@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext';
 import Login from './pages/Login';
 import Alunos from './pages/Alunos';
 import Turmas from './pages/Turmas';
+import Chamadas from './pages/Chamadas';
 
 const App: React.FC = () => {
   return (
@@ -16,6 +17,7 @@ const App: React.FC = () => {
               <Route path="/" element={<Login />} />
               <Route path="/alunos" element={<Alunos />} />
               <Route path="/turmas" element={<Turmas />} />
+              <Route path="/chamadas" element={<Chamadas />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </div>
