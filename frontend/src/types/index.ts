@@ -1,0 +1,58 @@
+// Tipos compartilhados do frontend
+
+export interface Professor {
+  id: string;
+  tenant_id: string;
+  nome: string;
+  hash: string;
+  criado_em: string;
+}
+
+export interface Aluno {
+  id: string;
+  tenant_id: string;
+  nome: string;
+  data_nascimento?: string;
+  genero?: string;
+  contato?: string;
+  ativo: boolean;
+  criado_em: string;
+}
+
+export interface Turma {
+  id: string;
+  tenant_id: string;
+  label: string;
+  horario: string;
+  professor_id?: string;
+  nivel?: string;
+  capacidade?: number;
+  faixa_etaria?: string;
+  criado_em: string;
+}
+
+export interface ChamadaLog {
+  id: string;
+  tenant_id: string;
+  data: string;
+  grupo_id?: string;
+  indice_aula: number;
+  status?: 'presente' | 'falta' | 'justificado' | 'cancelado';
+  motivo?: string;
+  condicao_clima?: string;
+  temperatura_ext?: number;
+  temperatura_piscina?: number;
+  cloro_ppm?: number;
+  tipo_select?: 'geral' | 'pessoal';
+  tipo_ocorrencia?: string;
+  origem?: 'manual' | 'extrapolado';
+  criado_em: string;
+}
+
+export interface AuthState {
+  isAuthenticated: boolean;
+  professorId?: string;
+  professorNome?: string;
+  tenantId?: string;
+  loading: boolean;
+}
