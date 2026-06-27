@@ -1,3 +1,25 @@
+# Sessão: 27/06/2026 - Fase 1 (Etapa Qwen) - Ajustes Frontend/Build
+
+## 🔍 O que foi feito
+- [x] Instaladas dependências do backend e frontend.
+- [x] Corrigido erro do Vite/TypeScript adicionando `vite-env.d.ts`.
+- [x] Build do frontend executado com sucesso (`npm run build`).
+
+## 🧠 Decisões Técnicas Tomadas
+- Foi adicionada tipagem de `ImportMetaEnv` para garantir acesso seguro a `import.meta.env` no Vite.
+
+## 🔗 Arquivos Alterados/Criados
+- `C:\Users\HP\fiz-app\frontend\src\vite-env.d.ts` (criado)
+- `C:\Users\HP\fiz-app\backend\package-lock.json` (modificado)
+- `C:\Users\HP\fiz-app\frontend\package-lock.json` (criado)
+
+## ⚠️ Blockers ou Problemas Encontrados
+- `npm install` no frontend teve timeout na primeira execução; resolvido com nova chamada silenciosa.
+
+## 🚀 Próximos Passos (para a próxima sessão)
+1. Iniciar Etapa 3 (Copilot/GPT-4o mini) para revisão de segurança e validações finais da Fase 1.
+2. Conferir rate limiting e validações de env (se necessário).
+
 # Sessão: 27/06/2026 - Planejamento do IMPLEMENTATION_PLAN.md
 
 ## 🔍 O que foi feito
