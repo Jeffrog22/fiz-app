@@ -1,0 +1,39 @@
+{
+  "name": "fiz-app",
+  "version": "1.0.0",
+  "description": "Aplicativo de lista de chamada para aulas de natação.\r Sistema de gestão de chamadas para piscinas de natação, unificando 4 unidades (Bela Vista, São Matheus, Vila e Parque) em uma única arquitetura multi-tenant.",
+  "main": "write-fase7-backend.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jeffrog22/fiz-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Jeffrog22/fiz-app/issues"
+  },
+  "homepage": "https://github.com/Jeffrog22/fiz-app#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.108.2",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^26.0.1",
+    "nodemon": "^3.1.14",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  }
+}
