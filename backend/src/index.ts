@@ -5,41 +5,45 @@ import dotenv from 'dotenv';
 import { tenantMiddleware } from './middleware/tenant';
 import { errorHandler } from './middleware/errorHandler';
 import authRoutes from './routes/authRoutes';
+import turmasRoutes from './routes/turmasRoutes';
+import alunosRoutes from './routes/alunosRoutes';
 
-// Configura variáveis de ambiente
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middlewares globais
+const frontendUrl = process.env.FRONTEND_URL || '*';
+
+if (process.env.NODE_ENV === 'production' && frontendUrl === '*') {
+  console.warn('⚠️ AVISO DE SEGURANÇA: CORS está configurado para permitir todas as origens (*)');
+  console.warn('Em produção, defina a variável de ambiente FRONTEND_URL para a URL específica do seu frontend.');
+}
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
+  origin: frontendUrl,
   credentials: true,
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Middleware de tenant (aplica-se a todas as rotas /api)
 app.use('/api', tenantMiddleware);
 
-// Rotas
 app.use('/api/auth', authRoutes);
+app.use('/api/turmas', turmasRoutes);
+app.use('/api/alunos', alunosRoutes);
 
-// Health check (sem tenant)
 app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
-    version: '0.1.0',
+    version: '0.3.0',
     timestamp: new Date().toISOString(),
   });
 });
 
-// Tratamento de erros (deve ser o último middleware)
 app.use(errorHandler);
 
-// Inicialização do servidor
 app.listen(PORT, () => {
   console.log(`🚀 Servidor Fiz! App rodando na porta ${PORT}`);
   console.log(`📋 Ambiente: ${process.env.NODE_ENV || 'development'}`);
