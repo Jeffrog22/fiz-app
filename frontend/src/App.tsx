@@ -28,3 +28,5 @@ const App: React.FC = () => {
 };
 
 export default App;
+import Calendario from " "\./pages/Calendario\';  
+import Exclusoes from \./pages/Exclusoes\'; 
