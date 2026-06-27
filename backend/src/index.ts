@@ -50,3 +50,7 @@ app.listen(PORT, () => {
 });
 
 export default app;
+import calendarioRoutes from " "\./routes/calendarioRoutes\';  
+import exclusoesRoutes from \./routes/exclusoesRoutes\';  
+app.use(\/api/calendario\', calendarioRoutes);  
+app.use(\/api/exclusoes\', exclusoesRoutes); 
