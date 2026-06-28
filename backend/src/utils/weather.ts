@@ -7,6 +7,10 @@ type CacheEntry = {
 
 const cache = new Map<string, CacheEntry>();
 
+export function clearWeatherCache(): void {
+  cache.clear();
+}
+
 export async function fetchWeather() {
   const now = Date.now();
   const cached = cache.get('open-meteo');
