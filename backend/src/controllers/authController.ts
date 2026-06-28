@@ -70,6 +70,7 @@ export class AuthController {
         message: 'Login realizado com sucesso',
         professorId: professor.id,
         nome: professor.nome,
+        token,
       });
     } catch (error) {
       next(error);
@@ -164,6 +165,7 @@ export class AuthController {
         message: 'Primeiro acesso realizado com sucesso',
         professorId: newProfessor.id,
         nome: newProfessor.nome,
+        token,
       });
     } catch (error) {
       next(error);

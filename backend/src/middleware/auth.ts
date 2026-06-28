@@ -14,8 +14,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
  * da requisição (proteção multi-tenant).
  */
 export function authMiddleware(req: TenantRequest, res: Response, next: NextFunction): void {
-  // Tenta extrair o token do cookie
-  const token = req.cookies?.token;
+  // Tenta extrair o token do cookie ou do header Authorization
+  const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
 
   if (!token) {
     res.status(401).json({ error: 'Token de autenticação não fornecido' });

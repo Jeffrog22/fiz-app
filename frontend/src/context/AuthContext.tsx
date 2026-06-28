@@ -28,7 +28,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   });
 
   useEffect(() => {
-    // Verifica se já existe sessão salva no localStorage
     const storedProfessor = localStorage.getItem(`${getTenantId()}_professor`);
     if (storedProfessor) {
       try {
@@ -53,9 +52,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setState(prev => ({ ...prev, loading: true }));
     try {
       const response = await api.post('/auth/login', { nome: professorNome });
-      const { professorId, nome } = response.data;
+      const { professorId, nome, token } = response.data;
       
-      localStorage.setItem(`${getTenantId()}_professor`, JSON.stringify({ professorId, nome }));
+      localStorage.setItem(`${getTenantId()}_professor`, JSON.stringify({ professorId, nome, token }));
       
       setState({
         isAuthenticated: true,
@@ -82,9 +81,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await api.post('/auth/primeiro-acesso', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      const { professorId, nome } = response.data;
+      const { professorId, nome, token } = response.data;
 
-      localStorage.setItem(`${getTenantId()}_professor`, JSON.stringify({ professorId, nome }));
+      localStorage.setItem(`${getTenantId()}_professor`, JSON.stringify({ professorId, nome, token }));
 
       setState({
         isAuthenticated: true,

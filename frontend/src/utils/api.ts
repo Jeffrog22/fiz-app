@@ -16,11 +16,24 @@ const api = axios.create({
   },
 });
 
-// Interceptor de requisição: injeta X-Tenant-ID
+// Interceptor de requisição: injeta X-Tenant-ID e Authorization
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const tenantId = getTenantId();
     config.headers['X-Tenant-ID'] = tenantId;
+
+    const storedProfessor = localStorage.getItem(`${tenantId}_professor`);
+    if (storedProfessor) {
+      try {
+        const parsed = JSON.parse(storedProfessor);
+        if (parsed.token) {
+          config.headers.Authorization = `Bearer ${parsed.token}`;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     return config;
   },
   (error) => {
