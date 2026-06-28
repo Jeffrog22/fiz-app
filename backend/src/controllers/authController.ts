@@ -165,4 +165,39 @@ export class AuthController {
   }
 }
 
+  /**
+   * DELETE /auth/clear-data
+   * Remove todos os alunos e turmas do tenant (para testes).
+   * Exige role admin via header X-Admin-Key.
+   */
+  static async clearData(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const tenantId = req.tenantId!;
+      const adminKey = req.headers['x-admin-key'] as string | undefined;
+
+      if (!adminKey || adminKey !== process.env.ADMIN_KEY) {
+        throw new AppError('Chave de admin inválida', 403);
+      }
+
+      const { error: errAlunos } = await supabase
+        .from('alunos')
+        .delete()
+        .eq('tenant_id', tenantId);
+
+      if (errAlunos) throw new AppError(`Erro ao limpar alunos: ${errAlunos.message}`, 500);
+
+      const { error: errTurmas } = await supabase
+        .from('turmas')
+        .delete()
+        .eq('tenant_id', tenantId);
+
+      if (errTurmas) throw new AppError(`Erro ao limpar turmas: ${errTurmas.message}`, 500);
+
+      res.json({ message: 'Dados limpos com sucesso', alunos: true, turmas: true });
+    } catch (error) {
+      next(error);
+    }
+  }
+}
+
 export default AuthController;

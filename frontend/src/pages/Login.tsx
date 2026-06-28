@@ -14,6 +14,7 @@ const Login: React.FC = () => {
   const [erro, setErro] = useState<string | null>(null);
   const [acessoRapido, setAcessoRapido] = useState<string[]>([]);
   const [adminMode, setAdminMode] = useState(false);
+  const [limpando, setLimpando] = useState(false);
   const tenantId = getTenantId();
 
   useEffect(() => {
@@ -83,14 +84,30 @@ const Login: React.FC = () => {
             <p className="text-sm font-medium text-gray-700 mb-2">Acesso rápido</p>
             <div className="flex flex-wrap gap-2">
               {acessoRapido.map((nome) => (
-                <button
+                <span
                   key={nome}
-                  type="button"
-                  onClick={() => { setProfessorNome(nome); setPrimeiroAcessoAtivo(false); }}
-                  className="px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm hover:bg-primary-100 transition-colors"
+                  className="group inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm"
                 >
-                  {nome}
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => { setProfessorNome(nome); setPrimeiroAcessoAtivo(false); }}
+                    className="hover:text-primary-900 transition-colors"
+                  >
+                    {nome}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = acessoRapido.filter((n) => n !== nome);
+                      localStorage.setItem(`${tenantId}_acesso_rapido`, JSON.stringify(updated));
+                      setAcessoRapido(updated);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all text-xs leading-none"
+                    title="Remover"
+                  >
+                    ✕
+                  </button>
+                </span>
               ))}
             </div>
           </div>
@@ -148,9 +165,37 @@ const Login: React.FC = () => {
         </form>
 
         {adminMode && (
-          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded space-y-2">
             <p className="text-xs text-yellow-700 font-medium">Modo Admin ativo</p>
             <p className="text-xs text-yellow-600">Pressione Ctrl+Alt+A para desativar</p>
+            <button
+              type="button"
+              disabled={limpando}
+              onClick={async () => {
+                setLimpando(true);
+                setErro(null);
+                try {
+                  const adminKey = prompt('Chave de admin (ADMIN_KEY no .env):');
+                  if (!adminKey) { setLimpando(false); return; }
+                  const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/auth/clear-data`, {
+                    method: 'DELETE',
+                    headers: { 'X-Tenant-ID': tenantId, 'X-Admin-Key': adminKey },
+                  });
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data.error || 'Erro ao limpar');
+                  alert(`Dados limpos! Alunos e turmas removidos.`);
+                  localStorage.removeItem(`${tenantId}_acesso_rapido`);
+                  setAcessoRapido([]);
+                } catch (err: any) {
+                  setErro(err.message);
+                } finally {
+                  setLimpando(false);
+                }
+              }}
+              className="w-full text-xs py-1.5 px-3 bg-red-500 text-white rounded hover:bg-red-600 disabled:bg-gray-400 transition"
+            >
+              {limpando ? 'Limpando...' : '🗑 Limpar dados (alunos + turmas)'}
+            </button>
           </div>
         )}
 

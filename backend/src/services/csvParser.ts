@@ -105,7 +105,7 @@ export function parseCSV(
     columns: true,
     bom: true,
     relax_column_count: true,
-    delimiter: [';', ',', '\t'],
+    delimiter: [';', ',', '\t', '|'],
   });
 
   const alunos: AlunoRow[] = [];

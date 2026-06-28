@@ -16,4 +16,6 @@ router.post(
   AuthController.primeiroAcesso
 );
 
+router.delete('/clear-data', tenantMiddleware, AuthController.clearData);
+
 export default router;
