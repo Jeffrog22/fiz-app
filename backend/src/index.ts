@@ -18,7 +18,8 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-const allowedOrigins = (process.env.FRONTEND_URL || '*')
+const corsOrigins = process.env.CORS_ORIGINS || process.env.FRONTEND_URL || '*';
+const allowedOrigins = corsOrigins
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean);
