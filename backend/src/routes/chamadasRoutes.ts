@@ -7,7 +7,15 @@ const router = Router();
 
 router.use(tenantMiddleware, authMiddleware);
 
+router.get('/periodo', ChamadasController.listarPorPeriodo);
+router.get('/card-aula/:data', ChamadasController.obterCardAula);
+router.get('/logs-acesso', ChamadasController.obterLogsAcesso);
 router.get('/:data', ChamadasController.listarPorData);
+
 router.post('/', ChamadasController.salvar);
+router.post('/extrapolar', ChamadasController.extrapolarPresenca);
+router.post('/card-aula', ChamadasController.salvarCardAula);
+router.post('/card-bo', ChamadasController.salvarCardBO);
+router.post('/log-acesso', ChamadasController.registrarLogAcesso);
 
 export default router;
