@@ -128,7 +128,8 @@ export class AuthController {
         .single();
 
       if (insertError || !newProfessor) {
-        throw new AppError('Erro ao cadastrar professor', 500);
+        console.error('[DEBUG PRIMEIRO ACESSO] insertError:', JSON.stringify(insertError));
+        throw new AppError(`Erro ao cadastrar professor: ${insertError?.message || 'erro desconhecido'}`, 500);
       }
 
       // Se houver CSV, processa (placeholder)
