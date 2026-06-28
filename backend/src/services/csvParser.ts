@@ -105,6 +105,22 @@ function getValor(row: Record<string, string>, ...keys: string[]): string | unde
   return undefined;
 }
 
+function normalizarData(valor: string | undefined): string | undefined {
+  if (!valor) return undefined;
+  const digitado = valor.replace(/[^0-9]/g, '');
+  // formato BR dd/mm/aaaa -> aaaa-mm-dd
+  if (digitado.length === 8) {
+    const dia = digitado.slice(0, 2);
+    const mes = digitado.slice(2, 4);
+    const ano = digitado.slice(4, 8);
+    return `${ano}-${mes}-${dia}`;
+  }
+  // formato ISO yyyy-mm-dd
+  if (/^\d{4}-\d{2}-\d{2}$/.test(valor)) return valor;
+  // fallback
+  return valor;
+}
+
 export function parseCSV(
   csvBuffer: Buffer,
 ): { alunos: AlunoRow[]; turmas: TurmaRow[] } {
@@ -144,13 +160,13 @@ export function parseCSV(
         const atestadoStr = getValor(row, 'atestado_medico', 'atestado', 'Atestado', 'Possui Atestado Medico', 'atestado_medico');
         alunos.push({
           nome,
-          data_nascimento: getValor(row, 'data_nascimento', 'Data de Nascimento', 'DataNascimento', 'nascimento', 'Nascimento'),
+          data_nascimento: normalizarData(getValor(row, 'data_nascimento', 'Data de Nascimento', 'DataNascimento', 'nascimento', 'Nascimento')),
           genero: getValor(row, 'genero', 'Genero', 'genero', 'Genero'),
           contato: getValor(row, 'contato', 'Contato', 'telefone', 'Telefone', 'celular', 'Celular'),
           ativo: true,
           par_q: parQStr ? ['sim', 's', 'true', '1', 'yes'].includes(parQStr.toLowerCase()) : undefined,
           atestado_medico: atestadoStr ? ['sim', 's', 'true', '1', 'yes'].includes(atestadoStr.toLowerCase()) : undefined,
-          data_atestado: getValor(row, 'data_atestado', 'Data Atestado', 'data_atestestado', 'Data do Atestado', 'data_atestado'),
+          data_atestado: normalizarData(getValor(row, 'data_atestado', 'Data Atestado', 'data_atestestado', 'Data do Atestado', 'data_atestado')),
           nivel: getValor(row, 'nivel', 'Nivel', 'nivel'),
         });
       }
