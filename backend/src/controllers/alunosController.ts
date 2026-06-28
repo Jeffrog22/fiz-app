@@ -29,7 +29,7 @@ export class AlunosController {
   static async listar(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const tenantId = req.tenantId!;
-      const { nome, turma_id, ativo, nivel } = req.query;
+      const { nome, ativo } = req.query;
 
       let query = supabase
         .from('alunos')
@@ -37,13 +37,15 @@ export class AlunosController {
         .eq('tenant_id', tenantId);
 
       if (nome) query = query.ilike('nome', `%${nome}%`);
-      if (turma_id) query = query.eq('turma_id', turma_id as string);
       if (ativo !== undefined) query = query.eq('ativo', ativo === 'true');
-      if (nivel) query = query.eq('nivel', nivel as string);
 
       const { data, error } = await query.order('nome', { ascending: true });
 
-      if (error) throw new AppError('Erro ao buscar alunos', 500);
+      if (error) {
+        console.error('[alunos/listar] Supabase error:', error);
+        throw new AppError(`Erro ao buscar alunos: ${error.message}`, 500);
+      }
+      console.log(`[alunos/listar] ${data?.length || 0} alunos retornados para tenant ${tenantId}`);
       res.json(data || []);
     } catch (error) {
       next(error);
@@ -55,7 +57,8 @@ export class AlunosController {
       const tenantId = req.tenantId!;
       const {
         nome, data_nascimento, genero, contato,
-        turma_id, nivel, par_q, atestado_medico, data_atestado
+        par_q, atestado_medico, data_atestado,
+        nivel, turma_id
       } = req.body;
 
       if (!nome || nome.trim().length === 0) {
@@ -83,17 +86,20 @@ export class AlunosController {
           data_nascimento: data_nascimento || null,
           genero: genero || null,
           contato: contato || null,
-          turma_id: turma_id || null,
-          nivel: nivel || null,
           par_q: par_q ?? null,
           atestado_medico: atestado_medico ?? null,
           data_atestado: data_atestado || null,
+          nivel: nivel || null,
+          turma_id: turma_id || null,
           categoria: categoria || null,
         })
         .select()
         .single();
 
-      if (error || !data) throw new AppError('Erro ao criar aluno', 500);
+      if (error || !data) {
+        console.error('[alunos/criar] Supabase error:', error);
+        throw new AppError('Erro ao criar aluno', 500);
+      }
       res.status(201).json(data);
     } catch (error) {
       next(error);
@@ -106,7 +112,8 @@ export class AlunosController {
       const { id } = req.params;
       const {
         nome, data_nascimento, genero, contato, ativo,
-        turma_id, nivel, par_q, atestado_medico, data_atestado
+        par_q, atestado_medico, data_atestado,
+        nivel, turma_id
       } = req.body;
 
       const categoria = data_nascimento ? calcularCategoria(data_nascimento) : undefined;
@@ -119,19 +126,22 @@ export class AlunosController {
           genero,
           contato,
           ativo,
-          turma_id,
-          nivel,
           par_q,
           atestado_medico,
           data_atestado,
-          categoria,
+          nivel: nivel || null,
+          turma_id: turma_id || null,
+          categoria: categoria || null,
         })
         .eq('id', id)
         .eq('tenant_id', tenantId)
         .select()
         .single();
 
-      if (error || !data) throw new AppError('Erro ao atualizar aluno', 500);
+      if (error || !data) {
+        console.error('[alunos/atualizar] Supabase error:', error);
+        throw new AppError('Erro ao atualizar aluno', 500);
+      }
       res.json(data);
     } catch (error) {
       next(error);

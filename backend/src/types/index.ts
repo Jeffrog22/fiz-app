@@ -26,9 +26,6 @@ export interface Aluno {
   par_q?: boolean;
   atestado_medico?: boolean;
   data_atestado?: string;
-  turma_id?: string;
-  nivel?: string;
-  categoria?: string;
   criado_em: string;
 }
 
