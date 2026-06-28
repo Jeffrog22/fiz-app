@@ -23,6 +23,12 @@ export interface Aluno {
   genero?: string;
   contato?: string;
   ativo: boolean;
+  par_q?: boolean;
+  atestado_medico?: boolean;
+  data_atestado?: string;
+  turma_id?: string;
+  nivel?: string;
+  categoria?: string;
   criado_em: string;
 }
 

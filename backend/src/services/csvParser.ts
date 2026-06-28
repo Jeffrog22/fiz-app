@@ -7,6 +7,11 @@ interface AlunoRow {
   genero?: string;
   contato?: string;
   ativo?: boolean;
+  par_q?: boolean;
+  atestado_medico?: boolean;
+  data_atestado?: string;
+  turma_id?: string;
+  nivel?: string;
 }
 
 interface TurmaRow {
@@ -30,6 +35,11 @@ async function inserirAlunos(
     genero: a.genero || null,
     contato: a.contato || null,
     ativo: a.ativo !== undefined ? a.ativo : true,
+    par_q: a.par_q ?? null,
+    atestado_medico: a.atestado_medico ?? null,
+    data_atestado: a.data_atestado || null,
+    turma_id: a.turma_id || null,
+    nivel: a.nivel || null,
   }));
 
   const { error } = await supabase.from('alunos').insert(rows);
@@ -130,12 +140,18 @@ export function parseCSV(
       }
     } else {
       if (nome) {
+        const parQStr = getValor(row, 'par_q', 'parQ', 'ParQ', 'apto', 'Apto', 'Ativo para atividade fisica');
+        const atestadoStr = getValor(row, 'atestado_medico', 'atestado', 'Atestado', 'Possui Atestado Medico', 'atestado_medico');
         alunos.push({
           nome,
           data_nascimento: getValor(row, 'data_nascimento', 'Data de Nascimento', 'DataNascimento', 'nascimento', 'Nascimento'),
-          genero: getValor(row, 'genero', 'Genero', 'gênero', 'Gênero'),
+          genero: getValor(row, 'genero', 'Genero', 'genero', 'Genero'),
           contato: getValor(row, 'contato', 'Contato', 'telefone', 'Telefone', 'celular', 'Celular'),
           ativo: true,
+          par_q: parQStr ? ['sim', 's', 'true', '1', 'yes'].includes(parQStr.toLowerCase()) : undefined,
+          atestado_medico: atestadoStr ? ['sim', 's', 'true', '1', 'yes'].includes(atestadoStr.toLowerCase()) : undefined,
+          data_atestado: getValor(row, 'data_atestado', 'Data Atestado', 'data_atestestado', 'Data do Atestado', 'data_atestado'),
+          nivel: getValor(row, 'nivel', 'Nivel', 'nivel'),
         });
       }
     }

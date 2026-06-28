@@ -3,8 +3,18 @@ import api from '../utils/api';
 import AlunoModal from '../components/modals/AlunoModal';
 import type { Aluno } from '../types';
 
+function calcularIdade(dataNascimento?: string): number | null {
+  if (!dataNascimento) return null;
+  const nasc = new Date(dataNascimento + 'T12:00:00');
+  const hoje = new Date();
+  let idade = hoje.getFullYear() - nasc.getFullYear();
+  const mes = hoje.getMonth() - nasc.getMonth();
+  if (mes < 0 || (mes === 0 && hoje.getDate() < nasc.getDate())) idade--;
+  return idade;
+}
+
 const Alunos: React.FC = () => {
-  const [alunos, setAlunos] = useState<Aluno[]>([]);
+  const [alunos, setAlunos] = useState<any[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [filtro, setFiltro] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -49,7 +59,7 @@ const Alunos: React.FC = () => {
     }
   };
 
-  const filtered = alunos.filter((a) =>
+  const filtered = alunos.filter((a: any) =>
     a.nome.toLowerCase().includes(filtro.toLowerCase())
   );
 
@@ -76,53 +86,52 @@ const Alunos: React.FC = () => {
       {carregando ? (
         <p className="text-sm text-gray-500">Carregando...</p>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="text-left px-4 py-2 font-medium text-gray-500">Nome</th>
-                <th className="text-left px-4 py-2 font-medium text-gray-500">Nascimento</th>
-                <th className="text-left px-4 py-2 font-medium text-gray-500">Contato</th>
-                <th className="text-left px-4 py-2 font-medium text-gray-500">Status</th>
-                <th className="text-right px-4 py-2 font-medium text-gray-500">Ações</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-500">Nome</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-500">Nivel</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-500">Idade</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-500">Categoria</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-500">Turma</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-500">Horario</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-500">Contato</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-500">Status</th>
+                <th className="text-right px-3 py-2 font-medium text-gray-500">Acoes</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.map((a) => (
-                <tr key={a.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-2 font-medium text-gray-800">{a.nome}</td>
-                  <td className="px-4 py-2 text-gray-600">
-                    {a.data_nascimento
-                      ? new Date(a.data_nascimento + 'T12:00:00').toLocaleDateString('pt-BR')
-                      : '-'}
-                  </td>
-                  <td className="px-4 py-2 text-gray-600">{a.contato || '-'}</td>
-                  <td className="px-4 py-2">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                      a.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                    }`}>
-                      {a.ativo ? 'Ativo' : 'Inativo'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-right space-x-2">
-                    <button
-                      onClick={() => { setEditando(a); setModalOpen(true); }}
-                      className="text-xs text-primary-600 hover:text-primary-800"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDelete(a.id)}
-                      className="text-xs text-red-500 hover:text-red-700"
-                    >
-                      Remover
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((a: any) => {
+                const idade = calcularIdade(a.data_nascimento);
+                return (
+                  <tr key={a.id} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 font-medium text-gray-800">{a.nome}</td>
+                    <td className="px-3 py-2 text-gray-600">{a.nivel || '-'}</td>
+                    <td className="px-3 py-2 text-gray-600">{idade !== null ? idade : '-'}</td>
+                    <td className="px-3 py-2 text-gray-600">{a.categoria || '-'}</td>
+                    <td className="px-3 py-2 text-gray-600">{a.turmas?.label || '-'}</td>
+                    <td className="px-3 py-2 text-gray-600">{a.turmas?.horario || '-'}</td>
+                    <td className="px-3 py-2 text-gray-600">{a.contato || '-'}</td>
+                    <td className="px-3 py-2">
+                      <span className={'text-xs font-medium px-2 py-0.5 rounded-full ' + (
+                        a.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                      )}>
+                        {a.ativo ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-right space-x-2 whitespace-nowrap">
+                      <button onClick={() => { setEditando(a); setModalOpen(true); }}
+                        className="text-xs text-primary-600 hover:text-primary-800">Editar</button>
+                      <button onClick={() => handleDelete(a.id)}
+                        className="text-xs text-red-500 hover:text-red-700">Remover</button>
+                    </td>
+                  </tr>
+                );
+              })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
                     Nenhum aluno encontrado
                   </td>
                 </tr>
