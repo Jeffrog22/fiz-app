@@ -6,6 +6,7 @@ import { TenantRequest, Professor } from '../types';
 import { AppError } from '../middleware/errorHandler';
 import { generateProfessorId } from '../utils/idGenerator';
 import { validateProfessorNome } from '../utils/validators';
+import { processCSVUpload } from '../services/csvParser';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 const JWT_EXPIRES_IN: number = 86400; // 24h em segundos
@@ -26,7 +27,6 @@ export class AuthController {
    */
   static async login(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      console.log(`[DEBUG LOGIN] body=${JSON.stringify(req.body)} tenantId=${req.tenantId} headers=${JSON.stringify(req.headers)}`);
       const { nome } = req.body;
       const tenantId = req.tenantId!;
 
@@ -132,11 +132,10 @@ export class AuthController {
         throw new AppError(`Erro ao cadastrar professor: ${insertError?.message || 'erro desconhecido'}`, 500);
       }
 
-      // Se houver CSV, processa (placeholder)
-      // TODO: Implementar parse completo do CSV na Fase 2/3
+      // Processa CSV se enviado
       if (csvFile) {
-        console.log('📄 CSV recebido:', csvFile.originalname);
-        // Aqui entra a lógica de parse e insert de alunos/turmas
+        const result = await processCSVUpload(csvFile.buffer, newProfessor.id, tenantId);
+        console.log(`📄 CSV processado: ${result.alunosOk} alunos, ${result.turmasOk} turmas`);
       }
 
       // Gera JWT

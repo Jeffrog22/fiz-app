@@ -51,7 +51,7 @@ app.use('/api/vagas', vagasRoutes);
 
 app.get('/health', (_req, res) => {
   res.json({
-    debug: 'health ok',
+    status: 'ok',
     version: '0.1.0',
     timestamp: new Date().toISOString(),
   });
