@@ -168,34 +168,60 @@ const Login: React.FC = () => {
           <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded space-y-2">
             <p className="text-xs text-yellow-700 font-medium">Modo Admin ativo</p>
             <p className="text-xs text-yellow-600">Pressione Ctrl+Alt+A para desativar</p>
-            <button
-              type="button"
-              disabled={limpando}
-              onClick={async () => {
-                setLimpando(true);
-                setErro(null);
-                try {
-                  const adminKey = prompt('Chave de admin (ADMIN_KEY no .env):');
-                  if (!adminKey) { setLimpando(false); return; }
-                  const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/auth/clear-data`, {
-                    method: 'DELETE',
-                    headers: { 'X-Tenant-ID': tenantId, 'X-Admin-Key': adminKey },
-                  });
-                  const data = await res.json();
-                  if (!res.ok) throw new Error(data.error || 'Erro ao limpar');
-                  alert(`Dados limpos! Alunos e turmas removidos.`);
-                  localStorage.removeItem(`${tenantId}_acesso_rapido`);
-                  setAcessoRapido([]);
-                } catch (err: any) {
-                  setErro(err.message);
-                } finally {
-                  setLimpando(false);
-                }
-              }}
-              className="w-full text-xs py-1.5 px-3 bg-red-500 text-white rounded hover:bg-red-600 disabled:bg-gray-400 transition"
-            >
-              {limpando ? 'Limpando...' : '🗑 Limpar dados (alunos + turmas)'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={limpando}
+                onClick={async () => {
+                  setLimpando(true);
+                  setErro(null);
+                  try {
+                    const adminKey = prompt('Chave de admin:');
+                    if (!adminKey) { setLimpando(false); return; }
+                    const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/auth/clear-data`, {
+                      method: 'DELETE',
+                      headers: { 'X-Tenant-ID': tenantId, 'X-Admin-Key': adminKey },
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Erro ao limpar');
+                    alert(`Dados limpos! Alunos e turmas removidos.`);
+                    localStorage.removeItem(`${tenantId}_acesso_rapido`);
+                    setAcessoRapido([]);
+                  } catch (err: any) {
+                    setErro(err.message);
+                  } finally {
+                    setLimpando(false);
+                  }
+                }}
+                className="flex-1 text-xs py-1.5 px-3 bg-red-500 text-white rounded hover:bg-red-600 disabled:bg-gray-400 transition"
+              >
+                {limpando ? 'Limpando...' : 'Limpar dados'}
+              </button>
+              <button
+                type="button"
+                disabled={limpando}
+                onClick={async () => {
+                  setLimpando(true);
+                  setErro(null);
+                  try {
+                    const url = `${import.meta.env.VITE_API_URL || '/api'}/auth/clear-data?tenantId=${tenantId}`;
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Erro ao limpar');
+                    alert(`Dados limpos via GET! ${data.message}`);
+                    localStorage.removeItem(`${tenantId}_acesso_rapido`);
+                    setAcessoRapido([]);
+                  } catch (err: any) {
+                    setErro(err.message);
+                  } finally {
+                    setLimpando(false);
+                  }
+                }}
+                className="flex-1 text-xs py-1.5 px-3 bg-yellow-500 text-white rounded hover:bg-yellow-600 disabled:bg-gray-400 transition"
+              >
+                {limpando ? 'Limpando...' : 'Limpar (GET)'}
+              </button>
+            </div>
           </div>
         )}
 

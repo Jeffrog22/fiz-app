@@ -134,8 +134,14 @@ export class AuthController {
 
       // Processa CSV se enviado
       if (csvFile) {
-        const result = await processCSVUpload(csvFile.buffer, newProfessor.id, tenantId);
-        console.log(`📄 CSV processado: ${result.alunosOk} alunos, ${result.turmasOk} turmas`);
+        try {
+          const result = await processCSVUpload(csvFile.buffer, newProfessor.id, tenantId);
+          console.log(`[primeiroAcesso] CSV processado: ${result.alunosOk} alunos, ${result.turmasOk} turmas`);
+        } catch (csvError: any) {
+          console.error('[primeiroAcesso] ERRO no CSV:', csvError.message);
+          // Nao interrompe o cadastro do professor, mas reporta o erro
+          throw new AppError(`Erro ao processar CSV: ${csvError.message}`, 400);
+        }
       }
 
       // Gera JWT
@@ -165,17 +171,22 @@ export class AuthController {
   }
 
   /**
-   * DELETE /auth/clear-data
-   * Remove todos os alunos e turmas do tenant (para testes).
-   * Exige role admin via header X-Admin-Key.
+   * GET /auth/clear-data (browser-friendly) ou DELETE /auth/clear-data
+   * Remove todos os alunos e turmas do tenant.
+   * GET: aceita tenantId via query string (ex: ?tenantId=bela-vista)
+   * DELETE: exige X-Tenant-ID header + X-Admin-Key
    */
   static async clearData(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const tenantId = req.tenantId!;
+      const tenantId = (req.query.tenantId as string) || req.tenantId!;
       const adminKey = req.headers['x-admin-key'] as string | undefined;
 
-      if (!adminKey || adminKey !== process.env.ADMIN_KEY) {
+      if (req.method === 'DELETE' && (!adminKey || adminKey !== process.env.ADMIN_KEY)) {
         throw new AppError('Chave de admin inválida', 403);
+      }
+
+      if (!tenantId) {
+        throw new AppError('Tenant ID obrigatório (header X-Tenant-ID ou query ?tenantId=)', 400);
       }
 
       const { error: errAlunos } = await supabase
@@ -192,7 +203,9 @@ export class AuthController {
 
       if (errTurmas) throw new AppError(`Erro ao limpar turmas: ${errTurmas.message}`, 500);
 
-      res.json({ message: 'Dados limpos com sucesso', alunos: true, turmas: true });
+      const msg = `Dados do tenant "${tenantId}" limpos: alunos e turmas removidos.`;
+      console.log(`[clearData] ${msg}`);
+      res.json({ message: msg, alunos: true, turmas: true });
     } catch (error) {
       next(error);
     }
