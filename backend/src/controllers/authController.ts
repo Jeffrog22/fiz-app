@@ -26,6 +26,7 @@ export class AuthController {
    */
   static async login(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
+      console.log(`[DEBUG LOGIN] body=${JSON.stringify(req.body)} tenantId=${req.tenantId} headers=${JSON.stringify(req.headers)}`);
       const { nome } = req.body;
       const tenantId = req.tenantId!;
 

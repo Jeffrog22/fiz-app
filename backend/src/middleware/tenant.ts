@@ -24,12 +24,14 @@ const DOMAIN_TENANT_MAP: Record<string, string> = {
  * Recusa requisições sem tenant válido com HTTP 400.
  */
 export function tenantMiddleware(req: TenantRequest, res: Response, next: NextFunction): void {
+  console.log(`[DEBUG TENANT] headers=${JSON.stringify(req.headers)} host=${req.get('host')}`);
   let tenantId = req.headers['x-tenant-id'] as string;
 
   if (!tenantId) {
     const host = req.get('host') || '';
-    const domain = host.split(':')[0]; // Remove porta se presente
+    const domain = host.split(':')[0];
     tenantId = DOMAIN_TENANT_MAP[domain] || null as unknown as string;
+    console.log(`[DEBUG TENANT] domain=${domain} mappedTenant=${tenantId}`);
   }
 
   if (!tenantId) {
