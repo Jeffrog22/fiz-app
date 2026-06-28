@@ -18,15 +18,19 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-const frontendUrl = process.env.FRONTEND_URL || '*';
-
-if (process.env.NODE_ENV === 'production' && frontendUrl === '*') {
-  console.warn('⚠️ AVISO DE SEGURANÇA: CORS está configurado para permitir todas as origens (*)');
-  console.warn('Em produção, defina a variável de ambiente FRONTEND_URL para a URL específica do seu frontend.');
-}
+const allowedOrigins = (process.env.FRONTEND_URL || '*')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 app.use(cors({
-  origin: frontendUrl,
+  origin: (origin, callback) => {
+    if (allowedOrigins.includes('*') || !origin || allowedOrigins.some((o) => origin.startsWith(o))) {
+      callback(null, true);
+    } else {
+      callback(new Error('Origem não permitida pelo CORS'));
+    }
+  },
   credentials: true,
 }));
 app.use(express.json());
