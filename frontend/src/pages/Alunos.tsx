@@ -110,8 +110,8 @@ const Alunos: React.FC = () => {
                     <td className="px-3 py-2 text-gray-600">{a.nivel || '-'}</td>
                     <td className="px-3 py-2 text-gray-600">{idade !== null ? idade : '-'}</td>
                     <td className="px-3 py-2 text-gray-600">{a.categoria || '-'}</td>
-                    <td className="px-3 py-2 text-gray-600">{a.turmas?.label || '-'}</td>
-                    <td className="px-3 py-2 text-gray-600">{a.turmas?.horario || '-'}</td>
+                    <td className="px-3 py-2 text-gray-600">{a.turma_id || '-'}</td>
+                    <td className="px-3 py-2 text-gray-600">{'-'}</td>
                     <td className="px-3 py-2 text-gray-600">{a.contato || '-'}</td>
                     <td className="px-3 py-2">
                       <span className={'text-xs font-medium px-2 py-0.5 rounded-full ' + (

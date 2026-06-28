@@ -33,7 +33,7 @@ export class AlunosController {
 
       let query = supabase
         .from('alunos')
-        .select('*, turmas!left(label, horario, professor_id)')
+        .select('*')
         .eq('tenant_id', tenantId);
 
       if (nome) query = query.ilike('nome', `%${nome}%`);
