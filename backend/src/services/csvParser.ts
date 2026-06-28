@@ -61,6 +61,40 @@ async function inserirTurmas(
   return { turmasOk: rows.length };
 }
 
+function detectaColunas(records: Record<string, string>[]): 'alunos' | 'turmas' | 'misto' {
+  if (records.length === 0) return 'misto';
+  const headers = Object.keys(records[0]).map((h) => h.toLowerCase());
+
+  const hasTipo = headers.includes('tipo');
+
+  if (hasTipo) {
+    const tipos = new Set(records.map((r) => (r.tipo || r.Tipo || '').toLowerCase().trim()));
+    const hasAluno = tipos.has('aluno') || tipos.has('alunos');
+    const hasTurma = tipos.has('turma') || tipos.has('turmas');
+    if (hasAluno && hasTurma) return 'misto';
+    if (hasTurma) return 'turmas';
+    return 'alunos';
+  }
+
+  const hasLabel = headers.includes('label');
+  const hasHorario = headers.includes('horario');
+  const hasLabelNome = headers.some((h) => h === 'label' || h === 'nome');
+
+  if (hasLabel && hasHorario) return 'turmas';
+
+  return 'alunos';
+}
+
+function getValor(row: Record<string, string>, ...keys: string[]): string | undefined {
+  for (const key of keys) {
+    if (row[key] !== undefined && row[key] !== '') return row[key];
+    const lowerKey = key.toLowerCase();
+    const found = Object.keys(row).find((k) => k.toLowerCase() === lowerKey);
+    if (found && row[found] !== '') return row[found];
+  }
+  return undefined;
+}
+
 export function parseCSV(
   csvBuffer: Buffer,
 ): { alunos: AlunoRow[]; turmas: TurmaRow[] } {
@@ -71,32 +105,37 @@ export function parseCSV(
     columns: true,
     bom: true,
     relax_column_count: true,
+    delimiter: [';', ',', '\t'],
   });
 
   const alunos: AlunoRow[] = [];
   const turmas: TurmaRow[] = [];
+  const modo = detectaColunas(records);
 
   for (const row of records) {
-    const tipo = (row.tipo || row.Tipo || '').toLowerCase().trim();
+    const tipo = (getValor(row, 'tipo', 'Tipo') || '').toLowerCase().trim();
+    const nome = getValor(row, 'nome', 'Nome');
 
-    if (tipo === 'aluno' || tipo === 'alunos') {
-      if (row.nome || row.Nome) {
-        alunos.push({
-          nome: row.nome || row.Nome,
-          data_nascimento: row.data_nascimento || row['Data de Nascimento'] || undefined,
-          genero: row.genero || row.Genero || row.Gênero || undefined,
-          contato: row.contato || row.Contato || undefined,
-          ativo: true,
+    if (modo === 'turmas' || tipo === 'turma' || tipo === 'turmas') {
+      const label = getValor(row, 'label', 'Label', 'nome', 'Nome', 'turma', 'Turma');
+      const horario = getValor(row, 'horario', 'Horario', 'horário', 'Horário');
+      if (label && horario) {
+        turmas.push({
+          label,
+          horario,
+          nivel: getValor(row, 'nivel', 'Nivel', 'nível', 'Nível'),
+          capacidade: getValor(row, 'capacidade', 'Capacidade') ? parseInt(getValor(row, 'capacidade', 'Capacidade')!, 10) : undefined,
+          faixa_etaria: getValor(row, 'faixa_etaria', 'faixa_etária', 'Faixa Etária', 'FaixaEtaria'),
         });
       }
-    } else if (tipo === 'turma' || tipo === 'turmas') {
-      if (row.label || row.Label || row.nome || row.Nome) {
-        turmas.push({
-          label: row.label || row.Label || row.nome || row.Nome,
-          horario: row.horario || row.Horario,
-          nivel: row.nivel || row.Nivel || undefined,
-          capacidade: row.capacidade ? parseInt(row.capacidade, 10) : undefined,
-          faixa_etaria: row.faixa_etaria || row['Faixa Etária'] || undefined,
+    } else {
+      if (nome) {
+        alunos.push({
+          nome,
+          data_nascimento: getValor(row, 'data_nascimento', 'Data de Nascimento', 'DataNascimento', 'nascimento', 'Nascimento'),
+          genero: getValor(row, 'genero', 'Genero', 'gênero', 'Gênero'),
+          contato: getValor(row, 'contato', 'Contato', 'telefone', 'Telefone', 'celular', 'Celular'),
+          ativo: true,
         });
       }
     }
