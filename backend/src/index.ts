@@ -7,6 +7,11 @@ import { errorHandler } from './middleware/errorHandler';
 import authRoutes from './routes/authRoutes';
 import turmasRoutes from './routes/turmasRoutes';
 import alunosRoutes from './routes/alunosRoutes';
+import chamadasRoutes from './routes/chamadasRoutes';
+import calendarioRoutes from './routes/calendarioRoutes';
+import exclusoesRoutes from './routes/exclusoesRoutes';
+import relatoriosRoutes from './routes/relatoriosRoutes';
+import vagasRoutes from './routes/vagasRoutes';
 
 dotenv.config();
 
@@ -33,11 +38,16 @@ app.use('/api', tenantMiddleware);
 app.use('/api/auth', authRoutes);
 app.use('/api/turmas', turmasRoutes);
 app.use('/api/alunos', alunosRoutes);
+app.use('/api/chamadas', chamadasRoutes);
+app.use('/api/calendario', calendarioRoutes);
+app.use('/api/exclusoes', exclusoesRoutes);
+app.use('/api/relatorios', relatoriosRoutes);
+app.use('/api/vagas', vagasRoutes);
 
 app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
-    version: '0.3.0',
+    version: '0.1.0',
     timestamp: new Date().toISOString(),
   });
 });
@@ -50,15 +60,3 @@ app.listen(PORT, () => {
 });
 
 export default app;
-import calendarioRoutes from " "\./routes/calendarioRoutes\';  
-import exclusoesRoutes from \./routes/exclusoesRoutes\';  
-app.use(\/api/calendario\', calendarioRoutes);  
-app.use(\/api/exclusoes\', exclusoesRoutes); 
-import calendarioRoutes from " "\./routes/calendarioRoutes\';  
-import exclusoesRoutes from \./routes/exclusoesRoutes\';  
-import relatoriosRoutes from \./routes/relatoriosRoutes\';  
-import vagasRoutes from \./routes/vagasRoutes\';  
-app.use(\/api/calendario\', calendarioRoutes);  
-app.use(\/api/exclusoes\', exclusoesRoutes);  
-app.use(\/api/relatorios\', relatoriosRoutes);  
-app.use(\/api/vagas\', vagasRoutes);  

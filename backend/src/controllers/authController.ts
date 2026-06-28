@@ -8,7 +8,7 @@ import { generateProfessorId } from '../utils/idGenerator';
 import { validateProfessorNome } from '../utils/validators';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
+const JWT_EXPIRES_IN: number = 86400; // 24h em segundos
 
 /**
  * Gera hash SHA256 do formato: SHA256(professor + unidade + timestamp + salt)
@@ -58,12 +58,11 @@ export class AuthController {
 
       const token = jwt.sign(jwtPayload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
-      // Define cookie httpOnly
       res.cookie('token', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
-        maxAge: 24 * 60 * 60 * 1000, // 24h
+        maxAge: 24 * 60 * 60 * 1000,
       });
 
       res.json({
@@ -108,7 +107,7 @@ export class AuthController {
         .select('id')
         .eq('tenant_id', tenantId);
 
-      const existingIds = (existingProfessors || []).map((p: Professor) => p.id);
+      const existingIds = ((existingProfessors || []) as { id: string }[]).map((p) => p.id);
       const professorId = generateProfessorId(professorNome, existingIds);
 
       // Gera hash

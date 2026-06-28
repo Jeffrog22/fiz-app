@@ -1,30 +1,30 @@
 # Changelog - Fiz! App
-(Histórico de Versões)
-Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
-O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
-e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
-
-## [Não publicado]
-
+## [v0.1.0] - 2026-06-27
 ### Adicionado
-- Estrutura inicial do projeto (arquivos .md)
-
-### Alterado
-- N/A
+- Estrutura inicial do projeto (documentação, backend e frontend)
+- Autenticação de professores via JWT
+- Middleware de identificação de tenant (X-Tenant-ID)
+- Conexão com banco Supabase (modelos iniciais)
+- CRUD de alunos e turmas (controllers, routes, services)
+- Páginas frontend: Login, Alunos, Turmas, Chamadas, Calendário, Exclusões, Relatórios, Vagas
+- Contextos: AuthContext, TenantContext
+- Hooks: useAuth, useTenant
 
 ### Corrigido
-- N/A
+- Imports quebrados no `App.tsx` (sintaxe inválida)
+- Dependências duplicadas no `package.json` raiz
+- Version string incorreta no health check (`0.3.0` → `0.1.0`)
+- Template literals com emojis soltos no `backend/src/index.ts`
+- Caracteres inválidos em `chamadasRoutes.ts`
+- Tipagem do `expiresIn` no JWT e do `.map()` em `authController.ts`
+- Nome do método em rota de chamadas (`listar` → `listarPorData`)
 
----
-
-## [v0.1.0] - 2026-06-23 (Exemplo)
-
-### Adicionado
-- Autenticação de professores via JWT.
-- Middleware de identificação de tenant (X-Tenant-ID).
-- Conexão com banco Supabase (modelos iniciais).
-
----
-
-*Mantenha este arquivo atualizado a cada nova versão/tag criada.*
+### Adicionado (UI)
+- `TopBar` — barra superior com unidade, professor e logout
+- `Sidebar` — navegação lateral com links para todas as páginas
+- `DataGrid` — grid alunos × dias com tri-state de presença e anotações
+- `GridFilters` — filtros de data e turma
+- `GridPagination` — navegação entre índices de aula
+- `AlunoModal` — modal de criação/edição de alunos
+- `TurmaModal` — modal de criação/edição de turmas
