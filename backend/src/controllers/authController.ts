@@ -163,7 +163,6 @@ export class AuthController {
       next(error);
     }
   }
-}
 
   /**
    * DELETE /auth/clear-data
