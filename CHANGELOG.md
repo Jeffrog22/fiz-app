@@ -28,3 +28,10 @@
 - `GridPagination` — navegação entre índices de aula
 - `AlunoModal` — modal de criação/edição de alunos
 - `TurmaModal` — modal de criação/edição de turmas
+
+### Integrado (Fase 2)
+- Login com AuthContext (login, primeiro acesso, CSV, acesso rápido, admin mode)
+- CRUD de alunos via API com AlunoModal e tabela
+- CRUD de turmas via API com TurmaModal e tabela
+- Grid de chamadas com DataGrid, filtros e paginação
+- Layout protegido com TopBar + Sidebar para todas as páginas

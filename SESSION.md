@@ -1,30 +1,26 @@
-# Sessão: 27/06/2026 - Componentes de UI (Fase 1)
+# Sessão: 27/06/2026 - Integração Frontend-Backend (Fase 2)
 
 ## O que foi feito
-- [x] Criado `TopBar.tsx` — barra superior com nome da unidade, professor e logout
-- [x] Criado `Sidebar.tsx` — navegação lateral com links para todas as páginas
-- [x] Criado `DataGrid.tsx` — grid alunos × dias com tri-state de presença (Verde→Vermelho→Amarelo→Cinza) e anotações inline
-- [x] Criado `GridFilters.tsx` — filtros de data início/fim e turma
-- [x] Criado `GridPagination.tsx` — navegação "Anterior/Próximo" entre índices de aula
-- [x] Criado `AlunoModal.tsx` — modal de criação/edição de alunos
-- [x] Criado `TurmaModal.tsx` — modal de criação/edição de turmas
-- [x] Build do frontend verificado — 0 erros
+- [x] Login.tsx: integração completa com AuthContext, CSV upload, acesso rápido, modo admin (Ctrl+Alt+A), redirect pós-login
+- [x] Alunos.tsx: CRUD completo via API, tabela com filtro, AlunoModal
+- [x] Turmas.tsx: CRUD completo via API, tabela com filtro, TurmaModal
+- [x] Chamadas.tsx: integração com DataGrid, GridFilters, GridPagination, salvamento via POST /chamadas
+- [x] App.tsx: layout protegido com TopBar + Sidebar, rotas para todas as páginas (Relatorios, Vagas, Exclusoes, Calendario)
+- [x] Build verificado — 0 erros (107 módulos)
 
 ## Decisões Técnicas Tomadas
-- DataGrid usa ciclo sequencial: presente → falta → justificado → vazio, com cores: verde, vermelho, amarelo, cinza
-- Anotações são editadas inline com input que aparece ao clicar no ícone
-- Modais usam `fixed inset-0 z-50` com overlay semi-transparente
-- Tailwind classes seguem o padrão existente (primary-500/600 para ações principais)
+- ProtectedLayout wrapper verifica autenticação e renderiza TopBar + Sidebar + main content
+- Chamadas.tsx mapeia `grupo_id` da API como identificador de aluno para compatibilidade com a estrutura atual do banco
+- CSV upload no Login usa input file nativo (react-dropzone pode ser adicionado depois pelo Qwen)
+- Acesso rápido salvo no localStorage com prefixo do tenant para isolamento
 
 ## Arquivos Alterados/Criados
-- `frontend/src/components/common/TopBar.tsx` (criado)
-- `frontend/src/components/common/Sidebar.tsx` (criado)
-- `frontend/src/components/grid/DataGrid.tsx` (criado)
-- `frontend/src/components/grid/GridFilters.tsx` (criado)
-- `frontend/src/components/grid/GridPagination.tsx` (criado)
-- `frontend/src/components/modals/AlunoModal.tsx` (criado)
-- `frontend/src/components/modals/TurmaModal.tsx` (criado)
+- `frontend/src/App.tsx` (reescrito — layout protegido, novas rotas)
+- `frontend/src/pages/Login.tsx` (reescrito — CSV, admin mode, acesso rápido)
+- `frontend/src/pages/Alunos.tsx` (reescrito — CRUD completo)
+- `frontend/src/pages/Turmas.tsx` (reescrito — CRUD completo)
+- `frontend/src/pages/Chamadas.tsx` (reescrito — DataGrid integrado)
 - `SESSION.md` (atualizado)
 
 ## Próximos Passos
-- Fase 2: Integração frontend-backend (conectar páginas aos endpoints reais)
+- Fase 3: Testes (jest backend, teste de conectividade Supabase, isolamento tenant)
