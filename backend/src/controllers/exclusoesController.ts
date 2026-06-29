@@ -1,28 +1,14 @@
 import { Response, NextFunction } from 'express';
-import { supabase } from '../services/supabaseClient';
 import { TenantRequest } from '../types';
-import { AppError } from '../middleware/errorHandler';
+import * as exclusoesService from '../services/exclusoesService';
 
 export class ExclusoesController {
   static async listar(req: TenantRequest, res: Response, next: NextFunction) {
     try {
       const tenantId = req.tenantId!;
       const { mostrarOcultos } = req.query;
-      let query = supabase
-        .from('exclusoes')
-        .select(`
-          *,
-          alunos!inner(id, nome, turma_id, nivel, contato, ativo)
-        `)
-        .eq('tenant_id', tenantId);
-
-      if (mostrarOcultos !== 'true') {
-        query = query.eq('oculto', false);
-      }
-
-      const { data, error } = await query.order('data_exclusao', { ascending: false });
-      if (error) throw new AppError('Erro ao buscar exclusoes', 500);
-      res.json(data || []);
+      const result = await exclusoesService.listar(tenantId, mostrarOcultos as string | undefined);
+      res.json(result);
     } catch (e) { next(e); }
   }
 
@@ -30,37 +16,7 @@ export class ExclusoesController {
     try {
       const tenantId = req.tenantId!;
       const { id, turma_id } = req.body;
-
-      if (!id) throw new AppError('ID da exclusao e obrigatorio', 400);
-
-      const { data: exclusao, error: fetchError } = await supabase
-        .from('exclusoes')
-        .select('aluno_id')
-        .eq('id', id)
-        .eq('tenant_id', tenantId)
-        .single();
-
-      if (fetchError || !exclusao) throw new AppError('Exclusao nao encontrada', 404);
-
-      const updateData: any = { ativo: true };
-      if (turma_id) updateData.turma_id = turma_id;
-
-      const { error: updateError } = await supabase
-        .from('alunos')
-        .update(updateData)
-        .eq('id', exclusao.aluno_id)
-        .eq('tenant_id', tenantId);
-
-      if (updateError) throw new AppError('Erro ao restaurar aluno', 500);
-
-      const { error: deleteError } = await supabase
-        .from('exclusoes')
-        .delete()
-        .eq('id', id)
-        .eq('tenant_id', tenantId);
-
-      if (deleteError) throw new AppError('Erro ao remover exclusao', 500);
-
+      await exclusoesService.restaurar(id, tenantId, turma_id);
       res.json({ ok: true });
     } catch (e) { next(e); }
   }
@@ -69,14 +25,7 @@ export class ExclusoesController {
     try {
       const tenantId = req.tenantId!;
       const { id } = req.params;
-
-      const { error } = await supabase
-        .from('exclusoes')
-        .update({ oculto: true })
-        .eq('id', id)
-        .eq('tenant_id', tenantId);
-
-      if (error) throw new AppError('Erro ao ocultar exclusao', 500);
+      await exclusoesService.excluirDefinitivo(id, tenantId);
       res.json({ ok: true });
     } catch (e) { next(e); }
   }

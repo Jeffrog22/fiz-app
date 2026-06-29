@@ -4,6 +4,7 @@ import { TenantProvider } from './context/TenantContext';
 import { AuthProvider } from './context/AuthContext';
 import { DevProvider } from './context/DevContext';
 import { useDevLog } from './hooks/useDevLog';
+import { usePushNotifications } from './hooks/usePushNotifications';
 import Login from './pages/Login';
 import Home from './pages/Home';
 import Alunos from './pages/Alunos';
@@ -100,12 +101,18 @@ const AppContent: React.FC = () => {
   );
 };
 
+const PushNotificationInit: React.FC = () => {
+  usePushNotifications();
+  return null;
+};
+
 const App: React.FC = () => {
   return (
     <BrowserRouter>
       <TenantProvider>
         <AuthProvider>
           <DevProvider>
+            <PushNotificationInit />
             <AppContent />
           </DevProvider>
         </AuthProvider>

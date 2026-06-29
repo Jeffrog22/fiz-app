@@ -1,94 +1,16 @@
 import { Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
-import { supabase } from '../services/supabaseClient';
-import { TenantRequest, Professor } from '../types';
+import { TenantRequest } from '../types';
 import { AppError } from '../middleware/errorHandler';
-import { generateProfessorId } from '../utils/idGenerator';
-import { processCSVUpload } from '../services/csvParser';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
-if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
-  throw new Error('JWT_SECRET obrigatório em produção');
-}
-const JWT_EXPIRES_IN: number = 86400; // 24h em segundos
-
-/**
- * Gera hash SHA256 do formato: SHA256(professor + unidade + timestamp + salt)
- */
-function generateHash(professor: string, tenantId: string, salt: string): string {
-  const timestamp = Date.now().toString();
-  const data = `${professor}${tenantId}${timestamp}${salt}`;
-  return crypto.createHash('sha256').update(data).digest('hex');
-}
+import { loginService, primeiroAcessoService, clearDataService } from '../services/authService';
 
 export class AuthController {
-  /**
-   * POST /auth/login
-   * Autentica um professor existente via hash.
-   */
   static async login(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { nome, hash } = req.body;
       const tenantId = req.tenantId!;
-
-      if (!nome) {
-        throw new AppError('Preencha o nome do professor', 400);
-      }
-
-      // Busca professor no banco
-      const { data: professor, error } = await supabase
-        .from('professores')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .eq('nome', nome.trim())
-        .single();
-
-      if (error || !professor) {
-        const ip = req.ip || req.socket.remoteAddress || 'desconhecido';
-        try {
-          await supabase.from('logs_acesso').insert({
-            tenant_id: tenantId, professor: nome?.trim() || 'desconhecido', unidade: tenantId, status: 'falha', ip,
-          });
-        } catch { console.warn('[audit] falha ao registrar log de acesso'); }
-        throw new AppError('Nenhum cadastro encontrado. Marque "Primeiro acesso".', 401);
-      }
-
-      // Valida hash se foi enviado
-      if (hash) {
-        if (hash !== professor.hash) {
-          const ip = req.ip || req.socket.remoteAddress || 'desconhecido';
-          try {
-            await supabase.from('logs_acesso').insert({
-              tenant_id: tenantId, professor: nome.trim(), unidade: tenantId, status: 'falha', ip,
-            });
-          } catch { console.warn('[audit] falha ao registrar log de acesso'); }
-          throw new AppError('Hash inválido. Faça login novamente pelo primeiro acesso.', 401);
-        }
-      } else {
-        // Fallback: login sem hash (dev mode) — permite acesso sem hash apenas em dev
-        if (process.env.NODE_ENV === 'production') {
-          throw new AppError('Hash obrigatório para login em produção.', 401);
-        }
-        console.warn('[auth] Login sem hash em modo dev — NÃO USE EM PRODUÇÃO');
-      }
-
-      // Registra log de auditoria
       const ip = req.ip || req.socket.remoteAddress || 'desconhecido';
-      try {
-        await supabase.from('logs_acesso').insert({
-          tenant_id: tenantId, professor: professor.nome, unidade: tenantId, status: 'sucesso', ip,
-        });
-      } catch { console.warn('[audit] falha ao registrar log de acesso'); }
 
-      // Gera JWT
-      const jwtPayload = {
-        professorId: professor.id,
-        tenantId: professor.tenant_id,
-        nome: professor.nome,
-      };
-
-      const token = jwt.sign(jwtPayload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+      const { professor, token } = await loginService(nome, hash, tenantId, ip);
 
       res.cookie('token', token, {
         httpOnly: true,
@@ -109,84 +31,13 @@ export class AuthController {
     }
   }
 
-  /**
-   * POST /auth/primeiro-acesso
-   * Cadastra um novo professor com upload de CSV.
-   */
   static async primeiroAcesso(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { nome } = req.body;
-      const csvFile = req.file; // Arquivo enviado via multer
+      const csvFile = req.file;
       const tenantId = req.tenantId!;
 
-      if (!nome || typeof nome !== 'string' || !nome.trim()) {
-        throw new AppError('Preencha o nome do professor', 400);
-      }
-
-      const professorNome = nome.trim();
-
-      // Verifica se já existe professor com esse nome
-      const { data: existingProfessor } = await supabase
-        .from('professores')
-        .select('id')
-        .eq('tenant_id', tenantId)
-        .eq('nome', professorNome)
-        .single();
-
-      if (existingProfessor) {
-        throw new AppError('Professor já cadastrado. Use o login normal.', 400);
-      }
-
-      // Busca IDs existentes para gerar ID único
-      const { data: existingProfessors } = await supabase
-        .from('professores')
-        .select('id')
-        .eq('tenant_id', tenantId);
-
-      const existingIds = ((existingProfessors || []) as { id: string }[]).map((p) => p.id);
-      const professorId = generateProfessorId(professorNome, existingIds);
-
-      // Gera hash
-      const salt = crypto.randomBytes(16).toString('hex');
-      const hash = generateHash(professorNome, tenantId, salt);
-
-      // Insere professor
-      const { data: newProfessor, error: insertError } = await supabase
-        .from('professores')
-        .insert({
-          id: professorId,
-          tenant_id: tenantId,
-          nome: professorNome,
-          hash: hash,
-        })
-        .select()
-        .single();
-
-      if (insertError || !newProfessor) {
-        console.error('[DEBUG PRIMEIRO ACESSO] insertError:', JSON.stringify(insertError));
-        throw new AppError(`Erro ao cadastrar professor: ${insertError?.message || 'erro desconhecido'}`, 500);
-      }
-
-      // Processa CSV se enviado
-      if (csvFile) {
-        try {
-          const result = await processCSVUpload(csvFile.buffer, newProfessor.id, tenantId);
-          console.info(`[primeiroAcesso] CSV processado: ${result.alunosOk} alunos, ${result.turmasOk} turmas`);
-        } catch (csvError: any) {
-          console.error('[primeiroAcesso] ERRO no CSV:', csvError.message);
-          // Nao interrompe o cadastro do professor, mas reporta o erro
-          throw new AppError(`Erro ao processar CSV: ${csvError.message}`, 400);
-        }
-      }
-
-      // Gera JWT
-      const jwtPayload = {
-        professorId: newProfessor.id,
-        tenantId: newProfessor.tenant_id,
-        nome: newProfessor.nome,
-      };
-
-      const token = jwt.sign(jwtPayload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+      const { professor, hash, token } = await primeiroAcessoService(nome, tenantId, csvFile?.buffer);
 
       res.cookie('token', token, {
         httpOnly: true,
@@ -197,9 +48,9 @@ export class AuthController {
 
       res.status(201).json({
         message: 'Primeiro acesso realizado com sucesso',
-        professorId: newProfessor.id,
-        nome: newProfessor.nome,
-        hash: newProfessor.hash,
+        professorId: professor.id,
+        nome: professor.nome,
+        hash: professor.hash,
         token,
       });
     } catch (error) {
@@ -207,12 +58,6 @@ export class AuthController {
     }
   }
 
-  /**
-   * GET /auth/clear-data (browser-friendly) ou DELETE /auth/clear-data
-   * Remove todos os alunos e turmas do tenant.
-   * GET: aceita tenantId via query string (ex: ?tenantId=bela-vista)
-   * DELETE: exige X-Tenant-ID header + X-Admin-Key
-   */
   static async clearData(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const tenantId = (req.query.tenantId as string) || req.tenantId!;
@@ -226,23 +71,12 @@ export class AuthController {
         throw new AppError('Tenant ID obrigatório (header X-Tenant-ID ou query ?tenantId=)', 400);
       }
 
-      const { error: errAlunos } = await supabase
-        .from('alunos')
-        .delete()
-        .eq('tenant_id', tenantId);
+      const result = await clearDataService(tenantId);
 
-      if (errAlunos) throw new AppError(`Erro ao limpar alunos: ${errAlunos.message}`, 500);
-
-      const { error: errTurmas } = await supabase
-        .from('turmas')
-        .delete()
-        .eq('tenant_id', tenantId);
-
-      if (errTurmas) throw new AppError(`Erro ao limpar turmas: ${errTurmas.message}`, 500);
-
-      const msg = `Dados do tenant "${tenantId}" limpos: alunos e turmas removidos.`;
-      console.info(`[clearData] ${msg}`);
-      res.json({ message: msg, alunos: true, turmas: true });
+      res.json({
+        message: `Dados do tenant "${tenantId}" limpos: alunos e turmas removidos.`,
+        ...result,
+      });
     } catch (error) {
       next(error);
     }
