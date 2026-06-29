@@ -7,6 +7,7 @@ const router = Router();
 
 router.use(tenantMiddleware, authMiddleware);
 
+router.get('/clima', ChamadasController.obterClima);
 router.get('/periodo', ChamadasController.listarPorPeriodo);
 router.get('/card-aula/:data', ChamadasController.obterCardAula);
 router.get('/logs-acesso', ChamadasController.obterLogsAcesso);

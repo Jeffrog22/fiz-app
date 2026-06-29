@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTenant } from '../hooks/useTenant';
+import { useDevLog } from '../hooks/useDevLog';
 import { getTenantId } from '../utils/tenant';
 
 const Login: React.FC = () => {
@@ -15,6 +16,7 @@ const Login: React.FC = () => {
   const [acessoRapido, setAcessoRapido] = useState<string[]>([]);
   const [adminMode, setAdminMode] = useState(false);
   const [limpando, setLimpando] = useState(false);
+  const { enabled: devEnabled, toggle: toggleDev } = useDevLog();
   const tenantId = getTenantId();
 
   useEffect(() => {
@@ -27,7 +29,7 @@ const Login: React.FC = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/alunos', { replace: true });
+      navigate('/home', { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
@@ -221,6 +223,17 @@ const Login: React.FC = () => {
               >
                 {limpando ? 'Limpando...' : 'Limpar (GET)'}
               </button>
+            </div>
+            <div className="pt-1">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={devEnabled}
+                  onChange={toggleDev}
+                  className="h-4 w-4 text-primary-600 border-gray-300 rounded"
+                />
+                <span className="text-xs text-yellow-700">Modo Dev (Debug)</span>
+              </label>
             </div>
           </div>
         )}

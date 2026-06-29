@@ -7,13 +7,14 @@ interface SidebarLink {
 }
 
 const links: SidebarLink[] = [
+  { to: '/home', label: 'In\u00edcio' },
   { to: '/chamadas', label: 'Chamadas' },
   { to: '/alunos', label: 'Alunos' },
   { to: '/turmas', label: 'Turmas' },
-  { to: '/relatorios', label: 'Relatórios' },
+  { to: '/relatorios', label: 'Relat\u00f3rios' },
   { to: '/vagas', label: 'Vagas' },
-  { to: '/exclusoes', label: 'Exclusões' },
-  { to: '/calendario', label: 'Calendário' },
+  { to: '/exclusoes', label: 'Exclus\u00f5es' },
+  { to: '/calendario', label: 'Calend\u00e1rio' },
 ];
 
 const Sidebar: React.FC = () => {

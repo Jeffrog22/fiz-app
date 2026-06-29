@@ -5,4 +5,6 @@ import tenantMiddleware from '../middleware/tenant';
 const router = Router();
 router.use(tenantMiddleware, authMiddleware);
 router.get('/frequencia', RelatoriosController.frequencia);
+router.get('/vagas', RelatoriosController.vagas);
+router.get('/cancelamentos', RelatoriosController.cancelamentos);
 export default router;

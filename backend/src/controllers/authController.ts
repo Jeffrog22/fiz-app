@@ -5,10 +5,12 @@ import { supabase } from '../services/supabaseClient';
 import { TenantRequest, Professor } from '../types';
 import { AppError } from '../middleware/errorHandler';
 import { generateProfessorId } from '../utils/idGenerator';
-import { validateProfessorNome } from '../utils/validators';
 import { processCSVUpload } from '../services/csvParser';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET obrigatório em produção');
+}
 const JWT_EXPIRES_IN: number = 86400; // 24h em segundos
 
 /**
@@ -27,7 +29,7 @@ export class AuthController {
    */
   static async login(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { nome } = req.body;
+      const { nome, hash } = req.body;
       const tenantId = req.tenantId!;
 
       if (!nome) {
@@ -43,12 +45,41 @@ export class AuthController {
         .single();
 
       if (error || !professor) {
+        const ip = req.ip || req.socket.remoteAddress || 'desconhecido';
+        try {
+          await supabase.from('logs_acesso').insert({
+            tenant_id: tenantId, professor: nome?.trim() || 'desconhecido', unidade: tenantId, status: 'falha', ip,
+          });
+        } catch { console.warn('[audit] falha ao registrar log de acesso'); }
         throw new AppError('Nenhum cadastro encontrado. Marque "Primeiro acesso".', 401);
       }
 
-      // Em produção, a validação de hash deve ser implementada
-      // Aqui estamos simplificando para permitir login com nome correto
-      // No futuro, o frontend enviará o hash e faremos a comparação
+      // Valida hash se foi enviado
+      if (hash) {
+        if (hash !== professor.hash) {
+          const ip = req.ip || req.socket.remoteAddress || 'desconhecido';
+          try {
+            await supabase.from('logs_acesso').insert({
+              tenant_id: tenantId, professor: nome.trim(), unidade: tenantId, status: 'falha', ip,
+            });
+          } catch { console.warn('[audit] falha ao registrar log de acesso'); }
+          throw new AppError('Hash inválido. Faça login novamente pelo primeiro acesso.', 401);
+        }
+      } else {
+        // Fallback: login sem hash (dev mode) — permite acesso sem hash apenas em dev
+        if (process.env.NODE_ENV === 'production') {
+          throw new AppError('Hash obrigatório para login em produção.', 401);
+        }
+        console.warn('[auth] Login sem hash em modo dev — NÃO USE EM PRODUÇÃO');
+      }
+
+      // Registra log de auditoria
+      const ip = req.ip || req.socket.remoteAddress || 'desconhecido';
+      try {
+        await supabase.from('logs_acesso').insert({
+          tenant_id: tenantId, professor: professor.nome, unidade: tenantId, status: 'sucesso', ip,
+        });
+      } catch { console.warn('[audit] falha ao registrar log de acesso'); }
 
       // Gera JWT
       const jwtPayload = {
@@ -70,6 +101,7 @@ export class AuthController {
         message: 'Login realizado com sucesso',
         professorId: professor.id,
         nome: professor.nome,
+        hash: professor.hash,
         token,
       });
     } catch (error) {
@@ -87,7 +119,9 @@ export class AuthController {
       const csvFile = req.file; // Arquivo enviado via multer
       const tenantId = req.tenantId!;
 
-      validateProfessorNome(req, res, () => {}); // Valida nome
+      if (!nome || typeof nome !== 'string' || !nome.trim()) {
+        throw new AppError('Preencha o nome do professor', 400);
+      }
 
       const professorNome = nome.trim();
 
@@ -165,6 +199,7 @@ export class AuthController {
         message: 'Primeiro acesso realizado com sucesso',
         professorId: newProfessor.id,
         nome: newProfessor.nome,
+        hash: newProfessor.hash,
         token,
       });
     } catch (error) {

@@ -25,3 +25,8 @@ cd frontend
 npm install
 cp .env.local.example .env.local  # ajuste a VITE_API_URL
 npm run dev
+
+# // De acordo com os docs: PRD.md, ARCHITECTURE.md, DEVELOPMENT.md, IMPLEMENTION_PLAN.md, CHANGELOG.md e SESSION.md. Verifique o que já foi feito, confira o e documente o que for necessário.
+# Informe sobre os próximos passos...
+
+

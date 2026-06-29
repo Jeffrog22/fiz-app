@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { supabase } from '../services/supabaseClient';
 import { TenantRequest, ChamadaLog } from '../types';
 import { AppError } from '../middleware/errorHandler';
+import { fetchWeather } from '../utils/weather';
 
 export class ChamadasController {
   static async listarPorData(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
@@ -285,6 +286,68 @@ export class ChamadasController {
       if (error) throw new AppError('Erro ao buscar CardAula', 500);
 
       res.json(registros && registros.length > 0 ? registros[0] : null);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async obterClima(_req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const data = await fetchWeather();
+
+      if (!data.ok || !data.raw) {
+        res.json({
+          ok: false,
+          temperatura: 26.0,
+          condicao: 'Parcialmente Nublado',
+          weatherCode: 2,
+        });
+        return;
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+      const daily = data.raw.daily;
+      if (!daily) {
+        res.json({
+          ok: false,
+          temperatura: 26.0,
+          condicao: 'Parcialmente Nublado',
+          weatherCode: 2,
+        });
+        return;
+      }
+
+      const todayIdx = daily.time.indexOf(today);
+      const idx = todayIdx >= 0 ? todayIdx : 0;
+
+      const weatherCode = daily.weather_code?.[idx] ?? 2;
+      const tempMax = daily.temperature_2m_max?.[idx];
+      const tempMin = daily.temperature_2m_min?.[idx];
+      const precipitacao = daily.precipitation_probability_max?.[idx] ?? 0;
+
+      const condicoes: Record<number, string> = {
+        0: 'C\u00e9u Limpo', 1: 'Principalmente Limpo',
+        2: 'Parcialmente Nublado', 3: 'Nublado',
+        45: 'N\u00e9voa Seca', 48: 'Nevoeiro/Geadas',
+        51: 'Chuvisco', 53: 'Chuvisco', 55: 'Chuvisco',
+        56: 'Chuvisco Congelante', 57: 'Chuvisco Congelante',
+        61: 'Chuva', 63: 'Chuva', 65: 'Chuva',
+        66: 'Chuva Congelante', 67: 'Chuva Congelante',
+        71: 'Neve', 73: 'Neve', 75: 'Neve',
+        77: 'Gr\u00e3os de Neve',
+        80: 'Pancadas de Chuva', 81: 'Pancadas de Chuva', 82: 'Pancadas de Chuva',
+        85: 'Pancadas de Neve', 86: 'Pancadas de Neve',
+        95: 'Tempestade', 96: 'Tempestade com Granizo', 99: 'Tempestade com Granizo',
+      };
+
+      res.json({
+        ok: true,
+        temperatura: tempMax ?? 26.0,
+        temperaturaMin: tempMin ?? 18.0,
+        weatherCode,
+        condicao: condicoes[weatherCode] || 'Desconhecido',
+        precipitacao,
+      });
     } catch (error) {
       next(error);
     }

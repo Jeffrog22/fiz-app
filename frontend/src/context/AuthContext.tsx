@@ -51,10 +51,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = useCallback(async (professorNome: string) => {
     setState(prev => ({ ...prev, loading: true }));
     try {
-      const response = await api.post('/auth/login', { nome: professorNome });
-      const { professorId, nome, token } = response.data;
-      
-      localStorage.setItem(`${getTenantId()}_professor`, JSON.stringify({ professorId, nome, token }));
+      const stored: any = JSON.parse(localStorage.getItem(`${getTenantId()}_professor`) || '{}');
+      const response = await api.post('/auth/login', { nome: professorNome, hash: stored?.hash });
+      const { professorId, nome, token, hash } = response.data;
+
+      localStorage.setItem(`${getTenantId()}_professor`, JSON.stringify({ professorId, nome, hash, token }));
       
       setState({
         isAuthenticated: true,
@@ -81,9 +82,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await api.post('/auth/primeiro-acesso', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      const { professorId, nome, token } = response.data;
+      const { professorId, nome, token, hash } = response.data;
 
-      localStorage.setItem(`${getTenantId()}_professor`, JSON.stringify({ professorId, nome, token }));
+      localStorage.setItem(`${getTenantId()}_professor`, JSON.stringify({ professorId, nome, hash, token }));
 
       setState({
         isAuthenticated: true,

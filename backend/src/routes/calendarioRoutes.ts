@@ -5,4 +5,8 @@ import tenantMiddleware from '../middleware/tenant';
 const router = Router();
 router.use(tenantMiddleware, authMiddleware);
 router.get('/', CalendarioController.listar);
+router.get('/periodo', CalendarioController.obterPeriodo);
+router.post('/periodo', CalendarioController.salvarPeriodo);
+router.post('/evento', CalendarioController.salvarEvento);
+router.delete('/evento/:id', CalendarioController.removerEvento);
 export default router;

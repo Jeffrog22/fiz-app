@@ -2,7 +2,10 @@ import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { TenantRequest, JwtPayload } from '../types';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET obrigatório em produção');
+}
 
 /**
  * Middleware de autenticação JWT.

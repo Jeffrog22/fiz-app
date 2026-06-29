@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { authMiddleware } from '../auth';
 
-const JWT_SECRET = 'dev-secret-change-in-production';
+const JWT_SECRET = 'dev-secret';
 
 function mockReqRes(headers: Record<string, string>, cookies?: Record<string, string>) {
   const req = {

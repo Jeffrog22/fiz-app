@@ -22,6 +22,10 @@ api.interceptors.request.use(
     const tenantId = getTenantId();
     config.headers['X-Tenant-ID'] = tenantId;
 
+    window.dispatchEvent(new CustomEvent('dev:api-request', {
+      detail: { method: config.method?.toUpperCase(), url: config.url },
+    }));
+
     const storedProfessor = localStorage.getItem(`${tenantId}_professor`);
     if (storedProfessor) {
       try {
@@ -43,8 +47,18 @@ api.interceptors.request.use(
 
 // Interceptor de resposta: tratamento de erros global
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    window.dispatchEvent(new CustomEvent('dev:api-response', {
+      detail: { method: response.config.method?.toUpperCase(), url: response.config.url, status: response.status },
+    }));
+    return response;
+  },
   (error) => {
+    if (error.config) {
+      window.dispatchEvent(new CustomEvent('dev:api-response', {
+        detail: { method: error.config.method?.toUpperCase(), url: error.config.url, status: error.response?.status || 0 },
+      }));
+    }
     if (error.response) {
       const { status, data } = error.response;
 
