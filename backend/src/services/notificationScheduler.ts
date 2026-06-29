@@ -2,8 +2,18 @@ import webpush from 'web-push';
 import { supabase } from './supabaseClient';
 import { getVapidKeys } from '../utils/vapidKeys';
 
-const vapidKeys = getVapidKeys();
-webpush.setVapidDetails(vapidKeys.subject, vapidKeys.publicKey, vapidKeys.privateKey);
+let initialized = false;
+
+function ensureInitialized() {
+  if (initialized) return;
+  const vapidKeys = getVapidKeys();
+  if (!vapidKeys.publicKey || !vapidKeys.privateKey) {
+    console.warn('[notifications] VAPID keys não configuradas — scheduler desativado');
+    return;
+  }
+  webpush.setVapidDetails(vapidKeys.subject, vapidKeys.publicKey, vapidKeys.privateKey);
+  initialized = true;
+}
 
 function getCurrentHorario(): string {
   const now = new Date();
@@ -94,6 +104,11 @@ async function enviarNotificacao(professorId: string) {
 }
 
 export function startNotificationScheduler() {
+  ensureInitialized();
+  if (!initialized) {
+    console.warn('[notifications] Scheduler não iniciado — VAPID keys ausentes');
+    return;
+  }
   console.log('[notifications] Iniciando scheduler de notificações (intervalo: 1 minuto)');
   processarNotificacoes();
   setInterval(processarNotificacoes, 60 * 1000);

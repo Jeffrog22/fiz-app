@@ -12,8 +12,8 @@ export function getVapidKeys() {
       throw new Error('VAPID_PUBLIC_KEY e VAPID_PRIVATE_KEY são obrigatórios em produção');
     }
     return {
-      publicKey: 'BKah9oWX0GtT4t0vE0k0vE0k0vE0k0vE0k0vE0k0vE',
-      privateKey: 'dev-vapid-private-key',
+      publicKey: 'BAX-0HcUSHb0c-0XVQEppIiQKDpX8zC2JL2xIs6yV0vv85jmSPMqcnJmobSzF9wSIrWjOYPYaKKv1ToL6SvtZzI',
+      privateKey: 'jp-I_Ao_OoMmAJS5Al6ABYZUzsQoL9vCe9m6jVzbry4',
       subject,
     };
   }
