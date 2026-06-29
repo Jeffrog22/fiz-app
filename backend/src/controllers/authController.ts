@@ -171,7 +171,7 @@ export class AuthController {
       if (csvFile) {
         try {
           const result = await processCSVUpload(csvFile.buffer, newProfessor.id, tenantId);
-          console.log(`[primeiroAcesso] CSV processado: ${result.alunosOk} alunos, ${result.turmasOk} turmas`);
+          console.info(`[primeiroAcesso] CSV processado: ${result.alunosOk} alunos, ${result.turmasOk} turmas`);
         } catch (csvError: any) {
           console.error('[primeiroAcesso] ERRO no CSV:', csvError.message);
           // Nao interrompe o cadastro do professor, mas reporta o erro
@@ -241,7 +241,7 @@ export class AuthController {
       if (errTurmas) throw new AppError(`Erro ao limpar turmas: ${errTurmas.message}`, 500);
 
       const msg = `Dados do tenant "${tenantId}" limpos: alunos e turmas removidos.`;
-      console.log(`[clearData] ${msg}`);
+      console.info(`[clearData] ${msg}`);
       res.json({ message: msg, alunos: true, turmas: true });
     } catch (error) {
       next(error);

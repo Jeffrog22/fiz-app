@@ -21,7 +21,6 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
 
   useEffect(() => {
     // Prefixa chaves do localStorage com o tenant para isolamento
-    console.log(`🏊 Tenant identificado: ${tenantNome} (${tenantId})`);
   }, [tenantId, tenantNome]);
 
   return (

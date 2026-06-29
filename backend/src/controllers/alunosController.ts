@@ -45,7 +45,7 @@ export class AlunosController {
         console.error('[alunos/listar] Supabase error:', error);
         throw new AppError(`Erro ao buscar alunos: ${error.message}`, 500);
       }
-      console.log(`[alunos/listar] ${data?.length || 0} alunos retornados para tenant ${tenantId}`);
+      console.info(`[alunos/listar] ${data?.length || 0} alunos retornados para tenant ${tenantId}`);
       res.json(data || []);
     } catch (error) {
       next(error);

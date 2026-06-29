@@ -8,6 +8,10 @@ export function formatarNomeMobile(nomeCompleto: string): string {
   const preposicoes = ['de', 'da', 'do', 'das', 'dos'];
 
   if (preposicoes.includes(penultimo.toLowerCase())) {
+    if (partes.length > 4) {
+      const segundo = partes[1];
+      return `${primeiro} ${segundo} ${penultimo} ${ultimo}`;
+    }
     return `${primeiro} ${penultimo} ${ultimo}`;
   }
 
@@ -55,7 +59,8 @@ export function mascaraHora(value: string): string {
 export function mascaraTelefone(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 11);
   if (digits.length <= 2) return `(${digits}`;
-  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
 }
 

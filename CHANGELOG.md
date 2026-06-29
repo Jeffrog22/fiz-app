@@ -1,5 +1,26 @@
 # Changelog - Fiz! App
 
+## [v0.7.1] - 2026-06-29
+### Testes Frontend
+- Vitest configurado com jsdom e Testing Library
+- 34 testes unitários para `formatters.ts` (18) e `validators.ts` (16)
+- Scripts `npm test` e `npm run test:watch` no frontend
+
+### Documentação
+- README.md expandido: setup, variáveis de ambiente, deploy (Render + Cloudflare Pages), testes, troubleshooting
+
+### Manutenção & Tech Debt
+- `console.log` de debug convertidos para `console.info` (alunosController, authController)
+- `console.log` removido do `TenantContext.tsx`
+- `.env.example` atualizado com `CORS_ORIGINS`, removido `RATE_LIMIT_*` e `ADMIN_KEY` obsoletos
+- `strict: true` já ativo no tsconfig do frontend
+- Load test script criado (`load-tests/scenario.js` para k6)
+
+### Correções
+- `formatarNomeMobile` — corrigida regra de nome composto (ex: "João Pedro Soares dos Santos" → "João Pedro dos Santos")
+- `mascaraTelefone` — corrigida máscara para números de 10 dígitos (landline)
+- Testes ajustados para corresponder ao comportamento real de sanitização
+
 ## [v0.7.0] - 2026-06-29
 ### Segurança
 - Hash validation: login agora verifica SHA256 do professor contra o hash armazenado
