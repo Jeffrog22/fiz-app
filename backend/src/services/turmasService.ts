@@ -48,7 +48,8 @@ export async function criarTurmaService(data: any, tenantId: string): Promise<an
 
   console.log('[DEBUG criarTurma] resultado:', JSON.stringify(result), 'erro:', error);
 
-  if (error || !result) throw new AppError('Erro ao criar turma', 500);
+  if (error) throw new AppError(`Erro ao criar turma: ${error.message}`, 500);
+  if (!result) throw new AppError('Erro ao criar turma: nenhum retorno do banco', 500);
   return result;
 }
 
@@ -77,7 +78,8 @@ export async function atualizarTurmaService(id: string, data: any, tenantId: str
 
   console.log('[DEBUG atualizarTurma] resultado:', JSON.stringify(result), 'erro:', error);
 
-  if (error || !result) throw new AppError('Erro ao atualizar turma', 500);
+  if (error) throw new AppError(`Erro ao atualizar turma: ${error.message}`, 500);
+  if (!result) throw new AppError('Erro ao atualizar turma: nenhum retorno do banco', 500);
   return result;
 }
 
