@@ -30,7 +30,7 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
   useEffect(() => {
     if (turma) {
       setLabel(turma.label);
-      setHorario(turma.horario);
+      setHorario(mascaraHora(turma.horario || ''));
       setNivel(turma.nivel || '');
       setCapacidade(turma.capacidade?.toString() || '');
       setFaixaEtaria(turma.faixa_etaria || '');
