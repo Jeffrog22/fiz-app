@@ -45,12 +45,12 @@ const Vagas: React.FC = () => {
           type="text"
           value={nivel}
           onChange={(e) => setNivel(e.target.value)}
-          placeholder="Filtrar por n\u00edvel"
+          placeholder="Filtrar por nível"
           className="text-sm px-3 py-1.5 border border-gray-300 rounded"
         />
         <select value={periodo} onChange={(e) => setPeriodo(e.target.value)} className="text-sm px-2 py-1.5 border border-gray-300 rounded">
-          <option value="">Todos os per\u00edodos</option>
-          <option value="manha">Manh\u00e3</option>
+          <option value="">Todos os períodos</option>
+          <option value="manha">Manhã</option>
           <option value="tarde">Tarde</option>
         </select>
         <button onClick={carregar} className="text-sm px-3 py-1.5 bg-primary-600 text-white rounded hover:bg-primary-700 transition">
@@ -64,16 +64,16 @@ const Vagas: React.FC = () => {
             {[
               { label: 'Capacidade Total', value: data.totais.capacidade, cor: 'text-blue-600' },
               { label: 'Alunos Ativos', value: data.totais.ativos, cor: 'text-green-600' },
-              { label: 'Vagas Dispon\u00edveis', value: data.totais.vagas, cor: data.totais.vagas > 0 ? 'text-primary-600' : 'text-gray-400' },
+              { label: 'Vagas Disponíveis', value: data.totais.vagas, cor: data.totais.vagas > 0 ? 'text-primary-600' : 'text-gray-400' },
               { label: 'Excedente', value: data.totais.excedente, cor: data.totais.excedente > 0 ? 'text-red-600' : 'text-gray-400' },
             ].map((card) => (
               <div
                 key={card.label}
                 className={`bg-white rounded-lg border p-4 shadow-sm cursor-pointer transition hover:shadow-md ${
-                  card.value > 0 && card.label === 'Vagas Dispon\u00edveis' ? 'border-primary-200' : 'border-gray-200'
+                  card.value > 0 && card.label === 'Vagas Disponíveis' ? 'border-primary-200' : 'border-gray-200'
                 }`}
                 onClick={() => {
-                  if (card.label === 'Vagas Dispon\u00edveis' && data?.turmas) {
+                  if (card.label === 'Vagas Disponíveis' && data?.turmas) {
                     setNivel('');
                     setPeriodo('');
                   }
@@ -132,10 +132,10 @@ const Vagas: React.FC = () => {
                         <div className="text-xs text-gray-500 space-y-1">
                           <p>Turma: <strong>{turma.label}</strong></p>
                           <p>Professor: <strong>{turma.professor}</strong></p>
-                          <p>N\u00edvel: <strong>{turma.nivel}</strong></p>
-                          <p>Hor\u00e1rio: <strong>{turma.horario?.substring(0, 5)}</strong></p>
-                          <p>Lota\u00e7\u00e3o: <strong>{turma.alunos_ativos}/{turma.capacidade}</strong></p>
-                          {turma.vagas > 0 && <p className="text-blue-600">Vagas dispon\u00edveis: <strong>{turma.vagas}</strong></p>}
+                          <p>Nível: <strong>{turma.nivel}</strong></p>
+                          <p>Horário: <strong>{turma.horario?.substring(0, 5)}</strong></p>
+                          <p>Lotação: <strong>{turma.alunos_ativos}/{turma.capacidade}</strong></p>
+                          {turma.vagas > 0 && <p className="text-blue-600">Vagas disponíveis: <strong>{turma.vagas}</strong></p>}
                           {turma.excedente > 0 && <p className="text-red-600">Excedente: <strong>{turma.excedente}</strong></p>}
                         </div>
                       </div>

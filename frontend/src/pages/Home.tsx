@@ -13,9 +13,9 @@ const menuItems: MenuItem[] = [
   { label: 'Chamadas', path: '/chamadas', icon: '\uD83D\uDCDD', color: 'bg-blue-50 hover:bg-blue-100 border-blue-200', group: 'main' },
   { label: 'Alunos', path: '/alunos', icon: '\uD83D\uDC65', color: 'bg-green-50 hover:bg-green-100 border-green-200', group: 'main' },
   { label: 'Turmas', path: '/turmas', icon: '\uD83D\uDCDA', color: 'bg-purple-50 hover:bg-purple-100 border-purple-200', group: 'main' },
-  { label: 'Calend\u00e1rio', path: '/calendario', icon: '\uD83D\uDCC5', color: 'bg-orange-50 hover:bg-orange-100 border-orange-200', group: 'more' },
-  { label: 'Exclus\u00f5es', path: '/exclusoes', icon: '\uD83D\uDDD1\uFE0F', color: 'bg-red-50 hover:bg-red-100 border-red-200', group: 'more' },
-  { label: 'Relat\u00f3rios', path: '/relatorios', icon: '\uD83D\uDCCA', color: 'bg-teal-50 hover:bg-teal-100 border-teal-200', group: 'more' },
+  { label: 'Calendário', path: '/calendario', icon: '\uD83D\uDCC5', color: 'bg-orange-50 hover:bg-orange-100 border-orange-200', group: 'more' },
+  { label: 'Exclusões', path: '/exclusoes', icon: '\uD83D\uDDD1\uFE0F', color: 'bg-red-50 hover:bg-red-100 border-red-200', group: 'more' },
+  { label: 'Relatórios', path: '/relatorios', icon: '\uD83D\uDCCA', color: 'bg-teal-50 hover:bg-teal-100 border-teal-200', group: 'more' },
   { label: 'Vagas', path: '/vagas', icon: '\uD83D\uDCE6', color: 'bg-cyan-50 hover:bg-cyan-100 border-cyan-200', group: 'more' },
 ];
 
@@ -43,7 +43,7 @@ const Home: React.FC = () => {
       </div>
 
       <div>
-        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Mais Op\u00e7\u00f5es</h3>
+        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Mais Opções</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {moreItems.map((item) => (
             <button

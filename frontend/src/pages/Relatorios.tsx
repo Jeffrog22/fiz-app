@@ -124,7 +124,7 @@ const Relatorios: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-gray-800">Relat\u00f3rios</h1>
+      <h1 className="text-2xl font-bold text-gray-800">Relatórios</h1>
 
       <div className="flex gap-2 flex-wrap items-center justify-between">
         <div className="flex gap-2 flex-wrap">
@@ -136,7 +136,7 @@ const Relatorios: React.FC = () => {
                 tab === t ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              {t === 'frequencia' ? 'Frequ\u00eancia' : t === 'cancelamentos' ? 'Cancelamentos' : 'Hist\u00f3rico'}
+              {t === 'frequencia' ? 'Frequência' : t === 'cancelamentos' ? 'Cancelamentos' : 'Histórico'}
             </button>
           ))}
         </div>
@@ -166,7 +166,7 @@ const Relatorios: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
               { label: 'Total de Registros', value: freqData.resumo.totalRegistros, cor: 'text-blue-500' },
-              { label: 'Presen\u00e7as', value: freqData.resumo.presentes, cor: 'text-green-500' },
+              { label: 'Presenças', value: freqData.resumo.presentes, cor: 'text-green-500' },
               { label: 'Faltas', value: freqData.resumo.faltas, cor: 'text-red-500' },
               { label: 'Justificados', value: freqData.resumo.justificados, cor: 'text-yellow-500' },
             ].map((card) => (
@@ -178,7 +178,7 @@ const Relatorios: React.FC = () => {
           </div>
 
           <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribui\u00e7\u00e3o de Presen\u00e7a</h3>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribuição de Presença</h3>
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
@@ -198,7 +198,7 @@ const Relatorios: React.FC = () => {
           </div>
 
           <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Frequ\u00eancia por N\u00edvel</h3>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Frequência por Nível</h3>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={Object.entries(freqData.porNivel).map(([nivel, dados]) => ({ name: nivel, presentes: dados.presentes, faltas: dados.total - dados.presentes }))}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -215,7 +215,7 @@ const Relatorios: React.FC = () => {
           {rankings && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Top 5 - Maior Presen\u00e7a</h3>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Top 5 - Maior Presença</h3>
                 <div className="space-y-2">
                   {rankings.topPresenca.map((item, i) => (
                     <div key={i} className="flex items-center justify-between text-sm">
@@ -241,7 +241,7 @@ const Relatorios: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Por Per\u00edodo</h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Por Período</h3>
               <div className="space-y-2">
                 {Object.entries(freqData.porHorario).map(([periodo, dados]) => (
                   <div key={periodo}>
@@ -279,7 +279,7 @@ const Relatorios: React.FC = () => {
             {[
               { label: 'Total Cancelamentos', value: cancelData.total, cor: 'text-red-500' },
               { label: 'Motivos Distintos', value: Object.keys(cancelData.porMotivo).length, cor: 'text-orange-500' },
-              { label: 'N\u00edveis Afetados', value: Object.keys(cancelData.porNivel).length, cor: 'text-blue-500' },
+              { label: 'Níveis Afetados', value: Object.keys(cancelData.porNivel).length, cor: 'text-blue-500' },
               { label: 'Meses com Registro', value: Object.keys(cancelData.porMes).length, cor: 'text-purple-500' },
             ].map((card) => (
               <div key={card.label} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
@@ -291,7 +291,7 @@ const Relatorios: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribui\u00e7\u00e3o por Motivo</h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribuição por Motivo</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
                   <Pie
@@ -312,7 +312,7 @@ const Relatorios: React.FC = () => {
             </div>
 
             <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Evolu\u00e7\u00e3o Mensal</h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Evolução Mensal</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={Object.entries(cancelData.porMes).sort(([a], [b]) => a.localeCompare(b)).map(([mesKey, qtd]) => ({ name: mesKey, cancelamentos: qtd }))}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -350,7 +350,7 @@ const Relatorios: React.FC = () => {
       {tab === 'historico' && (
         <div className="space-y-4">
           <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Hist\u00f3rico do Aluno</h3>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Histórico do Aluno</h3>
             <div className="flex gap-2 mb-4">
               <input
                 type="text"
@@ -370,7 +370,7 @@ const Relatorios: React.FC = () => {
                     className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition flex justify-between items-center"
                   >
                     <span className="font-medium text-gray-800">{aluno.nome}</span>
-                    <span className="text-xs text-gray-400">Ver hist\u00f3rico \u2192</span>
+                    <span className="text-xs text-gray-400">Ver histórico →</span>
                   </button>
                 ))}
                 {alunosFiltrados.length === 0 && (
@@ -391,7 +391,7 @@ const Relatorios: React.FC = () => {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       {[
                         { label: 'Total de Aulas', value: freqData?.resumo?.totalRegistros || 0, cor: 'text-blue-600' },
-                        { label: 'Presen\u00e7as', value: freqData?.resumo?.presentes || 0, cor: 'text-green-600' },
+                        { label: 'Presenças', value: freqData?.resumo?.presentes || 0, cor: 'text-green-600' },
                         { label: 'Faltas', value: freqData?.resumo?.faltas || 0, cor: 'text-red-600' },
                         { label: 'Justificativas', value: freqData?.resumo?.justificados || 0, cor: 'text-yellow-600' },
                       ].map((card) => (
@@ -417,7 +417,7 @@ const Relatorios: React.FC = () => {
                     </div>
 
                     <div className="bg-gray-50 rounded p-4">
-                      <p className="text-sm font-medium text-gray-700 mb-3">Linha do Tempo de Perman\u00eancia</p>
+                      <p className="text-sm font-medium text-gray-700 mb-3">Linha do Tempo de Permanência</p>
                       <div className="space-y-3">
                         {Object.entries(freqData?.porNivel || {}).map(([nivel, dados], i) => (
                           <div key={nivel} className="flex gap-3">
@@ -430,13 +430,13 @@ const Relatorios: React.FC = () => {
                             <div className="flex-1 pb-3">
                               <p className="text-sm font-medium text-gray-800">{nivel}</p>
                               <p className="text-xs text-gray-500">
-                                Presen\u00e7as: {dados.presentes}/{dados.total} ({calcPercentual(dados.presentes, dados.total)}%)
+                                Presenças: {dados.presentes}/{dados.total} ({calcPercentual(dados.presentes, dados.total)}%)
                               </p>
                             </div>
                           </div>
                         ))}
                         {(!freqData?.porNivel || Object.keys(freqData.porNivel).length === 0) && (
-                          <p className="text-xs text-gray-400">Nenhum dado de n\u00edvel dispon\u00edvel para este per\u00edodo.</p>
+                          <p className="text-xs text-gray-400">Nenhum dado de nível disponível para este período.</p>
                         )}
                       </div>
                     </div>
@@ -447,7 +447,7 @@ const Relatorios: React.FC = () => {
 
             {!buscaHistorico && !alunoSelecionado && (
               <p className="text-sm text-gray-400 text-center py-4">
-                Digite o nome de um aluno para consultar o hist\u00f3rico completo de presen\u00e7as e perman\u00eancia.
+                Digite o nome de um aluno para consultar o histórico completo de presenças e permanência.
               </p>
             )}
           </div>
