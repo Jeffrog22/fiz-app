@@ -74,9 +74,14 @@ psql -h localhost -U postgres -d fizapp -f database/init.sql
 
 ### Frontend (Cloudflare Pages)
 1. Conecte o repositório
-2. Build command: `cd frontend && npm install && npm run build`
-3. Build output: `frontend/dist`
-4. Defina `VITE_API_URL` apontando para o backend em produção
+2. Root directory: `/` (padrão)
+3. Build command: `cd frontend && npm run build`
+4. Build output: `frontend/dist`
+5. Defina `VITE_API_URL` apontando para o backend em produção
+
+> O Cloudflare Pages v2 executa `npm ci` automaticamente na raiz.
+> O `workspaces: ["frontend"]` no `package.json` raiz garante que as
+> dependências do frontend sejam instaladas.
 
 ## Testes
 

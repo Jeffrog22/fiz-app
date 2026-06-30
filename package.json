@@ -1,7 +1,9 @@
 {
   "name": "fiz-app",
   "version": "1.0.0",
+  "private": true,
   "description": "Aplicativo de lista de chamada para aulas de natação. Sistema de gestão de chamadas para piscinas de natação, unificando 4 unidades (Bela Vista, São Matheus, Vila e Parque) em uma única arquitetura multi-tenant.",
+  "workspaces": ["frontend"],
   "scripts": {
     "install:backend": "cd backend && npm install",
     "install:frontend": "cd frontend && npm install",
