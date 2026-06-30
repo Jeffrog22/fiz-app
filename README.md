@@ -126,6 +126,36 @@ fiz-app/
 └── CHANGELOG.md           # Histórico de versões
 ```
 
+## Migrações
+
+### 001 — Corrigir tipo da coluna `professor_id` (UUID → TEXT)
+
+Se ao criar/editar turmas com professor aparecer o erro:
+```
+invalid input syntax for type uuid: "jef"
+```
+
+Execute no SQL Editor do Supabase:
+
+```sql
+-- database/migration-001-fix-professor-id-type.sql
+DO $$ DECLARE fk_name TEXT; BEGIN
+  SELECT constraint_name INTO fk_name FROM information_schema.table_constraints
+  WHERE table_name = 'turmas' AND constraint_type = 'FOREIGN KEY';
+  IF fk_name IS NOT NULL THEN
+    EXECUTE 'ALTER TABLE turmas DROP CONSTRAINT ' || fk_name;
+  END IF;
+END $$;
+
+ALTER TABLE turmas ALTER COLUMN professor_id TYPE TEXT USING professor_id::TEXT;
+
+ALTER TABLE turmas ADD CONSTRAINT turmas_professor_id_fkey
+  FOREIGN KEY (professor_id) REFERENCES professores(id) ON DELETE SET NULL;
+
+UPDATE turmas SET professor_id = NULL
+WHERE professor_id IS NOT NULL AND professor_id NOT IN (SELECT id FROM professores);
+```
+
 ## Troubleshooting
 
 ### Erro: `JWT_SECRET not configured for production`
