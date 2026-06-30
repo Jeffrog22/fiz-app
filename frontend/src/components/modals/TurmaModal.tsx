@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Turma } from '../../types';
+import { mascaraHora } from '../../utils/formatters';
 
 interface TurmaModalProps {
   open: boolean;
@@ -77,9 +78,12 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
             <label className="text-sm font-medium text-gray-600">Horário</label>
             <input
               required
-              type="time"
+              type="text"
+              inputMode="numeric"
+              placeholder="HH:MM"
               value={horario}
-              onChange={(e) => setHorario(e.target.value)}
+              onChange={(e) => setHorario(mascaraHora(e.target.value))}
+              maxLength={5}
               className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>

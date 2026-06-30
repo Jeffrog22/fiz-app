@@ -22,6 +22,15 @@ interface TurmaRow {
   faixa_etaria?: string;
 }
 
+function normalizarGenero(valor: string | undefined | null): string | null {
+  if (!valor) return null;
+  const v = valor.toLowerCase().trim().replace(/[^a-zà-ÿ]/g, '');
+  if (v.includes('nao') || v.includes('não')) return 'nao-binario';
+  if (v.startsWith('masculin') || v === 'm') return 'masculino';
+  if (v.startsWith('feminin') || v === 'f') return 'feminino';
+  return v;
+}
+
 async function inserirAlunos(
   alunos: AlunoRow[],
   tenantId: string,
@@ -32,7 +41,7 @@ async function inserirAlunos(
     tenant_id: tenantId,
     nome: a.nome.trim(),
     data_nascimento: a.data_nascimento || null,
-    genero: a.genero || null,
+    genero: normalizarGenero(a.genero),
     contato: a.contato || null,
     ativo: a.ativo !== undefined ? a.ativo : true,
     par_q: a.par_q ?? null,
@@ -161,13 +170,13 @@ export function parseCSV(
         alunos.push({
           nome,
           data_nascimento: normalizarData(getValor(row, 'data_nascimento', 'Data de Nascimento', 'DataNascimento', 'nascimento', 'Nascimento')),
-          genero: getValor(row, 'genero', 'Genero', 'genero', 'Genero'),
+          genero: getValor(row, 'genero', 'Genero', 'gênero', 'Gênero', 'GENERO'),
           contato: getValor(row, 'contato', 'Contato', 'telefone', 'Telefone', 'celular', 'Celular'),
           ativo: true,
           par_q: parQStr ? ['sim', 's', 'true', '1', 'yes'].includes(parQStr.toLowerCase()) : undefined,
           atestado_medico: atestadoStr ? ['sim', 's', 'true', '1', 'yes'].includes(atestadoStr.toLowerCase()) : undefined,
           data_atestado: normalizarData(getValor(row, 'data_atestado', 'Data Atestado', 'data_atestestado', 'Data do Atestado', 'data_atestado')),
-          nivel: getValor(row, 'nivel', 'Nivel', 'nivel'),
+          nivel: getValor(row, 'nivel', 'Nivel', 'nível', 'Nível'),
         });
       }
     }

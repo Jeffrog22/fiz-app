@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
 import type { Aluno, Turma } from '../../types';
+import { mascaraTelefone, mascaraData, desmascarar, formatDateISO, formatDateBR } from '../../utils/formatters';
 
 interface AlunoModalProps {
   open: boolean;
@@ -17,6 +18,14 @@ function calcularIdade(dataNascimento?: string): number | null {
   const mes = hoje.getMonth() - nasc.getMonth();
   if (mes < 0 || (mes === 0 && hoje.getDate() < nasc.getDate())) idade--;
   return idade;
+}
+
+function normalizarGenero(valor: string): string {
+  const v = valor.toLowerCase().trim().replace(/[^a-zà-ÿ]/g, '');
+  if (v.includes('nao') || v.includes('não')) return 'nao-binario';
+  if (v.startsWith('masculin') || v === 'm') return 'masculino';
+  if (v.startsWith('feminin') || v === 'f') return 'feminino';
+  return v;
 }
 
 function calcularCategoria(idade: number | null): string {
@@ -61,13 +70,13 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, onSave, onClose })
   useEffect(() => {
     if (aluno) {
       setNome(aluno.nome);
-      setDataNascimento(aluno.data_nascimento || '');
-      setGenero(aluno.genero || '');
+      setDataNascimento(aluno.data_nascimento ? formatDateBR(aluno.data_nascimento) : '');
+      setGenero(normalizarGenero(aluno.genero || ''));
       setContato(aluno.contato || '');
       setAtivo(aluno.ativo);
       setParQ(aluno.par_q === true ? 'sim' : aluno.par_q === false ? 'nao' : '');
       setAtestadoMedico(aluno.atestado_medico === true);
-      setDataAtestado(aluno.data_atestado || '');
+      setDataAtestado(aluno.data_atestado ? formatDateBR(aluno.data_atestado) : '');
       setTurmaId(aluno.turma_id || '');
       setNivel(aluno.nivel || '');
     } else {
@@ -90,13 +99,13 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, onSave, onClose })
     e.preventDefault();
     onSave({
       nome,
-      data_nascimento: dataNascimento || undefined,
-      genero: genero || undefined,
-      contato: contato || undefined,
+      data_nascimento: dataNascimento ? formatDateISO(dataNascimento) : undefined,
+      genero: normalizarGenero(genero || '') || undefined,
+      contato: contato ? desmascarar(contato) : undefined,
       ativo,
       par_q: parQ === 'sim' ? true : parQ === 'nao' ? false : undefined,
       atestado_medico: atestadoMedico || undefined,
-      data_atestado: dataAtestado || undefined,
+      data_atestado: dataAtestado ? formatDateISO(dataAtestado) : undefined,
       turma_id: turmaId || undefined,
       nivel: nivel || undefined,
     });
@@ -119,7 +128,9 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, onSave, onClose })
 
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-600">Data de Nascimento</label>
-            <input type="date" value={dataNascimento} onChange={(e) => setDataNascimento(e.target.value)}
+            <input type="text" inputMode="numeric" placeholder="dd/mm/aaaa"
+              value={dataNascimento} onChange={(e) => setDataNascimento(mascaraData(e.target.value))}
+              maxLength={10}
               className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
             {idade !== null && <span className="text-xs text-gray-400 mt-0.5">{idade} anos</span>}
           </div>
@@ -138,8 +149,8 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, onSave, onClose })
 
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-600">Contato</label>
-              <input value={contato} onChange={(e) => setContato(e.target.value)}
-                placeholder="(11) 99999-9999"
+              <input value={contato} onChange={(e) => setContato(mascaraTelefone(e.target.value))}
+                placeholder="(11) 99999-9999" maxLength={16}
                 className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
             </div>
           </div>
@@ -168,16 +179,10 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, onSave, onClose })
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-600">Nivel</label>
-            <select value={nivel} onChange={(e) => setNivel(e.target.value)}
-              className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
-              <option value="">Selecione</option>
-              <option value="Iniciacao">Iniciacao</option>
-              <option value="Basico">Basico</option>
-              <option value="Intermediario">Intermediario</option>
-              <option value="Avancado">Avancado</option>
-              <option value="Adaptacao">Adaptacao</option>
-            </select>
+            <label className="text-sm font-medium text-gray-600">Nível</label>
+            <p className="px-3 py-1.5 border border-gray-200 rounded-md text-sm bg-gray-50 text-gray-700">
+              {nivel || '-'}
+            </p>
           </div>
 
           <div className="flex flex-col gap-1">
