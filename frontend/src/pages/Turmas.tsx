@@ -33,6 +33,7 @@ const Turmas: React.FC = () => {
 
   const handleSave = async (data: Partial<Turma>) => {
     try {
+      console.log('[DEBUG handleSave] método:', editando ? 'PUT' : 'POST', 'payload:', JSON.stringify(data));
       if (editando) {
         await api.put(`/turmas/${editando.id}`, data);
       } else {
