@@ -14,6 +14,7 @@ import exclusoesRoutes from './routes/exclusoesRoutes';
 import relatoriosRoutes from './routes/relatoriosRoutes';
 import vagasRoutes from './routes/vagasRoutes';
 import notificacoesRoutes from './routes/notificacoesRoutes';
+import professoresRoutes from './routes/professoresRoutes';
 
 dotenv.config();
 
@@ -51,6 +52,7 @@ app.use('/api/exclusoes', exclusoesRoutes);
 app.use('/api/relatorios', relatoriosRoutes);
 app.use('/api/vagas', vagasRoutes);
 app.use('/api/notificacoes', notificacoesRoutes);
+app.use('/api/professores', professoresRoutes);
 
 app.get('/health', (_req, res) => {
   res.json({

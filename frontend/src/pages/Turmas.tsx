@@ -14,14 +14,16 @@ const Turmas: React.FC = () => {
   const carregar = useCallback(async () => {
     setCarregando(true);
     try {
-      const [resTurmas, resProf] = await Promise.all([
-        api.get('/turmas'),
-        api.get('/professores'),
-      ]);
+      const resTurmas = await api.get('/turmas');
       setTurmas(resTurmas.data);
-      setProfessores(resProf.data);
     } catch (err) {
       console.error('Erro ao carregar turmas', err);
+    }
+    try {
+      const resProf = await api.get('/professores');
+      setProfessores(resProf.data);
+    } catch (err) {
+      console.error('Erro ao carregar professores', err);
     } finally {
       setCarregando(false);
     }
@@ -39,8 +41,10 @@ const Turmas: React.FC = () => {
       setModalOpen(false);
       setEditando(null);
       await carregar();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao salvar turma', err);
+      const msg = err.response?.data?.error || 'Erro ao salvar turma';
+      alert(msg);
     }
   };
 
