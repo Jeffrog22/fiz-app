@@ -1,5 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import api from '../utils/api';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, LineChart, Line, Legend,
+} from 'recharts';
 
 interface FrequenciaData {
   resumo: { totalRegistros: number; presentes: number; faltas: number; justificados: number };
@@ -17,6 +21,8 @@ interface CancelamentoData {
 }
 
 type Tab = 'frequencia' | 'cancelamentos' | 'historico';
+
+const CORES_PIE = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'];
 
 function calcPercentual(parte: number, total: number): string {
   if (total === 0) return '0';
@@ -39,6 +45,11 @@ const Relatorios: React.FC = () => {
   const [mes, setMes] = useState(() => String(new Date().getMonth() + 1).padStart(2, '0'));
   const [ano, setAno] = useState(String(new Date().getFullYear()));
 
+  const [buscaHistorico, setBuscaHistorico] = useState('');
+  const [alunosLista, setAlunosLista] = useState<any[]>([]);
+  const [alunoSelecionado, setAlunoSelecionado] = useState<any>(null);
+  const [carregandoHistorico, setCarregandoHistorico] = useState(false);
+
   const carregarFrequencia = useCallback(async () => {
     try {
       const res = await api.get(`/relatorios/frequencia?mes=${mes}&ano=${ano}`);
@@ -53,8 +64,16 @@ const Relatorios: React.FC = () => {
     } catch { setCancelData(null); }
   }, [mes, ano]);
 
+  const carregarAlunos = useCallback(async () => {
+    try {
+      const res = await api.get('/alunos');
+      setAlunosLista(res.data);
+    } catch { setAlunosLista([]); }
+  }, []);
+
   useEffect(() => { if (tab === 'frequencia') carregarFrequencia(); }, [tab, carregarFrequencia]);
   useEffect(() => { if (tab === 'cancelamentos') carregarCancelamentos(); }, [tab, carregarCancelamentos]);
+  useEffect(() => { if (tab === 'historico') carregarAlunos(); }, [tab, carregarAlunos]);
 
   const exportCSV = () => {
     if (!cancelData) return;
@@ -70,6 +89,38 @@ const Relatorios: React.FC = () => {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  const alunosFiltrados = alunosLista.filter((a: any) =>
+    a.nome.toLowerCase().includes(buscaHistorico.toLowerCase())
+  );
+
+  const handleVerHistorico = async (aluno: any) => {
+    setCarregandoHistorico(true);
+    setAlunoSelecionado(aluno);
+    try {
+      const res = await api.get(`/relatorios/frequencia?mes=${mes}&ano=${ano}`);
+      setFreqData(res.data);
+    } catch { /* ignore */ }
+    setCarregandoHistorico(false);
+  };
+
+  const rankings = (() => {
+    if (!freqData) return null;
+    const alunosRank: { nome: string; presencas: number; faltas: number; total: number }[] = [];
+    const nomes = Object.keys(freqData.porProfessor);
+    nomes.forEach((nome) => {
+      const dados = freqData.porProfessor[nome];
+      alunosRank.push({
+        nome,
+        presencas: dados.presentes,
+        faltas: dados.total - dados.presentes,
+        total: dados.total,
+      });
+    });
+    const topPresenca = [...alunosRank].sort((a, b) => b.presencas - a.presencas).slice(0, 5);
+    const topFaltas = [...alunosRank].sort((a, b) => b.faltas - a.faltas).slice(0, 5);
+    return { topPresenca, topFaltas };
+  })();
 
   return (
     <div className="space-y-4">
@@ -127,19 +178,66 @@ const Relatorios: React.FC = () => {
           </div>
 
           <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Frequ\u00eancia por N\u00edvel</h3>
-            <div className="space-y-2">
-              {Object.entries(freqData.porNivel).map(([nivel, dados]) => (
-                <div key={nivel}>
-                  <div className="flex justify-between text-xs text-gray-600 mb-0.5">
-                    <span>{nivel}</span>
-                    <span>{dados.presentes}/{dados.total} ({calcPercentual(dados.presentes, dados.total)}%)</span>
-                  </div>
-                  <BarraProgresso valor={dados.presentes} max={dados.total} cor="bg-blue-500" />
-                </div>
-              ))}
-            </div>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribui\u00e7\u00e3o de Presen\u00e7a</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: 'Presentes', value: freqData.resumo.presentes },
+                    { name: 'Faltas', value: freqData.resumo.faltas },
+                    { name: 'Justificados', value: freqData.resumo.justificados },
+                  ]}
+                  cx="50%" cy="50%" outerRadius={80} dataKey="value"
+                  label={({ name, percent }: any) => `${name || ''} ${((percent || 0) * 100).toFixed(0)}%`}
+                >
+                  {[0, 1, 2].map((i) => <Cell key={i} fill={CORES_PIE[i]} />)}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Frequ\u00eancia por N\u00edvel</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={Object.entries(freqData.porNivel).map(([nivel, dados]) => ({ name: nivel, presentes: dados.presentes, faltas: dados.total - dados.presentes }))}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="presentes" fill="#10B981" name="Presentes" />
+                <Bar dataKey="faltas" fill="#EF4444" name="Faltas" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {rankings && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Top 5 - Maior Presen\u00e7a</h3>
+                <div className="space-y-2">
+                  {rankings.topPresenca.map((item, i) => (
+                    <div key={i} className="flex items-center justify-between text-sm">
+                      <span className="text-gray-700">{i + 1}. {item.nome}</span>
+                      <span className="text-green-600 font-medium">{item.presencas}/{item.total} ({calcPercentual(item.presencas, item.total)}%)</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Top 5 - Mais Faltas</h3>
+                <div className="space-y-2">
+                  {rankings.topFaltas.map((item, i) => (
+                    <div key={i} className="flex items-center justify-between text-sm">
+                      <span className="text-gray-700">{i + 1}. {item.nome}</span>
+                      <span className="text-red-600 font-medium">{item.faltas} faltas</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
@@ -193,53 +291,166 @@ const Relatorios: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Por Motivo</h3>
-              <div className="space-y-2">
-                {Object.entries(cancelData.porMotivo)
-                  .sort(([, a], [, b]) => b - a)
-                  .map(([motivo, qtd]) => {
-                    const max = Math.max(1, ...Object.values(cancelData.porMotivo));
-                    return (
-                      <div key={motivo}>
-                        <div className="flex justify-between text-xs text-gray-600 mb-0.5">
-                          <span className="capitalize">{motivo}</span>
-                          <span>{qtd}</span>
-                        </div>
-                        <BarraProgresso valor={qtd} max={max} cor="bg-red-400" />
-                      </div>
-                    );
-                  })}
-              </div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribui\u00e7\u00e3o por Motivo</h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={Object.entries(cancelData.porMotivo)
+                      .sort(([, a], [, b]) => b - a)
+                      .slice(0, 6)
+                      .map(([motivo, qtd], i) => ({ name: motivo, value: qtd, fill: CORES_PIE[i % CORES_PIE.length] }))}
+                    cx="50%" cy="50%" outerRadius={80} dataKey="value"
+                    label={({ name, percent }: any) => `${name || ''} (${((percent || 0) * 100).toFixed(0)}%)`}
+                  >
+                    {Object.entries(cancelData.porMotivo).slice(0, 6).map((_, i) => (
+                      <Cell key={i} fill={CORES_PIE[i % CORES_PIE.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
 
             <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Evolu\u00e7\u00e3o Mensal</h3>
-              <div className="space-y-2">
-                {Object.entries(cancelData.porMes)
-                  .sort(([a], [b]) => a.localeCompare(b))
-                  .map(([mesKey, qtd]) => {
-                    const max = Math.max(1, ...Object.values(cancelData.porMes));
-                    return (
-                      <div key={mesKey}>
-                        <div className="flex justify-between text-xs text-gray-600 mb-0.5">
-                          <span>{mesKey}</span>
-                          <span>{qtd}</span>
-                        </div>
-                        <BarraProgresso valor={qtd} max={max} cor="bg-orange-400" />
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={Object.entries(cancelData.porMes).sort(([a], [b]) => a.localeCompare(b)).map(([mesKey, qtd]) => ({ name: mesKey, cancelamentos: qtd }))}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                  <YAxis />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="cancelamentos" stroke="#EF4444" strokeWidth={2} dot={{ r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Por Motivo (Detalhado)</h3>
+            <div className="space-y-2">
+              {Object.entries(cancelData.porMotivo)
+                .sort(([, a], [, b]) => b - a)
+                .map(([motivo, qtd]) => {
+                  const max = Math.max(1, ...Object.values(cancelData.porMotivo));
+                  return (
+                    <div key={motivo}>
+                      <div className="flex justify-between text-xs text-gray-600 mb-0.5">
+                        <span className="capitalize">{motivo}</span>
+                        <span>{qtd}</span>
                       </div>
-                    );
-                  })}
-              </div>
+                      <BarraProgresso valor={qtd} max={max} cor="bg-red-400" />
+                    </div>
+                  );
+                })}
             </div>
           </div>
         </div>
       )}
 
       {tab === 'historico' && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">Hist\u00f3rico do Aluno</h3>
-          <p className="text-sm text-gray-500">Consulte o hist\u00f3rico completo de presen\u00e7as e perman\u00eancia do aluno.</p>
-          <p className="text-xs text-gray-400 mt-2">Em breve: busca por nome com linha do tempo vertical e taxas de assiduidade.</p>
+        <div className="space-y-4">
+          <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Hist\u00f3rico do Aluno</h3>
+            <div className="flex gap-2 mb-4">
+              <input
+                type="text"
+                value={buscaHistorico}
+                onChange={(e) => setBuscaHistorico(e.target.value)}
+                placeholder="Buscar aluno por nome..."
+                className="flex-1 px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+
+            {buscaHistorico && (
+              <div className="max-h-60 overflow-y-auto border border-gray-200 rounded divide-y divide-gray-100">
+                {alunosFiltrados.map((aluno: any) => (
+                  <button
+                    key={aluno.id}
+                    onClick={() => handleVerHistorico(aluno)}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition flex justify-between items-center"
+                  >
+                    <span className="font-medium text-gray-800">{aluno.nome}</span>
+                    <span className="text-xs text-gray-400">Ver hist\u00f3rico \u2192</span>
+                  </button>
+                ))}
+                {alunosFiltrados.length === 0 && (
+                  <p className="px-3 py-4 text-sm text-gray-400 text-center">Nenhum aluno encontrado.</p>
+                )}
+              </div>
+            )}
+
+            {alunoSelecionado && (
+              <div className="mt-4 border-t border-gray-200 pt-4">
+                <h4 className="text-base font-semibold text-gray-800 mb-3">
+                  {alunoSelecionado.nome}
+                </h4>
+                {carregandoHistorico ? (
+                  <p className="text-sm text-gray-500">Carregando...</p>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {[
+                        { label: 'Total de Aulas', value: freqData?.resumo?.totalRegistros || 0, cor: 'text-blue-600' },
+                        { label: 'Presen\u00e7as', value: freqData?.resumo?.presentes || 0, cor: 'text-green-600' },
+                        { label: 'Faltas', value: freqData?.resumo?.faltas || 0, cor: 'text-red-600' },
+                        { label: 'Justificativas', value: freqData?.resumo?.justificados || 0, cor: 'text-yellow-600' },
+                      ].map((card) => (
+                        <div key={card.label} className="bg-gray-50 rounded p-3">
+                          <p className="text-xs text-gray-500">{card.label}</p>
+                          <p className={`text-xl font-bold mt-0.5 ${card.cor}`}>{card.value}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="bg-gray-50 rounded p-4">
+                      <p className="text-sm text-gray-600 mb-1">Taxa de Assiduidade</p>
+                      <p className="text-3xl font-bold text-blue-600">
+                        {freqData?.resumo?.totalRegistros
+                          ? ((freqData.resumo.presentes / freqData.resumo.totalRegistros) * 100).toFixed(1) + '%'
+                          : 'N/A'}
+                      </p>
+                      <BarraProgresso
+                        valor={freqData?.resumo?.presentes || 0}
+                        max={freqData?.resumo?.totalRegistros || 1}
+                        cor="bg-blue-500"
+                      />
+                    </div>
+
+                    <div className="bg-gray-50 rounded p-4">
+                      <p className="text-sm font-medium text-gray-700 mb-3">Linha do Tempo de Perman\u00eancia</p>
+                      <div className="space-y-3">
+                        {Object.entries(freqData?.porNivel || {}).map(([nivel, dados], i) => (
+                          <div key={nivel} className="flex gap-3">
+                            <div className="flex flex-col items-center">
+                              <div className="w-3 h-3 rounded-full bg-primary-500" />
+                              {i < Object.keys(freqData?.porNivel || {}).length - 1 && (
+                                <div className="w-0.5 flex-1 bg-gray-300" />
+                              )}
+                            </div>
+                            <div className="flex-1 pb-3">
+                              <p className="text-sm font-medium text-gray-800">{nivel}</p>
+                              <p className="text-xs text-gray-500">
+                                Presen\u00e7as: {dados.presentes}/{dados.total} ({calcPercentual(dados.presentes, dados.total)}%)
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                        {(!freqData?.porNivel || Object.keys(freqData.porNivel).length === 0) && (
+                          <p className="text-xs text-gray-400">Nenhum dado de n\u00edvel dispon\u00edvel para este per\u00edodo.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!buscaHistorico && !alunoSelecionado && (
+              <p className="text-sm text-gray-400 text-center py-4">
+                Digite o nome de um aluno para consultar o hist\u00f3rico completo de presen\u00e7as e perman\u00eancia.
+              </p>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import api from '../utils/api';
+import WeatherWidget from '../components/common/WeatherWidget';
 
 interface CalendarioEvento {
   id: string;
@@ -38,6 +39,7 @@ const Calendario: React.FC = () => {
   const [novoEventoTipo, setNovoEventoTipo] = useState<string>('evento');
   const [novoEventoDesc, setNovoEventoDesc] = useState('');
   const [planningFiles, setPlanningFiles] = useState<File[]>([]);
+  const [climaDados, setClimaDados] = useState<Record<string, any>>({});
 
   const carregarEventos = useCallback(async () => {
     try {
@@ -45,6 +47,26 @@ const Calendario: React.FC = () => {
       setEventos(res.data);
     } catch { setEventos([]); }
   }, [mes, ano]);
+
+  const carregarClima = useCallback(async () => {
+    try {
+      const res = await api.get('/chamadas/clima');
+      if (res.data?.ok && res.data?.raw?.daily) {
+        const daily = res.data.raw.daily;
+        const map: Record<string, any> = {};
+        for (let i = 0; i < daily.time.length; i++) {
+          map[daily.time[i]] = {
+            temp: daily.temperature_2m_max?.[i],
+            code: daily.weather_code?.[i],
+            precipitacao: daily.precipitation_probability_max?.[i] || 0,
+          };
+        }
+        setClimaDados(map);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { carregarClima(); }, [carregarClima]);
 
   const carregarPeriodo = useCallback(async () => {
     try {
@@ -133,6 +155,8 @@ const Calendario: React.FC = () => {
     const isPeriodoFim = periodo?.termino_aulas === dataStr;
     const isFerias = periodo && dataStr >= periodo.ferias_inicio && dataStr <= periodo.ferias_fim;
     const isSelected = selectedDay === dataStr;
+    const climaDia = climaDados[dataStr];
+    const temAlertaChuva = climaDia?.precipitacao > 60;
 
     let bgClass = 'hover:bg-gray-100';
     if (isSelected) bgClass = 'bg-primary-100 ring-2 ring-primary-400';
@@ -148,6 +172,12 @@ const Calendario: React.FC = () => {
         <span className={`text-xs ${isPeriodoInicio || isPeriodoFim ? 'text-white bg-green-500 rounded-full w-5 h-5 flex items-center justify-center' : ''}`}>
           {dia}
         </span>
+        {climaDia && (
+          <span className="text-[9px] text-gray-500 mt-0.5">
+            {Math.round(climaDia.temp)}°C
+            {temAlertaChuva && <span className="text-red-400 ml-0.5">🌧️</span>}
+          </span>
+        )}
         {diaEventos.length > 0 && (
           <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center">
             {diaEventos.slice(0, 2).map((ev, i) => (

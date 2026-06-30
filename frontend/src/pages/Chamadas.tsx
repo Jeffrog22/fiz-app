@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import api from '../utils/api';
 import DataGrid from '../components/grid/DataGrid';
 import GridFilters from '../components/grid/GridFilters';
@@ -34,6 +34,7 @@ const Chamadas: React.FC = () => {
   const [dataInicio, setDataInicio] = useState(() => gerarDias(0)[0]);
   const [dataFim, setDataFim] = useState(() => gerarDias(0)[4]);
   const [turmaId, setTurmaId] = useState('');
+  const [buscaTexto, setBuscaTexto] = useState('');
 
   const [indiceAtual, setIndiceAtual] = useState(0);
   const totalIndices = 12;
@@ -80,7 +81,31 @@ const Chamadas: React.FC = () => {
   useEffect(() => { carregarLogs(); }, [carregarLogs]);
 
   const dias = gerarDias(0);
-  const alunosFiltrados = alunos;
+
+  // Fuzzy search: insensível a acentos, busca por partes do nome
+  const alunosFiltrados = useMemo(() => {
+    if (!buscaTexto.trim()) return alunos;
+    const termo = buscaTexto
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    return alunos.filter((a) =>
+      a.nome
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .includes(termo)
+    );
+  }, [alunos, buscaTexto]);
+
+  const temFiltroAtivo = buscaTexto.trim() !== '' || turmaId !== '';
+
+  const limparFiltros = () => {
+    setBuscaTexto('');
+    setTurmaId('');
+    setDataInicio(gerarDias(0)[0]);
+    setDataFim(gerarDias(0)[4]);
+  };
 
   const processarFila = useCallback(async () => {
     if (filaSalvamento.current.length === 0) return;
@@ -203,13 +228,34 @@ const Chamadas: React.FC = () => {
         </div>
       </div>
 
-      <GridFilters
-        dataInicio={dataInicio} dataFim={dataFim}
-        turmaId={turmaId} turmas={turmas}
-        onDataInicioChange={setDataInicio}
-        onDataFimChange={setDataFim}
-        onTurmaChange={setTurmaId}
-      />
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 max-w-xs">
+          <input
+            type="text"
+            placeholder="Buscar aluno (live search)..."
+            value={buscaTexto}
+            onChange={(e) => setBuscaTexto(e.target.value)}
+            className="w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">??</span>
+        </div>
+        <GridFilters
+          dataInicio={dataInicio} dataFim={dataFim}
+          turmaId={turmaId} turmas={turmas}
+          onDataInicioChange={setDataInicio}
+          onDataFimChange={setDataFim}
+          onTurmaChange={setTurmaId}
+        />
+        {temFiltroAtivo && (
+          <button
+            onClick={limparFiltros}
+            className="px-2 py-1.5 text-xs bg-red-50 text-red-600 rounded border border-red-200 hover:bg-red-100 transition"
+            title="Remover todos os filtros"
+          >
+            ? Limpar filtros
+          </button>
+        )}
+      </div>
 
       <div className="flex items-center gap-2 flex-wrap">
         <GridPagination
