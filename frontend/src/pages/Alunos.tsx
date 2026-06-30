@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api from '../utils/api';
 import AlunoModal from '../components/modals/AlunoModal';
 import type { Aluno } from '../types';
+import { mascaraTelefone } from '../utils/formatters';
 
 function calcularIdade(dataNascimento?: string): number | null {
   if (!dataNascimento) return null;
@@ -122,7 +123,7 @@ const Alunos: React.FC = () => {
                     </td>
                     <td className="px-3 py-2 text-gray-600">{idade !== null ? idade + ' anos' : '-'}</td>
                     <td className="px-3 py-2 text-gray-600">{a.genero || '-'}</td>
-                    <td className="px-3 py-2 text-gray-600">{a.contato || '-'}</td>
+                    <td className="px-3 py-2 text-gray-600">{a.contato ? mascaraTelefone(a.contato) : '-'}</td>
                     <td className="px-3 py-2">
                       {a.par_q === true ? <span className="text-green-600 text-xs font-medium">Sim</span>
                       : a.par_q === false ? <span className="text-red-500 text-xs font-medium">Nao</span>

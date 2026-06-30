@@ -105,7 +105,7 @@ const Turmas: React.FC = () => {
               {filtered.map((t) => (
                 <tr key={t.id} className="hover:bg-gray-50">
                   <td className="px-4 py-2 font-medium text-gray-800">{t.label}</td>
-                  <td className="px-4 py-2 text-gray-600">{t.horario}</td>
+                  <td className="px-4 py-2 text-gray-600">{(t.horario || '').slice(0, 5)}</td>
                   <td className="px-4 py-2 text-gray-600">{t.nivel || '-'}</td>
                   <td className="px-4 py-2 text-gray-600">{professorNome(t.professor_id)}</td>
                   <td className="px-4 py-2 text-gray-600">

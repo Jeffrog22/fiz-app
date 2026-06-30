@@ -87,7 +87,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, onSave, onClose })
       setNome(aluno.nome);
       setDataNascimento(aluno.data_nascimento ? formatDateBR(aluno.data_nascimento) : '');
       setGenero(normalizarGenero(aluno.genero || ''));
-      setContato(aluno.contato || '');
+      setContato(mascaraTelefone(aluno.contato || ''));
       setAtivo(aluno.ativo);
       setParQ(aluno.par_q === true ? 'sim' : aluno.par_q === false ? 'nao' : '');
       setAtestadoMedico(aluno.atestado_medico === true);
