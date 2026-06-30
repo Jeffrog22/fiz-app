@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Turma } from '../../types';
 import { mascaraHora } from '../../utils/formatters';
+import { validarHora, sanitizarInput } from '../../utils/validators';
 
 interface TurmaModalProps {
   open: boolean;
@@ -23,6 +24,8 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
   const [capacidade, setCapacidade] = useState('');
   const [faixaEtaria, setFaixaEtaria] = useState('');
   const [professorId, setProfessorId] = useState('');
+  const [erroHorario, setErroHorario] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ msg: string } | null>(null);
 
   useEffect(() => {
     if (turma) {
@@ -40,12 +43,20 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
       setFaixaEtaria('');
       setProfessorId('');
     }
+    setErroHorario(null);
+    setToast(null);
   }, [turma, open]);
 
   if (!open) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const erro = validarHora(horario);
+    if (erro) {
+      setErroHorario(erro);
+      setToast({ msg: erro });
+      return;
+    }
     onSave({
       label,
       horario,
@@ -80,11 +91,19 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
               required
               type="text"
               inputMode="numeric"
-              placeholder="HH:MM"
+              placeholder="somente números"
               value={horario}
-              onChange={(e) => setHorario(mascaraHora(e.target.value))}
+              onChange={(e) => {
+                setErroHorario(null);
+                setHorario(mascaraHora(sanitizarInput(e.target.value)));
+              }}
+              onPaste={(e) => {
+                e.preventDefault();
+                const colado = e.clipboardData.getData('text');
+                setHorario(mascaraHora(sanitizarInput(colado)));
+              }}
               maxLength={5}
-              className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className={`px-3 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 ${erroHorario ? 'border-red-500 animate-shake' : 'border-gray-300 focus:ring-primary-500'}`}
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -145,6 +164,13 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
             </button>
           </div>
         </form>
+
+        {toast && (
+          <div className="fixed bottom-4 right-4 bg-red-600 text-white px-4 py-2 rounded shadow-lg text-sm z-50">
+            {toast.msg}
+            <button onClick={() => setToast(null)} className="ml-2 font-bold">&times;</button>
+          </div>
+        )}
       </div>
     </div>
   );

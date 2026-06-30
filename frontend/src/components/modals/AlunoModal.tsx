@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
 import type { Aluno, Turma } from '../../types';
 import { mascaraTelefone, mascaraData, desmascarar, formatDateISO, formatDateBR } from '../../utils/formatters';
+import { validarData, validarTelefone, sanitizarInput } from '../../utils/validators';
 
 interface AlunoModalProps {
   open: boolean;
@@ -10,9 +11,20 @@ interface AlunoModalProps {
   onClose: () => void;
 }
 
+function parseData(dateStr: string): Date | null {
+  if (!dateStr) return null;
+  if (dateStr.includes('/')) {
+    const [dia, mes, ano] = dateStr.split('/').map(Number);
+    return new Date(ano, mes - 1, dia);
+  }
+  const d = new Date(dateStr + 'T12:00:00');
+  return isNaN(d.getTime()) ? null : d;
+}
+
 function calcularIdade(dataNascimento?: string): number | null {
   if (!dataNascimento) return null;
-  const nasc = new Date(dataNascimento + 'T12:00:00');
+  const nasc = parseData(dataNascimento);
+  if (!nasc) return null;
   const hoje = new Date();
   let idade = hoje.getFullYear() - nasc.getFullYear();
   const mes = hoje.getMonth() - nasc.getMonth();
@@ -56,6 +68,9 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, onSave, onClose })
   const [turmaId, setTurmaId] = useState('');
   const [nivel, setNivel] = useState('');
   const [turmas, setTurmas] = useState<Turma[]>([]);
+  const [erroData, setErroData] = useState<string | null>(null);
+  const [erroContato, setErroContato] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ msg: string } | null>(null);
 
   const idade = calcularIdade(dataNascimento);
   const categoria = calcularCategoria(idade);
@@ -91,12 +106,26 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, onSave, onClose })
       setTurmaId('');
       setNivel('');
     }
+    setErroData(null);
+    setErroContato(null);
+    setToast(null);
   }, [aluno, open]);
 
   if (!open) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const erroDataMsg = dataNascimento ? validarData(dataNascimento) : null;
+    const erroContatoMsg = contato ? validarTelefone(contato) : null;
+
+    if (erroDataMsg || erroContatoMsg) {
+      setErroData(erroDataMsg);
+      setErroContato(erroContatoMsg);
+      setToast({ msg: erroDataMsg || erroContatoMsg || 'Verifique os campos' });
+      return;
+    }
+
     onSave({
       nome,
       data_nascimento: dataNascimento ? formatDateISO(dataNascimento) : undefined,
@@ -128,10 +157,18 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, onSave, onClose })
 
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-600">Data de Nascimento</label>
-            <input type="text" inputMode="numeric" placeholder="dd/mm/aaaa"
-              value={dataNascimento} onChange={(e) => setDataNascimento(mascaraData(e.target.value))}
+            <input type="text" inputMode="numeric" placeholder="somente números"
+              value={dataNascimento}
+              onChange={(e) => {
+                setErroData(null);
+                setDataNascimento(mascaraData(sanitizarInput(e.target.value)));
+              }}
+              onPaste={(e) => {
+                e.preventDefault();
+                setDataNascimento(mascaraData(sanitizarInput(e.clipboardData.getData('text'))));
+              }}
               maxLength={10}
-              className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              className={`px-3 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 ${erroData ? 'border-red-500 animate-shake' : 'border-gray-300 focus:ring-primary-500'}`} />
             {idade !== null && <span className="text-xs text-gray-400 mt-0.5">{idade} anos</span>}
           </div>
 
@@ -149,9 +186,24 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, onSave, onClose })
 
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-600">Contato</label>
-              <input value={contato} onChange={(e) => setContato(mascaraTelefone(e.target.value))}
-                placeholder="(11) 99999-9999" maxLength={16}
-                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              <input value={contato}
+                onChange={(e) => {
+                  setErroContato(null);
+                  setContato(mascaraTelefone(sanitizarInput(e.target.value)));
+                }}
+                onPaste={(e) => {
+                  e.preventDefault();
+                  setContato(mascaraTelefone(sanitizarInput(e.clipboardData.getData('text'))));
+                }}
+                placeholder="somente números" maxLength={16}
+                className={`px-3 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 ${erroContato ? 'border-red-500 animate-shake' : 'border-gray-300 focus:ring-primary-500'}`} />
+              {contato && desmascarar(contato).length >= 10 && (
+                <a href={`https://wa.me/55${desmascarar(contato)}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-green-600 hover:text-green-800 mt-0.5 inline-block">
+                  WhatsApp
+                </a>
+              )}
             </div>
           </div>
 
@@ -242,6 +294,13 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, onSave, onClose })
             </button>
           </div>
         </form>
+
+        {toast && (
+          <div className="fixed bottom-4 right-4 bg-red-600 text-white px-4 py-2 rounded shadow-lg text-sm z-50">
+            {toast.msg}
+            <button onClick={() => setToast(null)} className="ml-2 font-bold">&times;</button>
+          </div>
+        )}
       </div>
     </div>
   );
