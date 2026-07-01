@@ -18,29 +18,42 @@ export function formatarNomeMobile(nomeCompleto: string): string {
   return `${primeiro} ${ultimo}`;
 }
 
-export function calcIdade(dataNascimento: string): number {
-  if (!dataNascimento) return 0;
+export function calcIdade(dataNascimento?: string): number | null {
+  if (!dataNascimento) return null;
+  const nasc = new Date(dataNascimento + 'T12:00:00');
   const hoje = new Date();
-  const nasc = new Date(dataNascimento);
   let idade = hoje.getFullYear() - nasc.getFullYear();
-  const mesDiff = hoje.getMonth() - nasc.getMonth();
-  if (mesDiff < 0 || (mesDiff === 0 && hoje.getDate() < nasc.getDate())) {
-    idade--;
-  }
+  const mes = hoje.getMonth() - nasc.getMonth();
+  if (mes < 0 || (mes === 0 && hoje.getDate() < nasc.getDate())) idade--;
   return idade;
 }
 
-export function calcCategoria(idade: number): string {
-  if (idade < 3) return 'Baby';
-  if (idade <= 5) return 'Infantil A';
-  if (idade <= 7) return 'Infantil B';
-  if (idade <= 9) return 'Infantil C';
-  if (idade <= 11) return 'Juvenil A';
-  if (idade <= 13) return 'Juvenil B';
-  if (idade <= 17) return 'Juvenil C';
-  if (idade <= 29) return 'Adulto';
-  if (idade <= 49) return 'Master';
-  return 'Sênior';
+export function calcCategoria(idade: number | null): string {
+  if (idade === null || idade < 0) return '';
+  if (idade < 9) return 'Pré-Mirim';
+  if (idade < 10) return 'Mirim I';
+  if (idade < 11) return 'Mirim II';
+  if (idade < 12) return 'Petiz I';
+  if (idade < 13) return 'Petiz II';
+  if (idade < 14) return 'Infantil I';
+  if (idade < 15) return 'Infantil II';
+  if (idade < 16) return 'Juvenil I';
+  if (idade < 17) return 'Juvenil II';
+  if (idade < 18) return 'Júnior I';
+  if (idade < 20) return 'Júnior II/Sênior';
+  if (idade < 25) return 'A20+';
+  if (idade < 30) return 'B25+';
+  if (idade < 35) return 'C30+';
+  if (idade < 40) return 'D35+';
+  if (idade < 45) return 'E40+';
+  if (idade < 50) return 'F45+';
+  if (idade < 55) return 'G50+';
+  if (idade < 60) return 'H55+';
+  if (idade < 65) return 'I60+';
+  if (idade < 70) return 'J65+';
+  if (idade < 75) return 'K70+';
+  if (idade < 80) return 'L75+';
+  return 'M80+';
 }
 
 export function mascaraData(value: string): string {

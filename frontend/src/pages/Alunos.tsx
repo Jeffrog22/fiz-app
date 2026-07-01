@@ -1,34 +1,32 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../utils/api';
 import AlunoModal from '../components/modals/AlunoModal';
-import type { Aluno } from '../types';
+import type { Aluno, Professor } from '../types';
 import { mascaraTelefone } from '../utils/formatters';
-
-function calcularIdade(dataNascimento?: string): number | null {
-  if (!dataNascimento) return null;
-  const nasc = new Date(dataNascimento + 'T12:00:00');
-  const hoje = new Date();
-  let idade = hoje.getFullYear() - nasc.getFullYear();
-  const mes = hoje.getMonth() - nasc.getMonth();
-  if (mes < 0 || (mes === 0 && hoje.getDate() < nasc.getDate())) idade--;
-  return idade;
-}
+import { calcIdade, calcCategoria } from '../utils/formatters';
 
 const Alunos: React.FC = () => {
   const [alunos, setAlunos] = useState<any[]>([]);
+  const [professores, setProfessores] = useState<Professor[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [filtro, setFiltro] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<Aluno | null>(null);
 
+  const professorMap = new Map(professores.map((p) => [p.id, p.nome]));
+
   const carregar = useCallback(async () => {
     setCarregando(true);
     setErro(null);
     try {
-      const res = await api.get('/alunos');
-      setAlunos(res.data);
-      if (res.data.length === 0) setErro('Nenhum aluno cadastrado');
+      const [alunosRes, profsRes] = await Promise.all([
+        api.get('/alunos'),
+        api.get('/professores'),
+      ]);
+      setAlunos(alunosRes.data);
+      setProfessores(profsRes.data);
+      if (alunosRes.data.length === 0) setErro('Nenhum aluno cadastrado');
     } catch (err: any) {
       console.error('Erro ao carregar alunos', err);
       setErro(err?.response?.data?.error || err.message || 'Erro ao carregar alunos');
@@ -64,9 +62,17 @@ const Alunos: React.FC = () => {
     }
   };
 
-  const filtered = alunos.filter((a: any) =>
-    a.nome.toLowerCase().includes(filtro.toLowerCase())
-  );
+  const filtered = alunos.filter((a: any) => {
+    if (!filtro) return true;
+    const q = filtro.toLowerCase();
+    return (
+      a.nome.toLowerCase().includes(q) ||
+      (a.turma?.nivel || '').toLowerCase().includes(q) ||
+      (a.turma?.label || '').toLowerCase().includes(q) ||
+      (a.turma?.horario || '').toLowerCase().includes(q) ||
+      (professorMap.get(a.turma?.professor_id) || '').toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="space-y-4">
@@ -82,10 +88,10 @@ const Alunos: React.FC = () => {
 
       <input
         type="text"
-        placeholder="Buscar por nome..."
+        placeholder="Buscar por nome, nível, turma, horário ou professor..."
         value={filtro}
         onChange={(e) => setFiltro(e.target.value)}
-        className="w-full max-w-xs px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+        className="w-full max-w-md px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
       />
 
       {erro && !carregando && alunos.length === 0 && (
@@ -100,48 +106,51 @@ const Alunos: React.FC = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="text-left px-3 py-2 font-medium text-gray-500">Nome</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-500">Nascimento</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-500">Nível</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-500">Turma</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-500">Horário</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-500">Professor</th>
                 <th className="text-left px-3 py-2 font-medium text-gray-500">Idade</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-500">Genero</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-500">Contato</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-500">ParQ</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-500">Atestado</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-500">Categoria</th>
+                <th className="text-left px-3 py-2 font-medium text-gray-500">Gênero</th>
                 <th className="text-left px-3 py-2 font-medium text-gray-500">Status</th>
-                <th className="text-right px-3 py-2 font-medium text-gray-500">Acoes</th>
+                <th className="text-right px-3 py-2 font-medium text-gray-500">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filtered.map((a: any) => {
-                const idade = calcularIdade(a.data_nascimento);
+                const idade = calcIdade(a.data_nascimento);
+                const categoria = calcCategoria(idade);
+                const status = a.turma_id ? '' : 'Pendente';
+                const profNome = a.turma?.professor_id ? professorMap.get(a.turma.professor_id) : null;
                 return (
                   <tr key={a.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-2 font-medium text-gray-800">{a.nome}</td>
+                    <td
+                      className="px-3 py-2 font-medium text-primary-600 cursor-pointer hover:text-primary-800"
+                      title="clique para editar"
+                      onClick={() => { setEditando(a); setModalOpen(true); }}
+                    >
+                      {a.nome}
+                    </td>
+                    <td className="px-3 py-2 text-gray-600">{a.turma?.nivel || a.nivel || '-'}</td>
+                    <td className="px-3 py-2 text-gray-600">{a.turma?.label || '-'}</td>
+                    <td className="px-3 py-2 text-gray-600">{a.turma?.horario || '-'}</td>
+                    <td className="px-3 py-2 text-gray-600">{profNome || '-'}</td>
+                    <td className="px-3 py-2 text-gray-600">{idade !== null ? idade + ' anos' : '-'}</td>
+                    <td className="px-3 py-2 text-gray-600">{categoria || '-'}</td>
                     <td className="px-3 py-2 text-gray-600">
-                      {a.data_nascimento
-                        ? new Date(a.data_nascimento + 'T12:00:00').toLocaleDateString('pt-BR')
+                      {a.genero
+                        ? a.genero.charAt(0).toUpperCase() + a.genero.slice(1).replace('-', ' ')
                         : '-'}
                     </td>
-                    <td className="px-3 py-2 text-gray-600">{idade !== null ? idade + ' anos' : '-'}</td>
-                    <td className="px-3 py-2 text-gray-600">{a.genero || '-'}</td>
-                    <td className="px-3 py-2 text-gray-600">{a.contato ? mascaraTelefone(a.contato) : '-'}</td>
                     <td className="px-3 py-2">
-                      {a.par_q === true ? <span className="text-green-600 text-xs font-medium">Sim</span>
-                      : a.par_q === false ? <span className="text-red-500 text-xs font-medium">Nao</span>
-                      : '-'}
-                    </td>
-                    <td className="px-3 py-2">
-                      {a.atestado_medico ? (
-                        <span className="text-xs font-medium text-yellow-600">
-                          Sim {a.data_atestado ? '(' + new Date(a.data_atestado + 'T12:00:00').toLocaleDateString('pt-BR') + ')' : ''}
+                      {status === 'Pendente' ? (
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
+                          Pendente
                         </span>
-                      ) : '-'}
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className={'text-xs font-medium px-2 py-0.5 rounded-full ' + (
-                        a.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                      )}>
-                        {a.ativo ? 'Ativo' : 'Inativo'}
-                      </span>
+                      ) : (
+                        <span className="text-xs text-gray-400">-</span>
+                      )}
                     </td>
                     <td className="px-3 py-2 text-right space-x-2 whitespace-nowrap">
                       <button onClick={() => { setEditando(a); setModalOpen(true); }}
@@ -154,7 +163,7 @@ const Alunos: React.FC = () => {
               })}
               {filtered.length === 0 && !carregando && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={10} className="px-4 py-8 text-center text-gray-400">
                     Nenhum aluno encontrado
                   </td>
                 </tr>

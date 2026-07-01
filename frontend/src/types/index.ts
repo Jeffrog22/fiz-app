@@ -22,6 +22,7 @@ export interface Aluno {
   turma_id?: string;
   nivel?: string;
   categoria?: string;
+  turma?: Turma;
   criado_em: string;
 }
 
@@ -52,6 +53,18 @@ export interface ChamadaLog {
   tipo_select?: 'geral' | 'pessoal';
   tipo_ocorrencia?: string;
   origem?: 'manual' | 'extrapolado';
+  criado_em: string;
+}
+
+export interface EnrollmentPeriod {
+  id: string;
+  tenant_id: string;
+  aluno_id: string;
+  turma_id?: string;
+  nivel?: string;
+  data_inicio: string;
+  data_fim?: string;
+  motivo: 'matricula_inicial' | 'correcao' | 'transferencia';
   criado_em: string;
 }
 
