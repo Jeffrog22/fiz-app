@@ -2,41 +2,41 @@
 
 ## [v1.0.0] - 2026-06-30
 ### Grid de Chamadas Aprimorado
-- Sistema de Notas por Aluno - destaque azul no nome quando houver anotacoes; gatilho via clique no nome (PRD 5.3.8)
-- Action Column - botoes por aluno: Historico e Exclusao condicional (aparece apos 3 faltas no mes) (PRD 5.3.7)
-- Capacity Counter - rodape "Lotacao/capacidade (da turma): X/Y" (PRD 5.3.7)
+- Sistema de Notas por Aluno - destaque azul no nome quando houver anotações; gatilho via clique no nome (PRD 5.3.8)
+- Action Column - botões por aluno: Histórico (📊) e Exclusão condicional (aparece após 3 faltas no mês) (PRD 5.3.7)
+- Capacity Counter - rodapé "Lotação/capacidade (da turma): X/Y" (PRD 5.3.7)
 
 ### Filtros e Busca
-- Clear All Filters Trigger - botao "Limpar filtros" no grid quando filtro ativo (PRD 2.5)
-- Fuzzy Search - live search insensivel a acentos no grid de chamadas (PRD 2.4)
+- Clear All Filters Trigger - botão "✕ Limpar filtros" no grid quando filtro ativo (PRD 2.5)
+- Fuzzy Search - live search insensível a acentos no grid de chamadas (PRD 2.4)
 
-### Calendario com Clima
-- Integracao Open-Meteo - temperatura e alerta de chuva nos dias do calendario (PRD 6.2)
+### Calendário com Clima
+- Integração Open-Meteo - temperatura e alerta de chuva nos dias do calendário (PRD 6.2)
 
-### CardAula Engine de Sugestao
-- Filtro 1: clima/sensacao (frio, veto absoluto WMO, clima dinamico)
-- Filtro 2: temperatura da piscina (< 26C muito fria, < 28C fria)
+### CardAula Engine de Sugestão
+- Filtro 1: clima/sensação (frio, veto absoluto WMO, clima dinâmico)
+- Filtro 2: temperatura da piscina (< 26°C muito fria, < 28°C fria)
 - Filtro 3: cloro (slider 0-7, fora de 1-5 ppm = falta justificada)
-- Calculo instantaneo a cada alteracao conforme PRD 5.3.2
+- Cálculo instantâneo a cada alteração conforme PRD 5.3.2
 
 ### Painel Admin
-- Reset de Hashes - botao no painel admin (PRD 1.1.3)
-- Resetar Banco de Dados - com alerta severo e dupla confirmacao (PRD 1.1.3)
+- Reset de Hashes - botão no painel admin (PRD 1.1.3)
+- Resetar Banco de Dados - com alerta severo e dupla confirmação (PRD 1.1.3)
 
-### Relatorios com Recharts
-- Grafico de Rosca - distribuicao de presenca (PRD 8.1.1)
-- Grafico de Barras - frequencia por nivel (PRD 8.1.1)
-- Grafico de Linha - evolucao mensal de cancelamentos (PRD 8.1.1)
-- Rankings - Top 5 maior presenca e Top 5 mais faltas (PRD 8.1.3)
+### Relatórios com Recharts
+- Gráfico de Rosca - distribuição de presença (PRD 8.1.1)
+- Gráfico de Barras - frequência por nível (PRD 8.1.1)
+- Gráfico de Linha - evolução mensal de cancelamentos (PRD 8.1.1)
+- Rankings - Top 5 maior presença e Top 5 mais faltas (PRD 8.1.3)
 
-### Historico do Aluno
+### Histórico do Aluno
 - Busca por nome com lista de alunos (PRD 8.2)
 - Taxa de assiduidade com barra de progresso
-- Linha do tempo vertical com niveis e presencas
+- Linha do tempo vertical com níveis e presenças
 
 ### Testes e Build
 - 59 testes totais (25 backend + 34 frontend) - 100% passando
-- Build frontend: 0 erros TypeScript, producao (696 modulos, 216 KB gzip)
+- Build frontend: 0 erros TypeScript, produção (696 módulos, 216 KB gzip)
 
 ## [v0.7.1] - 2026-06-29
 ### Testes Frontend
