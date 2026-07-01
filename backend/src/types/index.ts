@@ -68,6 +68,18 @@ export interface JwtPayload {
   nome: string;
 }
 
+export interface EnrollmentPeriod {
+  id: string;
+  tenant_id: string;
+  aluno_id: string;
+  turma_id?: string;
+  nivel?: string;
+  data_inicio: string;
+  data_fim?: string;
+  motivo: 'matricula_inicial' | 'correcao' | 'transferencia';
+  criado_em: string;
+}
+
 export interface LogAcesso {
   id: string;
   timestamp: string;
