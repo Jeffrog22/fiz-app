@@ -6,6 +6,7 @@
 - Indicador visual de status do banco (bullet verde/amarelo/cinza) com polling via `/health`
 - Versão do app (`v1.0.0`) injetada no build via `git describe` e exibida no header e na tela de login
 - Hook `useDbStatus` para verificação periódica da conectividade do backend
+- **Sistema híbrido de versionamento**: `post-commit` hook cria tag automática a partir do CHANGELOG.md; build fallback para CHANGELOG quando `git describe` falha (CI)
 
 ### Corrigido
 - `useDbStatus` usava `fetch('/health')` direto, quebrando em produção (Cloudflare) — agora usa `api.defaults.baseURL` para alcançar `https://chamadas-backend.onrender.com/health`
@@ -15,7 +16,9 @@
 - Contraste da versão no TopBar (`text-gray-300` → `text-gray-500`)
 
 ### Arquivos alterados
-- `frontend/vite.config.ts` (define + fallback versão)
+- `.githooks/post-commit` (novo — auto-tag via CHANGELOG)
+- `package.json` (raiz — script `prepare` para `core.hooksPath`)
+- `frontend/vite.config.ts` (define + fallback versão + CHANGELOG fallback)
 - `frontend/src/vite-env.d.ts` (declaração `__APP_VERSION__`)
 - `frontend/src/hooks/useDbStatus.ts` (novo)
 - `frontend/src/components/common/TopBar.tsx` (Piscina + versão + DB + contraste)
