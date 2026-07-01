@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../utils/api';
 import AlunoModal from '../components/modals/AlunoModal';
-import type { Aluno, Professor } from '../types';
-import { mascaraTelefone } from '../utils/formatters';
+import type { Aluno, Professor, SavePayload } from '../types';
 import { calcIdade, calcCategoria } from '../utils/formatters';
 
 const Alunos: React.FC = () => {
@@ -37,10 +36,26 @@ const Alunos: React.FC = () => {
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  const handleSave = async (data: Partial<Aluno>) => {
+  const handleSave = async ({ data, acao }: SavePayload) => {
     try {
       if (editando) {
         await api.put(`/alunos/${editando.id}`, data);
+
+        if (acao === 'transferencia') {
+          const turmaId = data.turma_id || null;
+          const nivel = (editando as any)?.turma?.nivel || data.nivel || null;
+          await api.post(`/alunos/${editando.id}/enrollment`, {
+            turma_id: turmaId,
+            nivel,
+            motivo: 'transferencia',
+          });
+        } else if (acao === 'correcao') {
+          await api.post(`/alunos/${editando.id}/enrollment`, {
+            turma_id: editando.turma_id || null,
+            nivel: editando.nivel || null,
+            motivo: 'correcao',
+          });
+        }
       } else {
         await api.post('/alunos', data);
       }

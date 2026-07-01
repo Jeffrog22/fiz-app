@@ -68,6 +68,11 @@ export interface EnrollmentPeriod {
   criado_em: string;
 }
 
+export interface SavePayload {
+  data: Partial<Aluno>;
+  acao?: 'correcao' | 'transferencia';
+}
+
 export interface AuthState {
   isAuthenticated: boolean;
   professorId?: string;
