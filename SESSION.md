@@ -7,6 +7,8 @@
 - [x] **Correção de acentuação (2ª rodada)** — `\u00XX` escapes e mojibake em DevPanel, WeatherWidget, AccessibilityToolbar, Sidebar, CardAula
 - [x] **Correção health check em produção** — `fetch('/health')` direto quebrava no Cloudflare, alterado para usar `api.defaults.baseURL` e alcançar `https://chamadas-backend.onrender.com/health`
 - [x] **Build CI resiliente** — fallback para `'dev'` quando `git describe` falha (clone raso no Cloudflare Pages)
+- [x] **Login com versão dinâmica** — versão hardcoded `v0.1.0` substituída por `__APP_VERSION__` + indicador de DB
+- [x] **Contraste da versão no TopBar** — `text-gray-300` → `text-gray-500`
 
 ## 🧠 Decisões Técnicas Tomadas
 - Versão injetada em build-time (Vite `define`) para evitar chamada extra à API
@@ -18,7 +20,8 @@
 - `frontend/vite.config.ts` (modificado — define + fallback)
 - `frontend/src/vite-env.d.ts` (modificado — declaração global)
 - `frontend/src/hooks/useDbStatus.ts` (criado)
-- `frontend/src/components/common/TopBar.tsx` (modificado)
+- `frontend/src/components/common/TopBar.tsx` (modificado — Piscina + versão + DB + contraste)
+- `frontend/src/pages/Login.tsx` (modificado — versão dinâmica + DB indicator)
 - `frontend/src/components/common/WeatherWidget.tsx` (modificado)
 - `frontend/src/components/common/AccessibilityToolbar.tsx` (modificado)
 - `frontend/src/components/common/Sidebar.tsx` (modificado)

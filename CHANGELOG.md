@@ -4,19 +4,22 @@
 ### Adicionado
 - Label "Piscina:" no header antes do nome da unidade
 - Indicador visual de status do banco (bullet verde/amarelo/cinza) com polling via `/health`
-- Versão do app (`v1.0.0`) injetada no build via `git describe` e exibida no header
+- Versão do app (`v1.0.0`) injetada no build via `git describe` e exibida no header e na tela de login
 - Hook `useDbStatus` para verificação periódica da conectividade do backend
 
 ### Corrigido
 - `useDbStatus` usava `fetch('/health')` direto, quebrando em produção (Cloudflare) — agora usa `api.defaults.baseURL` para alcançar `https://chamadas-backend.onrender.com/health`
 - `vite.config.ts`: `git describe` falhava em CI sem tags — adicionado fallback para `'dev'`
 - Acentuação corrompida em `DevPanel.tsx`, `WeatherWidget.tsx`, `AccessibilityToolbar.tsx`, `Sidebar.tsx`, `CardAula.tsx`
+- Versão hardcoded `v0.1.0` na tela de login substituída por `__APP_VERSION__` dinâmico + indicador de DB
+- Contraste da versão no TopBar (`text-gray-300` → `text-gray-500`)
 
 ### Arquivos alterados
 - `frontend/vite.config.ts` (define + fallback versão)
 - `frontend/src/vite-env.d.ts` (declaração `__APP_VERSION__`)
 - `frontend/src/hooks/useDbStatus.ts` (novo)
-- `frontend/src/components/common/TopBar.tsx` (Piscina + versão + DB)
+- `frontend/src/components/common/TopBar.tsx` (Piscina + versão + DB + contraste)
+- `frontend/src/pages/Login.tsx` (versão dinâmica + DB indicator)
 - `frontend/src/components/common/WeatherWidget.tsx`
 - `frontend/src/components/common/AccessibilityToolbar.tsx`
 - `frontend/src/components/common/Sidebar.tsx`

@@ -32,7 +32,7 @@ const TopBar: React.FC = () => {
         </button>
         <div className="flex items-center gap-1.5 ml-1 select-none" title={dbStatus === 'online' ? 'Banco online' : dbStatus === 'checking' ? 'Verificando...' : 'Banco offline'}>
           <span className={`w-2 h-2 rounded-full ${dbStatus === 'online' ? 'bg-green-400' : dbStatus === 'checking' ? 'bg-yellow-400' : 'bg-gray-300'}`} />
-          <span className="text-[10px] text-gray-300">{__APP_VERSION__}</span>
+          <span className="text-[10px] text-gray-500">{__APP_VERSION__}</span>
         </div>
       </div>
     </header>

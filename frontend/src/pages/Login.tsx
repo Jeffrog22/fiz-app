@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTenant } from '../hooks/useTenant';
 import { useDevLog } from '../hooks/useDevLog';
+import { useDbStatus } from '../hooks/useDbStatus';
 import { getTenantId } from '../utils/tenant';
 
 const Login: React.FC = () => {
@@ -17,6 +18,7 @@ const Login: React.FC = () => {
   const [adminMode, setAdminMode] = useState(false);
   const [limpando, setLimpando] = useState(false);
   const { enabled: devEnabled, toggle: toggleDev } = useDevLog();
+  const dbStatus = useDbStatus();
   const tenantId = getTenantId();
 
   useEffect(() => {
@@ -238,7 +240,10 @@ const Login: React.FC = () => {
           </div>
         )}
 
-        <p className="text-center text-xs text-gray-400 mt-6">v0.1.0</p>
+        <div className="flex items-center justify-center gap-1.5 mt-6 select-none">
+          <span className={`w-2 h-2 rounded-full ${dbStatus === 'online' ? 'bg-green-400' : dbStatus === 'checking' ? 'bg-yellow-400' : 'bg-gray-300'}`} />
+          <span className="text-xs text-gray-400">{__APP_VERSION__}</span>
+        </div>
       </div>
     </div>
   );
