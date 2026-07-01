@@ -1,5 +1,36 @@
 # Changelog - Fiz! App
 
+## [v1.2.0] - 2026-07-01
+### Adicionado
+- **Grid de Alunos refatorado** — novas colunas na ordem: Nome, Nível, Turma, Horário, Professor, Idade, Categoria, Gênero, Status
+- **Coluna Status** — exibe badge "Pendente" quando o aluno não possui turma associada (`turma_id` nulo)
+- **Tooltip no Nome** — "clique para editar" ao passar o mouse; clique abre modal
+- **Modal com dois modos** — view (todos campos desabilitados) e edição (habilitados após clicar "Editar")
+- **Chips condicionais "Correção" e "Transferência"** — aparecem apenas no modo edição para alunos existentes
+- **Fluxo de Correção** — atualiza dados pessoais do aluno sem alterar turma; registra período com motivo 'correcao'
+- **Fluxo de Transferência** — move aluno para nova turma com seletor dedicado; encerra período ativo e inicia novo na turma de destino
+- **Tabela `enrollment_period`** — novo schema + endpoints para rastrear histórico de matrículas (matricula_inicial, correcao, transferencia)
+- **Join turmas na listagem de alunos** — backend retorna dados aninhados da turma (label, horario, nivel, professor_id) junto com cada aluno
+- **Tabela de categorias oficial** — ranges de Pré-Mirim (0-8) até M80+ (80+)
+
+### Alterado
+- `calcularCategoria` unificada (backend + frontend) com a tabela oficial
+- Busca global agora cobre Nível, Turma, Horário e Professor
+- `AlunoModal` reescrito com estados distintos de visualização/edição
+
+### Arquivos alterados
+- `backend/src/services/alunosService.ts` (join + categoria)
+- `backend/src/types/index.ts` (Aluno fields + EnrollmentPeriod)
+- `backend/src/migrations/002_enrollment_period.sql` (novo)
+- `backend/src/services/enrollmentService.ts` (novo)
+- `backend/src/controllers/enrollmentController.ts` (novo)
+- `backend/src/routes/enrollmentRoutes.ts` (novo)
+- `backend/src/index.ts` (rota enrollment)
+- `frontend/src/types/index.ts` (Aluno.turma, EnrollmentPeriod, SavePayload)
+- `frontend/src/utils/formatters.ts` (calcIdade, calcCategoria)
+- `frontend/src/pages/Alunos.tsx` (reescrito)
+- `frontend/src/components/modals/AlunoModal.tsx` (reescrito)
+
 ## [v1.1.0] - 2026-07-01
 ### Adicionado
 - Label "Piscina:" no header antes do nome da unidade

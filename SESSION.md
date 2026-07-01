@@ -1,42 +1,28 @@
-# Sessão: 01/07/2026 - v1.1.0 (Header, Versão, DB Status e Correções de Encoding)
+# Sessão: 01/07/2026 - Reorganização do Grid de Alunos
 
 ## 🔍 O que foi feito
-- [x] **Label "Piscina:" no header** — `<span>Piscina:</span>` antes do nome da unidade no TopBar
-- [x] **Versão do app** — injetada via `git describe --tags --abbrev=0` no build (`vite.config.ts` `define`), exibida no canto direito do header
-- [x] **Indicador de DB** — hook `useDbStatus` com polling `/health` a cada 60s, bullet verde (online) / amarelo (checking) / cinza (offline)
-- [x] **Correção de acentuação (2ª rodada)** — `\u00XX` escapes e mojibake em DevPanel, WeatherWidget, AccessibilityToolbar, Sidebar, CardAula
-- [x] **Correção health check em produção** — `fetch('/health')` direto quebrava no Cloudflare, alterado para usar `api.defaults.baseURL` e alcançar `https://chamadas-backend.onrender.com/health`
-- [x] **Build CI resiliente** — fallback para `'dev'` quando `git describe` falha (clone raso no Cloudflare Pages)
-- [x] **Login com versão dinâmica** — versão hardcoded `v0.1.0` substituída por `__APP_VERSION__` + indicador de DB
-- [x] **Contraste da versão no TopBar** — `text-gray-300` → `text-gray-500`
-- [x] **Auto-tag via post-commit hook** — `.githooks/post-commit` lê CHANGELOG.md e cria tag automaticamente após cada commit
-- [x] **Fallback CHANGELOG no build** — `vite.config.ts` lê a primeira versão do CHANGELOG.md quando `git describe` falha (CI)
+- [x] **Commit 1: Backend join turmas** — `listarAlunosService` agora faz join com `turmas` via Supabase (`.select('*, turma:turma_id(*)')`); tabela de categorias atualizada para ranges oficiais (Pré-Mirim a M80+)
+- [x] **Commit 2: Enrollment Period** — criada tabela `enrollment_period` + service/controller/routes para rastrear histórico de matrículas (motivos: matricula_inicial, correcao, transferencia)
+- [x] **Commit 3: Grid refatorado** — colunas reordenadas (Nome, Nível, Turma, Horário, Professor, Idade, Categoria, Gênero, Status); coluna Status exibe "Pendente" quando `turma_id` é nulo; busca global estendida para novas colunas; professor name mapeado via cache local (GET /professores)
+- [x] **Commit 4: Modal refatorado** — dois modos (view/edit); botão "Editar" no top-right do modal; chips condicionais "Correção" e "Transferência" aparecem apenas no modo edição; transferência cria enrollment_period; correção registra período com motivo 'correcao'
+- [x] **TypeScript** — 0 erros (backend + frontend)
 
 ## 🧠 Decisões Técnicas Tomadas
-- Versão injetada em build-time (Vite `define`) para evitar chamada extra à API
-- **Híbrido de versionamento**: 3 níveis de fallback — (1) `git describe`, (2) CHANGELOG.md, (3) `'dev'`
-- **Hooks versionados**: `.githooks/` é trackeado no git; `npm prepare` configura `core.hooksPath` via `package.json` raiz
-- **Tag automática**: hook `post-commit` extrai versão do CHANGELOG e cria tag se não existir; evita esquecimento manual
-- Health check usa `api.defaults.baseURL` em vez de URL hardcoded, respeitando `VITE_API_URL` em cada ambiente
-- Hook isolado em `useDbStatus.ts` com cleanup de interval e mounted ref para evitar memory leaks
+- **Join no backend**: Supabase `.select('*, turma:turma_id(*)')` para retornar dados aninhados da turma junto com cada aluno — evita N+1 queries
+- **Professor name**: Mapeamento via `Map<id, nome>` no frontend (cache local) em vez de subconsulta no backend, pois professores raramente mudam
+- **Enrollment Period**: Nova tabela separada para rastrear histórico de matrículas, permitindo futura timeline visual (linha do tempo de permanência do aluno)
+- **Chips condicionais**: Aparecem apenas no modo edição para alunos existentes; novos alunos já abrem em modo edição sem chips
+- **Categoria**: Tabela oficial fornecida pelo usuário (Pré-Mirim a M80+) aplicada tanto no backend quanto no frontend
 
 ## 🔗 Arquivos Alterados/Criados
-- `.githooks/post-commit` (criado)
-- `package.json` (raiz — script `prepare`)
-- `frontend/vite.config.ts` (modificado — CHANGELOG fallback)
-- `frontend/src/vite-env.d.ts` (modificado — declaração global)
-- `frontend/src/hooks/useDbStatus.ts` (criado)
-- `frontend/src/components/common/TopBar.tsx` (modificado — Piscina + versão + DB + contraste)
-- `frontend/src/pages/Login.tsx` (modificado — versão dinâmica + DB indicator)
-- `frontend/src/components/common/WeatherWidget.tsx` (modificado)
-- `frontend/src/components/common/AccessibilityToolbar.tsx` (modificado)
-- `frontend/src/components/common/Sidebar.tsx` (modificado)
-- `frontend/src/components/dev/DevPanel.tsx` (modificado)
-- `frontend/src/components/modals/CardAula.tsx` (modificado)
-- `CHANGELOG.md` (modificado)
-- `SESSION.md` (modificado)
-
-## ✅ Status Final
-- Frontend build: 0 erros TypeScript (tsc) + Vite production build (697 modules, 216 KB gzip)
-- Frontend tests: 2 suites, 34 testes, 0 falhas
-- Tag `v1.1.0` criada; versão exibe `v1.1.0` no Login e TopBar
+- `backend/src/services/alunosService.ts` (modificado — join + categoria)
+- `backend/src/types/index.ts` (modificado — Aluno fields + EnrollmentPeriod)
+- `backend/src/migrations/002_enrollment_period.sql` (criado)
+- `backend/src/services/enrollmentService.ts` (criado)
+- `backend/src/controllers/enrollmentController.ts` (criado)
+- `backend/src/routes/enrollmentRoutes.ts` (criado)
+- `backend/src/index.ts` (modificado — nova rota)
+- `frontend/src/types/index.ts` (modificado — Aluno.turma, EnrollmentPeriod, SavePayload)
+- `frontend/src/utils/formatters.ts` (modificado — calcIdade, calcCategoria com nova tabela)
+- `frontend/src/pages/Alunos.tsx` (reescrito — novo grid, busca estendida)
+- `frontend/src/components/modals/AlunoModal.tsx` (reescrito — view/edit, chips, transferência)

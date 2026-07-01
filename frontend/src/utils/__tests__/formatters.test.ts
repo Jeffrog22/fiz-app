@@ -38,16 +38,26 @@ describe('calcIdade', () => {
     expect(calcIdade(iso)).toBe(10);
   });
 
-  it('retorna 0 para data vazia', () => {
-    expect(calcIdade('')).toBe(0);
+  it('retorna null para data vazia', () => {
+    expect(calcIdade('')).toBeNull();
+  });
+
+  it('retorna null para undefined', () => {
+    expect(calcIdade(undefined)).toBeNull();
   });
 });
 
 describe('calcCategoria', () => {
-  it('retorna Baby para idade < 3', () => expect(calcCategoria(2)).toBe('Baby'));
-  it('retorna Infantil A para 3-5', () => expect(calcCategoria(4)).toBe('Infantil A'));
-  it('retorna Adulto para 18-29', () => expect(calcCategoria(25)).toBe('Adulto'));
-  it('retorna Senior para 50+', () => expect(calcCategoria(65)).toBe('S\u00eanior'));
+  it('retorna Pré-Mirim para idade < 9', () => expect(calcCategoria(5)).toBe('Pré-Mirim'));
+  it('retorna Mirim I para 9', () => expect(calcCategoria(9)).toBe('Mirim I'));
+  it('retorna Petiz I para 11', () => expect(calcCategoria(11)).toBe('Petiz I'));
+  it('retorna Infantil I para 13', () => expect(calcCategoria(13)).toBe('Infantil I'));
+  it('retorna Júnior I para 17', () => expect(calcCategoria(17)).toBe('Júnior I'));
+  it('retorna A20+ para 20-24', () => expect(calcCategoria(22)).toBe('A20+'));
+  it('retorna B25+ para 25-29', () => expect(calcCategoria(27)).toBe('B25+'));
+  it('retorna G50+ para 50-54', () => expect(calcCategoria(52)).toBe('G50+'));
+  it('retorna M80+ para 80+', () => expect(calcCategoria(85)).toBe('M80+'));
+  it('retorna string vazia para null', () => expect(calcCategoria(null)).toBe(''));
 });
 
 describe('mascaraData', () => {
