@@ -2,7 +2,12 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { execSync } from 'child_process';
 
-const appVersion = execSync('git describe --tags --abbrev=0').toString().trim();
+let appVersion = '0.0.0';
+try {
+  appVersion = execSync('git describe --tags --abbrev=0').toString().trim();
+} catch {
+  appVersion = 'dev';
+}
 
 export default defineConfig({
   plugins: [react()],
