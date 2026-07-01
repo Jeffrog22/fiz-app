@@ -41,7 +41,7 @@ export async function listarAlunosService(
 ): Promise<any[]> {
   let query = supabase
     .from('alunos')
-    .select('*, turma:turma_id(*)')
+    .select('*')
     .eq('tenant_id', tenantId);
 
   if (filters.nome) query = query.ilike('nome', `%${filters.nome}%`);

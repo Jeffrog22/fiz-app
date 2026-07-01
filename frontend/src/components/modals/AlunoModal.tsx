@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
-import type { Aluno, Turma, SavePayload } from '../../types';
+import type { Aluno, Turma, Professor, SavePayload } from '../../types';
 import { mascaraTelefone, mascaraData, desmascarar, formatDateISO, formatDateBR } from '../../utils/formatters';
 import { calcIdade, calcCategoria } from '../../utils/formatters';
 import { validarData, validarTelefone, sanitizarInput } from '../../utils/validators';
@@ -8,6 +8,7 @@ import { validarData, validarTelefone, sanitizarInput } from '../../utils/valida
 interface AlunoModalProps {
   open: boolean;
   aluno?: Aluno | null;
+  professores?: Professor[];
   onSave: (payload: SavePayload) => void;
   onClose: () => void;
 }
@@ -20,7 +21,7 @@ function normalizarGenero(valor: string): string {
   return v;
 }
 
-const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, onSave, onClose }) => {
+const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], onSave, onClose }) => {
   const [editMode, setEditMode] = useState(false);
   const [acao, setAcao] = useState<'correcao' | 'transferencia' | null>(null);
 
@@ -186,7 +187,10 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, onSave, onClose })
               <option value="">Selecione a nova turma</option>
               {turmas.map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.label} - {t.horario} ({t.nivel || 'sem nível'})
+                  {(() => {
+                  const pn = professores.find(p => p.id === t.professor_id)?.nome;
+                  return `${t.label} - ${t.horario} (${t.nivel || 'sem nível'})${pn ? ` - ${pn}` : ''}`;
+                })()}
                 </option>
               ))}
             </select>
@@ -292,7 +296,10 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, onSave, onClose })
                 <option value="">Selecione uma turma</option>
                 {turmas.map((t) => (
                   <option key={t.id} value={t.id}>
-                    {t.label} - {t.horario} ({t.nivel || 'sem nível'})
+                    {(() => {
+                  const pn = professores.find(p => p.id === t.professor_id)?.nome;
+                  return `${t.label} - ${t.horario} (${t.nivel || 'sem nível'})${pn ? ` - ${pn}` : ''}`;
+                })()}
                   </option>
                 ))}
               </select>

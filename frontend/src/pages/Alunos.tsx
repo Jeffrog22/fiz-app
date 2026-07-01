@@ -7,6 +7,7 @@ import { calcIdade, calcCategoria } from '../utils/formatters';
 const Alunos: React.FC = () => {
   const [alunos, setAlunos] = useState<any[]>([]);
   const [professores, setProfessores] = useState<Professor[]>([]);
+  const [turmas, setTurmas] = useState<any[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [filtro, setFiltro] = useState('');
@@ -19,12 +20,15 @@ const Alunos: React.FC = () => {
     setCarregando(true);
     setErro(null);
     try {
-      const [alunosRes, profsRes] = await Promise.all([
+      const [alunosRes, profsRes, turmasRes] = await Promise.all([
         api.get('/alunos'),
         api.get('/professores'),
+        api.get('/turmas'),
       ]);
-      setAlunos(alunosRes.data);
+      const turmaMap = new Map(turmasRes.data.map((t: any) => [t.id, t]));
+      setAlunos(alunosRes.data.map((a: any) => ({ ...a, turma: turmaMap.get(a.turma_id) || null })));
       setProfessores(profsRes.data);
+      setTurmas(turmasRes.data);
       if (alunosRes.data.length === 0) setErro('Nenhum aluno cadastrado');
     } catch (err: any) {
       console.error('Erro ao carregar alunos', err);
@@ -191,6 +195,7 @@ const Alunos: React.FC = () => {
       <AlunoModal
         open={modalOpen}
         aluno={editando}
+        professores={professores}
         onSave={handleSave}
         onClose={() => { setModalOpen(false); setEditando(null); }}
       />
