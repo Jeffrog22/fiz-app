@@ -1,0 +1,19 @@
+#!/bin/sh
+# Auto-creates git tag from CHANGELOG.md after every commit
+
+CHANGELOG="CHANGELOG.md"
+VERSION=$(grep -m1 '^## \[' "$CHANGELOG" | sed 's/^## \[v\?\(.*\)\].*/\1/')
+
+if [ -z "$VERSION" ]; then
+  exit 0
+fi
+
+TAG="v$VERSION"
+
+# Only create tag if it doesn't exist yet
+if git rev-parse "$TAG" >/dev/null 2>&1; then
+  exit 0
+fi
+
+git tag "$TAG"
+echo "post-commit: created tag $TAG"

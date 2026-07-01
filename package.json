@@ -5,6 +5,7 @@
   "description": "Aplicativo de lista de chamada para aulas de natação. Sistema de gestão de chamadas para piscinas de natação, unificando 4 unidades (Bela Vista, São Matheus, Vila e Parque) em uma única arquitetura multi-tenant.",
   "workspaces": ["frontend"],
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
     "install:backend": "cd backend && npm install",
     "install:frontend": "cd frontend && npm install",
     "install:all": "npm run install:backend && npm run install:frontend",
