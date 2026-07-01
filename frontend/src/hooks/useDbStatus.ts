@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import api from '../utils/api';
 
 export type DbStatus = 'checking' | 'online' | 'offline';
 
@@ -11,7 +12,8 @@ export function useDbStatus(intervalMs = 60000): DbStatus {
 
     const check = async () => {
       try {
-        const res = await fetch('/health');
+        const base = (api.defaults.baseURL || '/api').replace(/\/api\/?$/, '');
+        const res = await fetch(base + '/health');
         const data = await res.json();
         if (mountedRef.current) {
           setStatus(data?.status === 'ok' ? 'online' : 'offline');
