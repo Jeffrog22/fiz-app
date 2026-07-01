@@ -16,10 +16,10 @@ const AccessibilityToolbar: React.FC = () => {
       </button>
       <button
         onClick={resetar}
-        title="Restaurar zoom padr\u00e3o"
+        title="Restaurar zoom padrão"
         className="px-2 py-0.5 text-xs border border-gray-300 rounded hover:bg-gray-100 transition"
       >
-        Padr\u00e3o
+        Padrão
       </button>
       <button
         onClick={aumentar}

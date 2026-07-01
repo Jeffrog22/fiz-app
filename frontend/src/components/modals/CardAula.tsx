@@ -11,7 +11,7 @@ interface Props {
 const WMO_VETO_ABSOLUTO = [3, 45, 48, 51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 71, 73, 75, 77, 80, 81, 82, 85, 86, 95, 96, 99];
 const WMO_DINAMICO = [0, 1, 2];
 
-const SENSACOES = ['Calor', 'Abafado', 'Seco', 'Agrad·vel', 'Vento', 'Frio'];
+const SENSACOES = ['Calor', 'Abafado', 'Seco', 'Agrad√°vel', 'Vento', 'Frio'];
 
 function getClimaSugestao(condicao: string, sensacoes: string[]): { status: string; motivo: string | null } {
   const condLower = condicao.toLowerCase();
@@ -24,7 +24,7 @@ function getClimaSugestao(condicao: string, sensacoes: string[]): { status: stri
   }
 
   const weatherCodeMap: Record<string, number> = {
-    'nublado': 3, 'nÈvoa seca': 45, 'nevoeiro': 48, 'chuvisco': 51,
+    'nublado': 3, 'n√©voa seca': 45, 'nevoeiro': 48, 'chuvisco': 51,
     'chuva': 61, 'pancadas de chuva': 80, 'tempestade': 95,
   };
   const code = weatherCodeMap[condLower] || -1;
@@ -35,7 +35,7 @@ function getClimaSugestao(condicao: string, sensacoes: string[]): { status: stri
   if (WMO_DINAMICO.includes(code)) {
     const sensacoesNaoPermitidas = ['Frio', 'Vento'];
     if (sensacoes.some(s => sensacoesNaoPermitidas.includes(s))) {
-      return { status: 'FALTA JUSTIFICADA', motivo: 'CondiÁ„o clim·tica desfavor·vel' };
+      return { status: 'FALTA JUSTIFICADA', motivo: 'Condi√ß√£o clim√°tica desfavor√°vel' };
     }
   }
 
@@ -44,17 +44,17 @@ function getClimaSugestao(condicao: string, sensacoes: string[]): { status: stri
 
 function getTempPiscinaSugestao(temp: number): { status: string; motivo: string | null } {
   if (temp < 26) {
-    return { status: 'FALTA JUSTIFICADA', motivo: '¡gua muito fria' };
+    return { status: 'FALTA JUSTIFICADA', motivo: '√Ågua muito fria' };
   }
   if (temp < 28) {
-    return { status: 'FALTA JUSTIFICADA', motivo: '¡gua fria' };
+    return { status: 'FALTA JUSTIFICADA', motivo: '√Ågua fria' };
   }
   return { status: 'AULA NORMAL', motivo: null };
 }
 
 function getCloroSugestao(cloro: number): { status: string; motivo: string | null } {
   if (cloro < 1 || cloro > 5) {
-    return { status: 'FALTA JUSTIFICADA', motivo: 'Par‚metros de Cloro Inadequados' };
+    return { status: 'FALTA JUSTIFICADA', motivo: 'Par√¢metros de Cloro Inadequados' };
   }
   return { status: 'AULA NORMAL', motivo: null };
 }
@@ -152,10 +152,10 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula }) => {
             </p>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">CondiÁ„o clim·tica</label>
+                <label className="block text-sm font-medium text-gray-700">Condi√ß√£o clim√°tica</label>
                 <select value={condicao} onChange={(e) => setCondicao(e.target.value)}
                   className="w-full border border-gray-300 rounded p-2 mt-1 text-sm">
-                  <option>CÈu Limpo</option>
+                  <option>C√©u Limpo</option>
                   <option>Principalmente Limpo</option>
                   <option>Parcialmente Nublado</option>
                   <option>Nublado</option>
@@ -166,14 +166,14 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Temperatura Externa (∞C)</label>
+                <label className="block text-sm font-medium text-gray-700">Temperatura Externa (¬∞C)</label>
                 <input type="number" step="0.1" value={tempExterna}
                   onChange={(e) => setTempExterna(Number(e.target.value))}
                   className="w-full border border-gray-300 rounded p-2 mt-1 text-sm" />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Temperatura Piscina (∞C)</label>
+                <label className="block text-sm font-medium text-gray-700">Temperatura Piscina (¬∞C)</label>
                 <input type="number" step="0.1" value={tempPiscina}
                   onChange={(e) => setTempPiscina(Number(e.target.value))}
                   className="w-full border border-gray-300 rounded p-2 mt-1 text-sm" />
@@ -190,7 +190,7 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">SensaÁ„o</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sensa√ß√£o</label>
                 <div className="flex flex-wrap gap-1.5">
                   {SENSACOES.map((s) => (
                     <button

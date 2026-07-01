@@ -161,7 +161,7 @@ const DevPanel: React.FC = () => {
           className="text-gray-400 hover:text-white text-xs px-1"
           title="Recolher"
         >
-          \u2715
+          ✕
         </button>
       </div>
 
@@ -169,7 +169,7 @@ const DevPanel: React.FC = () => {
         {tabHeader('estado', 'Estado')}
         {tabHeader('logs', 'Logs')}
         {tabHeader('sync', 'Sincronia')}
-        {tabHeader('requests', 'Requisi\u00e7\u00f5es')}
+        {tabHeader('requests', 'Requisições')}
         {tabHeader('errors', 'Erros')}
         {tabHeader('console', 'Console')}
       </div>

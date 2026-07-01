@@ -56,17 +56,17 @@ const WeatherWidget: React.FC = () => {
 
   if (!weather || !weather.ok) {
     return (
-      <div className="flex items-center gap-1 text-gray-400 text-sm" title="Clima indispon\u00edvel">
+      <div className="flex items-center gap-1 text-gray-400 text-sm" title="Clima indisponível">
         <span>\u2601\uFE0F</span>
-        <span>--\u00B0C</span>
+        <span>--°C</span>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-1.5 text-sm" title={`${weather.condicao} - ${weather.temperatura}\u00B0C`}>
+    <div className="flex items-center gap-1.5 text-sm" title={`${weather.condicao} - ${weather.temperatura}°C`}>
       <span className="text-base">{getWeatherIcon(weather.weatherCode)}</span>
-      <span className="font-medium text-gray-700 tabular-nums">{Math.round(weather.temperatura)}\u00B0C</span>
+      <span className="font-medium text-gray-700 tabular-nums">{Math.round(weather.temperatura)}°C</span>
       <span className="text-gray-400 hidden sm:inline text-xs">{weather.condicao}</span>
     </div>
   );
