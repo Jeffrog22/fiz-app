@@ -9,18 +9,30 @@ export function calcularCategoria(dataNascimento?: string): string | undefined {
   const mes = hoje.getMonth() - nasc.getMonth();
   if (mes < 0 || (mes === 0 && hoje.getDate() < nasc.getDate())) idade--;
 
-  if (idade < 2) return 'Bebe';
-  if (idade <= 3) return 'Infantil A';
-  if (idade <= 5) return 'Infantil B';
-  if (idade <= 7) return 'Infantil C';
-  if (idade <= 9) return 'Infantil D';
-  if (idade <= 11) return 'Juvenil A';
-  if (idade <= 13) return 'Juvenil B';
-  if (idade <= 15) return 'Juvenil C';
-  if (idade <= 17) return 'Juvenil D';
-  if (idade <= 29) return 'Adulto';
-  if (idade <= 49) return 'Master';
-  return 'Master+';
+  if (idade < 9) return 'Pré-Mirim';
+  if (idade < 10) return 'Mirim I';
+  if (idade < 11) return 'Mirim II';
+  if (idade < 12) return 'Petiz I';
+  if (idade < 13) return 'Petiz II';
+  if (idade < 14) return 'Infantil I';
+  if (idade < 15) return 'Infantil II';
+  if (idade < 16) return 'Juvenil I';
+  if (idade < 17) return 'Juvenil II';
+  if (idade < 18) return 'Júnior I';
+  if (idade < 20) return 'Júnior II/Sênior';
+  if (idade < 25) return 'A20+';
+  if (idade < 30) return 'B25+';
+  if (idade < 35) return 'C30+';
+  if (idade < 40) return 'D35+';
+  if (idade < 45) return 'E40+';
+  if (idade < 50) return 'F45+';
+  if (idade < 55) return 'G50+';
+  if (idade < 60) return 'H55+';
+  if (idade < 65) return 'I60+';
+  if (idade < 70) return 'J65+';
+  if (idade < 75) return 'K70+';
+  if (idade < 80) return 'L75+';
+  return 'M80+';
 }
 
 export async function listarAlunosService(
@@ -29,7 +41,7 @@ export async function listarAlunosService(
 ): Promise<any[]> {
   let query = supabase
     .from('alunos')
-    .select('*')
+    .select('*, turma:turma_id(*)')
     .eq('tenant_id', tenantId);
 
   if (filters.nome) query = query.ilike('nome', `%${filters.nome}%`);
