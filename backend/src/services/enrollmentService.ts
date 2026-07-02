@@ -24,7 +24,10 @@ export async function listarPeriodosService(
     .eq('tenant_id', tenantId)
     .order('data_inicio', { ascending: false });
 
-  if (error) throw new AppError('Erro ao buscar períodos do aluno', 500);
+  if (error) {
+    console.error('[enrollment/listarPeriodos] Supabase error:', error);
+    throw new AppError('Erro ao buscar períodos do aluno', 500);
+  }
   return data || [];
 }
 
@@ -40,7 +43,10 @@ export async function buscarPeriodoAtivoService(
     .is('data_fim', null)
     .maybeSingle();
 
-  if (error) throw new AppError('Erro ao buscar período ativo', 500);
+  if (error) {
+    console.error('[enrollment/buscarPeriodoAtivo] Supabase error:', error);
+    throw new AppError('Erro ao buscar período ativo', 500);
+  }
   return data;
 }
 
@@ -60,7 +66,10 @@ export async function iniciarPeriodoService(
       .eq('id', periodoAtivo.id)
       .eq('tenant_id', tenantId);
 
-    if (updateError) throw new AppError('Erro ao encerrar período anterior', 500);
+    if (updateError) {
+      console.error('[enrollment/iniciarPeriodo] Update error:', updateError);
+      throw new AppError('Erro ao encerrar período anterior', 500);
+    }
   }
 
   const { data, error } = await supabase
@@ -76,6 +85,9 @@ export async function iniciarPeriodoService(
     .select()
     .single();
 
-  if (error || !data) throw new AppError('Erro ao criar período', 500);
+  if (error || !data) {
+    console.error('[enrollment/iniciarPeriodo] Insert error:', error);
+    throw new AppError('Erro ao criar período', 500);
+  }
   return data;
 }

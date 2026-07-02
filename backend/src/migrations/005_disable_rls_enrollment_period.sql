@@ -1,0 +1,1 @@
+ALTER TABLE enrollment_period DISABLE ROW LEVEL SECURITY;
