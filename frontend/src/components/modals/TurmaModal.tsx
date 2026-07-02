@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Turma } from '../../types';
 import { mascaraHora } from '../../utils/formatters';
 import { validarHora, sanitizarInput } from '../../utils/validators';
@@ -153,7 +153,7 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
     });
   };
 
-  const handleConfirmarAlocacao = useCallback(async () => {
+  const handleConfirmarAlocacao = async () => {
     if (!turma || selectedIds.size === 0) return;
     setAlocando(true);
     try {
@@ -165,7 +165,7 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
     } finally {
       setAlocando(false);
     }
-  }, [turma, selectedIds, onAlocar]);
+  };
 
   if (modoAlocacao && turma) {
     const pendentes = alunosPendentes.filter((a) => !a.turma_id);
