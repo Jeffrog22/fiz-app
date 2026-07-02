@@ -41,7 +41,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
   const [toast, setToast] = useState<{ msg: string; tipo?: 'sucesso' | 'erro' } | null>(null);
 
   const isNew = !aluno;
-  const idade = calcIdade(dataNascimento);
+  const idade = calcIdade(dataNascimento ? formatDateISO(dataNascimento) : undefined);
   const categoria = calcCategoria(idade);
   const turmaSelecionada = turmas.find((t) => t.id === turmaId);
 
@@ -80,6 +80,13 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
     setErroContato(null);
     setToast(null);
   }, [aluno, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -126,8 +133,8 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-800">
             {isNew ? 'Novo Aluno' : isEditMode ? `Editando: ${aluno!.nome}` : aluno!.nome}

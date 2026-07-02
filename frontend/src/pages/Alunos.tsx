@@ -57,7 +57,7 @@ const Alunos: React.FC = () => {
       case 'nivel': return a.turma?.nivel || a.nivel || '-';
       case 'categoria': return calcCategoria(calcIdade(a.data_nascimento)) || '-';
       case 'turma': return a.turma?.label || '-';
-      case 'horario': return a.turma?.horario || '-';
+      case 'horario': return (a.turma?.horario || '-').substring(0, 5);
       default: return '';
     }
   };
@@ -394,7 +394,7 @@ const Alunos: React.FC = () => {
                     </td>
                     <td className="px-3 py-2 text-gray-600">{a.turma?.nivel || a.nivel || '-'}</td>
                     <td className="px-3 py-2 text-gray-600">{a.turma?.label || '-'}</td>
-                    <td className="px-3 py-2 text-gray-600">{a.turma?.horario || '-'}</td>
+                    <td className="px-3 py-2 text-gray-600">{(a.turma?.horario || '-').substring(0, 5)}</td>
                     <td className="px-3 py-2 text-gray-600">{profNome || '-'}</td>
                     <td className="px-3 py-2 text-gray-600">{idade !== null ? idade + ' anos' : '-'}</td>
                     <td className="px-3 py-2 text-gray-600">{categoria || '-'}</td>
