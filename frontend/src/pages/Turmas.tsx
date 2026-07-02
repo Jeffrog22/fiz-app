@@ -14,16 +14,14 @@ const Turmas: React.FC = () => {
   const carregar = useCallback(async () => {
     setCarregando(true);
     try {
-      const resTurmas = await api.get('/turmas');
+      const [resTurmas, resProf] = await Promise.all([
+        api.get('/turmas'),
+        api.get('/professores'),
+      ]);
       setTurmas(resTurmas.data);
-    } catch (err) {
-      console.error('Erro ao carregar turmas', err);
-    }
-    try {
-      const resProf = await api.get('/professores');
       setProfessores(resProf.data);
     } catch (err) {
-      console.error('Erro ao carregar professores', err);
+      console.error('Erro ao carregar turmas', err);
     } finally {
       setCarregando(false);
     }
@@ -31,9 +29,8 @@ const Turmas: React.FC = () => {
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  const handleSave = async (data: Partial<Turma>) => {
+  const handleSave = async (data: any) => {
     try {
-      console.log('[DEBUG handleSave] método:', editando ? 'PUT' : 'POST', 'payload:', JSON.stringify(data));
       if (editando) {
         await api.put(`/turmas/${editando.id}`, data);
       } else {
@@ -62,9 +59,24 @@ const Turmas: React.FC = () => {
   const professorNome = (professorId?: string) =>
     professores.find((p) => p.id === professorId)?.nome || '-';
 
-  const filtered = turmas.filter((t) =>
-    t.label.toLowerCase().includes(filtro.toLowerCase())
-  );
+  const filtered = turmas.filter((t) => {
+    if (!filtro) return true;
+    const q = filtro.toLowerCase();
+    return (
+      t.label.toLowerCase().includes(q) ||
+      (t.grupo_id || '').toLowerCase().includes(q) ||
+      (t.horario || '').toLowerCase().includes(q) ||
+      (t.nivel || '').toLowerCase().includes(q) ||
+      professorNome(t.professor_id).toLowerCase().includes(q)
+    );
+  });
+
+  const lotacaoClass = (count: number, cap?: number) => {
+    if (!cap) return '';
+    if (count > cap) return 'bg-red-100 text-red-700';
+    if (count === cap) return 'bg-yellow-100 text-yellow-700';
+    return '';
+  };
 
   return (
     <div className="space-y-4">
@@ -80,10 +92,10 @@ const Turmas: React.FC = () => {
 
       <input
         type="text"
-        placeholder="Buscar por nome..."
+        placeholder="Buscar por turma, grupo ID, horário, nível ou professor..."
         value={filtro}
         onChange={(e) => setFiltro(e.target.value)}
-        className="w-full max-w-xs px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+        className="w-full max-w-md px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
       />
 
       {carregando ? (
@@ -97,36 +109,48 @@ const Turmas: React.FC = () => {
                 <th className="text-left px-4 py-2 font-medium text-gray-500">Horário</th>
                 <th className="text-left px-4 py-2 font-medium text-gray-500">Nível</th>
                 <th className="text-left px-4 py-2 font-medium text-gray-500">Professor</th>
-                <th className="text-left px-4 py-2 font-medium text-gray-500">Vagas</th>
+                <th className="text-left px-4 py-2 font-medium text-gray-500">Lotação</th>
                 <th className="text-right px-4 py-2 font-medium text-gray-500">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.map((t) => (
-                <tr key={t.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-2 font-medium text-gray-800">{t.label}</td>
-                  <td className="px-4 py-2 text-gray-600">{(t.horario || '').slice(0, 5)}</td>
-                  <td className="px-4 py-2 text-gray-600">{t.nivel || '-'}</td>
-                  <td className="px-4 py-2 text-gray-600">{professorNome(t.professor_id)}</td>
-                  <td className="px-4 py-2 text-gray-600">
-                    {t.capacidade ? `${t.capacidade} vagas` : '-'}
-                  </td>
-                  <td className="px-4 py-2 text-right space-x-2">
-                    <button
-                      onClick={() => { setEditando(t); setModalOpen(true); }}
-                      className="text-xs text-primary-600 hover:text-primary-800"
+              {filtered.map((t) => {
+                const alunosCount = t.alunos_count ?? 0;
+                return (
+                  <tr key={t.id} className="hover:bg-gray-50">
+                    <td
+                      className="px-4 py-2 font-medium text-gray-800"
+                      title={t.grupo_id || t.label}
                     >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDelete(t.id)}
-                      className="text-xs text-red-500 hover:text-red-700"
-                    >
-                      Remover
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                      {t.label}
+                    </td>
+                    <td className="px-4 py-2 text-gray-600">{(t.horario || '').slice(0, 5)}</td>
+                    <td className="px-4 py-2 text-gray-600">{t.nivel || '-'}</td>
+                    <td className="px-4 py-2 text-gray-600">{professorNome(t.professor_id)}</td>
+                    <td className="px-4 py-2">
+                      <span
+                        className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${lotacaoClass(alunosCount, t.capacidade)}`}
+                      >
+                        {alunosCount}/{t.capacidade || '∞'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-right space-x-2">
+                      <button
+                        onClick={() => { setEditando(t); setModalOpen(true); }}
+                        className="text-xs text-primary-600 hover:text-primary-800"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDelete(t.id)}
+                        className="text-xs text-red-500 hover:text-red-700"
+                      >
+                        Remover
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-gray-400">

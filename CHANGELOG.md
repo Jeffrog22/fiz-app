@@ -1,5 +1,33 @@
 # Changelog - Fiz! App
 
+## [v1.3.0] - 2026-07-01
+### Adicionado
+- **Chave Tríplice nas Turmas** — unicidade garantida por (label + horário + professor_id) via índice no banco
+- **Grupo ID automático** — formato `{professorId}{dias}{seq}` (ex: `jeftq01`); gerado na criação da turma
+- **Chips de dias da semana** — `Seg|Ter|Qua|Qui|Sex` com seleção múltipla; label auto-gerado (ex: "Ter/Qui")
+- **Coluna Lotação** — exibe `alunos/capacidade` com cores (amarelo = lotado, vermelho = excedente)
+- **Tooltip no label da turma** — exibe `grupo_id` ao passar o mouse
+- **Busca de turmas extendida** — agora cobre grupo_id, horário, nível e professor
+- **Validação de unicidade** — backend rejeita duplicatas na criação e edição (HTTP 409)
+
+### Alterado
+- `TurmaModal` reescrito: campo `label` substituído por chips de dias + label auto-gerado (disabled)
+- `listarTurmasService` agora retorna `alunos_count` (subquery) para a coluna Lotação
+- `criarTurmaService` aceita `dias[]` em vez de `label` cru; gera label, grupo_id e valida chave tríplice
+
+### Corrigido
+- Teste `calcIdade` — evitava timezone inconsistency ao usar `toISOString()`
+
+### Arquivos alterados
+- `backend/src/migrations/003_triple_key.sql` (novo)
+- `backend/src/utils/idGenerator.ts` (+generateGrupoId, gerarLabelFromDias, parseDiasFromLabel)
+- `backend/src/services/turmasService.ts` (reescrito)
+- `backend/src/types/index.ts` (Turma.grupo_id, alunos_count)
+- `frontend/src/types/index.ts` (Turma.grupo_id, alunos_count)
+- `frontend/src/components/modals/TurmaModal.tsx` (reescrito)
+- `frontend/src/pages/Turmas.tsx` (reescrito)
+- `frontend/src/utils/__tests__/formatters.test.ts` (fix calcIdade)
+
 ## [v1.2.0] - 2026-07-01
 ### Adicionado
 - **Grid de Alunos refatorado** — novas colunas na ordem: Nome, Nível, Turma, Horário, Professor, Idade, Categoria, Gênero, Status

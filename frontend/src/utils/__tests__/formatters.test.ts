@@ -32,9 +32,10 @@ describe('formatarNomeMobile', () => {
 describe('calcIdade', () => {
   it('calcula idade corretamente', () => {
     const hoje = new Date();
-    const anoPassado = new Date(hoje);
-    anoPassado.setFullYear(hoje.getFullYear() - 10);
-    const iso = anoPassado.toISOString().split('T')[0];
+    const anoPassado = new Date(hoje.getFullYear() - 10, hoje.getMonth(), hoje.getDate());
+    const mes = String(anoPassado.getMonth() + 1).padStart(2, '0');
+    const dia = String(anoPassado.getDate()).padStart(2, '0');
+    const iso = `${anoPassado.getFullYear()}-${mes}-${dia}`;
     expect(calcIdade(iso)).toBe(10);
   });
 

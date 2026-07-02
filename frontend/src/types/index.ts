@@ -35,6 +35,8 @@ export interface Turma {
   nivel?: string;
   capacidade?: number;
   faixa_etaria?: string;
+  grupo_id?: string;
+  alunos_count?: number;
   criado_em: string;
 }
 

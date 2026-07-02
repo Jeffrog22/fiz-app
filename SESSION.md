@@ -26,3 +26,29 @@
 - `frontend/src/utils/formatters.ts` (modificado — calcIdade, calcCategoria com nova tabela)
 - `frontend/src/pages/Alunos.tsx` (reescrito — novo grid, busca estendida)
 - `frontend/src/components/modals/AlunoModal.tsx` (reescrito — view/edit, chips, transferência)
+
+# Sessão: 01/07/2026 - Chave Tríplice nas Turmas (Grupo ID)
+
+## 🔍 O que foi feito
+- [x] **Migration** — `003_triple_key.sql`: coluna `grupo_id` + índices de unicidade (grupo_id e chave tríplice label+horario+professor)
+- [x] **Gerador de Grupo ID** — `idGenerator.ts`: função `generateGrupoId(professorId, dias, existingIds)` no formato `{profId}{dias}{seq}` (ex: `jeftq03`); funções `gerarLabelFromDias` e `parseDiasFromLabel`
+- [x] **Turmas Service** — `criarTurmaService`: aceita `dias[]`, gera label e grupo_id, valida chave tríplice única; `listarTurmasService`: adiciona `alunos_count` via subquery; `atualizarTurmaService`: valida unicidade na edição
+- [x] **TurmaModal reescrito** — chips de dias `Seg|Ter|Qua|Qui|Sex` com toggle; label auto-gerado (disabled); preview do grupo_id; criação envia `dias[]`, edição envia dados tradicionais
+- [x] **Página Turmas** — coluna "Lotação" com cores (amarelo = lotado, vermelho = excedente); tooltip no label com grupo_id; busca estendida para grupo_id, horário, nível e professor
+
+## 🧠 Decisões Técnicas Tomadas
+- **Label auto-gerado**: formato `"Ter/Qui"` (abreviação de 3 letras separada por `/`)
+- **Grupo ID**: `{3 letras do professor}{iniciais dos dias}{índice sequencial de 2 dígitos}` — ex: `jeftq01`
+- **Parse reverso na edição**: ao editar turma existente, o label é parseado para preencher os chips (ex: "Ter/Qui" → `['Terça','Quinta']`)
+- **Edição não regenera grupo_id**: o grupo_id permanece o original; a edição só altera nível/capacidade/faixa etária
+- **Lotação via subquery**: Supabase `.select('*, alunos:turma_id(count)')` conta alunos por turma sem FK explícita
+
+## 🔗 Arquivos Alterados/Criados
+- `backend/src/migrations/003_triple_key.sql` (criado)
+- `backend/src/utils/idGenerator.ts` (modificado — +generateGrupoId, gerarLabelFromDias, parseDiasFromLabel)
+- `backend/src/services/turmasService.ts` (reescrito — triple key, lotação)
+- `backend/src/types/index.ts` (modificado — Turma.grupo_id, alunos_count)
+- `frontend/src/types/index.ts` (modificado — Turma.grupo_id, alunos_count)
+- `frontend/src/components/modals/TurmaModal.tsx` (reescrito — chips, label auto)
+- `frontend/src/pages/Turmas.tsx` (reescrito — lotação, tooltip, busca)
+- `frontend/src/utils/__tests__/formatters.test.ts` (modificado — calcIdade test fix)

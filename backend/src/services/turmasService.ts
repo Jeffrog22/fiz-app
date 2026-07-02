@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { AppError } from '../middleware/errorHandler';
+import { generateGrupoId, gerarLabelFromDias } from '../utils/idGenerator';
 
 export async function listarTurmasService(
   tenantId: string,
@@ -7,7 +8,7 @@ export async function listarTurmasService(
 ): Promise<any[]> {
   let query = supabase
     .from('turmas')
-    .select('*')
+    .select('*, alunos:turma_id(count)')
     .eq('tenant_id', tenantId)
     .order('horario', { ascending: true });
 
@@ -18,19 +19,50 @@ export async function listarTurmasService(
   const { data, error } = await query;
 
   if (error) throw new AppError('Erro ao buscar turmas', 500);
-  return data || [];
+
+  return (data || []).map((t: any) => ({
+    ...t,
+    alunos_count: t.alunos?.[0]?.count ?? 0,
+  }));
 }
 
 export async function criarTurmaService(data: any, tenantId: string): Promise<any> {
-  const { label, horario, professor_id, nivel, capacidade, faixa_etaria } = data;
+  const { dias, horario, professor_id, nivel, capacidade, faixa_etaria } = data;
 
-  if (!label || !horario) {
-    throw new AppError('Label e horário são obrigatórios', 400);
+  if (!dias || dias.length === 0 || !horario) {
+    throw new AppError('Dias e horário são obrigatórios', 400);
   }
+
+  const label = gerarLabelFromDias(dias);
+
+  // Valida chave tríplice
+  const { data: existing } = await supabase
+    .from('turmas')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('label', label)
+    .eq('horario', horario)
+    .eq('professor_id', professor_id || null)
+    .maybeSingle();
+
+  if (existing) {
+    throw new AppError('Já existe turma com esse label, horário e professor', 409);
+  }
+
+  // Gera grupo_id
+  const { data: allGrupos } = await supabase
+    .from('turmas')
+    .select('grupo_id')
+    .eq('tenant_id', tenantId)
+    .not('grupo_id', 'is', null);
+
+  const existingIds = (allGrupos || []).map((g: any) => g.grupo_id);
+  const grupoId = generateGrupoId(professor_id || '', dias, existingIds);
 
   const payload = {
     tenant_id: tenantId,
     label,
+    grupo_id: grupoId,
     horario,
     professor_id: professor_id || null,
     nivel: nivel || null,
@@ -38,15 +70,11 @@ export async function criarTurmaService(data: any, tenantId: string): Promise<an
     faixa_etaria: faixa_etaria || null,
   };
 
-  console.log('[DEBUG criarTurma] payload:', JSON.stringify(payload));
-
   const { data: result, error } = await supabase
     .from('turmas')
     .insert(payload)
     .select()
     .single();
-
-  console.log('[DEBUG criarTurma] resultado:', JSON.stringify(result), 'erro:', error);
 
   if (error) throw new AppError(`Erro ao criar turma: ${error.message}`, 500);
   if (!result) throw new AppError('Erro ao criar turma: nenhum retorno do banco', 500);
@@ -55,6 +83,21 @@ export async function criarTurmaService(data: any, tenantId: string): Promise<an
 
 export async function atualizarTurmaService(id: string, data: any, tenantId: string): Promise<any> {
   const { label, horario, professor_id, nivel, capacidade, faixa_etaria } = data;
+
+  // Valida chave tríplice (excluindo a si mesmo)
+  const { data: existing } = await supabase
+    .from('turmas')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('label', label)
+    .eq('horario', horario)
+    .eq('professor_id', professor_id || null)
+    .neq('id', id)
+    .maybeSingle();
+
+  if (existing) {
+    throw new AppError('Já existe outra turma com esse label, horário e professor', 409);
+  }
 
   const payload: Record<string, any> = {
     label,
@@ -66,8 +109,6 @@ export async function atualizarTurmaService(id: string, data: any, tenantId: str
   if (capacidade !== undefined) payload.capacidade = capacidade ?? null;
   if (faixa_etaria !== undefined) payload.faixa_etaria = faixa_etaria || null;
 
-  console.log('[DEBUG atualizarTurma] id:', id, 'payload:', JSON.stringify(payload));
-
   const { data: result, error } = await supabase
     .from('turmas')
     .update(payload)
@@ -75,8 +116,6 @@ export async function atualizarTurmaService(id: string, data: any, tenantId: str
     .eq('tenant_id', tenantId)
     .select()
     .single();
-
-  console.log('[DEBUG atualizarTurma] resultado:', JSON.stringify(result), 'erro:', error);
 
   if (error) throw new AppError(`Erro ao atualizar turma: ${error.message}`, 500);
   if (!result) throw new AppError('Erro ao atualizar turma: nenhum retorno do banco', 500);
