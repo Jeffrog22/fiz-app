@@ -80,7 +80,24 @@ Sempre que encerrar uma tarefa com o Cline, peça a ele:
 
 "Atualize o SESSION.md com tudo o que foi feito nesta sessão, listando os arquivos alterados e as decisões tomadas."
 
-3.3. Commits e pushes automáticos mediante aprovação
+### 3.3. Arquivo AGENTS.md (Referência Cumulativa)
+
+O `AGENTS.md` é a **memória permanente do projeto**. Ele deve ser atualizado **ao final de cada sessão**, junto com o `SESSION.md`.
+
+**O que adicionar no AGENTS.md a cada sessão:**
+- Nova seção no formato `## Sessão: DD/MM/YYYY — Título`
+- Decisões técnicas relevantes (se forem mudanças de rota)
+- Arquivos alterados (links com linha, se relevante)
+- Contexto crítico novo (ex: "descoberto que X causa Y")
+
+**O que NÃO colocar no AGENTS.md:**
+- Detalhes de implementação temporários
+- Listas de tarefas pendentes (isso fica no SESSION.md ou todo list)
+- Commits individuais
+
+> **Regra de ouro:** Se uma AI nova ler só o `AGENTS.md`, ela deve conseguir trabalhar no projeto sem ler `SESSION.md` ou `git log`.
+
+3.4. Commits e pushes automáticos mediante aprovação
 Ao final de cada etapa, milestone ou entrega de uma sub-tarefa acordada, o assistente deve:
 1. Verificar as alterações realizadas.
 2. Formular uma mensagem de commit seguindo Conventional Commits.
@@ -161,6 +178,7 @@ Antes de finalizar qualquer tarefa, o Cline deve verificar:
 - [ ] As regras de negócio seguem o `PRD.md`?
 - [ ] Os commits seguem o padrão do `DEVELOPMENT.md`?
 - [ ] O `SESSION.md` foi atualizado com as mudanças?
+- [ ] O `AGENTS.md` foi atualizado com a nova sessão?
 
 ### 7.4. Penalidade por Desvio
 

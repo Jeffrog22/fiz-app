@@ -1,3 +1,4 @@
+<!-- última-sessão: 2026-07-01 — Alocar Alunos em Turmas -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Identidade
