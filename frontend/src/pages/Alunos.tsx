@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../utils/api';
 import AlunoModal from '../components/modals/AlunoModal';
+import SearchInput from '../components/SearchInput';
 import type { Aluno, Professor, SavePayload } from '../types';
-import { calcIdade, calcCategoria } from '../utils/formatters';
+import { calcIdade, calcCategoria, normalizeSearch } from '../utils/formatters';
 
 interface SortRule {
   column: string;
@@ -76,13 +77,13 @@ const Alunos: React.FC = () => {
     let data = [...alunos];
 
     if (filtro) {
-      const q = filtro.toLowerCase();
+      const q = normalizeSearch(filtro);
       data = data.filter((a) =>
-        a.nome.toLowerCase().includes(q) ||
-        (a.turma?.nivel || '').toLowerCase().includes(q) ||
-        (a.turma?.label || '').toLowerCase().includes(q) ||
-        (a.turma?.horario || '').toLowerCase().includes(q) ||
-        (professorMap.get(a.turma?.professor_id) || '').toLowerCase().includes(q)
+        normalizeSearch(a.nome).includes(q) ||
+        normalizeSearch(a.turma?.nivel || '').includes(q) ||
+        normalizeSearch(a.turma?.label || '').includes(q) ||
+        normalizeSearch(a.turma?.horario || '').includes(q) ||
+        normalizeSearch(professorMap.get(a.turma?.professor_id) || '').includes(q)
       );
     }
 
@@ -291,12 +292,11 @@ const Alunos: React.FC = () => {
         </div>
       </div>
 
-      <input
-        type="text"
-        placeholder="Buscar por nome, nível, turma, horário ou professor..."
+      <SearchInput
         value={filtro}
-        onChange={(e) => setFiltro(e.target.value)}
-        className="w-full max-w-md px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+        onChange={setFiltro}
+        placeholder="Buscar por nome, nível, turma, horário ou professor..."
+        className="w-full max-w-md"
       />
 
       {erro && !carregando && alunos.length === 0 && (

@@ -5,6 +5,7 @@ import GridFilters from '../components/grid/GridFilters';
 import GridPagination from '../components/grid/GridPagination';
 import CardAula from '../components/modals/CardAula';
 import CardBO from '../components/modals/CardBO';
+import SearchInput from '../components/SearchInput';
 import type { Aluno, Turma, ChamadaLog } from '../types';
 
 type PresencaStatus = 'presente' | 'falta' | 'justificado' | undefined;
@@ -82,7 +83,7 @@ const Chamadas: React.FC = () => {
 
   const dias = gerarDias(0);
 
-  // Fuzzy search: insensível a acentos, busca por partes do nome
+  // Fuzzy search: insensï¿½vel a acentos, busca por partes do nome
   const alunosFiltrados = useMemo(() => {
     if (!buscaTexto.trim()) return alunos;
     const termo = buscaTexto
@@ -229,16 +230,12 @@ const Chamadas: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="relative flex-1 max-w-xs">
-          <input
-            type="text"
-            placeholder="Buscar aluno (live search)..."
-            value={buscaTexto}
-            onChange={(e) => setBuscaTexto(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">??</span>
-        </div>
+        <SearchInput
+          value={buscaTexto}
+          onChange={setBuscaTexto}
+          placeholder="Buscar aluno (live search)..."
+          className="flex-1 max-w-xs"
+        />
         <GridFilters
           dataInicio={dataInicio} dataFim={dataFim}
           turmaId={turmaId} turmas={turmas}

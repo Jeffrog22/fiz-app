@@ -1,5 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import api from '../utils/api';
+import SearchInput from '../components/SearchInput';
+import { normalizeSearch } from '../utils/formatters';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend,
@@ -90,9 +92,13 @@ const Relatorios: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const alunosFiltrados = alunosLista.filter((a: any) =>
-    a.nome.toLowerCase().includes(buscaHistorico.toLowerCase())
-  );
+  const alunosFiltrados = useMemo(() => {
+    if (!buscaHistorico.trim()) return alunosLista;
+    const q = normalizeSearch(buscaHistorico);
+    return alunosLista.filter((a: any) =>
+      normalizeSearch(a.nome).includes(q)
+    );
+  }, [alunosLista, buscaHistorico]);
 
   const handleVerHistorico = async (aluno: any) => {
     setCarregandoHistorico(true);
@@ -352,12 +358,11 @@ const Relatorios: React.FC = () => {
           <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Histórico do Aluno</h3>
             <div className="flex gap-2 mb-4">
-              <input
-                type="text"
+              <SearchInput
                 value={buscaHistorico}
-                onChange={(e) => setBuscaHistorico(e.target.value)}
+                onChange={setBuscaHistorico}
                 placeholder="Buscar aluno por nome..."
-                className="flex-1 px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="flex-1"
               />
             </div>
 

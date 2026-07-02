@@ -87,6 +87,10 @@ export function formatDateBR(iso: string): string {
   return `${dia}/${mes}/${ano}`;
 }
 
+export function normalizeSearch(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
 export function formatDateISO(brDate: string): string {
   const partes = brDate.split('/');
   if (partes.length !== 3) return brDate;

@@ -1,5 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import api from '../utils/api';
+import SearchInput from '../components/SearchInput';
+import { normalizeSearch } from '../utils/formatters';
 
 interface Exclusao {
   id: string;
@@ -27,6 +29,7 @@ interface Turma {
 const Exclusoes: React.FC = () => {
   const [exclusoes, setExclusoes] = useState<Exclusao[]>([]);
   const [mostrarOcultos, setMostrarOcultos] = useState(false);
+  const [filtro, setFiltro] = useState('');
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [restoreModal, setRestoreModal] = useState<{ id: string; alunoNome: string } | null>(null);
   const [novaTurmaId, setNovaTurmaId] = useState('');
@@ -71,6 +74,14 @@ const Exclusoes: React.FC = () => {
     }
   };
 
+  const filtered = useMemo(() => {
+    if (!filtro.trim()) return exclusoes;
+    const q = normalizeSearch(filtro);
+    return exclusoes.filter((exc) =>
+      normalizeSearch(exc.alunos?.nome || '').includes(q)
+    );
+  }, [exclusoes, filtro]);
+
   const formatDate = (iso: string) => {
     if (!iso) return '---';
     return new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR');
@@ -91,6 +102,13 @@ const Exclusoes: React.FC = () => {
         </label>
       </div>
 
+      <SearchInput
+        value={filtro}
+        onChange={setFiltro}
+        placeholder="Buscar por nome do aluno..."
+        className="max-w-sm"
+      />
+
       <div className="bg-white rounded-lg shadow border border-gray-200 overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
@@ -104,7 +122,7 @@ const Exclusoes: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {exclusoes.map((exc) => (
+            {filtered.map((exc) => (
               <tr key={exc.id} className="hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium text-gray-800">{exc.alunos?.nome || '---'}</td>
                 <td className="px-4 py-3 text-gray-600">{exc.alunos?.turma_id ? turmas.find(t => t.id === exc.alunos.turma_id)?.label || exc.alunos.turma_id : '---'}</td>
@@ -129,7 +147,7 @@ const Exclusoes: React.FC = () => {
                 </td>
               </tr>
             ))}
-            {exclusoes.length === 0 && (
+            {filtered.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-gray-400 text-sm">Nenhuma exclusão encontrada.</td>
               </tr>

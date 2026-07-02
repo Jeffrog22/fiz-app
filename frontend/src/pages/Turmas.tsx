@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import TurmaModal from '../components/modals/TurmaModal';
+import SearchInput from '../components/SearchInput';
+import { normalizeSearch } from '../utils/formatters';
 import type { Turma } from '../types';
 
 const Turmas: React.FC = () => {
@@ -69,17 +71,17 @@ const Turmas: React.FC = () => {
   const professorNome = (professorId?: string) =>
     professores.find((p) => p.id === professorId)?.nome || '-';
 
-  const filtered = turmas.filter((t) => {
+  const filtered = useMemo(() => turmas.filter((t) => {
     if (!filtro) return true;
-    const q = filtro.toLowerCase();
+    const q = normalizeSearch(filtro);
     return (
-      t.label.toLowerCase().includes(q) ||
-      (t.grupo_id || '').toLowerCase().includes(q) ||
-      (t.horario || '').toLowerCase().includes(q) ||
-      (t.nivel || '').toLowerCase().includes(q) ||
-      professorNome(t.professor_id).toLowerCase().includes(q)
+      normalizeSearch(t.label).includes(q) ||
+      normalizeSearch(t.grupo_id || '').includes(q) ||
+      normalizeSearch(t.horario || '').includes(q) ||
+      normalizeSearch(t.nivel || '').includes(q) ||
+      normalizeSearch(professorNome(t.professor_id)).includes(q)
     );
-  });
+  }), [turmas, filtro]);
 
   const lotacaoClass = (count: number, cap?: number) => {
     if (!cap) return '';
@@ -100,12 +102,11 @@ const Turmas: React.FC = () => {
         </button>
       </div>
 
-      <input
-        type="text"
-        placeholder="Buscar por turma, grupo ID, horário, nível ou professor..."
+      <SearchInput
         value={filtro}
-        onChange={(e) => setFiltro(e.target.value)}
-        className="w-full max-w-md px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+        onChange={setFiltro}
+        placeholder="Buscar por turma, grupo ID, horário, nível ou professor..."
+        className="w-full max-w-md"
       />
 
       {carregando ? (
