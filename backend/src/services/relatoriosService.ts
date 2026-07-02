@@ -6,7 +6,7 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
 
   let query = supabase
     .from('chamadas_log')
-    .select('*, alunos!inner(id, nome, nivel, turma_id)')
+    .select('*')
     .eq('tenant_id', tenantId);
 
   if (mes && ano) {
@@ -16,20 +16,29 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
       .lte('data', `${ano}-${mesStr}-31`);
   }
 
-  const { data, error } = await query.order('data', { ascending: true });
+  const { data: chamadas, error } = await query.order('data', { ascending: true });
   if (error) throw new AppError('Erro ao buscar frequencia', 500);
 
-  const totalRegistros = data?.length || 0;
-  const presentes = data?.filter((r: any) => r.status === 'presente').length || 0;
-  const faltas = data?.filter((r: any) => r.status === 'falta').length || 0;
-  const justificados = data?.filter((r: any) => r.status === 'justificado').length || 0;
+  const { data: alunos } = await supabase
+    .from('alunos')
+    .select('id, nome, nivel, turma_id')
+    .eq('tenant_id', tenantId);
+
+  const alunosMap = new Map<string, any>();
+  alunos?.forEach((a: any) => alunosMap.set(a.id, a));
+
+  const totalRegistros = chamadas?.length || 0;
+  const presentes = chamadas?.filter((r: any) => r.status === 'presente').length || 0;
+  const faltas = chamadas?.filter((r: any) => r.status === 'falta').length || 0;
+  const justificados = chamadas?.filter((r: any) => r.status === 'justificado').length || 0;
 
   const porNivel: Record<string, { total: number; presentes: number }> = {};
   const porHorario: Record<string, { total: number; presentes: number }> = {};
   const porProfessor: Record<string, { total: number; presentes: number }> = {};
 
-  data?.forEach((r: any) => {
-    const nivel = r.alunos?.nivel || 'Sem nivel';
+  chamadas?.forEach((r: any) => {
+    const aluno = alunosMap.get(r.grupo_id);
+    const nivel = aluno?.nivel || 'Sem nivel';
     if (!porNivel[nivel]) porNivel[nivel] = { total: 0, presentes: 0 };
     porNivel[nivel].total++;
     if (r.status === 'presente') porNivel[nivel].presentes++;

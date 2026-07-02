@@ -2,6 +2,7 @@ import { supabase } from './supabaseClient';
 import { ChamadaLog } from '../types';
 import { AppError } from '../middleware/errorHandler';
 import { fetchWeather } from '../utils/weather';
+import { registrarOperacao } from '../utils/logEngine';
 
 export async function listarPorData(data: string, tenantId: string): Promise<any[]> {
   const { data: logs, error } = await supabase
@@ -103,6 +104,13 @@ export async function extrapolarPresenca(data: string, indice_aula: number | und
 
   if (insertError) throw new AppError('Erro ao extrapolar presenca', 500);
 
+  registrarOperacao({
+    tenant_id: tenantId,
+    tabela: 'chamadas_log',
+    operacao: 'extrapolacao',
+    dados: { data, indice_aula: aulaIdx, total: novosLogs.length },
+  });
+
   return { message: `Presenca extrapolada para ${novosLogs.length} alunos`, count: novosLogs.length };
 }
 
@@ -142,6 +150,70 @@ export async function salvarCardAula(
 
     if (updateError) throw new AppError('Erro ao atualizar CardAula', 500);
   }
+
+  registrarOperacao({
+    tenant_id: tenantId,
+    tabela: 'chamadas_log',
+    operacao: 'atualizacao',
+    dados: { data, indice_aula: aulaIdx, temperatura_piscina, cloro_ppm, condicao_clima },
+  });
+}
+
+const CANCELAMENTO_TIPOS = new Set([
+  'Falta Particular do Professor',
+  'Falta Médica',
+  'Manutenção Emergencial',
+  'Raios e Trovões',
+  'Incidente Crítico',
+]);
+
+async function aplicarBOEmIndice(
+  tenantId: string,
+  data: string,
+  indice_aula: number,
+  tipo_select: string,
+  tipo_ocorrencia: string,
+  motivo: string,
+  grupo_id?: string,
+): Promise<void> {
+  const isCancelamento = CANCELAMENTO_TIPOS.has(tipo_ocorrencia);
+  const statusFinal = tipo_select === 'pessoal' && grupo_id
+    ? 'justificado'
+    : isCancelamento
+      ? 'cancelado'
+      : undefined;
+
+  if (grupo_id) {
+    const { error } = await supabase
+      .from('chamadas_log')
+      .upsert({
+        tenant_id: tenantId,
+        data,
+        grupo_id,
+        indice_aula,
+        tipo_select,
+        tipo_ocorrencia,
+        status: statusFinal || 'justificado',
+        motivo,
+        origem: 'manual',
+      });
+    if (error) throw new AppError('Erro ao salvar BO', 500);
+  } else {
+    const updateFields: Record<string, any> = {
+      tipo_select,
+      tipo_ocorrencia,
+      motivo,
+    };
+    if (statusFinal) updateFields.status = statusFinal;
+
+    const { error } = await supabase
+      .from('chamadas_log')
+      .update(updateFields)
+      .eq('tenant_id', tenantId)
+      .eq('data', data)
+      .eq('indice_aula', indice_aula);
+    if (error) throw new AppError('Erro ao atualizar BO', 500);
+  }
 }
 
 export async function salvarCardBO(
@@ -152,53 +224,46 @@ export async function salvarCardBO(
   tipo_ocorrencia?: string,
   motivo?: string,
   grupo_id?: string,
+  compromete_dia?: boolean,
 ): Promise<void> {
   if (!data) throw new AppError('Campo data e obrigatorio', 400);
 
   const aulaIdx = indice_aula ?? 0;
+  const tSelect = tipo_select || 'pessoal';
+  const tOcorrencia = tipo_ocorrencia || 'Outro';
+  const tMotivo = motivo || '';
 
-  if (grupo_id) {
-    const { error: upsertError } = await supabase
-      .from('chamadas_log')
-      .upsert({
-        tenant_id: tenantId,
-        data,
-        grupo_id,
-        indice_aula: aulaIdx,
-        tipo_select: tipo_select || 'pessoal',
-        tipo_ocorrencia: tipo_ocorrencia || 'Outro',
-        status: 'justificado',
-        motivo: motivo || '',
-        origem: 'manual',
-      });
-
-    if (upsertError) throw new AppError('Erro ao salvar BO', 500);
-  } else {
-    const { data: registros, error: fetchError } = await supabase
-      .from('chamadas_log')
-      .select('id')
-      .eq('tenant_id', tenantId)
-      .eq('data', data)
-      .eq('indice_aula', aulaIdx)
-      .limit(1);
-
-    if (fetchError) throw new AppError('Erro ao buscar registros', 500);
-
-    if (registros && registros.length > 0) {
-      const { error: updateError } = await supabase
-        .from('chamadas_log')
-        .update({
-          tipo_select: tipo_select || 'pessoal',
-          tipo_ocorrencia,
-          motivo,
-        })
-        .eq('tenant_id', tenantId)
-        .eq('data', data)
-        .eq('indice_aula', aulaIdx);
-
-      if (updateError) throw new AppError('Erro ao atualizar BO', 500);
+  if (compromete_dia) {
+    const maxIndices = 12;
+    for (let i = 0; i < maxIndices; i++) {
+      await aplicarBOEmIndice(tenantId, data, i, tSelect, tOcorrencia, tMotivo, grupo_id);
     }
+    if (tSelect === 'geral') {
+      const { data: outros } = await supabase
+        .from('chamadas_log')
+        .select('grupo_id, indice_aula')
+        .eq('tenant_id', tenantId)
+        .eq('data', data);
+      if (outros) {
+        const visto = new Set<string>();
+        for (const log of outros) {
+          const key = `${log.grupo_id}|${log.indice_aula}`;
+          if (visto.has(key)) continue;
+          visto.add(key);
+          await aplicarBOEmIndice(tenantId, data, log.indice_aula, tSelect, tOcorrencia, tMotivo, log.grupo_id);
+        }
+      }
+    }
+  } else {
+    await aplicarBOEmIndice(tenantId, data, aulaIdx, tSelect, tOcorrencia, tMotivo, grupo_id);
   }
+
+  registrarOperacao({
+    tenant_id: tenantId,
+    tabela: 'chamadas_log',
+    operacao: tSelect === 'geral' && CANCELAMENTO_TIPOS.has(tOcorrencia) ? 'cancelamento' : 'insercao',
+    dados: { data, indice_aula: aulaIdx, tipo_select: tSelect, tipo_ocorrencia: tOcorrencia, compromete_dia },
+  });
 }
 
 export async function registrarLogAcesso(tenantId: string, professorId?: string, ip?: string): Promise<void> {

@@ -1,65 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
+import {
+  getClimaSugestao,
+  getTempPiscinaSugestao,
+  getCloroSugestao,
+  getSugestaoFinal,
+  getCondicaoFromWeatherCode,
+  getSensacoesFromTemperatura,
+  WMO_MAP,
+} from '../../utils/climateEngine';
 
 interface Props {
   aberto: boolean;
   onClose: () => void;
   data: string;
   indiceAula: number;
+  onAbrirBO?: () => void;
 }
 
-const WMO_VETO_ABSOLUTO = [3, 45, 48, 51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 71, 73, 75, 77, 80, 81, 82, 85, 86, 95, 96, 99];
-const WMO_DINAMICO = [0, 1, 2];
+const SENSACOES = ['Calor', 'Abafado', 'Seco', 'Agradável', 'Vento', 'Frio', 'Frio Intenso'];
 
-const SENSACOES = ['Calor', 'Abafado', 'Seco', 'Agradável', 'Vento', 'Frio'];
+const CONDICOES = Object.values(WMO_MAP).filter((v, i, a) => a.indexOf(v) === i);
 
-function getClimaSugestao(condicao: string, sensacoes: string[]): { status: string; motivo: string | null } {
-  const condLower = condicao.toLowerCase();
-
-  if (sensacoes.includes('Frio') && sensacoes.includes('Vento')) {
-    return { status: 'FALTA JUSTIFICADA', motivo: 'Frio' };
-  }
-  if (sensacoes.includes('Frio')) {
-    return { status: 'FALTA JUSTIFICADA', motivo: 'Frio' };
-  }
-
-  const weatherCodeMap: Record<string, number> = {
-    'nublado': 3, 'névoa seca': 45, 'nevoeiro': 48, 'chuvisco': 51,
-    'chuva': 61, 'pancadas de chuva': 80, 'tempestade': 95,
-  };
-  const code = weatherCodeMap[condLower] || -1;
-  if (WMO_VETO_ABSOLUTO.includes(code)) {
-    return { status: 'FALTA JUSTIFICADA', motivo: condicao };
-  }
-
-  if (WMO_DINAMICO.includes(code)) {
-    const sensacoesNaoPermitidas = ['Frio', 'Vento'];
-    if (sensacoes.some(s => sensacoesNaoPermitidas.includes(s))) {
-      return { status: 'FALTA JUSTIFICADA', motivo: 'Condição climática desfavorável' };
-    }
-  }
-
-  return { status: 'AULA NORMAL', motivo: null };
-}
-
-function getTempPiscinaSugestao(temp: number): { status: string; motivo: string | null } {
-  if (temp < 26) {
-    return { status: 'FALTA JUSTIFICADA', motivo: 'Água muito fria' };
-  }
-  if (temp < 28) {
-    return { status: 'FALTA JUSTIFICADA', motivo: 'Água fria' };
-  }
-  return { status: 'AULA NORMAL', motivo: null };
-}
-
-function getCloroSugestao(cloro: number): { status: string; motivo: string | null } {
-  if (cloro < 1 || cloro > 5) {
-    return { status: 'FALTA JUSTIFICADA', motivo: 'Parâmetros de Cloro Inadequados' };
-  }
-  return { status: 'AULA NORMAL', motivo: null };
-}
-
-const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula }) => {
+const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, onAbrirBO }) => {
   const [tempExterna, setTempExterna] = useState(26);
   const [tempPiscina, setTempPiscina] = useState(28);
   const [cloro, setCloro] = useState(2.5);
@@ -71,47 +34,47 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula }) => {
   useEffect(() => {
     if (aberto && data) {
       setCarregou(false);
+      setSensacoes([]);
       api.get('/chamadas/clima')
         .then((res) => {
-          if (res.data?.ok && res.data?.temperatura) {
-            setTempExterna(res.data.temperatura);
-            if (res.data.temperatura < 15) {
-              setSensacoes(prev => prev.includes('Frio') ? prev : [...prev, 'Frio']);
-            }
-            if (res.data.condicao) {
-              setCondicao(res.data.condicao);
-            }
+          if (res.data?.ok) {
+            const temp = res.data.temperatura ?? 26;
+            setTempExterna(temp);
+            setCondicao(getCondicaoFromWeatherCode(res.data.weatherCode ?? null));
+            const sens = getSensacoesFromTemperatura(temp);
+            if (sens.length > 0) setSensacoes(sens);
+          } else {
+            setTempExterna(26);
+            setCondicao('Parcialmente Nublado');
           }
         })
-        .catch(() => {})
+        .catch(() => {
+          setTempExterna(26);
+          setCondicao('Parcialmente Nublado');
+        })
         .finally(() => setCarregou(true));
     }
   }, [aberto, data]);
 
-  const sensacaoSugestao = getClimaSugestao(condicao, sensacoes);
-  const tempSugestao = getTempPiscinaSugestao(tempPiscina);
-  const cloroSugestao = getCloroSugestao(cloro);
+  useEffect(() => {
+    const sens = getSensacoesFromTemperatura(tempExterna);
+    setSensacoes((prev) => {
+      const filtered = prev.filter((s) => s !== 'Frio' && s !== 'Frio Intenso');
+      return [...filtered, ...sens];
+    });
+  }, [tempExterna]);
 
-  const sugestaoFinal = (() => {
-    if (sensacaoSugestao.status === 'FALTA JUSTIFICADA') {
-      return sensacaoSugestao;
-    }
-    if (tempSugestao.status === 'FALTA JUSTIFICADA') {
-      return tempSugestao;
-    }
-    if (cloroSugestao.status === 'FALTA JUSTIFICADA') {
-      return cloroSugestao;
-    }
-    return { status: 'AULA NORMAL', motivo: null };
-  })();
+  const climaSugestao = getClimaSugestao(condicao, sensacoes);
+  const piscinaSugestao = getTempPiscinaSugestao(tempPiscina);
+  const cloroSugestao = getCloroSugestao(cloro);
+  const sugestaoFinal = getSugestaoFinal(climaSugestao, piscinaSugestao, cloroSugestao);
 
   const toggleSensacao = (s: string) => {
     setSensacoes(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
   };
 
-  const sugestaoCor = sugestaoFinal.status === 'FALTA JUSTIFICADA' ? 'text-red-600'
-    : sugestaoFinal.status === 'AULA NORMAL' ? 'text-green-600'
-    : 'text-yellow-600';
+  const sugestaoCor = sugestaoFinal.status === 'FALTA_JUSTIFICADA' ? 'text-red-600'
+    : 'text-green-600';
 
   const handleSalvar = async () => {
     setSalvando(true);
@@ -155,18 +118,17 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula }) => {
                 <label className="block text-sm font-medium text-gray-700">Condição climática</label>
                 <select value={condicao} onChange={(e) => setCondicao(e.target.value)}
                   className="w-full border border-gray-300 rounded p-2 mt-1 text-sm">
-                  <option>Céu Limpo</option>
-                  <option>Principalmente Limpo</option>
-                  <option>Parcialmente Nublado</option>
-                  <option>Nublado</option>
-                  <option>Chuvisco</option>
-                  <option>Chuva</option>
-                  <option>Tempestade</option>
+                  {CONDICOES.map((c) => (
+                    <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                  ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Temperatura Externa (°C)</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Temperatura Externa (°C)
+                  {tempExterna < 15 && <span className="ml-2 text-xs text-red-500">Frio detectado</span>}
+                </label>
                 <input type="number" step="0.1" value={tempExterna}
                   onChange={(e) => setTempExterna(Number(e.target.value))}
                   className="w-full border border-gray-300 rounded p-2 mt-1 text-sm" />
@@ -209,13 +171,36 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula }) => {
                 </div>
               </div>
 
-              <div className={'p-3 rounded bg-gray-50 text-sm font-medium ' + sugestaoCor}>
-                <span className="text-gray-700">Status Sugerido: </span>
-                <strong>{sugestaoFinal.status}</strong>
-                {sugestaoFinal.motivo && (
-                  <span className="block text-xs mt-0.5">Motivo: {sugestaoFinal.motivo}</span>
-                )}
+              <div className="space-y-1 p-3 rounded bg-gray-50 text-sm">
+                <p className="text-xs text-gray-500">Filtro 1 (Clima): {climaSugestao.status === 'FALTA_JUSTIFICADA' ? `❌ ${climaSugestao.motivo}` : '✅ AULA NORMAL'}</p>
+                <p className="text-xs text-gray-500">Filtro 2 (Piscina): {piscinaSugestao.status === 'FALTA_JUSTIFICADA' ? `❌ ${piscinaSugestao.motivo}` : '✅ AULA NORMAL'}</p>
+                <p className="text-xs text-gray-500">Filtro 3 (Cloro): {cloroSugestao.status === 'FALTA_JUSTIFICADA' ? `❌ ${cloroSugestao.motivo}` : '✅ AULA NORMAL'}</p>
+                <div className={'pt-1 font-medium ' + sugestaoCor}>
+                  Status Sugerido: <strong>{sugestaoFinal.status === 'FALTA_JUSTIFICADA' ? 'FALTA JUSTIFICADA' : 'AULA NORMAL'}</strong>
+                  {sugestaoFinal.motivo && (
+                    <span className="block text-xs mt-0.5">Motivo: {sugestaoFinal.motivo}</span>
+                  )}
+                </div>
               </div>
+
+              {(tempPiscina < 25 || cloro === 0) && (
+                <div className="p-3 border border-red-200 bg-red-50 rounded space-y-2">
+                  <p className="text-xs font-medium text-red-700">
+                    Condição de cancelamento detectada:
+                  </p>
+                  <ul className="text-xs text-red-600 list-disc list-inside">
+                    {tempPiscina < 23 && <li>Água crítica ({tempPiscina}°C) — risco para todos os alunos</li>}
+                    {tempPiscina >= 23 && tempPiscina < 25 && <li>Água muito fria ({tempPiscina}°C) — risco para menores de 16 anos</li>}
+                    {cloro === 0 && <li>Cloro zerado — condições inadequadas para aula</li>}
+                  </ul>
+                  {onAbrirBO && (
+                    <button type="button" onClick={onAbrirBO}
+                      className="text-xs px-3 py-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition">
+                      Abrir BO de Cancelamento
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             <div className="flex justify-end gap-2 mt-6">
               <button onClick={onClose}

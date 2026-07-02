@@ -2,6 +2,15 @@ import React, { useEffect, useState, useCallback } from 'react';
 import api from '../utils/api';
 import WeatherWidget from '../components/common/WeatherWidget';
 
+interface PlanejamentoArquivo {
+  id: string;
+  nome_original: string;
+  nome_arquivo: string;
+  tamanho: number;
+  tipo: string;
+  criado_em: string;
+}
+
 interface CalendarioEvento {
   id: string;
   data: string;
@@ -38,7 +47,8 @@ const Calendario: React.FC = () => {
   const [selectedDayEventos, setSelectedDayEventos] = useState<CalendarioEvento[]>([]);
   const [novoEventoTipo, setNovoEventoTipo] = useState<string>('evento');
   const [novoEventoDesc, setNovoEventoDesc] = useState('');
-  const [planningFiles, setPlanningFiles] = useState<File[]>([]);
+  const [planningFiles, setPlanningFiles] = useState<PlanejamentoArquivo[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [climaDados, setClimaDados] = useState<Record<string, any>>({});
 
   const carregarEventos = useCallback(async () => {
@@ -78,8 +88,16 @@ const Calendario: React.FC = () => {
     } catch { /* ignore */ }
   }, []);
 
+  const carregarArquivos = useCallback(async () => {
+    try {
+      const res = await api.get('/planejamento');
+      setPlanningFiles(res.data);
+    } catch { setPlanningFiles([]); }
+  }, []);
+
   useEffect(() => { carregarEventos(); }, [carregarEventos]);
   useEffect(() => { carregarPeriodo(); }, [carregarPeriodo]);
+  useEffect(() => { carregarArquivos(); }, [carregarArquivos]);
 
   const mesAnterior = () => { if (mes === 1) { setMes(12); setAno(a => a - 1); } else { setMes(m => m - 1); } };
   const mesSeguinte = () => { if (mes === 12) { setMes(1); setAno(a => a + 1); } else { setMes(m => m + 1); } };
@@ -134,11 +152,55 @@ const Calendario: React.FC = () => {
     } catch { /* ignore */ }
   };
 
-  const handlePlanningUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setPlanningFiles(prev => [...prev, ...Array.from(e.target.files!)].slice(0, 4));
-    }
+  const handlePlanningUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      for (const file of Array.from(e.target.files)) {
+        formData.append('arquivos', file);
+      }
+      await api.post('/planejamento/multi', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      carregarArquivos();
+    } catch { alert('Erro ao fazer upload dos arquivos'); }
+    setUploading(false);
+    e.target.value = '';
   };
+
+  const handleRemoverArquivo = async (id: string) => {
+    try {
+      await api.delete(`/planejamento/${id}`);
+      carregarArquivos();
+    } catch { alert('Erro ao remover arquivo'); }
+  };
+
+  const handleDownloadArquivo = async (id: string) => {
+    try {
+      const res = await api.get(`/planejamento/${id}/download`, { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const arquivo = planningFiles.find(f => f.id === id);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = arquivo?.nome_original || 'download';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { alert('Erro ao baixar arquivo'); }
+  };
+
+  function formatarTamanho(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  function iconeTipo(tipo: string): string {
+    if (tipo.includes('pdf')) return '📄';
+    if (tipo.includes('csv') || tipo.includes('excel') || tipo.includes('spreadsheet')) return '📊';
+    if (tipo.includes('text')) return '📝';
+    return '📎';
+  }
 
   const diasCalendario: React.ReactNode[] = [];
   for (let i = 0; i < primeiroDiaSemana; i++) {
@@ -276,23 +338,35 @@ const Calendario: React.FC = () => {
 
       <div className="bg-white rounded-lg shadow border border-gray-200 p-4 space-y-3">
         <h3 className="text-sm font-semibold text-gray-700">Planejamento</h3>
-        <p className="text-xs text-gray-500">Faça upload de arquivos de planejamento (PDF/TXT/CSV, até 4 arquivos).</p>
+        <p className="text-xs text-gray-500">Faça upload de arquivos de planejamento (PDF/TXT/CSV/XLS/XLSX, até 10MB cada, máx 4 arquivos por vez).</p>
         <input
           type="file"
-          accept=".pdf,.txt,.csv"
+          accept=".pdf,.txt,.csv,.xls,.xlsx"
           multiple
           onChange={handlePlanningUpload}
-          className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:border file:border-gray-300 file:rounded file:text-sm file:bg-gray-50 hover:file:bg-gray-100"
+          disabled={uploading}
+          className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:border file:border-gray-300 file:rounded file:text-sm file:bg-gray-50 hover:file:bg-gray-100 disabled:opacity-50"
         />
+        {uploading && <p className="text-xs text-primary-600">Enviando...</p>}
         {planningFiles.length > 0 && (
-          <ul className="text-xs text-gray-600 space-y-1">
-            {planningFiles.map((f, i) => (
-              <li key={i} className="flex justify-between items-center">
-                <span>{f.name} ({(f.size / 1024).toFixed(1)} KB)</span>
-                <button onClick={() => setPlanningFiles(prev => prev.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-600">&times;</button>
+          <ul className="text-xs text-gray-600 space-y-2">
+            {planningFiles.map((f) => (
+              <li key={f.id} className="flex justify-between items-center py-1 px-2 rounded hover:bg-gray-50">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span>{iconeTipo(f.tipo)}</span>
+                  <span className="truncate max-w-[200px]" title={f.nome_original}>{f.nome_original}</span>
+                  <span className="text-gray-400 shrink-0">({formatarTamanho(f.tamanho)})</span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => handleDownloadArquivo(f.id)} className="text-primary-500 hover:text-primary-700 px-1" title="Download">⬇</button>
+                  <button onClick={() => handleRemoverArquivo(f.id)} className="text-red-400 hover:text-red-600 px-1" title="Remover">&times;</button>
+                </div>
               </li>
             ))}
           </ul>
+        )}
+        {planningFiles.length === 0 && !uploading && (
+          <p className="text-xs text-gray-400 text-center py-2">Nenhum arquivo de planejamento enviado.</p>
         )}
       </div>
 

@@ -75,6 +75,16 @@ export interface SavePayload {
   acao?: 'correcao' | 'transferencia';
 }
 
+export interface AnotacaoAluno {
+  id: string;
+  tenant_id: string;
+  aluno_id: string;
+  anotacao: string;
+  criado_por?: string;
+  criado_em: string;
+  atualizado_em: string;
+}
+
 export interface AuthState {
   isAuthenticated: boolean;
   professorId?: string;

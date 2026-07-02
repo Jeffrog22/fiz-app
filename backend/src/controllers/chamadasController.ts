@@ -60,8 +60,8 @@ export class ChamadasController {
   static async salvarCardBO(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const tenantId = req.tenantId!;
-      const { data, indice_aula, tipo_select, tipo_ocorrencia, motivo, grupo_id } = req.body;
-      await chamadasService.salvarCardBO(tenantId, data, indice_aula, tipo_select, tipo_ocorrencia, motivo, grupo_id);
+      const { data, indice_aula, tipo_select, tipo_ocorrencia, motivo, grupo_id, compromete_dia } = req.body;
+      await chamadasService.salvarCardBO(tenantId, data, indice_aula, tipo_select, tipo_ocorrencia, motivo, grupo_id, compromete_dia);
       res.json({ ok: true });
     } catch (error) {
       next(error);

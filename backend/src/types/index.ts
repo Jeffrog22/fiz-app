@@ -60,6 +60,7 @@ export interface ChamadaLog {
   cloro_ppm?: number;
   tipo_select?: 'geral' | 'pessoal';
   tipo_ocorrencia?: string;
+  compromete_dia?: boolean;
   origem?: 'manual' | 'extrapolado';
   criado_em: string;
 }
@@ -80,6 +81,16 @@ export interface EnrollmentPeriod {
   data_fim?: string;
   motivo: 'matricula_inicial' | 'correcao' | 'transferencia';
   criado_em: string;
+}
+
+export interface AnotacaoAluno {
+  id: string;
+  tenant_id: string;
+  aluno_id: string;
+  anotacao: string;
+  criado_por?: string;
+  criado_em: string;
+  atualizado_em: string;
 }
 
 export interface LogAcesso {

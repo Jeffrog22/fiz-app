@@ -1,40 +1,44 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import api from '../utils/api';
 import DataGrid from '../components/grid/DataGrid';
-import GridFilters from '../components/grid/GridFilters';
+import ChamadaFilters from '../components/grid/ChamadaFilters';
 import GridPagination from '../components/grid/GridPagination';
 import CardAula from '../components/modals/CardAula';
 import CardBO from '../components/modals/CardBO';
 import SearchInput from '../components/SearchInput';
-import type { Aluno, Turma, ChamadaLog } from '../types';
+import type { Aluno, Turma, Professor, ChamadaLog, AnotacaoAluno } from '../types';
+import { gerarDiasLetivos, hojeMesAno } from '../utils/chamadaUtils';
 
-type PresencaStatus = 'presente' | 'falta' | 'justificado' | undefined;
+type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | undefined;
 
-function gerarDias(semanaOffset: number = 0): string[] {
-  const dias: string[] = [];
-  const hoje = new Date();
-  const inicio = new Date(hoje);
-  inicio.setDate(hoje.getDate() + semanaOffset * 7 - hoje.getDay() + 1);
-  for (let i = 0; i < 5; i++) {
-    const d = new Date(inicio);
-    d.setDate(inicio.getDate() + i);
-    dias.push(d.toISOString().split('T')[0]);
-  }
-  return dias;
+const MAX_UNDO = 10;
+
+interface UndoAction {
+  type: 'presenca' | 'anotacao' | 'limpar';
+  alunoId?: string;
+  data?: string;
+  indice?: number;
+  statusAntigo?: PresencaStatus;
+  motivoAntigo?: string;
+  batch?: Array<{ alunoId: string; statusAntigo?: PresencaStatus }>;
 }
 
 const Chamadas: React.FC = () => {
+  const { mes: mesInicial, ano: anoInicial } = hojeMesAno();
+
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [turmas, setTurmas] = useState<Turma[]>([]);
+  const [professores, setProfessores] = useState<Professor[]>([]);
   const [logs, setLogs] = useState<Record<string, Record<string, ChamadaLog>>>({});
   const [carregando, setCarregando] = useState(true);
-  const [salvando, setSalvando] = useState(false);
-  const [ultimoSalvamento, setUltimoSalvamento] = useState<string | null>(null);
   const [statusSave, setStatusSave] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
-  const [dataInicio, setDataInicio] = useState(() => gerarDias(0)[0]);
-  const [dataFim, setDataFim] = useState(() => gerarDias(0)[4]);
+  const [mes, setMes] = useState(mesInicial);
+  const [ano, setAno] = useState(anoInicial);
+  const [retroativo, setRetroativo] = useState(false);
   const [turmaId, setTurmaId] = useState('');
+  const [professorId, setProfessorId] = useState('');
+  const [horario, setHorario] = useState('');
   const [buscaTexto, setBuscaTexto] = useState('');
 
   const [indiceAtual, setIndiceAtual] = useState(0);
@@ -42,19 +46,52 @@ const Chamadas: React.FC = () => {
 
   const [cardAulaAberto, setCardAulaAberto] = useState(false);
   const [cardBOAberto, setCardBOAberto] = useState(false);
+  const [dateHeaderClickData, setDateHeaderClickData] = useState<string>('');
+  const [alunosComAnotacao, setAlunosComAnotacao] = useState<Set<string>>(new Set());
+
+  const [limparConfirm, setLimparConfirm] = useState(false);
+  const [undoCount, setUndoCount] = useState(0);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const filaSalvamento = useRef<any[]>([]);
+  const undoStack = useRef<UndoAction[]>([]);
+
+  const statusSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const turmaSelecionada = useMemo(
+    () => turmas.find((t) => t.id === turmaId) || null,
+    [turmas, turmaId],
+  );
+
+  const dias = useMemo(
+    () => gerarDiasLetivos(mes, ano, turmaSelecionada?.label || ''),
+    [mes, ano, turmaSelecionada],
+  );
+
+  const alunosDaTurma = useMemo(() => {
+    if (!turmaId) return [];
+    return alunos.filter((a) => a.turma_id === turmaId);
+  }, [alunos, turmaId]);
+
+  const alunosFiltrados = useMemo(() => {
+    if (!buscaTexto.trim()) return alunosDaTurma;
+    const termo = buscaTexto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return alunosDaTurma.filter((a) =>
+      a.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(termo),
+    );
+  }, [alunosDaTurma, buscaTexto]);
 
   const carregarDados = useCallback(async () => {
     setCarregando(true);
     try {
-      const [resAlunos, resTurmas] = await Promise.all([
+      const [resAlunos, resTurmas, resProfs] = await Promise.all([
         api.get('/alunos'),
         api.get('/turmas'),
+        api.get('/professores'),
       ]);
       setAlunos(resAlunos.data);
       setTurmas(resTurmas.data);
+      setProfessores(resProfs.data);
     } catch (err) {
       console.error('Erro ao carregar dados', err);
     } finally {
@@ -63,8 +100,11 @@ const Chamadas: React.FC = () => {
   }, []);
 
   const carregarLogs = useCallback(async () => {
+    if (dias.length === 0) return;
     try {
-      const res = await api.get('/chamadas/periodo?inicio=' + dataInicio + '&fim=' + dataFim);
+      const inicio = dias[0];
+      const fim = dias[dias.length - 1];
+      const res = await api.get(`/chamadas/periodo?inicio=${inicio}&fim=${fim}`);
       const raw: ChamadaLog[] = res.data;
       const indexed: Record<string, Record<string, ChamadaLog>> = {};
       for (const log of raw) {
@@ -76,74 +116,80 @@ const Chamadas: React.FC = () => {
     } catch (err) {
       console.error('Erro ao carregar chamadas', err);
     }
-  }, [dataInicio, dataFim]);
+  }, [dias]);
+
+  const carregarAnotacoes = useCallback(async () => {
+    const ids = alunosDaTurma.map((a) => a.id);
+    if (ids.length === 0) { setAlunosComAnotacao(new Set()); return; }
+    try {
+      const res = await api.get(`/anotacoes/lote?ids=${ids.join(',')}`);
+      const data: AnotacaoAluno[] = res.data || [];
+      setAlunosComAnotacao(new Set(data.map((a) => a.aluno_id)));
+    } catch (err) {
+      console.error('Erro ao carregar anotacoes', err);
+    }
+  }, [alunosDaTurma]);
 
   useEffect(() => { carregarDados(); }, [carregarDados]);
   useEffect(() => { carregarLogs(); }, [carregarLogs]);
+  useEffect(() => { carregarAnotacoes(); }, [carregarAnotacoes]);
 
-  const dias = gerarDias(0);
-
-  // Fuzzy search: insens�vel a acentos, busca por partes do nome
-  const alunosFiltrados = useMemo(() => {
-    if (!buscaTexto.trim()) return alunos;
-    const termo = buscaTexto
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
-    return alunos.filter((a) =>
-      a.nome
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .includes(termo)
-    );
-  }, [alunos, buscaTexto]);
-
-  const temFiltroAtivo = buscaTexto.trim() !== '' || turmaId !== '';
+  useEffect(() => {
+    if (statusSave === 'saved') {
+      if (statusSaveTimerRef.current) clearTimeout(statusSaveTimerRef.current);
+      statusSaveTimerRef.current = setTimeout(() => setStatusSave('idle'), 3000);
+    }
+    return () => {
+      if (statusSaveTimerRef.current) clearTimeout(statusSaveTimerRef.current);
+    };
+  }, [statusSave]);
 
   const limparFiltros = () => {
-    setBuscaTexto('');
     setTurmaId('');
-    setDataInicio(gerarDias(0)[0]);
-    setDataFim(gerarDias(0)[4]);
+    setProfessorId('');
+    setHorario('');
+    setBuscaTexto('');
+    setRetroativo(false);
+    const hoje = hojeMesAno();
+    setMes(hoje.mes);
+    setAno(hoje.ano);
   };
 
   const processarFila = useCallback(async () => {
     if (filaSalvamento.current.length === 0) return;
-    setSalvando(true);
     setStatusSave('saving');
     const payload = [...filaSalvamento.current];
     filaSalvamento.current = [];
     try {
       const res = await api.post('/chamadas', payload);
       if (res.data.ok) {
-        const agora = new Date().toLocaleTimeString('pt-BR');
-        setUltimoSalvamento(agora);
         setStatusSave('saved');
       }
-    } catch (err) {
-      console.error('Erro no salvamento automatico', err);
+    } catch {
       setStatusSave('error');
-    } finally {
-      setSalvando(false);
     }
   }, []);
 
   const agendarSalvamento = useCallback((payload: any[]) => {
     filaSalvamento.current.push(...payload);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(processarFila, 1500);
+    debounceRef.current = setTimeout(processarFila, 1000);
   }, [processarFila]);
 
   const handleTogglePresenca = useCallback(
     (alunoId: string, data: string, status: PresencaStatus) => {
+      if (!retroativo && data < dias[0]) return;
+
+      const currentStatus = logs[alunoId]?.[data]?.status;
+      undoStack.current.push({ type: 'presenca', alunoId, data, indice: indiceAtual, statusAntigo: currentStatus });
+      if (undoStack.current.length > MAX_UNDO) undoStack.current.shift();
+      setUndoCount((c) => c + 1);
+
       const payload = [{
-        grupo_id: alunoId,
-        data,
-        indice_aula: indiceAtual,
-        status: status || null,
-        origem: 'manual',
+        grupo_id: alunoId, data, indice_aula: indiceAtual,
+        status: status || null, origem: 'manual',
       }];
+
       setLogs((prev) => {
         const next = { ...prev };
         if (!next[alunoId]) next[alunoId] = {};
@@ -160,11 +206,16 @@ const Chamadas: React.FC = () => {
       });
       agendarSalvamento(payload);
     },
-    [indiceAtual, agendarSalvamento]
+    [indiceAtual, agendarSalvamento, logs, retroativo, dias],
   );
 
   const handleUpdateAnotacao = useCallback(
     (alunoId: string, data: string, anotacao: string) => {
+      const motivoAntigo = logs[alunoId]?.[data]?.motivo;
+      undoStack.current.push({ type: 'anotacao', alunoId, data, indice: indiceAtual, motivoAntigo });
+      if (undoStack.current.length > MAX_UNDO) undoStack.current.shift();
+      setUndoCount((c) => c + 1);
+
       const payload = [{
         grupo_id: alunoId, data, indice_aula: indiceAtual,
         motivo: anotacao || null, origem: 'manual',
@@ -177,21 +228,157 @@ const Chamadas: React.FC = () => {
       });
       agendarSalvamento(payload);
     },
-    [indiceAtual, agendarSalvamento]
+    [indiceAtual, agendarSalvamento, logs],
   );
 
+  const handleDateHeaderClick = useCallback((data: string) => {
+    setDateHeaderClickData(data);
+    setCardAulaAberto(true);
+  }, []);
+
+  const handleAnotacaoChange = useCallback((_alunoId: string) => {
+    carregarAnotacoes();
+  }, [carregarAnotacoes]);
+
+  const handleSaveJustificativa = useCallback(
+    (alunoId: string, data: string, motivo: string) => {
+      const payload = [{
+        grupo_id: alunoId, data, indice_aula: indiceAtual,
+        status: 'justificado', motivo: motivo || null, origem: 'manual',
+      }];
+      setLogs((prev) => {
+        const next = { ...prev };
+        if (!next[alunoId]) next[alunoId] = {};
+        next[alunoId][data] = {
+          ...next[alunoId][data],
+          status: 'justificado', motivo,
+        } as ChamadaLog;
+        return next;
+      });
+      agendarSalvamento(payload);
+    },
+    [indiceAtual, agendarSalvamento],
+  );
+
+  const handleDesfazer = useCallback(() => {
+    const action = undoStack.current.pop();
+    if (!action) return;
+    setUndoCount((c) => c + 1);
+
+    switch (action.type) {
+      case 'presenca': {
+        if (!action.alunoId || !action.data) return;
+        const payload = [{
+          grupo_id: action.alunoId, data: action.data,
+          indice_aula: action.indice ?? indiceAtual,
+          status: action.statusAntigo || null, origem: 'manual',
+        }];
+        setLogs((prev) => {
+          const next = { ...prev };
+          if (!next[action.alunoId!]) next[action.alunoId!] = {};
+          if (action.statusAntigo) {
+            next[action.alunoId!][action.data!] = {
+              id: '', tenant_id: '', data: action.data!, grupo_id: action.alunoId!,
+              indice_aula: action.indice ?? indiceAtual, status: action.statusAntigo, origem: 'manual',
+              criado_em: new Date().toISOString(),
+            };
+          } else {
+            delete next[action.alunoId!][action.data!];
+          }
+          return next;
+        });
+        agendarSalvamento(payload);
+        break;
+      }
+      case 'anotacao': {
+        if (!action.alunoId || !action.data) return;
+        const payload = [{
+          grupo_id: action.alunoId, data: action.data,
+          indice_aula: action.indice ?? indiceAtual,
+          motivo: action.motivoAntigo || null, origem: 'manual',
+        }];
+        setLogs((prev) => {
+          const next = { ...prev };
+          if (!next[action.alunoId!]) next[action.alunoId!] = {};
+          next[action.alunoId!][action.data!] = {
+            ...next[action.alunoId!][action.data!],
+            motivo: action.motivoAntigo,
+          } as ChamadaLog;
+          return next;
+        });
+        agendarSalvamento(payload);
+        break;
+      }
+      case 'limpar': {
+        if (!action.batch) return;
+        const payload = action.batch.map((b) => ({
+          grupo_id: b.alunoId, data: action.data,
+          indice_aula: action.indice ?? indiceAtual,
+          status: b.statusAntigo || null, origem: 'manual',
+        }));
+        setLogs((prev) => {
+          const next = { ...prev };
+          for (const b of action.batch!) {
+            if (!next[b.alunoId]) next[b.alunoId] = {};
+            if (b.statusAntigo) {
+              next[b.alunoId][action.data!] = {
+                id: '', tenant_id: '', data: action.data!, grupo_id: b.alunoId,
+                indice_aula: action.indice ?? indiceAtual, status: b.statusAntigo, origem: 'manual',
+                criado_em: new Date().toISOString(),
+              };
+            } else {
+              delete next[b.alunoId][action.data!];
+            }
+          }
+          return next;
+        });
+        agendarSalvamento(payload);
+        break;
+      }
+    }
+  }, [indiceAtual, agendarSalvamento]);
+
   const handleExtrapolar = useCallback(async () => {
-    if (!dataInicio) return;
+    if (dias.length === 0) return;
     try {
       const res = await api.post('/chamadas/extrapolar', {
-        data: dataInicio, indice_aula: indiceAtual,
+        data: dias[0], indice_aula: indiceAtual,
       });
       alert(res.data.message || 'Presenca extrapolada');
       carregarLogs();
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Erro ao extrapolar');
     }
-  }, [dataInicio, indiceAtual, carregarLogs]);
+  }, [dias, indiceAtual, carregarLogs]);
+
+  const handleLimpar = useCallback(() => {
+    if (alunosFiltrados.length === 0 || dias.length === 0) return;
+    const data = dias[0];
+    const batch = alunosFiltrados.map((a) => ({
+      alunoId: a.id,
+      statusAntigo: logs[a.id]?.[data]?.status,
+    }));
+    undoStack.current.push({ type: 'limpar', data, indice: indiceAtual, batch });
+    if (undoStack.current.length > MAX_UNDO) undoStack.current.shift();
+    setUndoCount((c) => c + 1);
+
+    const payload = batch.map((b) => ({
+      grupo_id: b.alunoId, data,
+      indice_aula: indiceAtual,
+      status: null, origem: 'manual',
+    }));
+    setLogs((prev) => {
+      const next = { ...prev };
+      for (const b of batch) {
+        if (next[b.alunoId]?.[data]) {
+          delete next[b.alunoId][data];
+        }
+      }
+      return next;
+    });
+    agendarSalvamento(payload);
+    setLimparConfirm(false);
+  }, [alunosFiltrados, dias, indiceAtual, logs, agendarSalvamento]);
 
   useEffect(() => {
     return () => {
@@ -200,61 +387,59 @@ const Chamadas: React.FC = () => {
     };
   }, [processarFila]);
 
-  const statusTexto = () => {
+  const podeDesfazer = undoStack.current.length > 0;
+
+  const indicadorSave = () => {
     switch (statusSave) {
-      case 'saving': return 'Salvando alteracoes...';
-      case 'saved': return 'Todas as alteracoes foram salvas';
-      case 'error': return 'Erro ao salvar. Tentando novamente...';
-      default: return ultimoSalvamento ? 'Salvo as ' + ultimoSalvamento : '';
+      case 'saving':
+        return <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" />Salvando...</span>;
+      case 'saved':
+        return <span className="flex items-center gap-1.5 text-xs text-green-600"><span className="w-2 h-2 bg-green-500 rounded-full" />Salvo</span>;
+      case 'error':
+        return <span className="flex items-center gap-1.5 text-xs text-red-500"><span className="w-2 h-2 bg-red-500 rounded-full" />Erro ao salvar</span>;
+      default:
+        return null;
     }
   };
 
-  const statusCor = () => {
-    switch (statusSave) {
-      case 'saving': return 'text-gray-500';
-      case 'saved': return 'text-green-600';
-      case 'error': return 'text-red-500';
-      default: return 'text-gray-400';
-    }
-  };
+  const nivel = turmaSelecionada?.nivel || '';
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">Chamadas</h1>
-        <div className="flex items-center gap-2">
-          {statusSave !== 'idle' && (
-            <span className={'text-xs ' + statusCor()}>{statusTexto()}</span>
-          )}
+        <div className="flex items-center gap-2 min-w-[120px] justify-end">
+          {indicadorSave()}
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <ChamadaFilters
+        turmaId={turmaId}
+        professorId={professorId}
+        horario={horario}
+        nivel={nivel}
+        mes={mes}
+        ano={ano}
+        turmas={turmas}
+        professores={professores}
+        retroativo={retroativo}
+        onTurmaChange={(v) => { setTurmaId(v); setProfessorId(''); setHorario(''); }}
+        onProfessorChange={setProfessorId}
+        onHorarioChange={setHorario}
+        onMesChange={setMes}
+        onAnoChange={setAno}
+        onRetroativoChange={setRetroativo}
+        onLimpar={limparFiltros}
+      />
+
+      <div className="flex items-center gap-2 flex-wrap">
         <SearchInput
           value={buscaTexto}
           onChange={setBuscaTexto}
-          placeholder="Buscar aluno (live search)..."
+          placeholder="Buscar aluno..."
           className="flex-1 max-w-xs"
         />
-        <GridFilters
-          dataInicio={dataInicio} dataFim={dataFim}
-          turmaId={turmaId} turmas={turmas}
-          onDataInicioChange={setDataInicio}
-          onDataFimChange={setDataFim}
-          onTurmaChange={setTurmaId}
-        />
-        {temFiltroAtivo && (
-          <button
-            onClick={limparFiltros}
-            className="px-2 py-1.5 text-xs bg-red-50 text-red-600 rounded border border-red-200 hover:bg-red-100 transition"
-            title="Remover todos os filtros"
-          >
-            ? Limpar filtros
-          </button>
-        )}
-      </div>
 
-      <div className="flex items-center gap-2 flex-wrap">
         <GridPagination
           indiceAtual={indiceAtual}
           totalIndices={totalIndices}
@@ -263,15 +448,25 @@ const Chamadas: React.FC = () => {
         />
 
         <div className="flex gap-1 ml-auto">
+          <button onClick={handleDesfazer} disabled={!podeDesfazer}
+            className="px-3 py-1.5 text-xs bg-gray-50 text-gray-600 rounded hover:bg-gray-100 border border-gray-200 transition disabled:opacity-30 disabled:cursor-not-allowed">
+            Desfazer
+          </button>
+          {alunosFiltrados.length > 0 && (
+            <button onClick={() => setLimparConfirm(true)}
+              className="px-3 py-1.5 text-xs bg-red-50 text-red-700 rounded hover:bg-red-100 border border-red-200 transition">
+              Limpar
+            </button>
+          )}
           <button onClick={handleExtrapolar}
             className="px-3 py-1.5 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100 border border-blue-200 transition">
-            Extrapolar presenca
+            Extrapolar
           </button>
-          <button onClick={() => setCardAulaAberto(true)}
+          <button onClick={() => { setDateHeaderClickData(dias[0] || ''); setCardAulaAberto(true); }}
             className="px-3 py-1.5 text-xs bg-cyan-50 text-cyan-700 rounded hover:bg-cyan-100 border border-cyan-200 transition">
             Card Aula
           </button>
-          <button onClick={() => setCardBOAberto(true)}
+          <button onClick={() => { setDateHeaderClickData(dias[0] || ''); setCardBOAberto(true); }}
             className="px-3 py-1.5 text-xs bg-orange-50 text-orange-700 rounded hover:bg-orange-100 border border-orange-200 transition">
             Card BO
           </button>
@@ -280,25 +475,62 @@ const Chamadas: React.FC = () => {
 
       {carregando ? (
         <p className="text-sm text-gray-500">Carregando...</p>
+      ) : !turmaId ? (
+        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-400 text-sm">
+          Selecione uma turma para visualizar a chamada
+        </div>
+      ) : dias.length === 0 ? (
+        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-400 text-sm">
+          Nenhum dia letivo encontrado para esta turma no período selecionado
+        </div>
       ) : (
         <DataGrid
-          alunos={alunosFiltrados} dias={dias} logs={logs}
+          alunos={alunosFiltrados}
+          dias={dias}
+          logs={logs}
+          turma={turmaSelecionada}
           onTogglePresenca={handleTogglePresenca}
           onUpdateAnotacao={handleUpdateAnotacao}
+          onDateHeaderClick={handleDateHeaderClick}
+          alunosComAnotacao={alunosComAnotacao}
+          onAnotacaoChange={handleAnotacaoChange}
+          onSaveJustificativa={handleSaveJustificativa}
         />
+      )}
+
+      {limparConfirm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+          onClick={() => setLimparConfirm(false)}>
+          <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl m-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">Limpar Chamada</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Deseja limpar todas as presenças de <strong>{alunosFiltrados.length} alunos</strong>
+              {' '}no índice de aula <strong>{indiceAtual + 1}</strong>?
+            </p>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setLimparConfirm(false)}
+                className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">Cancelar</button>
+              <button onClick={handleLimpar}
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700">Limpar</button>
+            </div>
+          </div>
+        </div>
       )}
 
       <CardAula
         aberto={cardAulaAberto}
         onClose={() => setCardAulaAberto(false)}
-        data={dataInicio} indiceAula={indiceAtual}
+        data={dateHeaderClickData}
+        indiceAula={indiceAtual}
+        onAbrirBO={() => { setCardAulaAberto(false); setCardBOAberto(true); }}
       />
 
       <CardBO
         aberto={cardBOAberto}
         onClose={() => setCardBOAberto(false)}
-        data={dataInicio} indiceAula={indiceAtual}
-        alunos={alunos}
+        data={dateHeaderClickData}
+        indiceAula={indiceAtual}
+        alunos={alunosFiltrados}
       />
     </div>
   );

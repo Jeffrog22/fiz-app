@@ -1,10 +1,10 @@
-<!-- última-sessão: 2026-07-02 — Professor no modal + persistência sessão + ativo badge -->
+<!-- última-sessão: 2026-07-02 — Grid mensal + CardBO cancelamento + AnotacoesModal + Undo/Limpar + JustificativaModal + logEngine + Capacity bar -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v1.3.0
+- **Versão atual:** v1.5.0
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Unidades atendidas:** Bela Vista, São Matheus, Vila, Parque (multi-tenant via X-Tenant-ID ou domínio)
@@ -43,7 +43,10 @@
 - `enrollment_period` é tabela separada que rastreia histórico de matrículas
 - `PUT /alunos/:id` aceita `turma_id` e `nivel` para alocação em turma
 - Migration 005 desabilita RLS na tabela `enrollment_period` (executar no Supabase)
-- `SearchInput.tsx` é componente reutilizável com lupa + X clearable + onFocus select
+- `SearchInput.tsx` é componente reutilizável com lupa + X clearable + onFocus select (+ onMouseUp preventDefault)
+- Migrations 006 e 007 executadas em produção (Supabase)
+- Migration 008 (`planejamento_arquivos`) pendente execução
+- Upload de planejamento usa multer + disco local (`backend/uploads/`)
 
 ---
 
@@ -246,11 +249,133 @@
 
 ---
 
-## Links para Arquivos Modificados (Última Sessão)
+## Sessão: 02/07/2026 — Fase 1: Grid Mensal + Motor Climático + Filtros em Cascata
 
-- `frontend/src/components/SearchInput.tsx` — componente reutilizável com lupa + X + onFocus select
-- `frontend/src/utils/formatters.ts#L90-L92` — `normalizeSearch()` utility
-- `frontend/src/pages/Alunos.tsx#L397` — horário truncado `substring(0, 5)`
-- `frontend/src/components/modals/AlunoModal.tsx#L44-L45` — categoria com `formatDateISO`
-- `frontend/src/components/modals/AlunoModal.tsx#L136-L140` — backdrop click + ESC close
-- `frontend/src/components/modals/AlunoModal.tsx#L87-L92` — ESC keydown listener
+### O que foi feito
+- `climateEngine.ts` — motor de decisão com 3 filtros (clima WMO, piscina, cloro), sugestão final hierárquica
+- `chamadaUtils.ts` — gerador de dias letivos, parser de label, detectores de data
+- `ChamadaFilters.tsx` — filtros em cascata (Turma → Professor → Horário → Nível read-only), seletor de período
+- `DataGrid.tsx` (reescrito) — matriz mensal alunos × dias, formatarNomeMobile, tri-state, datas futuras desabilitadas
+- `CardAula.tsx` (reescrito) — integrado ao climateEngine, slider cloro, chips sensação, fallback climático
+- `Chamadas.tsx` (reescrito) — estado mensal, filtros + grid + CardAula + CardBO, undo 10 ações, auto-save 1000ms
+- `calendarioService.ts` — logs detalhados
+- `relatoriosService.ts` — fix 500: removido JOIN sem FK, merge manual
+- Migration 006 — tabelas calendario + periodos_letivos
+
+### Arquivos
+- `frontend/src/utils/climateEngine.ts` (novo)
+- `frontend/src/utils/chamadaUtils.ts` (novo)
+- `frontend/src/components/grid/ChamadaFilters.tsx` (novo)
+- `frontend/src/components/grid/DataGrid.tsx` (reescrito)
+- `frontend/src/components/modals/CardAula.tsx` (reescrito)
+- `frontend/src/pages/Chamadas.tsx` (reescrito)
+- `backend/src/services/calendarioService.ts` (logs)
+- `backend/src/services/relatoriosService.ts` (fix merge)
+- `backend/src/migrations/006_create_calendario_tables.sql` (novo)
+
+---
+
+## Sessão: 02/07/2026 — Fase 2: CardBO Escopo Aula/Dia + Cancelamento
+
+### O que foi feito
+- `CardBO.tsx` (reescrito) — checkbox "Pessoal/Professor", radio "Compromete a aula/dia", tipos cancelamento, warning
+- `chamadasService.ts` — `salvarCardBO` com `compromete_dia`, `aplicarBOEmIndice`, status cancelado, extrapolação 12 índices
+- `CardAula.tsx` — `onAbrirBO`, botão "Abrir BO de Cancelamento" se piscina < 25°C ou cloro = 0
+- `backend/types` — `ChamadaLog.compromete_dia`
+
+### Arquivos
+- `frontend/src/components/modals/CardBO.tsx` (reescrito)
+- `frontend/src/components/modals/CardAula.tsx` (+onAbrirBO)
+- `frontend/src/pages/Chamadas.tsx` (+onAbrirBO handler)
+- `backend/src/services/chamadasService.ts` (reescrito)
+- `backend/src/controllers/chamadasController.ts` (+compromete_dia)
+- `backend/src/types/index.ts` (+compromete_dia)
+
+---
+
+## Sessão: 02/07/2026 — Fase 3: AnotacoesModal
+
+### O que foi feito
+- Migration 007 — tabela `anotacoes_alunos`
+- `anotacoesService` + controller + routes (CRUD completo)
+- `AnotacoesModal.tsx` — lista de anotações, textarea auto-save debounce 800ms, remoção, fecha backdrop/ESC
+- `DataGrid.tsx` — coluna "Anot", nome clicável abre modal, fundo azul condicional (per-aluno + per-day)
+- `Chamadas.tsx` — `alunosComAnotacao: Set`, `GET /anotacoes/lote`, `onAnotacaoChange`
+
+### Arquivos
+- `backend/src/migrations/007_create_anotacoes_alunos.sql` (novo)
+- `backend/src/services/anotacoesService.ts` (novo)
+- `backend/src/controllers/anotacoesController.ts` (novo)
+- `backend/src/routes/anotacoesRoutes.ts` (novo)
+- `backend/src/index.ts` (+rota)
+- `backend/src/types/index.ts` (+AnotacaoAluno)
+- `frontend/src/types/index.ts` (+AnotacaoAluno)
+- `frontend/src/components/modals/AnotacoesModal.tsx` (novo)
+- `frontend/src/components/grid/DataGrid.tsx` (+modal, +alunosComAnotacao)
+- `frontend/src/pages/Chamadas.tsx` (+carregarAnotacoes)
+
+---
+
+## Sessão: 02/07/2026 — Fase 4: Undo Completo + Limpar + Auto-save
+
+### O que foi feito
+- `UndoAction` com `type: 'presenca' | 'anotacao' | 'limpar'`
+- `undoCount` state força re-render do botão Desfazer
+- Botão "Limpar" com modal de confirmação — batch `status: null`, desfazível
+- Indicador auto-save: dot colorido, auto-hide 3s, posicionado no header
+
+### Arquivos
+- `frontend/src/pages/Chamadas.tsx` (reescrito)
+
+---
+
+## Sessão: 02/07/2026 — Fase 6: JustificativaModal
+
+### O que foi feito
+- `JustificativaModal.tsx` — abre ao clicar em 'J', select 8 motivos, salva via callback
+- `DataGrid.tsx` — `handleCellClick` intercepta 'justificado', `onSaveJustificativa` prop
+- `Chamadas.tsx` — `handleSaveJustificativa` persiste status + motivo
+
+### Arquivos
+- `frontend/src/components/modals/JustificativaModal.tsx` (novo)
+- `frontend/src/components/grid/DataGrid.tsx` (+intercept)
+- `frontend/src/pages/Chamadas.tsx` (+handleSaveJustificativa)
+
+---
+
+## Sessão: 02/07/2026 — Fase 7: logEngine + Capacity Bar
+
+### O que foi feito
+- `logEngine.ts` — `registrarOperacao`, `auditarAcesso`, `calcularOcupacao`, `ocupacaoPorTurmas`
+- `chamadasService.ts` — audit calls em extrapolar, salvarCardAula, salvarCardBO
+- `DataGrid.tsx` — capacity bar visual (verde/amarelo/vermelho) + texto dinâmico
+
+### Arquivos
+- `backend/src/utils/logEngine.ts` (novo)
+- `backend/src/services/chamadasService.ts` (+audit)
+- `frontend/src/components/grid/DataGrid.tsx` (+bar)
+
+---
+
+## Sessão: 02/07/2026 — Upload Planejamento + Fix SearchInput
+
+### O que foi feito
+- Migration 008 — tabela `planejamento_arquivos`
+- `planejamentoService` + controller + routes (CRUD + upload/download)
+- `Calendario.tsx` — upload real via FormData + listagem + download + remoção
+- `SearchInput.tsx` — `onMouseUp preventDefault()` para manter seleção ao focar
+- Typecheck limpo no frontend e backend
+
+### Decisões
+- Multer com `memoryStorage` + filtro de tipos (PDF/TXT/CSV/XLS/XLSX)
+- Arquivos salvos em disco local (`backend/uploads/planejamento/`)
+- Download via `res.download()` com autenticação (fetch com blob no frontend)
+
+### Arquivos
+- `backend/src/migrations/008_create_planejamento_arquivos.sql` (novo)
+- `backend/src/services/planejamentoService.ts` (novo)
+- `backend/src/controllers/planejamentoController.ts` (novo)
+- `backend/src/routes/planejamentoRoutes.ts` (novo)
+- `backend/src/index.ts` (+rota)
+- `frontend/src/pages/Calendario.tsx` (reescrito — upload real)
+- `frontend/src/components/SearchInput.tsx` (+onMouseUp preventDefault)
