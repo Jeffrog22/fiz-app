@@ -13,6 +13,9 @@ const Alunos: React.FC = () => {
   const [filtro, setFiltro] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<Aluno | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [turmaAlocar, setTurmaAlocar] = useState('');
+  const [alocando, setAlocando] = useState(false);
 
   const professorMap = new Map(professores.map((p) => [p.id, p.nome]));
 
@@ -81,6 +84,49 @@ const Alunos: React.FC = () => {
     }
   };
 
+  const toggleSelecao = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelecionarTodos = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((a: any) => a.id)));
+    }
+  };
+
+  const handleAlocar = async () => {
+    if (!turmaAlocar || selectedIds.size === 0) return;
+    setAlocando(true);
+    try {
+      const turma = turmas.find((t: any) => t.id === turmaAlocar);
+      for (const alunoId of selectedIds) {
+        await api.put(`/alunos/${alunoId}`, {
+          turma_id: turmaAlocar,
+          nivel: turma?.nivel || null,
+        });
+        await api.post(`/alunos/${alunoId}/enrollment`, {
+          turma_id: turmaAlocar,
+          nivel: turma?.nivel || null,
+          motivo: 'matricula_inicial',
+        });
+      }
+      setSelectedIds(new Set());
+      setTurmaAlocar('');
+      await carregar();
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Erro ao alocar alunos');
+    } finally {
+      setAlocando(false);
+    }
+  };
+
   const filtered = alunos.filter((a: any) => {
     if (!filtro) return true;
     const q = filtro.toLowerCase();
@@ -117,6 +163,41 @@ const Alunos: React.FC = () => {
         <p className="text-sm text-red-500">{erro}</p>
       )}
 
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 px-4 py-2 bg-primary-50 border border-primary-200 rounded-md">
+          <span className="text-sm font-medium text-primary-700 whitespace-nowrap">
+            {selectedIds.size} selecionado{selectedIds.size !== 1 ? 's' : ''}
+          </span>
+          <select
+            value={turmaAlocar}
+            onChange={(e) => setTurmaAlocar(e.target.value)}
+            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="">Selecione a turma</option>
+            {turmas.map((t: any) => (
+              <option key={t.id} value={t.id}>
+                {t.label} - {(t.horario || '').slice(0, 5)} ({t.nivel || 'sem nível'})
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={handleAlocar}
+            disabled={!turmaAlocar || alocando}
+            className="px-4 py-1.5 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {alocando ? 'Alocando...' : 'Alocar'}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setSelectedIds(new Set()); setTurmaAlocar(''); }}
+            className="px-4 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+          >
+            Limpar
+          </button>
+        </div>
+      )}
+
       {carregando ? (
         <p className="text-sm text-gray-500">Carregando...</p>
       ) : (
@@ -124,6 +205,14 @@ const Alunos: React.FC = () => {
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
+                <th className="w-8 px-2 py-2">
+                  <input
+                    type="checkbox"
+                    checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                    onChange={toggleSelecionarTodos}
+                    className="rounded border-gray-300 text-primary-600"
+                  />
+                </th>
                 <th className="text-left px-3 py-2 font-medium text-gray-500">Nome</th>
                 <th className="text-left px-3 py-2 font-medium text-gray-500">Nível</th>
                 <th className="text-left px-3 py-2 font-medium text-gray-500">Turma</th>
@@ -144,6 +233,14 @@ const Alunos: React.FC = () => {
                 const profNome = a.turma?.professor_id ? professorMap.get(a.turma.professor_id) : null;
                 return (
                   <tr key={a.id} className="hover:bg-gray-50">
+                    <td className="px-2 py-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(a.id)}
+                        onChange={() => toggleSelecao(a.id)}
+                        className="rounded border-gray-300 text-primary-600"
+                      />
+                    </td>
                     <td
                       className="px-3 py-2 font-medium text-primary-600 cursor-pointer hover:text-primary-800"
                       title="clique para editar"
@@ -182,7 +279,7 @@ const Alunos: React.FC = () => {
               })}
               {filtered.length === 0 && !carregando && (
                 <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={11} className="px-4 py-8 text-center text-gray-400">
                     Nenhum aluno encontrado
                   </td>
                 </tr>
