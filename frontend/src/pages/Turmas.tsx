@@ -6,6 +6,7 @@ import type { Turma } from '../types';
 const Turmas: React.FC = () => {
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [professores, setProfessores] = useState<{ id: string; nome: string }[]>([]);
+  const [alunos, setAlunos] = useState<any[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [filtro, setFiltro] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -28,6 +29,7 @@ const Turmas: React.FC = () => {
         alunos_count: alunosPorTurma[t.id] || 0,
       })));
       setProfessores(resProf.data);
+      setAlunos(resAlunos.data);
     } catch (err) {
       console.error('Erro ao carregar turmas', err);
     } finally {
@@ -63,6 +65,19 @@ const Turmas: React.FC = () => {
       console.error('Erro ao remover turma', err);
     }
   };
+
+  const handleAlocar = async (alunoIds: string[], turmaId: string) => {
+    const turma = turmas.find((t) => t.id === turmaId);
+    for (const alunoId of alunoIds) {
+      await api.put(`/alunos/${alunoId}`, {
+        turma_id: turmaId,
+        nivel: turma?.nivel || null,
+      });
+    }
+    await carregar();
+  };
+
+  const alunosPendentes = alunos.filter((a) => !a.turma_id);
 
   const professorNome = (professorId?: string) =>
     professores.find((p) => p.id === professorId)?.nome || '-';
@@ -175,7 +190,9 @@ const Turmas: React.FC = () => {
         open={modalOpen}
         turma={editando}
         professores={professores}
+        alunosPendentes={alunosPendentes}
         onSave={handleSave}
+        onAlocar={handleAlocar}
         onClose={() => { setModalOpen(false); setEditando(null); }}
       />
     </div>

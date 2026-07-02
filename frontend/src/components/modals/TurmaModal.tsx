@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { Turma } from '../../types';
 import { mascaraHora } from '../../utils/formatters';
 import { validarHora, sanitizarInput } from '../../utils/validators';
@@ -7,7 +7,9 @@ interface TurmaModalProps {
   open: boolean;
   turma?: Turma | null;
   professores: { id: string; nome: string }[];
+  alunosPendentes?: any[];
   onSave: (data: any) => void;
+  onAlocar: (alunoIds: string[], turmaId: string) => Promise<void>;
   onClose: () => void;
 }
 
@@ -40,7 +42,10 @@ function gerarLabel(dias: string[]): string {
   return dias.map((d) => map[d] || d.slice(0, 3)).join('/');
 }
 
-const TurmaModal: React.FC<TurmaModalProps> = ({ open, turma, professores, onSave, onClose }) => {
+const TurmaModal: React.FC<TurmaModalProps> = ({
+  open, turma, professores, alunosPendentes = [],
+  onSave, onAlocar, onClose,
+}) => {
   const [dias, setDias] = useState<string[]>([]);
   const [label, setLabel] = useState('');
   const [horario, setHorario] = useState('');
@@ -49,9 +54,16 @@ const TurmaModal: React.FC<TurmaModalProps> = ({ open, turma, professores, onSav
   const [faixaEtaria, setFaixaEtaria] = useState('');
   const [professorId, setProfessorId] = useState('');
   const [erroHorario, setErroHorario] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ msg: string } | null>(null);
+  const [toast, setToast] = useState<{ msg: string; tipo?: string } | null>(null);
+
+  const [modoAlocacao, setModoAlocacao] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [alocando, setAlocando] = useState(false);
 
   const isNew = !turma;
+  const vagasDisponiveis = turma?.capacidade
+    ? turma.capacidade - (turma.alunos_count ?? 0)
+    : Infinity;
 
   useEffect(() => {
     if (turma) {
@@ -72,6 +84,8 @@ const TurmaModal: React.FC<TurmaModalProps> = ({ open, turma, professores, onSav
       setFaixaEtaria('');
       setProfessorId('');
     }
+    setModoAlocacao(false);
+    setSelectedIds(new Set());
     setErroHorario(null);
     setToast(null);
   }, [turma, open]);
@@ -91,7 +105,6 @@ const TurmaModal: React.FC<TurmaModalProps> = ({ open, turma, professores, onSav
     e.preventDefault();
 
     if (!isNew) {
-      // Edição: envia dados tradicionais
       const erro = validarHora(horario);
       if (erro) {
         setErroHorario(erro);
@@ -109,7 +122,6 @@ const TurmaModal: React.FC<TurmaModalProps> = ({ open, turma, professores, onSav
       return;
     }
 
-    // Criação: valida dias
     if (dias.length === 0) {
       setToast({ msg: 'Selecione pelo menos um dia da semana' });
       return;
@@ -132,6 +144,124 @@ const TurmaModal: React.FC<TurmaModalProps> = ({ open, turma, professores, onSav
     });
   };
 
+  const toggleSelecao = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleConfirmarAlocacao = useCallback(async () => {
+    if (!turma || selectedIds.size === 0) return;
+    setAlocando(true);
+    try {
+      await onAlocar(Array.from(selectedIds), turma.id);
+      setModoAlocacao(false);
+      setSelectedIds(new Set());
+    } catch {
+      setToast({ msg: 'Erro ao alocar alunos', tipo: 'erro' });
+    } finally {
+      setAlocando(false);
+    }
+  }, [turma, selectedIds, onAlocar]);
+
+  if (modoAlocacao && turma) {
+    const pendentes = alunosPendentes.filter((a) => !a.turma_id);
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] flex flex-col">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-800">
+              Alocar em: {turma.label} - {(turma.horario || '').slice(0, 5)}
+            </h2>
+            <p className="text-xs text-gray-500 mt-1">
+              Vagas: {turma.alunos_count ?? 0}/{turma.capacidade || '∞'}
+              {vagasDisponiveis > 0 && vagasDisponiveis < Infinity
+                ? ` (${vagasDisponiveis} disponíve${vagasDisponiveis === 1 ? 'l' : 'is'})`
+                : vagasDisponiveis <= 0 ? ' (lotada)' : ''}
+            </p>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2">
+            {pendentes.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-8">
+                Nenhum aluno pendente para alocar
+              </p>
+            ) : (
+              pendentes.map((a: any) => (
+                <label
+                  key={a.id}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-md border cursor-pointer transition-colors ${
+                    selectedIds.has(a.id)
+                      ? 'border-primary-300 bg-primary-50'
+                      : 'border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(a.id)}
+                    onChange={() => toggleSelecao(a.id)}
+                    className="rounded border-gray-300 text-primary-600"
+                    disabled={vagasDisponiveis <= 0 && !selectedIds.has(a.id)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{a.nome}</p>
+                    {a.data_nascimento && (
+                      <p className="text-xs text-gray-400">
+                        {(() => {
+                          const hoje = new Date();
+                          const nasc = new Date(a.data_nascimento + 'T12:00:00');
+                          let idade = hoje.getFullYear() - nasc.getFullYear();
+                          const mes = hoje.getMonth() - nasc.getMonth();
+                          if (mes < 0 || (mes === 0 && hoje.getDate() < nasc.getDate())) idade--;
+                          return `${idade} anos`;
+                        })()}
+                      </p>
+                    )}
+                  </div>
+                </label>
+              ))
+            )}
+          </div>
+
+          <div className="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
+            <p className="text-xs text-gray-400">
+              {selectedIds.size} selecionado{selectedIds.size !== 1 ? 's' : ''}
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => { setModoAlocacao(false); setSelectedIds(new Set()); }}
+                className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarAlocacao}
+                disabled={selectedIds.size === 0 || alocando || vagasDisponiveis <= 0}
+                className="px-4 py-2 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {alocando ? 'Alocando...' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {toast && (
+          <div className={`fixed bottom-4 right-4 text-white px-4 py-2 rounded shadow-lg text-sm z-50 ${
+            toast.tipo === 'erro' ? 'bg-red-600' : 'bg-green-600'
+          }`}>
+            {toast.msg}
+            <button onClick={() => setToast(null)} className="ml-2 font-bold">&times;</button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
@@ -139,11 +269,22 @@ const TurmaModal: React.FC<TurmaModalProps> = ({ open, turma, professores, onSav
           <h2 className="text-lg font-semibold text-gray-800">
             {isNew ? 'Nova Turma' : turma!.label}
           </h2>
-          {turma?.grupo_id && (
-            <span className="text-xs text-gray-400 font-mono" title="Grupo ID">
-              {turma.grupo_id}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {!isNew && (
+              <button
+                type="button"
+                onClick={() => setModoAlocacao(true)}
+                className="px-3 py-1 text-xs font-medium border border-primary-300 text-primary-700 rounded-md hover:bg-primary-50 transition-colors"
+              >
+                Alocar
+              </button>
+            )}
+            {turma?.grupo_id && (
+              <span className="text-xs text-gray-400 font-mono" title="Grupo ID">
+                {turma.grupo_id}
+              </span>
+            )}
+          </div>
         </div>
         <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
           {isNew && (
