@@ -1,5 +1,34 @@
 # Changelog - Fiz! App
 
+## [v1.4.0] - 2026-07-02
+### Adicionado
+- **Componente `SearchInput`** — input com lupa (SVG) à esquerda + botão X de limpar à direita; reutilizado em Alunos, Turmas, Chamadas, Relatorios e Exclusões
+- **Busca por nome em Exclusões** — campo de texto com live filter, `normalizeSearch()`, `useMemo`
+- **Seleção automática de texto** — `onFocus select()` em todos os campos de busca (agiliza nova consulta)
+- **Migration 005** — `ALTER TABLE enrollment_period DISABLE ROW LEVEL SECURITY`
+
+### Alterado
+- **Busca padronizada** — todas as páginas usam `normalizeSearch()` (acentos + maiúsculas ignorados) + `useMemo` para performance
+- **Horário do grid Alunos** — truncado para HH:MM (removido segundos)
+- **Categoria no AlunoModal** — corrigido parsing de data (DD/MM/YYYY → ISO via `formatDateISO`)
+- **Fechamento do AlunoModal** — agora fecha ao clicar no backdrop ou pressionar ESC
+- **Logs do enrollmentService** — agora mostram o erro real do Supabase em vez de engolir
+
+### Corrigido
+- Erro 500 "relation enrollment_period does not exist" — logs agora expõem a causa real
+
+### Arquivos alterados
+- `frontend/src/components/SearchInput.tsx` (novo)
+- `backend/src/migrations/005_disable_rls_enrollment_period.sql` (novo)
+- `backend/src/services/enrollmentService.ts` (logs)
+- `frontend/src/utils/formatters.ts` (+normalizeSearch)
+- `frontend/src/pages/Alunos.tsx` (SearchInput + normalize + horário truncado)
+- `frontend/src/pages/Turmas.tsx` (SearchInput + normalize + useMemo)
+- `frontend/src/pages/Chamadas.tsx` (SearchInput)
+- `frontend/src/pages/Relatorios.tsx` (SearchInput + normalize + useMemo)
+- `frontend/src/pages/Exclusoes.tsx` (SearchInput + filtro nome + useMemo)
+- `frontend/src/components/modals/AlunoModal.tsx` (categoria + backdrop + ESC)
+
 ## [v1.3.0] - 2026-07-01
 ### Adicionado
 - **Chave Tríplice nas Turmas** — unicidade garantida por (label + horário + professor_id) via índice no banco

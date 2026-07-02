@@ -52,3 +52,67 @@
 - `frontend/src/components/modals/TurmaModal.tsx` (reescrito — chips, label auto)
 - `frontend/src/pages/Turmas.tsx` (reescrito — lotação, tooltip, busca)
 - `frontend/src/utils/__tests__/formatters.test.ts` (modificado — calcIdade test fix)
+
+---
+
+# Sessão: 02/07/2026 - Logs Enrollment + Migration 005
+
+## 🔍 O que foi feito
+- [x] **Logs detalhados** — `enrollmentService.ts` agora loga o erro real do Supabase em todos os 4 pontos de falha (listar, buscar ativo, encerrar, criar)
+- [x] **Migration 005** — `ALTER TABLE enrollment_period DISABLE ROW LEVEL SECURITY` para permitir acesso com anon key
+
+## 🧠 Decisões Técnicas Tomadas
+- Engolir erro do Supabase impedia diagnóstico — agora o log mostra o erro exato (ex: "relation does not exist")
+- RLS desabilitado para consistência com as demais tabelas do projeto
+
+## 🔗 Arquivos Alterados/Criados
+- `backend/src/services/enrollmentService.ts` (modificado — logs)
+- `backend/src/migrations/005_disable_rls_enrollment_period.sql` (criado)
+
+---
+
+# Sessão: 02/07/2026 - Busca Padronizada
+
+## 🔍 O que foi feito
+- [x] **SearchInput** — componente reutilizável com lupa SVG à esquerda, input live onChange, botão X de limpar à direita
+- [x] **normalizeSearch()** — utilitário em `formatters.ts`: `normalize('NFD') + strip diacritics + toLowerCase`
+- [x] **Alunos.tsx** — substituído input por SearchInput; filtro usa normalizeSearch
+- [x] **Turmas.tsx** — substituído input por SearchInput; filtro envolto em useMemo + normalizeSearch
+- [x] **Chamadas.tsx** — substituído input por SearchInput (já tinha normalize NFD)
+- [x] **Relatorios.tsx** — substituído input por SearchInput; filtro envolto em useMemo + normalizeSearch
+- [x] **Exclusoes.tsx** — novo campo de busca por nome do aluno com normalizeSearch + useMemo
+- [x] **Vagas.tsx** — não alterado (server-side filtering mantido conforme solicitado)
+
+## 🧠 Decisões Técnicas Tomadas
+- Componente compartilhado evita duplicação de markup/estilo em 5 páginas
+- normalizeSearch centralizado permite manutenção única da lógica de acentos
+- useMemo adicionado onde não havia (Turmas, Relatorios, Exclusoes) para performance
+
+## 🔗 Arquivos Alterados/Criados
+- `frontend/src/components/SearchInput.tsx` (criado)
+- `frontend/src/utils/formatters.ts` (modificado — +normalizeSearch)
+- `frontend/src/pages/Alunos.tsx` (modificado)
+- `frontend/src/pages/Turmas.tsx` (modificado)
+- `frontend/src/pages/Chamadas.tsx` (modificado)
+- `frontend/src/pages/Relatorios.tsx` (modificado)
+- `frontend/src/pages/Exclusoes.tsx` (modificado)
+
+---
+
+# Sessão: 02/07/2026 - Ajustes Finos
+
+## 🔍 O que foi feito
+- [x] **onFocus select()** — SearchInput seleciona todo o texto ao focar (agiliza nova busca)
+- [x] **Horário HH:MM** — grid Alunos trunca `HH:MM:SS` → `HH:MM` na célula e no getFilterValue
+- [x] **Categoria correta** — AlunoModal usa `formatDateISO(dataNascimento)` antes de `calcIdade` (parsing correto de DD/MM/YYYY)
+- [x] **Fechar modal no backdrop** — `onClick` no overlay + `stopPropagation` no container
+- [x] **Fechar modal com ESC** — `useEffect` com `keydown` listener
+
+## 🧠 Decisões Técnicas Tomadas
+- `formatDateISO` já existia em formatters — reutilizado em vez de criar nova lógica de parsing
+- `stopPropagation` no container interno para não fechar ao clicar dentro do modal
+
+## 🔗 Arquivos Alterados/Criados
+- `frontend/src/components/SearchInput.tsx` (modificado — +onFocus)
+- `frontend/src/pages/Alunos.tsx` (modificado — horário substring)
+- `frontend/src/components/modals/AlunoModal.tsx` (modificado — categoria + backdrop + ESC)

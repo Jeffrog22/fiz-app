@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-01 — Filtros por coluna + ordenação multicoluna em Alunos -->
+<!-- última-sessão: 2026-07-02 — Busca padronizada + ajustes finos -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Identidade
@@ -42,6 +42,8 @@
   - `004_clean_legacy_turmas.sql` desvincula alunos de turmas sem `grupo_id` e as remove
 - `enrollment_period` é tabela separada que rastreia histórico de matrículas
 - `PUT /alunos/:id` aceita `turma_id` e `nivel` para alocação em turma
+- Migration 005 desabilita RLS na tabela `enrollment_period` (executar no Supabase)
+- `SearchInput.tsx` é componente reutilizável com lupa + X clearable + onFocus select
 
 ---
 
@@ -164,10 +166,70 @@
 
 ---
 
+## Sessão: 02/07/2026 — Logs Enrollment + RLS Fix
+
+### O que foi feito
+- Logs detalhados nos 4 pontos de erro do `enrollmentService.ts` (listar, buscar ativo, encerrar, criar)
+- Migration `005_disable_rls_enrollment_period.sql` — desabilita RLS na tabela `enrollment_period`
+
+### Decisões
+- Engolir erro do Supabase impedia diagnóstico — agora o log mostra o erro exato
+- RLS desabilitado para consistência com as demais tabelas do projeto
+
+### Arquivos
+- `backend/src/services/enrollmentService.ts` (logs)
+- `backend/src/migrations/005_disable_rls_enrollment_period.sql` (novo)
+
+---
+
+## Sessão: 02/07/2026 — Busca Padronizada (SearchInput + normalizeSearch)
+
+### O que foi feito
+- Componente `SearchInput.tsx` reutilizável: lupa SVG à esquerda, input live onChange, botão X de limpar à direita
+- Utilitário `normalizeSearch()` em `formatters.ts`: `normalize('NFD') + strip diacritics + toLowerCase`
+- Alunos, Turmas, Chamadas, Relatorios, Exclusões — todos com SearchInput + normalizeSearch
+- `useMemo` adicionado em Turmas, Relatorios e Exclusões (antes não tinham)
+- Vagas mantido como está (server-side)
+
+### Decisões
+- Componente compartilhado evita duplicação em 5 páginas
+- normalizeSearch centralizado permite manutenção única
+
+### Arquivos
+- `frontend/src/components/SearchInput.tsx` (novo)
+- `frontend/src/utils/formatters.ts` (+normalizeSearch)
+- `frontend/src/pages/Alunos.tsx` (SearchInput + normalize)
+- `frontend/src/pages/Turmas.tsx` (SearchInput + normalize + useMemo)
+- `frontend/src/pages/Chamadas.tsx` (SearchInput)
+- `frontend/src/pages/Relatorios.tsx` (SearchInput + normalize + useMemo)
+- `frontend/src/pages/Exclusoes.tsx` (SearchInput + filtro nome + useMemo)
+
+---
+
+## Sessão: 02/07/2026 — Ajustes Finos
+
+### O que foi feito
+- SearchInput agora seleciona todo o texto ao focar (`onFocus select()`) — agiliza nova busca
+- Horário no grid Alunos truncado para HH:MM (removido segundos)
+- Categoria no AlunoModal corrigida: `formatDateISO(dataNascimento)` antes de `calcIdade` (parsing correto de DD/MM/YYYY)
+- AlunoModal fecha ao clicar no backdrop (`onClick` no overlay + `stopPropagation` no container)
+- AlunoModal fecha com tecla ESC (`useEffect` com `keydown` listener)
+
+### Decisões
+- `formatDateISO` já existia em formatters — reutilizado em vez de criar nova lógica
+
+### Arquivos
+- `frontend/src/components/SearchInput.tsx` (+onFocus)
+- `frontend/src/pages/Alunos.tsx` (horário substring)
+- `frontend/src/components/modals/AlunoModal.tsx` (categoria + backdrop + ESC)
+
+---
+
 ## Links para Arquivos Modificados (Última Sessão)
 
-- `frontend/src/pages/Alunos.tsx#L20-L22` — states `columnFilters`, `sortRules`
-- `frontend/src/pages/Alunos.tsx#L55-L60` — `getFilterValue()` helper
-- `frontend/src/pages/Alunos.tsx#L62-L71` — `uniqueValues` useMemo
-- `frontend/src/pages/Alunos.tsx#L73-L118` — `processed` useMemo (pipeline completo)
-- `frontend/src/pages/Alunos.tsx#L163-L175` — `toggleSort`, `sortIcon`, `thSort`, `thFilter`
+- `frontend/src/components/SearchInput.tsx` — componente reutilizável com lupa + X + onFocus select
+- `frontend/src/utils/formatters.ts#L90-L92` — `normalizeSearch()` utility
+- `frontend/src/pages/Alunos.tsx#L397` — horário truncado `substring(0, 5)`
+- `frontend/src/components/modals/AlunoModal.tsx#L44-L45` — categoria com `formatDateISO`
+- `frontend/src/components/modals/AlunoModal.tsx#L136-L140` — backdrop click + ESC close
+- `frontend/src/components/modals/AlunoModal.tsx#L87-L92` — ESC keydown listener
