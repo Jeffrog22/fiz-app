@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-01 — Alocar Alunos em Turmas -->
+<!-- última-sessão: 2026-07-01 — Alocação em massa no grid de Alunos -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Identidade

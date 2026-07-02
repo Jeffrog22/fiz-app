@@ -1,8 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../utils/api';
 import AlunoModal from '../components/modals/AlunoModal';
 import type { Aluno, Professor, SavePayload } from '../types';
 import { calcIdade, calcCategoria } from '../utils/formatters';
+
+interface SortRule {
+  column: string;
+  dir: 'asc' | 'desc';
+}
 
 const Alunos: React.FC = () => {
   const [alunos, setAlunos] = useState<any[]>([]);
@@ -16,6 +21,8 @@ const Alunos: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [turmaAlocar, setTurmaAlocar] = useState('');
   const [alocando, setAlocando] = useState(false);
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
+  const [sortRules, setSortRules] = useState<SortRule[]>([]);
 
   const professorMap = new Map(professores.map((p) => [p.id, p.nome]));
 
@@ -42,6 +49,71 @@ const Alunos: React.FC = () => {
   }, []);
 
   useEffect(() => { carregar(); }, [carregar]);
+
+  const getFilterValue = (a: any, col: string): string => {
+    switch (col) {
+      case 'nivel': return a.turma?.nivel || a.nivel || '-';
+      case 'categoria': return calcCategoria(calcIdade(a.data_nascimento)) || '-';
+      case 'turma': return a.turma?.label || '-';
+      case 'horario': return a.turma?.horario || '-';
+      default: return '';
+    }
+  };
+
+  const uniqueValues = useMemo(() => {
+    const cols = ['nivel', 'categoria', 'turma', 'horario'];
+    const result: Record<string, string[]> = {};
+    for (const col of cols) {
+      const set = new Set<string>();
+      for (const a of alunos) set.add(getFilterValue(a, col));
+      result[col] = Array.from(set).sort();
+    }
+    return result;
+  }, [alunos]);
+
+  const processed = useMemo(() => {
+    let data = [...alunos];
+
+    if (filtro) {
+      const q = filtro.toLowerCase();
+      data = data.filter((a) =>
+        a.nome.toLowerCase().includes(q) ||
+        (a.turma?.nivel || '').toLowerCase().includes(q) ||
+        (a.turma?.label || '').toLowerCase().includes(q) ||
+        (a.turma?.horario || '').toLowerCase().includes(q) ||
+        (professorMap.get(a.turma?.professor_id) || '').toLowerCase().includes(q)
+      );
+    }
+
+    for (const [col, val] of Object.entries(columnFilters)) {
+      if (!val) continue;
+      data = data.filter((a) => getFilterValue(a, col) === val);
+    }
+
+    for (let i = sortRules.length - 1; i >= 0; i--) {
+      const { column, dir } = sortRules[i];
+      data.sort((a, b) => {
+        let va: any, vb: any;
+        switch (column) {
+          case 'nome': va = a.nome.toLowerCase(); vb = b.nome.toLowerCase(); break;
+          case 'nivel': va = a.turma?.nivel || a.nivel || ''; vb = b.turma?.nivel || b.nivel || ''; break;
+          case 'turma': va = a.turma?.label || ''; vb = b.turma?.label || ''; break;
+          case 'horario': va = a.turma?.horario || ''; vb = b.turma?.horario || ''; break;
+          case 'professor': va = professorMap.get(a.turma?.professor_id) || ''; vb = professorMap.get(b.turma?.professor_id) || ''; break;
+          case 'idade': va = calcIdade(a.data_nascimento) ?? -1; vb = calcIdade(b.data_nascimento) ?? -1; break;
+          case 'categoria': va = calcCategoria(calcIdade(a.data_nascimento)) || ''; vb = calcCategoria(calcIdade(b.data_nascimento)) || ''; break;
+          case 'genero': va = a.genero || ''; vb = b.genero || ''; break;
+          case 'status': va = a.turma_id ? 1 : 0; vb = b.turma_id ? 1 : 0; break;
+          default: return 0;
+        }
+        if (va < vb) return dir === 'asc' ? -1 : 1;
+        if (va > vb) return dir === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return data;
+  }, [alunos, filtro, columnFilters, sortRules, professorMap]);
 
   const handleSave = async ({ data, acao }: SavePayload) => {
     try {
@@ -94,10 +166,10 @@ const Alunos: React.FC = () => {
   };
 
   const toggleSelecionarTodos = () => {
-    if (selectedIds.size === filtered.length) {
+    if (selectedIds.size === processed.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filtered.map((a: any) => a.id)));
+      setSelectedIds(new Set(processed.map((a: any) => a.id)));
     }
   };
 
@@ -127,17 +199,68 @@ const Alunos: React.FC = () => {
     }
   };
 
-  const filtered = alunos.filter((a: any) => {
-    if (!filtro) return true;
-    const q = filtro.toLowerCase();
+  const toggleSort = (column: string) => {
+    setSortRules((prev) => {
+      const idx = prev.findIndex((r) => r.column === column);
+      if (idx === 0) {
+        if (prev[0].dir === 'asc') return [{ column, dir: 'desc' }, ...prev.slice(1)];
+        return prev.slice(1);
+      }
+      return [{ column, dir: 'asc' }, ...prev.filter((r) => r.column !== column)];
+    });
+  };
+
+  const sortIcon = (column: string) => {
+    const idx = sortRules.findIndex((r) => r.column === column);
+    if (idx === -1) return null;
+    const dir = sortRules[idx].dir;
     return (
-      a.nome.toLowerCase().includes(q) ||
-      (a.turma?.nivel || '').toLowerCase().includes(q) ||
-      (a.turma?.label || '').toLowerCase().includes(q) ||
-      (a.turma?.horario || '').toLowerCase().includes(q) ||
-      (professorMap.get(a.turma?.professor_id) || '').toLowerCase().includes(q)
+      <span className="ml-1 text-xs text-primary-600">
+        {idx > 0 && <sup className="text-[10px]">{idx + 1}</sup>}
+        {dir === 'asc' ? '▲' : '▼'}
+      </span>
     );
-  });
+  };
+
+  const thSort = (column: string, label: string) => (
+    <button
+      type="button"
+      onClick={() => toggleSort(column)}
+      className="font-medium text-gray-500 hover:text-gray-700 text-left text-sm whitespace-nowrap"
+    >
+      {label}
+      {sortIcon(column)}
+    </button>
+  );
+
+  const thFilter = (col: string, label: string) => (
+    <th className="px-3 py-2 align-top">
+      <div className="flex flex-col gap-1">
+        {thSort(col, label)}
+        <select
+          value={columnFilters[col] || ''}
+          onChange={(e) =>
+            setColumnFilters((f) => {
+              const next = { ...f };
+              if (e.target.value) next[col] = e.target.value;
+              else delete next[col];
+              return next;
+            })
+          }
+          className={`text-xs border rounded px-1 py-0.5 max-w-[110px] ${
+            columnFilters[col]
+              ? 'bg-primary-50 border-primary-300 text-primary-700'
+              : 'border-gray-200 text-gray-500'
+          }`}
+        >
+          <option value="">{label}</option>
+          {(uniqueValues[col] || []).map((v) => (
+            <option key={v} value={v}>{v}</option>
+          ))}
+        </select>
+      </div>
+    </th>
+  );
 
   return (
     <div className="space-y-4">
@@ -208,25 +331,25 @@ const Alunos: React.FC = () => {
                 <th className="w-8 px-2 py-2">
                   <input
                     type="checkbox"
-                    checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                    checked={processed.length > 0 && selectedIds.size === processed.length}
                     onChange={toggleSelecionarTodos}
                     className="rounded border-gray-300 text-primary-600"
                   />
                 </th>
-                <th className="text-left px-3 py-2 font-medium text-gray-500">Nome</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-500">Nível</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-500">Turma</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-500">Horário</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-500">Professor</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-500">Idade</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-500">Categoria</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-500">Gênero</th>
-                <th className="text-left px-3 py-2 font-medium text-gray-500">Status</th>
+                <th className="text-left px-3 py-2">{thSort('nome', 'Nome')}</th>
+                {thFilter('nivel', 'Nível')}
+                {thFilter('turma', 'Turma')}
+                {thFilter('horario', 'Horário')}
+                <th className="text-left px-3 py-2">{thSort('professor', 'Professor')}</th>
+                <th className="text-left px-3 py-2">{thSort('idade', 'Idade')}</th>
+                {thFilter('categoria', 'Categoria')}
+                <th className="text-left px-3 py-2">{thSort('genero', 'Gênero')}</th>
+                <th className="text-left px-3 py-2">{thSort('status', 'Status')}</th>
                 <th className="text-right px-3 py-2 font-medium text-gray-500">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.map((a: any) => {
+              {processed.map((a: any) => {
                 const idade = calcIdade(a.data_nascimento);
                 const categoria = calcCategoria(idade);
                 const status = a.turma_id ? '' : 'Pendente';
@@ -277,7 +400,7 @@ const Alunos: React.FC = () => {
                   </tr>
                 );
               })}
-              {filtered.length === 0 && !carregando && (
+              {processed.length === 0 && !carregando && (
                 <tr>
                   <td colSpan={11} className="px-4 py-8 text-center text-gray-400">
                     Nenhum aluno encontrado
