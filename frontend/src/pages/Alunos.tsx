@@ -23,6 +23,7 @@ const Alunos: React.FC = () => {
   const [alocando, setAlocando] = useState(false);
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
   const [sortRules, setSortRules] = useState<SortRule[]>([]);
+  const [modoAlocacao, setModoAlocacao] = useState(false);
 
   const professorMap = new Map(professores.map((p) => [p.id, p.nome]));
 
@@ -266,12 +267,28 @@ const Alunos: React.FC = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">Alunos</h1>
-        <button
-          onClick={() => { setEditando(null); setModalOpen(true); }}
-          className="px-4 py-2 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
-        >
-          + Novo Aluno
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (modoAlocacao) { setSelectedIds(new Set()); setTurmaAlocar(''); }
+              setModoAlocacao(!modoAlocacao);
+            }}
+            className={`px-4 py-2 text-sm rounded-md transition-colors ${
+              modoAlocacao
+                ? 'bg-primary-100 text-primary-700 border border-primary-300'
+                : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            {modoAlocacao ? 'Sair da Alocação' : 'Alocar'}
+          </button>
+          <button
+            onClick={() => { setEditando(null); setModalOpen(true); }}
+            className="px-4 py-2 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+          >
+            + Novo Aluno
+          </button>
+        </div>
       </div>
 
       <input
@@ -286,7 +303,7 @@ const Alunos: React.FC = () => {
         <p className="text-sm text-red-500">{erro}</p>
       )}
 
-      {selectedIds.size > 0 && (
+      {modoAlocacao && selectedIds.size > 0 && (
         <div className="flex items-center gap-3 px-4 py-2 bg-primary-50 border border-primary-200 rounded-md">
           <span className="text-sm font-medium text-primary-700 whitespace-nowrap">
             {selectedIds.size} selecionado{selectedIds.size !== 1 ? 's' : ''}
@@ -328,14 +345,16 @@ const Alunos: React.FC = () => {
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="w-8 px-2 py-2">
-                  <input
-                    type="checkbox"
-                    checked={processed.length > 0 && selectedIds.size === processed.length}
-                    onChange={toggleSelecionarTodos}
-                    className="rounded border-gray-300 text-primary-600"
-                  />
-                </th>
+                {modoAlocacao && (
+                  <th className="w-8 px-2 py-2">
+                    <input
+                      type="checkbox"
+                      checked={processed.length > 0 && selectedIds.size === processed.length}
+                      onChange={toggleSelecionarTodos}
+                      className="rounded border-gray-300 text-primary-600"
+                    />
+                  </th>
+                )}
                 <th className="text-left px-3 py-2">{thSort('nome', 'Nome')}</th>
                 {thFilter('nivel', 'Nível')}
                 {thFilter('turma', 'Turma')}
@@ -356,14 +375,16 @@ const Alunos: React.FC = () => {
                 const profNome = a.turma?.professor_id ? professorMap.get(a.turma.professor_id) : null;
                 return (
                   <tr key={a.id} className="hover:bg-gray-50">
-                    <td className="px-2 py-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(a.id)}
-                        onChange={() => toggleSelecao(a.id)}
-                        className="rounded border-gray-300 text-primary-600"
-                      />
-                    </td>
+                    {modoAlocacao && (
+                      <td className="px-2 py-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(a.id)}
+                          onChange={() => toggleSelecao(a.id)}
+                          className="rounded border-gray-300 text-primary-600"
+                        />
+                      </td>
+                    )}
                     <td
                       className="px-3 py-2 font-medium text-primary-600 cursor-pointer hover:text-primary-800"
                       title="clique para editar"
@@ -402,7 +423,7 @@ const Alunos: React.FC = () => {
               })}
               {processed.length === 0 && !carregando && (
                 <tr>
-                  <td colSpan={11} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={modoAlocacao ? 11 : 10} className="px-4 py-8 text-center text-gray-400">
                     Nenhum aluno encontrado
                   </td>
                 </tr>

@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-01 — Alocação em massa no grid de Alunos -->
+<!-- última-sessão: 2026-07-01 — Filtros por coluna + ordenação multicoluna em Alunos -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Identidade
@@ -121,31 +121,53 @@
 
 ---
 
-## Sessão: 01/07/2026 — Alocar Alunos em Turmas
+## Sessão: 01/07/2026 — Alocação em Massa no Grid de Alunos
 
 ### O que foi feito
-- Botão "Alocar" no TurmaModal (modo edição)
-- Seção interna com lista de alunos pendentes + checkboxes
-- Vagas disponíveis calculadas: `capacidade - alunos_count`
-- Checkboxes desabilitados se a turma estiver lotada
-- "Confirmar" faz `PUT /alunos/:id { turma_id, nivel }` serial para cada selecionado
-- Prop `alunosPendentes` vinda da página (filtro `!a.turma_id` sobre cache existente)
-- Prop `onAlocar` executada pela página com loop + refresh final
+- Removida alocação interna do TurmaModal (checkboxes + confirm)
+- Botão "Alocar" no TurmaModal agora navega para `/alunos`
+- Removido `alunos` state, `handleAlocar`, `alunosPendentes` de Turmas.tsx
+- Adicionados checkboxes no grid de Alunos (por linha + "selecionar todos")
+- Action bar com turma dropdown + "Alocar" + "Limpar" quando há seleção
+- `PUT /alunos/:id { turma_id, nivel }` + `POST /alunos/:id/enrollment { motivo: 'matricula_inicial' }` serial
 
 ### Decisões
-- Alunos pendentes filtrados no pai (Turmas.tsx) — zero requisições extras
-- PUT serial (não paralelo) para evitar race conditions
+- Fluxo único de alocação agora é pelo grid de Alunos (não mais pelo TurmaModal)
+- PUT serial para evitar race conditions
 
 ### Arquivos
-- `frontend/src/components/modals/TurmaModal.tsx` (modo alocação)
-- `frontend/src/pages/Turmas.tsx` (+handleAlocar, alunosPendentes, onAlocar)
+- `frontend/src/components/modals/TurmaModal.tsx` (remove alocação, add onNavigateToAlunos)
+- `frontend/src/pages/Turmas.tsx` (remove alunos state, add navigate)
+- `frontend/src/pages/Alunos.tsx` (checkboxes + action bar + handleAlocar)
+
+---
+
+## Sessão: 01/07/2026 — Filtros por Coluna + Ordenação Multicoluna em Alunos
+
+### O que foi feito
+- Filtros dropdown (Excel-like) nos headers: Nível, Categoria, Turma, Horário
+- Filtros cumulativos (AND entre colunas)
+- Dropdown destaca-se em azul quando filtro ativo
+- Ordenação multicoluna estável: 1º clique ASC, 2º DESC, 3º remove
+- Ordenação secundária mantém ordem da primária (stable sort reverso no useMemo)
+- Sort indicators: ▲/▼ com número de ordem (ex: `¹▲`, `²▼`)
+- Pipeline de dados: `alunos → filtro global → filtros coluna → multi-sort → render`
+- `uniqueValues` memoizado para cada coluna filtrável
+
+### Decisões
+- Stable sort implementado via iteração reversa do `sortRules` no `useMemo`
+- `getFilterValue` e `getSortValue` centralizados com switch
+- `toggleSort` mantém colunas existentes como critério secundário
+
+### Arquivos
+- `frontend/src/pages/Alunos.tsx` (reescrito — +300 lines de lógica de filtro/sort)
 
 ---
 
 ## Links para Arquivos Modificados (Última Sessão)
 
-- `frontend/src/components/modals/TurmaModal.tsx#L49-L136` — estado de alocação, render condicional, lista de pendentes, confirm handler
-- `frontend/src/pages/Turmas.tsx#L7` — +state `alunos`
-- `frontend/src/pages/Turmas.tsx#L31` — `setAlunos(resAlunos.data)` no `carregar()`
-- `frontend/src/pages/Turmas.tsx#L57-L67` — `handleAlocar` + `alunosPendentes`
-- `frontend/src/pages/Turmas.tsx#L178-L179` — props `alunosPendentes` e `onAlocar`
+- `frontend/src/pages/Alunos.tsx#L20-L22` — states `columnFilters`, `sortRules`
+- `frontend/src/pages/Alunos.tsx#L55-L60` — `getFilterValue()` helper
+- `frontend/src/pages/Alunos.tsx#L62-L71` — `uniqueValues` useMemo
+- `frontend/src/pages/Alunos.tsx#L73-L118` — `processed` useMemo (pipeline completo)
+- `frontend/src/pages/Alunos.tsx#L163-L175` — `toggleSort`, `sortIcon`, `thSort`, `thFilter`
