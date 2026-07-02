@@ -1,9 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../utils/api';
 import type { Aluno, Turma, Professor, SavePayload } from '../../types';
 import { mascaraTelefone, mascaraData, desmascarar, formatDateISO, formatDateBR } from '../../utils/formatters';
 import { calcIdade, calcCategoria } from '../../utils/formatters';
 import { validarData, validarTelefone, sanitizarInput } from '../../utils/validators';
+
+interface LastSession {
+  genero: string;
+  turmaId: string;
+  professorId: string;
+  nivel: string;
+}
 
 interface AlunoModalProps {
   open: boolean;
@@ -11,6 +18,8 @@ interface AlunoModalProps {
   professores?: Professor[];
   onSave: (payload: SavePayload) => void;
   onClose: () => void;
+  lastSession?: LastSession;
+  resetCounter?: number;
 }
 
 function normalizarGenero(valor: string): string {
@@ -21,7 +30,7 @@ function normalizarGenero(valor: string): string {
   return v;
 }
 
-const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], onSave, onClose }) => {
+const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], onSave, onClose, lastSession, resetCounter }) => {
   const [editMode, setEditMode] = useState(false);
   const [acao, setAcao] = useState<'correcao' | 'transferencia' | null>(null);
 
@@ -35,6 +44,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
   const [dataAtestado, setDataAtestado] = useState('');
   const [turmaId, setTurmaId] = useState('');
   const [nivel, setNivel] = useState('');
+  const [professorId, setProfessorId] = useState('');
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [erroData, setErroData] = useState<string | null>(null);
   const [erroContato, setErroContato] = useState<string | null>(null);
@@ -43,6 +53,10 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
   const isNew = !aluno;
   const idade = calcIdade(dataNascimento ? formatDateISO(dataNascimento) : undefined);
   const categoria = calcCategoria(idade);
+  const turmasFiltradas = useMemo(() => {
+    if (!professorId) return turmas;
+    return turmas.filter((t) => t.professor_id === professorId);
+  }, [turmas, professorId]);
   const turmaSelecionada = turmas.find((t) => t.id === turmaId);
 
   useEffect(() => {
@@ -62,24 +76,26 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
       setDataAtestado(aluno.data_atestado ? formatDateBR(aluno.data_atestado) : '');
       setTurmaId(aluno.turma_id || '');
       setNivel(aluno.nivel || (aluno as any).turma?.nivel || '');
+      setProfessorId(aluno.turma?.professor_id || '');
     } else {
       setNome('');
       setDataNascimento('');
-      setGenero('');
+      setGenero(lastSession?.genero || '');
       setContato('');
       setAtivo(true);
       setParQ('');
       setAtestadoMedico(false);
       setDataAtestado('');
-      setTurmaId('');
-      setNivel('');
+      setTurmaId(lastSession?.turmaId || '');
+      setNivel(lastSession?.nivel || '');
+      setProfessorId(lastSession?.professorId || '');
     }
     setEditMode(false);
     setAcao(null);
     setErroData(null);
     setErroContato(null);
     setToast(null);
-  }, [aluno, open]);
+  }, [aluno, open, resetCounter]);
 
   useEffect(() => {
     if (!open) return;
@@ -289,28 +305,51 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
           </div>
 
           {isNew && (
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-600">Turma</label>
-              <select
-                value={turmaId}
-                onChange={(e) => {
-                  setTurmaId(e.target.value);
-                  const t = turmas.find((x) => x.id === e.target.value);
-                  if (t) setNivel(t.nivel || '');
-                }}
-                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                <option value="">Selecione uma turma</option>
-                {turmas.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {(() => {
-                  const pn = professores.find(p => p.id === t.professor_id)?.nome;
-                  return `${t.label} - ${t.horario} (${t.nivel || 'sem nível'})${pn ? ` - ${pn}` : ''}`;
-                })()}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-600">Professor(a)</label>
+                <select
+                  value={professorId}
+                  onChange={(e) => {
+                    setProfessorId(e.target.value);
+                    setTurmaId('');
+                    setNivel('');
+                  }}
+                  className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">Selecione</option>
+                  {professores.map((p) => (
+                    <option key={p.id} value={p.id}>{p.nome}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-600">Turma</label>
+                <select
+                  value={turmaId}
+                  onChange={(e) => {
+                    setTurmaId(e.target.value);
+                    const t = turmas.find((x) => x.id === e.target.value);
+                    if (t) {
+                      setNivel(t.nivel || '');
+                      setProfessorId(t.professor_id || '');
+                    }
+                  }}
+                  className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">Selecione uma turma</option>
+                  {turmasFiltradas.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {(() => {
+                    const pn = professores.find(p => p.id === t.professor_id)?.nome;
+                    return `${t.label} - ${t.horario} (${t.nivel || 'sem nível'})${pn ? ` - ${pn}` : ''}`;
+                  })()}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
           )}
 
           <div className="flex flex-col gap-1">
@@ -385,17 +424,13 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
           </div>
 
           <div className="flex items-center gap-2 pt-2">
-            <input
-              type="checkbox"
-              id="ativo-modal"
-              checked={ativo}
-              onChange={(e) => setAtivo(e.target.checked)}
-              disabled={!isEditMode}
-              className="rounded border-gray-300 text-primary-600"
-            />
-            <label htmlFor="ativo-modal" className="text-sm text-gray-600">
-              Ativo
-            </label>
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+              ativo
+                ? 'bg-green-100 text-green-700'
+                : 'bg-red-100 text-red-700'
+            }`}>
+              {ativo ? 'Ativo' : 'Inativo'}
+            </span>
           </div>
 
           {isEditMode && (

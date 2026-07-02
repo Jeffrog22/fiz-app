@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-02 — Busca padronizada + ajustes finos -->
+<!-- última-sessão: 2026-07-02 — Professor no modal + persistência sessão + ativo badge -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Identidade
@@ -222,6 +222,27 @@
 - `frontend/src/components/SearchInput.tsx` (+onFocus)
 - `frontend/src/pages/Alunos.tsx` (horário substring)
 - `frontend/src/components/modals/AlunoModal.tsx` (categoria + backdrop + ESC)
+
+---
+
+## Sessão: 02/07/2026 — Professor no Modal + Persistência Sessão + Ativo Badge
+
+### O que foi feito
+- Select "Professor(a)" no modal Novo Aluno — filtra turmas por professor selecionado
+- Relação bidirecional: trocar professor limpa turma; trocar turma atualiza professor
+- `lastSession` + `resetCounter`: após salvar novo aluno, modal mantém-se aberto com Gênero/Turma/Professor(a)/Nível preenchidos da última sessão
+- Campos não-persistidos (nome, data, contato, ParQ, atestado) são limpos pós-salvar
+- Status "Ativo" convertido de checkbox editável para badge read-only (`bg-green-100`/`bg-red-100`)
+- Comportamento de fechar: backdrop click ou ESC fecha o modal normalmente
+
+### Decisões
+- `professorId` é estado próprio (não apenas derivado da turma) para filtragem independente
+- Turmas filtradas via `useMemo` para evitar re-renders desnecessários
+- `resetCounter` como trigger do useEffect garante reset controlado sem fechar o modal
+
+### Arquivos
+- `frontend/src/components/modals/AlunoModal.tsx` (+professorId, +turmasFiltradas, +lastSession, +resetCounter, +ativo badge)
+- `frontend/src/pages/Alunos.tsx` (+lastSession state, +resetCounter, handleSave mantém modal aberto para novos alunos)
 
 ---
 

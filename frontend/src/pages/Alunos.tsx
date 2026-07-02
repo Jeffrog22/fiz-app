@@ -25,6 +25,8 @@ const Alunos: React.FC = () => {
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
   const [sortRules, setSortRules] = useState<SortRule[]>([]);
   const [modoAlocacao, setModoAlocacao] = useState(false);
+  const [lastSession, setLastSession] = useState({ genero: '', turmaId: '', professorId: '', nivel: '' });
+  const [resetCounter, setResetCounter] = useState(0);
 
   const professorMap = new Map(professores.map((p) => [p.id, p.nome]));
 
@@ -140,8 +142,19 @@ const Alunos: React.FC = () => {
       } else {
         await api.post('/alunos', data);
       }
-      setModalOpen(false);
-      setEditando(null);
+
+      if (editando) {
+        setModalOpen(false);
+        setEditando(null);
+      } else {
+        setLastSession({
+          genero: data.genero || '',
+          turmaId: data.turma_id || '',
+          professorId: turmas.find((t: any) => t.id === data.turma_id)?.professor_id || '',
+          nivel: data.nivel || '',
+        });
+        setResetCounter((c) => c + 1);
+      }
       await carregar();
     } catch (err: any) {
       alert(err?.response?.data?.error || err.message || 'Erro ao salvar aluno');
@@ -439,6 +452,8 @@ const Alunos: React.FC = () => {
         professores={professores}
         onSave={handleSave}
         onClose={() => { setModalOpen(false); setEditando(null); }}
+        lastSession={lastSession}
+        resetCounter={resetCounter}
       />
     </div>
   );
