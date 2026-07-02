@@ -8,7 +8,7 @@ export async function listarTurmasService(
 ): Promise<any[]> {
   let query = supabase
     .from('turmas')
-    .select('*, alunos:turma_id(count)')
+    .select('*')
     .eq('tenant_id', tenantId)
     .order('horario', { ascending: true });
 
@@ -19,11 +19,7 @@ export async function listarTurmasService(
   const { data, error } = await query;
 
   if (error) throw new AppError('Erro ao buscar turmas', 500);
-
-  return (data || []).map((t: any) => ({
-    ...t,
-    alunos_count: t.alunos?.[0]?.count ?? 0,
-  }));
+  return data || [];
 }
 
 export async function criarTurmaService(data: any, tenantId: string): Promise<any> {

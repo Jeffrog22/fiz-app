@@ -14,11 +14,19 @@ const Turmas: React.FC = () => {
   const carregar = useCallback(async () => {
     setCarregando(true);
     try {
-      const [resTurmas, resProf] = await Promise.all([
+      const [resTurmas, resProf, resAlunos] = await Promise.all([
         api.get('/turmas'),
         api.get('/professores'),
+        api.get('/alunos'),
       ]);
-      setTurmas(resTurmas.data);
+      const alunosPorTurma: Record<string, number> = {};
+      for (const a of resAlunos.data) {
+        if (a.turma_id) alunosPorTurma[a.turma_id] = (alunosPorTurma[a.turma_id] || 0) + 1;
+      }
+      setTurmas(resTurmas.data.map((t: any) => ({
+        ...t,
+        alunos_count: alunosPorTurma[t.id] || 0,
+      })));
       setProfessores(resProf.data);
     } catch (err) {
       console.error('Erro ao carregar turmas', err);
