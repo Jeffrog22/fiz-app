@@ -39,7 +39,7 @@ const Alunos: React.FC = () => {
         api.get('/professores'),
         api.get('/turmas'),
       ]);
-      const turmaMap = new Map(turmasRes.data.map((t: any) => [t.id, t]));
+      const turmaMap = new Map(turmasRes.data.map((t: any) => [t.grupo_id, t]));
       setAlunos(alunosRes.data.map((a: any) => ({ ...a, turma: turmaMap.get(a.turma_id) || null })));
       setProfessores(profsRes.data);
       setTurmas(turmasRes.data);
@@ -150,7 +150,7 @@ const Alunos: React.FC = () => {
         setLastSession({
           genero: data.genero || '',
           turmaId: data.turma_id || '',
-          professorId: turmas.find((t: any) => t.id === data.turma_id)?.professor_id || '',
+          professorId: turmas.find((t: any) => t.grupo_id === data.turma_id)?.professor_id || '',
           nivel: data.nivel || '',
         });
         setResetCounter((c) => c + 1);
@@ -192,7 +192,7 @@ const Alunos: React.FC = () => {
     if (!turmaAlocar || selectedIds.size === 0) return;
     setAlocando(true);
     try {
-      const turma = turmas.find((t: any) => t.id === turmaAlocar);
+      const turma = turmas.find((t: any) => t.grupo_id === turmaAlocar);
       for (const alunoId of selectedIds) {
         await api.put(`/alunos/${alunoId}`, {
           turma_id: turmaAlocar,
@@ -328,7 +328,7 @@ const Alunos: React.FC = () => {
           >
             <option value="">Selecione a turma</option>
             {turmas.map((t: any) => (
-              <option key={t.id} value={t.id}>
+              <option key={t.grupo_id} value={t.grupo_id}>
                 {t.label} - {(t.horario || '').slice(0, 5)} ({t.nivel || 'sem nível'})
               </option>
             ))}

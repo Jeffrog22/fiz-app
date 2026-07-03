@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-02 — Grid mensal + CardBO cancelamento + AnotacoesModal + Undo/Limpar + JustificativaModal + logEngine + Capacity bar -->
+<!-- última-sessão: 2026-07-02 — Fix acentuação clima + Chave Tríplice: alunos.turma_id agora armazena grupo_id -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Identidade
@@ -46,6 +46,8 @@
 - `SearchInput.tsx` é componente reutilizável com lupa + X clearable + onFocus select (+ onMouseUp preventDefault)
 - Migrations 006 e 007 executadas em produção (Supabase)
 - Migration 008 (`planejamento_arquivos`) pendente execução
+- Migration 009 executada em produção (Supabase) — converte `alunos.turma_id` e `enrollment_period.turma_id` de UUID para `turmas.grupo_id`
+- `alunos.turma_id` agora armazena `turmas.grupo_id` (ex: `jeftq03`), não UUID — a alocação do aluno é pelo grupo_id (chave tríplice: label + professor_id + horario)
 - Upload de planejamento usa multer + disco local (`backend/uploads/`)
 
 ---
@@ -379,3 +381,32 @@
 - `backend/src/index.ts` (+rota)
 - `frontend/src/pages/Calendario.tsx` (reescrito — upload real)
 - `frontend/src/components/SearchInput.tsx` (+onMouseUp preventDefault)
+
+---
+
+## Sessão: 02/07/2026 — Fix Acentuação Clima + Chave Tríplice (aluno→grupo_id)
+
+### O que foi feito
+- **Acentuação clima**: normalizado fallback de `getCondicaoFromWeatherCode` (`'Parcialmente Nublado'` → `'parcialmente nublado'`), `.catch` e `useState` do CardAula, e `condicoes` do backend para lowercase consistente
+- **Chave Tríplice**: `alunos.turma_id` agora armazena `turmas.grupo_id` (ex: `jeftq03`) em vez de `turmas.id` (UUID)
+- Migration 009 executada no Supabase — converte dados existentes de UUID→grupo_id em `alunos` e `enrollment_period`
+- `ChamadaFilters.tsx` reescrito para cascata label→professor→horário (labels únicos, grid só renderiza quando grupo_id completo)
+- `Chamadas.tsx` — novo state `labelSelecionada`, `grupoId` computado de `label + professorId + horario`, grid condicional
+- `Alunos.tsx` — `turmaMap` key por `t.grupo_id`, `handleAlocar` e dropdowns usam `t.grupo_id`
+- `AlunoModal.tsx` — todos os lookups/selects de turma por `t.grupo_id`
+- Typecheck limpo (frontend + backend)
+
+### Decisões
+- `alunos.turma_id` armazena `grupo_id` textual (label+prof+horario), não UUID — alinhado ao PRD 3.1 (chave tríplice)
+- Chamada grid só exibe alunos quando label + professor + horário completam a tríplice e resolvem o grupo_id
+- Labels únicos no dropdown de Turma evitam duplicatas; cascade progressivo resolve o grupo específico
+
+### Arquivos
+- `frontend/src/utils/climateEngine.ts` (fallback lowercase)
+- `frontend/src/components/modals/CardAula.tsx` (useState + catch lowercase)
+- `backend/src/services/chamadasService.ts` (condicoes lowercase)
+- `backend/src/migrations/009_convert_turma_id_to_grupo_id.sql` (novo)
+- `frontend/src/pages/Alunos.tsx` (turmaMap, handleAlocar, dropdown → grupo_id)
+- `frontend/src/components/modals/AlunoModal.tsx` (lookups/selects → grupo_id)
+- `frontend/src/components/grid/ChamadaFilters.tsx` (reescrito — cascade label→prof→horario)
+- `frontend/src/pages/Chamadas.tsx` (labelSelecionada, grupoId, grid condicional)

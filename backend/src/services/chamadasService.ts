@@ -302,18 +302,18 @@ export async function obterCardAula(data: string, indice_aula: number, tenantId:
 }
 
 const condicoes: Record<number, string> = {
-  0: 'C\u00e9u Limpo', 1: 'Principalmente Limpo',
-  2: 'Parcialmente Nublado', 3: 'Nublado',
-  45: 'N\u00e9voa Seca', 48: 'Nevoeiro/Geadas',
-  51: 'Chuvisco', 53: 'Chuvisco', 55: 'Chuvisco',
-  56: 'Chuvisco Congelante', 57: 'Chuvisco Congelante',
-  61: 'Chuva', 63: 'Chuva', 65: 'Chuva',
-  66: 'Chuva Congelante', 67: 'Chuva Congelante',
-  71: 'Neve', 73: 'Neve', 75: 'Neve',
-  77: 'Gr\u00e3os de Neve',
-  80: 'Pancadas de Chuva', 81: 'Pancadas de Chuva', 82: 'Pancadas de Chuva',
-  85: 'Pancadas de Neve', 86: 'Pancadas de Neve',
-  95: 'Tempestade', 96: 'Tempestade com Granizo', 99: 'Tempestade com Granizo',
+  0: 'c\u00e9u limpo', 1: 'principalmente limpo',
+  2: 'parcialmente nublado', 3: 'nublado',
+  45: 'n\u00e9voa seca', 48: 'nevoeiro/geadas',
+  51: 'chuvisco', 53: 'chuvisco', 55: 'chuvisco',
+  56: 'chuvisco congelante', 57: 'chuvisco congelante',
+  61: 'chuva', 63: 'chuva', 65: 'chuva',
+  66: 'chuva congelante', 67: 'chuva congelante',
+  71: 'neve', 73: 'neve', 75: 'neve',
+  77: 'gr\u00e3os de neve',
+  80: 'pancadas de chuva', 81: 'pancadas de chuva', 82: 'pancadas de chuva',
+  85: 'pancadas de neve', 86: 'pancadas de neve',
+  95: 'tempestade', 96: 'tempestade com granizo', 99: 'tempestade com granizo',
 };
 
 export async function obterClima(): Promise<any> {

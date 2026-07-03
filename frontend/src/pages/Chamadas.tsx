@@ -36,7 +36,7 @@ const Chamadas: React.FC = () => {
   const [mes, setMes] = useState(mesInicial);
   const [ano, setAno] = useState(anoInicial);
   const [retroativo, setRetroativo] = useState(false);
-  const [turmaId, setTurmaId] = useState('');
+  const [labelSelecionada, setLabelSelecionada] = useState('');
   const [professorId, setProfessorId] = useState('');
   const [horario, setHorario] = useState('');
   const [buscaTexto, setBuscaTexto] = useState('');
@@ -58,20 +58,28 @@ const Chamadas: React.FC = () => {
 
   const statusSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const grupoId = useMemo(() => {
+    if (!labelSelecionada || !professorId || !horario) return '';
+    const turma = turmas.find(
+      (t) => t.label === labelSelecionada && t.professor_id === professorId && t.horario === horario
+    );
+    return turma?.grupo_id || '';
+  }, [labelSelecionada, professorId, horario, turmas]);
+
   const turmaSelecionada = useMemo(
-    () => turmas.find((t) => t.id === turmaId) || null,
-    [turmas, turmaId],
+    () => turmas.find((t) => t.grupo_id === grupoId) || null,
+    [turmas, grupoId],
   );
 
   const dias = useMemo(
-    () => gerarDiasLetivos(mes, ano, turmaSelecionada?.label || ''),
-    [mes, ano, turmaSelecionada],
+    () => gerarDiasLetivos(mes, ano, labelSelecionada),
+    [mes, ano, labelSelecionada],
   );
 
   const alunosDaTurma = useMemo(() => {
-    if (!turmaId) return [];
-    return alunos.filter((a) => a.turma_id === turmaId);
-  }, [alunos, turmaId]);
+    if (!grupoId) return [];
+    return alunos.filter((a) => a.turma_id === grupoId);
+  }, [alunos, grupoId]);
 
   const alunosFiltrados = useMemo(() => {
     if (!buscaTexto.trim()) return alunosDaTurma;
@@ -145,7 +153,7 @@ const Chamadas: React.FC = () => {
   }, [statusSave]);
 
   const limparFiltros = () => {
-    setTurmaId('');
+    setLabelSelecionada('');
     setProfessorId('');
     setHorario('');
     setBuscaTexto('');
@@ -414,7 +422,7 @@ const Chamadas: React.FC = () => {
       </div>
 
       <ChamadaFilters
-        turmaId={turmaId}
+        label={labelSelecionada}
         professorId={professorId}
         horario={horario}
         nivel={nivel}
@@ -423,7 +431,7 @@ const Chamadas: React.FC = () => {
         turmas={turmas}
         professores={professores}
         retroativo={retroativo}
-        onTurmaChange={(v) => { setTurmaId(v); setProfessorId(''); setHorario(''); }}
+        onLabelChange={(v) => { setLabelSelecionada(v); setProfessorId(''); setHorario(''); }}
         onProfessorChange={setProfessorId}
         onHorarioChange={setHorario}
         onMesChange={setMes}
@@ -458,16 +466,16 @@ const Chamadas: React.FC = () => {
               Limpar
             </button>
           )}
-          <button onClick={handleExtrapolar}
-            className="px-3 py-1.5 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100 border border-blue-200 transition">
+          <button onClick={handleExtrapolar} disabled={!grupoId}
+            className="px-3 py-1.5 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100 border border-blue-200 transition disabled:opacity-30 disabled:cursor-not-allowed">
             Extrapolar
           </button>
-          <button onClick={() => { setDateHeaderClickData(dias[0] || ''); setCardAulaAberto(true); }}
-            className="px-3 py-1.5 text-xs bg-cyan-50 text-cyan-700 rounded hover:bg-cyan-100 border border-cyan-200 transition">
+          <button onClick={() => { setDateHeaderClickData(dias[0] || ''); setCardAulaAberto(true); }} disabled={!grupoId}
+            className="px-3 py-1.5 text-xs bg-cyan-50 text-cyan-700 rounded hover:bg-cyan-100 border border-cyan-200 transition disabled:opacity-30 disabled:cursor-not-allowed">
             Card Aula
           </button>
-          <button onClick={() => { setDateHeaderClickData(dias[0] || ''); setCardBOAberto(true); }}
-            className="px-3 py-1.5 text-xs bg-orange-50 text-orange-700 rounded hover:bg-orange-100 border border-orange-200 transition">
+          <button onClick={() => { setDateHeaderClickData(dias[0] || ''); setCardBOAberto(true); }} disabled={!grupoId}
+            className="px-3 py-1.5 text-xs bg-orange-50 text-orange-700 rounded hover:bg-orange-100 border border-orange-200 transition disabled:opacity-30 disabled:cursor-not-allowed">
             Card BO
           </button>
         </div>
@@ -475,9 +483,13 @@ const Chamadas: React.FC = () => {
 
       {carregando ? (
         <p className="text-sm text-gray-500">Carregando...</p>
-      ) : !turmaId ? (
+      ) : !labelSelecionada ? (
         <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-400 text-sm">
           Selecione uma turma para visualizar a chamada
+        </div>
+      ) : !grupoId ? (
+        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-400 text-sm">
+          Selecione professor e horário para definir a turma
         </div>
       ) : dias.length === 0 ? (
         <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-400 text-sm">

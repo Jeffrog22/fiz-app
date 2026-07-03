@@ -57,7 +57,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
     if (!professorId) return turmas;
     return turmas.filter((t) => t.professor_id === professorId);
   }, [turmas, professorId]);
-  const turmaSelecionada = turmas.find((t) => t.id === turmaId);
+  const turmaSelecionada = turmas.find((t) => t.grupo_id === turmaId);
 
   useEffect(() => {
     if (!open) return;
@@ -202,14 +202,14 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
               value={turmaId}
               onChange={(e) => {
                 setTurmaId(e.target.value);
-                const t = turmas.find((x) => x.id === e.target.value);
-                if (t) setNivel(t.nivel || '');
-              }}
+                    const t = turmas.find((x) => x.grupo_id === e.target.value);
+                    if (t) setNivel(t.nivel || '');
+                  }}
               className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
               <option value="">Selecione a nova turma</option>
               {turmas.map((t) => (
-                <option key={t.id} value={t.id}>
+                <option key={t.grupo_id} value={t.grupo_id}>
                   {(() => {
                   const pn = professores.find(p => p.id === t.professor_id)?.nome;
                   return `${t.label} - ${t.horario} (${t.nivel || 'sem nível'})${pn ? ` - ${pn}` : ''}`;
@@ -330,7 +330,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
                   value={turmaId}
                   onChange={(e) => {
                     setTurmaId(e.target.value);
-                    const t = turmas.find((x) => x.id === e.target.value);
+                    const t = turmas.find((x) => x.grupo_id === e.target.value);
                     if (t) {
                       setNivel(t.nivel || '');
                       setProfessorId(t.professor_id || '');
@@ -340,7 +340,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
                 >
                   <option value="">Selecione uma turma</option>
                   {turmasFiltradas.map((t) => (
-                    <option key={t.id} value={t.id}>
+                    <option key={t.grupo_id} value={t.grupo_id}>
                       {(() => {
                     const pn = professores.find(p => p.id === t.professor_id)?.nome;
                     return `${t.label} - ${t.horario} (${t.nivel || 'sem nível'})${pn ? ` - ${pn}` : ''}`;

@@ -3,7 +3,7 @@ import type { Turma } from '../../types';
 import { formatMesAno, hojeMesAno } from '../../utils/chamadaUtils';
 
 interface ChamadaFiltersProps {
-  turmaId: string;
+  label: string;
   professorId: string;
   horario: string;
   nivel: string;
@@ -12,7 +12,7 @@ interface ChamadaFiltersProps {
   turmas: Turma[];
   professores: { id: string; nome: string }[];
   retroativo: boolean;
-  onTurmaChange: (v: string) => void;
+  onLabelChange: (v: string) => void;
   onProfessorChange: (v: string) => void;
   onHorarioChange: (v: string) => void;
   onMesChange: (v: number) => void;
@@ -22,7 +22,7 @@ interface ChamadaFiltersProps {
 }
 
 const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
-  turmaId,
+  label,
   professorId,
   horario,
   nivel,
@@ -31,7 +31,7 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
   turmas,
   professores,
   retroativo,
-  onTurmaChange,
+  onLabelChange,
   onProfessorChange,
   onHorarioChange,
   onMesChange,
@@ -39,27 +39,32 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
   onRetroativoChange,
   onLimpar,
 }) => {
-  const turmaSelecionada = turmas.find((t) => t.id === turmaId);
+  const labelsUnicos = useMemo(() => {
+    const set = new Set(turmas.map((t) => t.label).filter(Boolean));
+    return Array.from(set).sort();
+  }, [turmas]);
 
-  const professoresDaTurma = useMemo(() => {
-    if (!turmaId) return professores;
-    const profId = turmaSelecionada?.professor_id;
-    if (!profId) return [];
-    const prof = professores.find((p) => p.id === profId);
-    return prof ? [prof] : [];
-  }, [turmaId, turmas, professores, turmaSelecionada]);
+  const turmasComLabel = useMemo(() => {
+    if (!label) return [];
+    return turmas.filter((t) => t.label === label);
+  }, [turmas, label]);
+
+  const professoresDisponiveis = useMemo(() => {
+    if (!label) return [];
+    const profIds = new Set(turmasComLabel.map((t) => t.professor_id).filter(Boolean));
+    return professores.filter((p) => profIds.has(p.id));
+  }, [label, turmasComLabel, professores]);
 
   const horariosDisponiveis = useMemo(() => {
-    if (!turmaId) {
-      const set = new Set<string>();
-      turmas.forEach((t) => { if (t.horario) set.add(t.horario); });
-      return Array.from(set).sort();
-    }
-    const t = turmaSelecionada;
-    return t?.horario ? [t.horario] : [];
-  }, [turmaId, turmas, turmaSelecionada]);
+    if (!label || !professorId) return [];
+    const set = new Set<string>();
+    turmasComLabel
+      .filter((t) => t.professor_id === professorId)
+      .forEach((t) => { if (t.horario) set.add(t.horario); });
+    return Array.from(set).sort();
+  }, [label, professorId, turmasComLabel]);
 
-  const temFiltro = turmaId || professorId || horario;
+  const temFiltro = label || professorId || horario;
 
   const hoje = hojeMesAno();
   const anos = [hoje.ano - 1, hoje.ano, hoje.ano + 1];
@@ -117,13 +122,13 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
         <div className="flex flex-col gap-1">
           <label className="text-xs text-gray-500 font-medium">Turma</label>
           <select
-            value={turmaId}
-            onChange={(e) => { onTurmaChange(e.target.value); onProfessorChange(''); onHorarioChange(''); }}
+            value={label}
+            onChange={(e) => { onLabelChange(e.target.value); onProfessorChange(''); onHorarioChange(''); }}
             className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
             <option value="">Selecione</option>
-            {turmas.map((t) => (
-              <option key={t.id} value={t.id}>{t.label}</option>
+            {labelsUnicos.map((l) => (
+              <option key={l} value={l}>{l}</option>
             ))}
           </select>
         </div>
@@ -132,14 +137,14 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
           <label className="text-xs text-gray-500 font-medium">Professor</label>
           <select
             value={professorId}
-            onChange={(e) => onProfessorChange(e.target.value)}
-            disabled={!!turmaId}
+            onChange={(e) => { onProfessorChange(e.target.value); onHorarioChange(''); }}
+            disabled={!label}
             className={`px-3 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-              turmaId ? 'bg-gray-50 text-gray-500 border-gray-200' : 'border-gray-300'
+              !label ? 'bg-gray-50 text-gray-500 border-gray-200' : 'border-gray-300'
             }`}
           >
-            <option value="">{turmaId ? (professoresDaTurma[0]?.nome || 'Auto') : 'Selecione'}</option>
-            {!turmaId && professores.map((p) => (
+            <option value="">{label ? 'Selecione' : 'Selecione uma turma'}</option>
+            {professoresDisponiveis.map((p) => (
               <option key={p.id} value={p.id}>{p.nome}</option>
             ))}
           </select>
@@ -150,13 +155,13 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
           <select
             value={horario}
             onChange={(e) => onHorarioChange(e.target.value)}
-            disabled={!!turmaId}
+            disabled={!label || !professorId}
             className={`px-3 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-              turmaId ? 'bg-gray-50 text-gray-500 border-gray-200' : 'border-gray-300'
+              !label || !professorId ? 'bg-gray-50 text-gray-500 border-gray-200' : 'border-gray-300'
             }`}
           >
-            <option value="">{turmaId ? (horariosDisponiveis[0]?.substring(0, 5) || 'Auto') : 'Selecione'}</option>
-            {!turmaId && horariosDisponiveis.map((h) => (
+            <option value="">{label && professorId ? 'Selecione' : 'Selecione professor'}</option>
+            {horariosDisponiveis.map((h) => (
               <option key={h} value={h}>{h.substring(0, 5)}</option>
             ))}
           </select>
@@ -166,7 +171,7 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
           <label className="text-xs text-gray-500 font-medium">Nível</label>
           <input
             disabled
-            value={nivel || (turmaSelecionada?.nivel || '')}
+            value={nivel || '-'}
             className="px-3 py-1.5 border border-gray-200 rounded-md text-sm bg-gray-50 text-gray-500"
           />
         </div>

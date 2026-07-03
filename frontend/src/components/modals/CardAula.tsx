@@ -26,7 +26,7 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, onAbrirB
   const [tempExterna, setTempExterna] = useState(26);
   const [tempPiscina, setTempPiscina] = useState(28);
   const [cloro, setCloro] = useState(2.5);
-  const [condicao, setCondicao] = useState('Parcialmente Nublado');
+  const [condicao, setCondicao] = useState('parcialmente nublado');
   const [sensacoes, setSensacoes] = useState<string[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [carregou, setCarregou] = useState(false);
@@ -50,7 +50,7 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, onAbrirB
         })
         .catch(() => {
           setTempExterna(26);
-          setCondicao('Parcialmente Nublado');
+          setCondicao('parcialmente nublado');
         })
         .finally(() => setCarregou(true));
     }

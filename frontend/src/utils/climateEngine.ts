@@ -43,7 +43,7 @@ export const WMO_MAP: Record<number, string> = {
 
 export function getCondicaoFromWeatherCode(code: number | null): string {
   if (code === null || code === undefined || WMO_MAP[code] === undefined) {
-    return 'Parcialmente Nublado';
+    return 'parcialmente nublado';
   }
   return WMO_MAP[code];
 }
@@ -65,13 +65,23 @@ function getWeatherCode(condicao: string): number {
     'nevoeiro/geada': 48,
     'chuvisco': 51,
     'chuvisco constante': 53,
+    'chuvisco congelante': 56,
     'chuva fraca': 61,
     'chuva moderada': 63,
     'chuva forte': 65,
     'chuva': 61,
+    'chuva congelante': 66,
+    'neve fraca': 71,
+    'neve moderada': 73,
+    'neve forte': 75,
+    'grãos de neve': 77,
     'pancadas de chuva fraca': 80,
     'pancadas de chuva moderada': 81,
     'pancadas de chuva violentas': 82,
+    'pancadas de neve fracas': 85,
+    'pancadas de neve fortes': 86,
+    'pancadas de neve': 85,
+    'pancadas de chuva': 80,
     'tempestade': 95,
     'tempestade com granizo': 96,
   };
