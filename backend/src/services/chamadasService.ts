@@ -235,6 +235,35 @@ export async function extrapolarPresenca(data: string, indice_aula: number | und
   return { message: `Presenca extrapolada para ${novosLogs.length} alunos`, count: novosLogs.length };
 }
 
+function buildCardAulaFields(
+  temperatura_externa?: number,
+  temperatura_piscina?: number,
+  cloro_ppm?: number,
+  condicao_clima?: string,
+  sensacao?: string[],
+  status_sugerido?: string,
+  motivo_sugerido?: string,
+): Record<string, any> {
+  const fields: Record<string, any> = {
+    temperatura_ext: temperatura_externa ?? null,
+    temperatura_piscina: temperatura_piscina ?? null,
+    cloro_ppm: cloro_ppm ?? null,
+    condicao_clima: condicao_clima ?? null,
+  };
+  if (sensacao !== undefined) fields.sensacao = sensacao;
+  if (status_sugerido !== undefined) fields.status_sugerido = status_sugerido;
+  if (motivo_sugerido !== undefined) fields.motivo_sugerido = motivo_sugerido;
+  return fields;
+}
+
+function stripNewCardAulaFields(fields: Record<string, any>): Record<string, any> {
+  const cleaned = { ...fields };
+  delete cleaned.sensacao;
+  delete cleaned.status_sugerido;
+  delete cleaned.motivo_sugerido;
+  return cleaned;
+}
+
 export async function salvarCardAula(
   tenantId: string,
   data: string,
@@ -250,15 +279,7 @@ export async function salvarCardAula(
   if (!data) throw new AppError('Campo data e obrigatorio', 400);
 
   const aulaIdx = indice_aula ?? 0;
-  const updateFields: Record<string, any> = {
-    temperatura_ext: temperatura_externa ?? null,
-    temperatura_piscina: temperatura_piscina ?? null,
-    cloro_ppm: cloro_ppm ?? null,
-    condicao_clima: condicao_clima ?? null,
-  };
-  if (sensacao !== undefined) updateFields.sensacao = sensacao;
-  if (status_sugerido !== undefined) updateFields.status_sugerido = status_sugerido;
-  if (motivo_sugerido !== undefined) updateFields.motivo_sugerido = motivo_sugerido;
+  let updateFields = buildCardAulaFields(temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido);
 
   const { data: registros, error: fetchError } = await supabase
     .from('chamadas_log')
@@ -278,7 +299,21 @@ export async function salvarCardAula(
       .eq('data', data)
       .eq('indice_aula', aulaIdx);
 
-    if (updateError) throw new AppError('Erro ao atualizar CardAula', 500);
+    if (updateError) {
+      // Se erro de coluna inexistente, tenta sem colunas novas
+      if (updateError.message?.includes('sensacao') || updateError.message?.includes('status_sugerido') || updateError.message?.includes('motivo_sugerido') || updateError.message?.includes('column')) {
+        updateFields = stripNewCardAulaFields(updateFields);
+        const { error: retryError } = await supabase
+          .from('chamadas_log')
+          .update(updateFields)
+          .eq('tenant_id', tenantId)
+          .eq('data', data)
+          .eq('indice_aula', aulaIdx);
+        if (retryError) throw new AppError('Erro ao atualizar CardAula', 500);
+      } else {
+        throw new AppError('Erro ao atualizar CardAula', 500);
+      }
+    }
   } else {
     const { data: alunos, error: alunosError } = await supabase
       .from('alunos')
@@ -302,7 +337,26 @@ export async function salvarCardAula(
         .from('chamadas_log')
         .upsert(novosLogs, { onConflict: 'tenant_id,data,grupo_id,indice_aula' });
 
-      if (insertError) throw new AppError('Erro ao inserir CardAula', 500);
+      if (insertError) {
+        // Se erro de coluna inexistente, tenta sem colunas novas
+        if (insertError.message?.includes('sensacao') || insertError.message?.includes('status_sugerido') || insertError.message?.includes('motivo_sugerido') || insertError.message?.includes('column')) {
+          updateFields = stripNewCardAulaFields(updateFields);
+          const logsLimpos = alunos.map((a: any) => ({
+            tenant_id: tenantId,
+            data,
+            grupo_id: a.id,
+            indice_aula: aulaIdx,
+            status: null,
+            ...updateFields,
+          }));
+          const { error: retryError } = await supabase
+            .from('chamadas_log')
+            .upsert(logsLimpos, { onConflict: 'tenant_id,data,grupo_id,indice_aula' });
+          if (retryError) throw new AppError('Erro ao inserir CardAula', 500);
+        } else {
+          throw new AppError('Erro ao inserir CardAula', 500);
+        }
+      }
     }
   }
 
@@ -442,16 +496,34 @@ export async function registrarLogAcesso(tenantId: string, professorId?: string,
 }
 
 export async function obterCardAula(data: string, indice_aula: number, tenantId: string): Promise<any> {
+  // Tenta com colunas novas (sensacao, status_sugerido, motivo_sugerido)
+  // Se falhar (coluna nao existe), fallback para colunas basicas
+  let query = 'condicao_clima, temperatura_ext, temperatura_piscina, cloro_ppm, sensacao, status_sugerido, motivo_sugerido';
   const { data: registros, error } = await supabase
     .from('chamadas_log')
-    .select('condicao_clima, temperatura_ext, temperatura_piscina, cloro_ppm, sensacao, status_sugerido, motivo_sugerido')
+    .select(query)
     .eq('tenant_id', tenantId)
     .eq('data', data)
     .eq('indice_aula', indice_aula)
     .not('condicao_clima', 'is', null)
     .limit(1);
 
-  if (error) throw new AppError('Erro ao buscar CardAula', 500);
+  if (error) {
+    // Se erro de coluna inexistente, tenta sem as colunas novas
+    if (error.message?.includes('sensacao') || error.message?.includes('status_sugerido') || error.message?.includes('column')) {
+      const { data: fallback } = await supabase
+        .from('chamadas_log')
+        .select('condicao_clima, temperatura_ext, temperatura_piscina, cloro_ppm')
+        .eq('tenant_id', tenantId)
+        .eq('data', data)
+        .eq('indice_aula', indice_aula)
+        .not('condicao_clima', 'is', null)
+        .limit(1);
+      if (fallback && fallback.length > 0) return fallback[0];
+      return null;
+    }
+    throw new AppError('Erro ao buscar CardAula', 500);
+  }
 
   return registros && registros.length > 0 ? registros[0] : null;
 }
