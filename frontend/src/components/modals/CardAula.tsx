@@ -35,16 +35,18 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, onAbrirB
     if (aberto && data) {
       setCarregou(false);
       setSensacoes([]);
-      api.get(`/chamadas/card-aula/${data}?indice_aula=${indiceAula}`)
+      // Tenta ler do card_aula (documento diario)
+      api.get(`/chamadas/card-aula/daily/${data}`)
         .then((res) => {
-          if (res.data) {
-            if (res.data.temperatura_ext != null) setTempExterna(res.data.temperatura_ext);
+          if (res.data && res.data.id) {
+            if (res.data.condicao_clima) setCondicao(res.data.condicao_clima);
+            if (res.data.temperatura_externa != null) setTempExterna(res.data.temperatura_externa);
             if (res.data.temperatura_piscina != null) setTempPiscina(res.data.temperatura_piscina);
             if (res.data.cloro_ppm != null) setCloro(res.data.cloro_ppm);
-            if (res.data.condicao_clima) setCondicao(res.data.condicao_clima);
             if (res.data.sensacao) setSensacoes(res.data.sensacao);
             return;
           }
+          // Fallback: clima da API
           api.get('/chamadas/clima')
             .then((res2) => {
               if (res2.data?.ok) {
@@ -64,6 +66,7 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, onAbrirB
             });
         })
         .catch(() => {
+          // Fallback: clima da API
           api.get('/chamadas/clima')
             .then((res2) => {
               if (res2.data?.ok) {
@@ -84,7 +87,7 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, onAbrirB
         })
         .finally(() => setCarregou(true));
     }
-  }, [aberto, data, indiceAula]);
+  }, [aberto, data]);
 
   useEffect(() => {
     const sens = getSensacoesFromTemperatura(tempExterna);

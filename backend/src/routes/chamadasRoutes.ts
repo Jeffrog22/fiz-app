@@ -9,7 +9,8 @@ router.use(tenantMiddleware, authMiddleware);
 
 router.get('/clima', ChamadasController.obterClima);
 router.get('/periodo', ChamadasController.listarPorPeriodo);
-router.get('/card-aula/:data', ChamadasController.obterCardAula);
+router.get('/card-aula/daily/:data', ChamadasController.obterCardAula);
+router.get('/card-aula/:data', ChamadasController.obterCardAulaLegado);
 router.get('/logs-acesso', ChamadasController.obterLogsAcesso);
 router.get('/:data', ChamadasController.listarPorData);
 

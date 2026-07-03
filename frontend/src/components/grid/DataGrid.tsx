@@ -44,12 +44,20 @@ const TIPO_EVENTO_CORES: Record<string, string> = {
   evento: 'bg-purple-100 border-purple-300 text-purple-700',
 };
 
+interface CardAulaRecord {
+  condicao_clima?: string;
+  temperatura_externa?: number;
+  temperatura_piscina?: number;
+  cloro_ppm?: number;
+}
+
 interface DataGridProps {
   alunos: Aluno[];
   dias: string[];
   logs: Record<string, Record<string, ChamadaLog>>;
   turma?: Turma | null;
   eventos?: CalendarioEvento[];
+  cardAulaData?: Record<string, CardAulaRecord>;
   onTogglePresenca: (alunoId: string, data: string, status: PresencaStatus) => void;
   onUpdateAnotacao: (alunoId: string, data: string, anotacao: string) => void;
   onDateHeaderClick: (data: string) => void;
@@ -64,6 +72,7 @@ const DataGrid: React.FC<DataGridProps> = ({
   logs,
   turma,
   eventos,
+  cardAulaData,
   onTogglePresenca,
   onUpdateAnotacao,
   onDateHeaderClick,
@@ -109,13 +118,16 @@ const DataGrid: React.FC<DataGridProps> = ({
 
   const getCondicaoClima = useCallback(
     (data: string): string | undefined => {
+      if (cardAulaData?.[data]?.condicao_clima) {
+        return cardAulaData[data].condicao_clima;
+      }
       for (const alunoId of Object.keys(logs)) {
         const c = logs[alunoId]?.[data]?.condicao_clima;
         if (c) return c;
       }
       return undefined;
     },
-    [logs]
+    [logs, cardAulaData]
   );
 
   const temAlgumLog = useCallback(
@@ -252,6 +264,13 @@ const DataGrid: React.FC<DataGridProps> = ({
                         {new Date(dia + 'T12:00:00').getDate()}
                       </span>
                     </button>
+                    {cardAulaData?.[dia]?.condicao_clima && (
+                      <div className="mt-0.5">
+                        <span className="text-[8px] px-1 py-0.5 rounded bg-cyan-50 text-cyan-700 border border-cyan-200">
+                          {cardAulaData[dia].condicao_clima}
+                        </span>
+                      </div>
+                    )}
                     {hasEvento && (
                       <div className="mt-0.5">
                         <span className={`text-[8px] px-1 py-0.5 rounded border ${TIPO_EVENTO_CORES[diaEventos[0].tipo] || 'bg-gray-100'}`}>

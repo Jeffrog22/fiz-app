@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { TenantRequest } from '../types';
 import * as chamadasService from '../services/chamadasService';
+import * as cardAulaService from '../services/cardAulaService';
 
 export class ChamadasController {
   static async listarPorData(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
@@ -61,7 +62,7 @@ export class ChamadasController {
     try {
       const tenantId = req.tenantId!;
       const { data, indice_aula, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido } = req.body;
-      await chamadasService.salvarCardAula(tenantId, data, indice_aula, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido);
+      await cardAulaService.salvarCardAula(tenantId, data, indice_aula || 0, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido);
       res.json({ ok: true });
     } catch (error) {
       next(error);
@@ -92,6 +93,18 @@ export class ChamadasController {
   }
 
   static async obterCardAula(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const tenantId = req.tenantId!;
+      const { data } = req.params;
+      // Leitura nova: busca do card_aula (documento diario)
+      const result = await cardAulaService.obterCardAula(data, tenantId);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async obterCardAulaLegado(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const tenantId = req.tenantId!;
       const { data } = req.params;

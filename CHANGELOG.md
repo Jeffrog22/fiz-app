@@ -24,6 +24,25 @@
 ### Arquivos alterados
 - `backend/src/migrations/012_drop_grupo_id_fk.sql` (novo)
 
+## [v1.8.0] - 2026-07-03
+### Adicionado
+- **cardAulaService** — novo serviço dedicado com `salvarCardAula` (upsert em `card_aula` + propagação para `chamadas_log` por `indice_aula`) e `obterCardAula` (leitura por tenant+data, sem necessidade de índice)
+- **Clima no header do DataGrid** — badge com `condicao_clima` (ex: "parcialmente nublado") exibido abaixo da data quando CardAula já foi registrado
+- **CardAula forçado no primeiro P/F/J** — ao tentar registrar a primeira presença do dia na turma, CardAula abre automaticamente; após salvar, a ação pendente é executada
+
+### Alterado
+- **CardAula.tsx** — carregamento migrado de `GET /chamadas/card-aula/:data?indice_aula=...` para `GET /chamadas/card-aula/daily/:data` (sem índice), usando `card_aula` como fonte primária
+- **Chamadas.tsx** — adicionado `pendingToggle` para fila de ação pós-CardAula; `cardAulaData` buscado para todos os dias letivos
+- **DataGrid.tsx** — nova prop `cardAulaData`; `getCondicaoClima` checa `cardAulaData` antes de `logs`
+
+### Arquivos alterados
+- `backend/src/services/cardAulaService.ts` (novo)
+- `backend/src/controllers/chamadasController.ts` — delega para cardAulaService
+- `backend/src/routes/chamadasRoutes.ts` — nova rota `GET /card-aula/daily/:data`
+- `frontend/src/components/modals/CardAula.tsx` — load via daily endpoint
+- `frontend/src/pages/Chamadas.tsx` — pendingToggle, cardAulaData fetch
+- `frontend/src/components/grid/DataGrid.tsx` — cardAulaData prop, climate badge
+
 ## [v1.7.0] - 2026-07-03
 ### Corrigido
 - **CardAula não salvava sem logs existentes** — `salvarCardAula` fazia apenas UPDATE (0 linhas se não houvesse chamadas). Agora faz UPSERT criando linhas com `status: null` para todos os alunos ativos

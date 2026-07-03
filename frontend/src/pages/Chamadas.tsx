@@ -60,7 +60,9 @@ const Chamadas: React.FC = () => {
   const [cardAulaAberto, setCardAulaAberto] = useState(false);
   const [cardBOAberto, setCardBOAberto] = useState(false);
   const [dateHeaderClickData, setDateHeaderClickData] = useState<string>('');
+  const [pendingToggle, setPendingToggle] = useState<{ alunoId: string; data: string; status: PresencaStatus } | null>(null);
   const [alunosComAnotacao, setAlunosComAnotacao] = useState<Set<string>>(new Set());
+  const [cardAulaData, setCardAulaData] = useState<Record<string, any>>({});
 
   const [limparConfirm, setLimparConfirm] = useState(false);
   const [undoCount, setUndoCount] = useState(0);
@@ -163,10 +165,28 @@ const Chamadas: React.FC = () => {
     }
   }, [alunosDaTurma]);
 
+  const carregarCardAulaData = useCallback(async () => {
+    if (dias.length === 0) return;
+    const map: Record<string, any> = {};
+    const promises = dias.map(async (dia) => {
+      try {
+        const res = await api.get(`/chamadas/card-aula/daily/${dia}`);
+        if (res.data?.id) {
+          map[dia] = res.data;
+        }
+      } catch {
+        // card_aula nao existe para este dia
+      }
+    });
+    await Promise.all(promises);
+    setCardAulaData(map);
+  }, [dias]);
+
   useEffect(() => { carregarDados(); }, [carregarDados]);
   useEffect(() => { carregarLogs(); }, [carregarLogs]);
   useEffect(() => { aplicarEventosCalendario(); }, [aplicarEventosCalendario]);
   useEffect(() => { carregarAnotacoes(); }, [carregarAnotacoes]);
+  useEffect(() => { carregarCardAulaData(); }, [carregarCardAulaData]);
 
   useEffect(() => {
     try {
@@ -244,6 +264,14 @@ const Chamadas: React.FC = () => {
     (alunoId: string, data: string, status: PresencaStatus) => {
       if (!retroativo && data < dias[0]) return;
 
+      const hasPriorLog = alunosDaTurma.some((a) => logs[a.id]?.[data]?.status != null);
+      if (!hasPriorLog) {
+        setPendingToggle({ alunoId, data, status });
+        setDateHeaderClickData(data);
+        setCardAulaAberto(true);
+        return;
+      }
+
       const currentStatus = logs[alunoId]?.[data]?.status;
       undoStack.current.push({ type: 'presenca', alunoId, data, indice: indiceAtual, statusAntigo: currentStatus });
       if (undoStack.current.length > MAX_UNDO) undoStack.current.shift();
@@ -270,8 +298,38 @@ const Chamadas: React.FC = () => {
       });
       agendarSalvamento(payload);
     },
-    [indiceAtual, agendarSalvamento, logs, retroativo, dias],
+    [indiceAtual, agendarSalvamento, logs, retroativo, dias, alunosDaTurma],
   );
+
+  useEffect(() => {
+    if (!cardAulaAberto && pendingToggle) {
+      const { alunoId, data, status } = pendingToggle;
+      setPendingToggle(null);
+      const currentStatus = logs[alunoId]?.[data]?.status;
+      undoStack.current.push({ type: 'presenca', alunoId, data, indice: indiceAtual, statusAntigo: currentStatus });
+      if (undoStack.current.length > MAX_UNDO) undoStack.current.shift();
+      setUndoCount((c) => c + 1);
+      const payload = [{
+        grupo_id: alunoId, data, indice_aula: indiceAtual,
+        status: status || null, origem: 'manual',
+      }];
+      setLogs((prev) => {
+        const next = { ...prev };
+        if (!next[alunoId]) next[alunoId] = {};
+        if (status) {
+          next[alunoId][data] = {
+            id: '', tenant_id: '', data, grupo_id: alunoId,
+            indice_aula: indiceAtual, status, origem: 'manual',
+            criado_em: new Date().toISOString(),
+          };
+        } else {
+          delete next[alunoId][data];
+        }
+        return next;
+      });
+      agendarSalvamento(payload);
+    }
+  }, [cardAulaAberto, pendingToggle, indiceAtual, agendarSalvamento, logs]);
 
   const handleUpdateAnotacao = useCallback(
     (alunoId: string, data: string, anotacao: string) => {
@@ -556,6 +614,7 @@ const Chamadas: React.FC = () => {
           logs={logs}
           turma={turmaAtual}
           eventos={eventos}
+          cardAulaData={cardAulaData}
           onTogglePresenca={handleTogglePresenca}
           onUpdateAnotacao={handleUpdateAnotacao}
           onDateHeaderClick={handleDateHeaderClick}
