@@ -24,6 +24,24 @@
 ### Arquivos alterados
 - `backend/src/migrations/012_drop_grupo_id_fk.sql` (novo)
 
+## [v1.7.0] - 2026-07-03
+### Corrigido
+- **CardAula não salvava sem logs existentes** — `salvarCardAula` fazia apenas UPDATE (0 linhas se não houvesse chamadas). Agora faz UPSERT criando linhas com `status: null` para todos os alunos ativos
+- **CardAula não restaurava dados salvos** — ao abrir, agora chama `GET /chamadas/card-aula/:data` primeiro; se houver dados prévios, restaura; senão, fallback para API de clima
+- **`temperatura_externa` ignorada no backend** — controller não destruturava o campo; service não aceitava o parâmetro. Agora salva em `temperatura_ext`
+
+### Alterado
+- **Escalas de temperatura** — externa: step 0.1 → **1°C**; piscina: step 0.1 → **0.5°C**
+
+### Adicionado
+- **Migration 013** — colunas `sensacao` (TEXT[]), `status_sugerido` (TEXT), `motivo_sugerido` (TEXT) em `chamadas_log`
+
+### Arquivos alterados
+- `frontend/src/components/modals/CardAula.tsx` — restaura dados salvos, steps 1°C e 0.5°C
+- `backend/src/controllers/chamadasController.ts` — destrutura `temperatura_externa` e demais campos
+- `backend/src/services/chamadasService.ts` — `salvarCardAula` aceita todos os campos, cria linhas se não existirem; `obterCardAula` retorna `temperatura_ext` e novos campos
+- `backend/src/migrations/013_add_card_aula_columns.sql` (novo)
+
 ## [v1.6.0] - 2026-07-03
 ### Corrigido
 - **Feriado não bloqueia células** — `DataGrid.getStatus` agora checa `eventos` do calendário antes de `logs`, bloqueando cliques em qualquer índice de aula

@@ -60,8 +60,8 @@ export class ChamadasController {
   static async salvarCardAula(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const tenantId = req.tenantId!;
-      const { data, indice_aula, temperatura_piscina, cloro_ppm, condicao_clima } = req.body;
-      await chamadasService.salvarCardAula(tenantId, data, indice_aula, temperatura_piscina, cloro_ppm, condicao_clima);
+      const { data, indice_aula, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido } = req.body;
+      await chamadasService.salvarCardAula(tenantId, data, indice_aula, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido);
       res.json({ ok: true });
     } catch (error) {
       next(error);

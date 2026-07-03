@@ -35,26 +35,56 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, onAbrirB
     if (aberto && data) {
       setCarregou(false);
       setSensacoes([]);
-      api.get('/chamadas/clima')
+      api.get(`/chamadas/card-aula/${data}?indice_aula=${indiceAula}`)
         .then((res) => {
-          if (res.data?.ok) {
-            const temp = res.data.temperatura ?? 26;
-            setTempExterna(temp);
-            setCondicao(getCondicaoFromWeatherCode(res.data.weatherCode ?? null));
-            const sens = getSensacoesFromTemperatura(temp);
-            if (sens.length > 0) setSensacoes(sens);
-          } else {
-            setTempExterna(26);
-            setCondicao('Parcialmente Nublado');
+          if (res.data) {
+            if (res.data.temperatura_ext != null) setTempExterna(res.data.temperatura_ext);
+            if (res.data.temperatura_piscina != null) setTempPiscina(res.data.temperatura_piscina);
+            if (res.data.cloro_ppm != null) setCloro(res.data.cloro_ppm);
+            if (res.data.condicao_clima) setCondicao(res.data.condicao_clima);
+            if (res.data.sensacao) setSensacoes(res.data.sensacao);
+            return;
           }
+          api.get('/chamadas/clima')
+            .then((res2) => {
+              if (res2.data?.ok) {
+                const temp = res2.data.temperatura ?? 26;
+                setTempExterna(temp);
+                setCondicao(getCondicaoFromWeatherCode(res2.data.weatherCode ?? null));
+                const sens = getSensacoesFromTemperatura(temp);
+                if (sens.length > 0) setSensacoes(sens);
+              } else {
+                setTempExterna(26);
+                setCondicao('Parcialmente Nublado');
+              }
+            })
+            .catch(() => {
+              setTempExterna(26);
+              setCondicao('parcialmente nublado');
+            });
         })
         .catch(() => {
-          setTempExterna(26);
-          setCondicao('parcialmente nublado');
+          api.get('/chamadas/clima')
+            .then((res2) => {
+              if (res2.data?.ok) {
+                const temp = res2.data.temperatura ?? 26;
+                setTempExterna(temp);
+                setCondicao(getCondicaoFromWeatherCode(res2.data.weatherCode ?? null));
+                const sens = getSensacoesFromTemperatura(temp);
+                if (sens.length > 0) setSensacoes(sens);
+              } else {
+                setTempExterna(26);
+                setCondicao('Parcialmente Nublado');
+              }
+            })
+            .catch(() => {
+              setTempExterna(26);
+              setCondicao('parcialmente nublado');
+            });
         })
         .finally(() => setCarregou(true));
     }
-  }, [aberto, data]);
+  }, [aberto, data, indiceAula]);
 
   useEffect(() => {
     const sens = getSensacoesFromTemperatura(tempExterna);
@@ -129,14 +159,14 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, onAbrirB
                   Temperatura Externa (°C)
                   {tempExterna < 15 && <span className="ml-2 text-xs text-red-500">Frio detectado</span>}
                 </label>
-                <input type="number" step="0.1" value={tempExterna}
+                <input type="number" step="1" value={tempExterna}
                   onChange={(e) => setTempExterna(Number(e.target.value))}
                   className="w-full border border-gray-300 rounded p-2 mt-1 text-sm" />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">Temperatura Piscina (°C)</label>
-                <input type="number" step="0.1" value={tempPiscina}
+                <input type="number" step="0.5" value={tempPiscina}
                   onChange={(e) => setTempPiscina(Number(e.target.value))}
                   className="w-full border border-gray-300 rounded p-2 mt-1 text-sm" />
               </div>
