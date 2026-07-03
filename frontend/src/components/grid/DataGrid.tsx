@@ -91,9 +91,13 @@ const DataGrid: React.FC<DataGridProps> = ({
 
   const getStatus = useCallback(
     (alunoId: string, data: string): PresencaStatus => {
+      const dataEventos = eventosPorData(data);
+      if (dataEventos.length > 0) {
+        return dataEventos[0].tipo as PresencaStatus;
+      }
       return logs[alunoId]?.[data]?.status as PresencaStatus;
     },
-    [logs]
+    [logs, eventosPorData]
   );
 
   const getAnotacao = useCallback(

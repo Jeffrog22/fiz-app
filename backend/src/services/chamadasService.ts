@@ -41,20 +41,19 @@ export async function salvar(registros: any[], tenantId: string): Promise<void> 
 
   const resultados = await Promise.all(
     registros.map(async (item: any) => {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('chamadas_log')
-        .upsert({
-          ...item,
-          tenant_id: tenantId,
-        })
-        .select()
-        .single();
-      return { item, data, error };
+        .upsert(
+          { ...item, tenant_id: tenantId },
+          { onConflict: 'tenant_id,data,grupo_id,indice_aula' }
+        );
+      return { item, error };
     })
   );
 
   const comErro = resultados.find((r) => r.error);
   if (comErro?.error) {
+    console.error('[salvar] Erro no upsert:', comErro.error, 'item:', JSON.stringify(comErro.item));
     throw new AppError('Erro ao salvar chamadas', 500);
   }
 }
@@ -75,7 +74,10 @@ export async function aplicarEventoCalendario(
     .eq('origem', 'calendario')
     .limit(1);
 
-  if (fetchError) throw new AppError('Erro ao verificar chamadas existentes', 500);
+  if (fetchError) {
+    console.error('[aplicarEventoCalendario] Erro ao verificar chamadas existentes:', fetchError, 'data:', data, 'tipo:', tipo, 'tenant:', tenantId);
+    throw new AppError('Erro ao verificar chamadas existentes', 500);
+  }
 
   if (existingLogs && existingLogs.length > 0) {
     return { message: `Evento ja aplicado para ${data}`, count: 0 };
@@ -87,7 +89,10 @@ export async function aplicarEventoCalendario(
     .eq('tenant_id', tenantId)
     .eq('ativo', true);
 
-  if (alunosError) throw new AppError('Erro ao buscar alunos', 500);
+  if (alunosError) {
+    console.error('[aplicarEventoCalendario] Erro ao buscar alunos:', alunosError);
+    throw new AppError('Erro ao buscar alunos', 500);
+  }
 
   const novosLogs = (alunos || []).map((aluno: any) => ({
     tenant_id: tenantId,
@@ -130,7 +135,10 @@ export async function extrapolarPresenca(data: string, indice_aula: number | und
     .eq('data', data)
     .eq('indice_aula', aulaIdx);
 
-  if (fetchError) throw new AppError('Erro ao verificar chamadas existentes', 500);
+  if (fetchError) {
+    console.error('[extrapolarPresenca] Erro ao verificar chamadas existentes:', fetchError, 'data:', data, 'indice_aula:', aulaIdx, 'tenant:', tenantId);
+    throw new AppError('Erro ao verificar chamadas existentes', 500);
+  }
 
   if (existingLogs && existingLogs.length > 0) {
     return { message: 'Chamadas ja existem para esta data/aula', count: existingLogs.length };
@@ -142,7 +150,10 @@ export async function extrapolarPresenca(data: string, indice_aula: number | und
     .eq('tenant_id', tenantId)
     .eq('ativo', true);
 
-  if (alunosError) throw new AppError('Erro ao buscar alunos', 500);
+  if (alunosError) {
+    console.error('[extrapolarPresenca] Erro ao buscar alunos:', alunosError);
+    throw new AppError('Erro ao buscar alunos', 500);
+  }
 
   const novosLogs = (alunos || []).map((aluno: any) => ({
     tenant_id: tenantId,

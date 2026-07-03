@@ -22,6 +22,14 @@ interface UndoAction {
   batch?: Array<{ alunoId: string; statusAntigo?: PresencaStatus }>;
 }
 
+function getSessionState<T>(key: string, fallback: T): T {
+  try {
+    const stored = sessionStorage.getItem(key);
+    if (stored !== null) return JSON.parse(stored) as T;
+  } catch { /* ignore */ }
+  return fallback;
+}
+
 const Chamadas: React.FC = () => {
   const { mes: mesInicial, ano: anoInicial } = hojeMesAno();
 
@@ -33,11 +41,11 @@ const Chamadas: React.FC = () => {
   const [carregando, setCarregando] = useState(true);
   const [statusSave, setStatusSave] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
-  const [mes, setMes] = useState(mesInicial);
-  const [ano, setAno] = useState(anoInicial);
+  const [mes, setMes] = useState(getSessionState('chamadas_mes', mesInicial));
+  const [ano, setAno] = useState(getSessionState('chamadas_ano', anoInicial));
   const [retroativo, setRetroativo] = useState(false);
-  const [labelSelecionada, setLabelSelecionada] = useState('');
-  const [professorId, setProfessorId] = useState('');
+  const [labelSelecionada, setLabelSelecionada] = useState(getSessionState('chamadas_label', ''));
+  const [professorId, setProfessorId] = useState(getSessionState('chamadas_professorId', ''));
 
   const [indiceAtual, setIndiceAtual] = useState(0);
 
@@ -153,6 +161,15 @@ const Chamadas: React.FC = () => {
   useEffect(() => { carregarAnotacoes(); }, [carregarAnotacoes]);
 
   useEffect(() => {
+    try {
+      sessionStorage.setItem('chamadas_label', JSON.stringify(labelSelecionada));
+      sessionStorage.setItem('chamadas_professorId', JSON.stringify(professorId));
+      sessionStorage.setItem('chamadas_mes', JSON.stringify(mes));
+      sessionStorage.setItem('chamadas_ano', JSON.stringify(ano));
+    } catch { /* quota exceeded, ignore */ }
+  }, [labelSelecionada, professorId, mes, ano]);
+
+  useEffect(() => {
     setIndiceAtual(0);
   }, [labelSelecionada, professorId]);
 
@@ -179,6 +196,12 @@ const Chamadas: React.FC = () => {
     const hoje = hojeMesAno();
     setMes(hoje.mes);
     setAno(hoje.ano);
+    try {
+      sessionStorage.removeItem('chamadas_label');
+      sessionStorage.removeItem('chamadas_professorId');
+      sessionStorage.removeItem('chamadas_mes');
+      sessionStorage.removeItem('chamadas_ano');
+    } catch { /* ignore */ }
   };
 
   const processarFila = useCallback(async () => {
