@@ -1,5 +1,19 @@
 # Changelog - Fiz! App
 
+## [v1.6.1] - 2026-07-03
+### Corrigido
+- **Erro 500 ao salvar chamadas** — colunas `origem` e `compromete_dia` faltando em produção causavam falha em SELECT (`eq('origem', 'calendario')`) e UPSERT. Migration 011 adiciona as colunas; `aplicarEventoCalendario` agora checa por `status` em vez de `origem`; fallback no `salvar` remove campos inexistentes automaticamente
+- **Persistência do índice da turma no grid** — `indiceAtual` salvo/restaurado via `sessionStorage`, mantendo exata posição visual ao navegar entre páginas
+
+### Adicionado
+- **Migration 011** — `ADD COLUMN IF NOT EXISTS origem` e `compromete_dia` em `chamadas_log`
+- **Log de erro no processarFila** — `console.error` com detalhes do erro de salvamento no frontend
+
+### Arquivos alterados
+- `frontend/src/pages/Chamadas.tsx` — persistência de `indiceAtual`, reset condicional no mount inicial, log de erro no catch
+- `backend/src/services/chamadasService.ts` — verificação de eventos por `status` em vez de `origem`, fallback removendo colunas inexistentes
+- `backend/src/migrations/011_add_missing_columns.sql` (novo)
+
 ## [v1.6.0] - 2026-07-03
 ### Corrigido
 - **Feriado não bloqueia células** — `DataGrid.getStatus` agora checa `eventos` do calendário antes de `logs`, bloqueando cliques em qualquer índice de aula

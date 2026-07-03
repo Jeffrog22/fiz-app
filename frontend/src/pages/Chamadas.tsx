@@ -54,7 +54,8 @@ const Chamadas: React.FC = () => {
   const [labelSelecionada, setLabelSelecionada] = useState(getSessionState('chamadas_label', ''));
   const [professorId, setProfessorId] = useState(getSessionState('chamadas_professorId', ''));
 
-  const [indiceAtual, setIndiceAtual] = useState(0);
+  const [indiceAtual, setIndiceAtual] = useState(getSessionNumber('chamadas_indice', 0));
+  const isInitialMount = useRef(true);
 
   const [cardAulaAberto, setCardAulaAberto] = useState(false);
   const [cardBOAberto, setCardBOAberto] = useState(false);
@@ -171,12 +172,17 @@ const Chamadas: React.FC = () => {
     try {
       sessionStorage.setItem('chamadas_label', labelSelecionada);
       sessionStorage.setItem('chamadas_professorId', professorId);
+      sessionStorage.setItem('chamadas_indice', String(indiceAtual));
       sessionStorage.setItem('chamadas_mes', String(mes));
       sessionStorage.setItem('chamadas_ano', String(ano));
     } catch { /* quota exceeded, ignore */ }
-  }, [labelSelecionada, professorId, mes, ano]);
+  }, [labelSelecionada, professorId, indiceAtual, mes, ano]);
 
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     setIndiceAtual(0);
   }, [labelSelecionada, professorId]);
 
@@ -206,6 +212,7 @@ const Chamadas: React.FC = () => {
     try {
       sessionStorage.removeItem('chamadas_label');
       sessionStorage.removeItem('chamadas_professorId');
+      sessionStorage.removeItem('chamadas_indice');
       sessionStorage.removeItem('chamadas_mes');
       sessionStorage.removeItem('chamadas_ano');
     } catch { /* ignore */ }
@@ -221,7 +228,8 @@ const Chamadas: React.FC = () => {
       if (res.data.ok) {
         setStatusSave('saved');
       }
-    } catch {
+    } catch (err: any) {
+      console.error('[processarFila] Erro ao salvar chamadas:', err?.response?.data || err?.message || err);
       setStatusSave('error');
     }
   }, []);

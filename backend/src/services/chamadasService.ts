@@ -41,19 +41,59 @@ export async function salvar(registros: any[], tenantId: string): Promise<void> 
 
   const resultados = await Promise.all(
     registros.map(async (item: any) => {
-      const { error } = await supabase
+      const { error: upsertError } = await supabase
         .from('chamadas_log')
         .upsert(
           { ...item, tenant_id: tenantId },
           { onConflict: 'tenant_id,data,grupo_id,indice_aula' }
         );
-      return { item, error };
+
+      // Se onConflict falhar, faz fallback manual: select + update/insert
+      // Tambem trata erro de coluna inexistente (ex: origem) removendo-a do payload
+      if (upsertError) {
+        console.warn('[salvar] upsert com onConflict falhou, tentando fallback manual:', upsertError.message, 'item:', JSON.stringify(item));
+
+        // Se o erro for de coluna inexistente, remove campos problematicos
+        let safeItem = { ...item };
+        if (upsertError.message?.includes('origem') || upsertError.message?.includes('column')) {
+          delete safeItem.origem;
+        }
+        if (upsertError.message?.includes('compromete_dia') || upsertError.message?.includes('column')) {
+          delete safeItem.compromete_dia;
+        }
+
+        const { data: existente } = await supabase
+          .from('chamadas_log')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .eq('data', safeItem.data)
+          .eq('grupo_id', safeItem.grupo_id)
+          .eq('indice_aula', safeItem.indice_aula)
+          .maybeSingle();
+
+        if (existente) {
+          const { error: updateError } = await supabase
+            .from('chamadas_log')
+            .update(safeItem)
+            .eq('id', existente.id);
+          if (updateError) console.error('[salvar] fallback update error:', updateError.message);
+          return { item, error: updateError };
+        } else {
+          const { error: insertError } = await supabase
+            .from('chamadas_log')
+            .insert({ ...safeItem, tenant_id: tenantId });
+          if (insertError) console.error('[salvar] fallback insert error:', insertError.message);
+          return { item, error: insertError };
+        }
+      }
+
+      return { item, error: null };
     })
   );
 
   const comErro = resultados.find((r) => r.error);
   if (comErro?.error) {
-    console.error('[salvar] Erro no upsert:', comErro.error, 'item:', JSON.stringify(comErro.item));
+    console.error('[salvar] Erro no fallback:', comErro.error, 'item:', JSON.stringify(comErro.item));
     throw new AppError('Erro ao salvar chamadas', 500);
   }
 }
@@ -71,7 +111,7 @@ export async function aplicarEventoCalendario(
     .eq('tenant_id', tenantId)
     .eq('data', data)
     .eq('indice_aula', 0)
-    .eq('origem', 'calendario')
+    .in('status', ['feriado', 'ponte', 'reuniao', 'evento'])
     .limit(1);
 
   if (fetchError) {
@@ -109,9 +149,18 @@ export async function aplicarEventoCalendario(
 
   const { error: insertError } = await supabase
     .from('chamadas_log')
-    .insert(novosLogs);
+    .upsert(novosLogs, { onConflict: 'tenant_id,data,grupo_id,indice_aula' });
 
-  if (insertError) throw new AppError('Erro ao aplicar evento do calendario', 500);
+  if (insertError) {
+    console.error('[aplicarEventoCalendario] upsert falhou, tentando insert manual:', insertError.message, 'data:', data, 'tipo:', tipo);
+    const { error: insertFallback } = await supabase
+      .from('chamadas_log')
+      .insert(novosLogs);
+    if (insertFallback) {
+      console.error('[aplicarEventoCalendario] insert manual tambem falhou:', insertFallback.message);
+      throw new AppError('Erro ao aplicar evento do calendario', 500);
+    }
+  }
 
   registrarOperacao({
     tenant_id: tenantId,
