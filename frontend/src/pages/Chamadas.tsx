@@ -22,10 +22,17 @@ interface UndoAction {
   batch?: Array<{ alunoId: string; statusAntigo?: PresencaStatus }>;
 }
 
-function getSessionState<T>(key: string, fallback: T): T {
+function getSessionState(key: string, fallback: string): string {
   try {
     const stored = sessionStorage.getItem(key);
-    if (stored !== null) return JSON.parse(stored) as T;
+    if (stored !== null) return stored;
+  } catch { /* ignore */ }
+  return fallback;
+}
+function getSessionNumber(key: string, fallback: number): number {
+  try {
+    const stored = sessionStorage.getItem(key);
+    if (stored !== null) return Number(stored);
   } catch { /* ignore */ }
   return fallback;
 }
@@ -41,8 +48,8 @@ const Chamadas: React.FC = () => {
   const [carregando, setCarregando] = useState(true);
   const [statusSave, setStatusSave] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
-  const [mes, setMes] = useState(getSessionState('chamadas_mes', mesInicial));
-  const [ano, setAno] = useState(getSessionState('chamadas_ano', anoInicial));
+  const [mes, setMes] = useState(getSessionNumber('chamadas_mes', mesInicial));
+  const [ano, setAno] = useState(getSessionNumber('chamadas_ano', anoInicial));
   const [retroativo, setRetroativo] = useState(false);
   const [labelSelecionada, setLabelSelecionada] = useState(getSessionState('chamadas_label', ''));
   const [professorId, setProfessorId] = useState(getSessionState('chamadas_professorId', ''));
@@ -162,10 +169,10 @@ const Chamadas: React.FC = () => {
 
   useEffect(() => {
     try {
-      sessionStorage.setItem('chamadas_label', JSON.stringify(labelSelecionada));
-      sessionStorage.setItem('chamadas_professorId', JSON.stringify(professorId));
-      sessionStorage.setItem('chamadas_mes', JSON.stringify(mes));
-      sessionStorage.setItem('chamadas_ano', JSON.stringify(ano));
+      sessionStorage.setItem('chamadas_label', labelSelecionada);
+      sessionStorage.setItem('chamadas_professorId', professorId);
+      sessionStorage.setItem('chamadas_mes', String(mes));
+      sessionStorage.setItem('chamadas_ano', String(ano));
     } catch { /* quota exceeded, ignore */ }
   }, [labelSelecionada, professorId, mes, ano]);
 
