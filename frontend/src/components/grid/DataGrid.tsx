@@ -159,23 +159,23 @@ const DataGrid: React.FC<DataGridProps> = ({
     return eventosPorData(data).length > 0;
   }, [eventosPorData]);
 
+  const primeiroDiaJustificado = useCallback((alunoId: string): string | null => {
+    for (const dia of dias) {
+      if (getStatus(alunoId, dia) === 'justificado') return dia;
+    }
+    return dias.length > 0 ? dias[0] : null;
+  }, [dias, getStatus]);
+
   const handleCellClick = useCallback(
     (alunoId: string, data: string) => {
       if (isDataFutura(data)) return;
       const current = getStatus(alunoId, data);
-      if (current === 'justificado') {
-        const aluno = alunos.find((a) => a.id === alunoId);
-        if (aluno) {
-          setJustificativaModal({ aluno, data, motivo: getAnotacao(alunoId, data) });
-        }
-        return;
-      }
       if (current === 'feriado' || current === 'ponte' || current === 'reuniao' || current === 'evento' || current === 'cancelado') return;
       const currentIndex = STATUS_CYCLE.indexOf(current);
       const nextStatus = STATUS_CYCLE[(currentIndex + 1) % STATUS_CYCLE.length];
       onTogglePresenca(alunoId, data, nextStatus);
     },
-    [getStatus, onTogglePresenca, alunos, getAnotacao]
+    [getStatus, onTogglePresenca]
   );
 
   const handleNomeClick = useCallback((aluno: Aluno) => {
@@ -348,11 +348,14 @@ const DataGrid: React.FC<DataGridProps> = ({
                   <td className="sticky right-0 bg-white px-2 py-1 text-center z-10">
                     <div className="flex gap-1 justify-center">
                       <button
-                        onClick={() => setAnotacoesModalAluno(aluno)}
-                        className="px-1.5 py-0.5 text-[10px] bg-cyan-50 text-cyan-600 rounded hover:bg-cyan-100"
-                        title="Anotações do aluno"
+                        onClick={() => {
+                          const dia = primeiroDiaJustificado(aluno.id);
+                          if (dia) setJustificativaModal({ aluno, data: dia, motivo: getAnotacao(aluno.id, dia) ?? undefined });
+                        }}
+                        className="px-1.5 py-0.5 text-[10px] bg-yellow-50 text-yellow-700 rounded hover:bg-yellow-100"
+                        title="Justificativa"
                       >
-                        Anot
+                        Just
                       </button>
                       <button
                         onClick={() => setHistoricoAberto(aluno)}

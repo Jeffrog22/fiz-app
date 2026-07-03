@@ -24,6 +24,19 @@
 ### Arquivos alterados
 - `backend/src/migrations/012_drop_grupo_id_fk.sql` (novo)
 
+## [v1.8.1] - 2026-07-03
+### Corrigido
+- **CardAula não persistia sem tabela `card_aula`** — `obterCardAula` agora tem fallback para `chamadas_log` quando a tabela não existe ou está vazia
+- **JustificativaModal abria ao clicar em 'J'** — célula 'J' agora cicla normalmente (P→F→J→vazio); justificativa movida para botão "Just" na coluna Ações
+
+### Alterado
+- **DataGrid.tsx** — `handleCellClick` não intercepta mais 'justificado'; botão "Anot" substituído por "Just" que abre JustificativaModal no primeiro dia com status `justificado` do aluno (ou `dias[0]` se não houver)
+- **cardAulaService.ts** — `obterCardAula` busca `chamadas_log` como fallback quando `card_aula` retorna vazio
+
+### Arquivos alterados
+- `frontend/src/components/grid/DataGrid.tsx` — remove intercept de 'J', troca Anot por Just
+- `backend/src/services/cardAulaService.ts` — fallback para chamadas_log
+
 ## [v1.8.0] - 2026-07-03
 ### Adicionado
 - **cardAulaService** — novo serviço dedicado com `salvarCardAula` (upsert em `card_aula` + propagação para `chamadas_log` por `indice_aula`) e `obterCardAula` (leitura por tenant+data, sem necessidade de índice)

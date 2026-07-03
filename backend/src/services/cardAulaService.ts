@@ -79,12 +79,44 @@ export async function obterCardAula(data: string, tenantId: string): Promise<any
     .maybeSingle();
 
   if (error) {
-    // Se tabela nao existe, retorna null
     if (error.message?.includes('relation') || error.message?.includes('does not exist')) {
-      return null;
+      return buscarCardAulaFallback(tenantId, data);
     }
-    throw new AppError('Erro ao buscar CardAula', 500);
+    // Tenta fallback mesmo em outros erros
+    try {
+      return await buscarCardAulaFallback(tenantId, data);
+    } catch {
+      throw new AppError('Erro ao buscar CardAula', 500);
+    }
   }
 
-  return registro || null;
+  if (registro) return registro;
+
+  // Fallback: tentar de chamadas_log
+  return buscarCardAulaFallback(tenantId, data);
+}
+
+async function buscarCardAulaFallback(tenantId: string, data: string): Promise<any> {
+  const { data: logs } = await supabase
+    .from('chamadas_log')
+    .select('condicao_clima, temperatura_ext, temperatura_piscina, cloro_ppm, sensacao, status_sugerido, motivo_sugerido')
+    .eq('tenant_id', tenantId)
+    .eq('data', data)
+    .not('condicao_clima', 'is', null)
+    .limit(1)
+    .maybeSingle();
+
+  if (logs) {
+    return {
+      condicao_clima: logs.condicao_clima,
+      temperatura_externa: logs.temperatura_ext,
+      temperatura_piscina: logs.temperatura_piscina,
+      cloro_ppm: logs.cloro_ppm,
+      sensacao: logs.sensacao,
+      status_sugerido: logs.status_sugerido,
+      motivo_sugerido: logs.motivo_sugerido,
+    };
+  }
+
+  return null;
 }
