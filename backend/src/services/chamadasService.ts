@@ -43,7 +43,10 @@ export async function salvar(registros: any[], tenantId: string): Promise<void> 
     registros.map(async (item: any) => {
       const { error } = await supabase
         .from('chamadas_log')
-        .upsert({ ...item, tenant_id: tenantId });
+        .upsert(
+          { ...item, tenant_id: tenantId },
+          { onConflict: 'tenant_id,data,grupo_id,indice_aula' }
+        );
       return { item, error };
     })
   );
