@@ -68,6 +68,10 @@ const Chamadas: React.FC = () => {
   const horario = turmaAtual?.horario || '';
   const nivel = turmaAtual?.nivel || '';
 
+  const horariosDisponiveis = useMemo(() => {
+    return turmasDoLabelProf.map((t) => t.horario).filter(Boolean) as string[];
+  }, [turmasDoLabelProf]);
+
   const dias = useMemo(
     () => gerarDiasLetivos(mes, ano, labelSelecionada),
     [mes, ano, labelSelecionada],
@@ -119,16 +123,19 @@ const Chamadas: React.FC = () => {
 
   const aplicarEventosCalendario = useCallback(async () => {
     if (eventos.length === 0) return;
+    let aplicou = false;
     for (const ev of eventos) {
       if (dias.includes(ev.data)) {
         try {
-          await api.post('/chamadas/aplicar-evento', { data: ev.data, tipo: ev.tipo });
+          const res = await api.post('/chamadas/aplicar-evento', { data: ev.data, tipo: ev.tipo });
+          if (res.data?.count > 0) aplicou = true;
         } catch {
           // evento ja pode ter sido aplicado
         }
       }
     }
-  }, [eventos, dias]);
+    if (aplicou) carregarLogs();
+  }, [eventos, dias, carregarLogs]);
 
   const carregarAnotacoes = useCallback(async () => {
     const ids = alunosDaTurma.map((a) => a.id);
@@ -444,6 +451,10 @@ const Chamadas: React.FC = () => {
         retroativo={retroativo}
         onLabelChange={(v) => { setLabelSelecionada(v); setProfessorId(''); }}
         onProfessorChange={setProfessorId}
+        onHorarioChange={(v) => {
+          const idx = turmasDoLabelProf.findIndex((t) => t.horario === v);
+          if (idx >= 0) setIndiceAtual(idx);
+        }}
         onMesChange={setMes}
         onAnoChange={setAno}
         onRetroativoChange={setRetroativo}
