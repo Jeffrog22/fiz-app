@@ -11,8 +11,18 @@
 
 ### Arquivos alterados
 - `frontend/src/pages/Chamadas.tsx` — persistência de `indiceAtual`, reset condicional no mount inicial, log de erro no catch
-- `backend/src/services/chamadasService.ts` — verificação de eventos por `status` em vez de `origem`, fallback removendo colunas inexistentes
+- `backend/src/services/chamadasService.ts` — verificação de eventos por `status` em vez de `origem`, fallback removendo colunas inexistentes, erro do Supabase incluído na resposta
 - `backend/src/migrations/011_add_missing_columns.sql` (novo)
+
+## [v1.6.2] - 2026-07-03
+### Corrigido
+- **FK constraint bloqueia salvamento** — `chamadas_log.grupo_id` tinha FK constraint adicionada acidentalmente via dashboard, violada ao salvar (UUID do aluno != grupo_id). Migration 012 remove a constraint
+
+### Adicionado
+- **Migration 012** — `DROP CONSTRAINT IF EXISTS chamadas_log_grupo_id_fkey`
+
+### Arquivos alterados
+- `backend/src/migrations/012_drop_grupo_id_fk.sql` (novo)
 
 ## [v1.6.0] - 2026-07-03
 ### Corrigido

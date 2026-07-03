@@ -158,8 +158,9 @@ export async function aplicarEventoCalendario(
       .from('chamadas_log')
       .insert(novosLogs);
     if (insertFallback) {
-      console.error('[aplicarEventoCalendario] insert manual tambem falhou:', insertFallback.message);
-      throw new AppError('Erro ao aplicar evento do calendario', 500);
+      const msg = insertFallback.message || JSON.stringify(insertFallback);
+      console.error('[aplicarEventoCalendario] insert manual tambem falhou:', msg);
+      throw new AppError(`Erro ao aplicar evento do calendario: ${msg}`, 500);
     }
   }
 
