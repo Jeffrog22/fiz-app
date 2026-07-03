@@ -93,8 +93,9 @@ export async function salvar(registros: any[], tenantId: string): Promise<void> 
 
   const comErro = resultados.find((r) => r.error);
   if (comErro?.error) {
-    console.error('[salvar] Erro no fallback:', comErro.error, 'item:', JSON.stringify(comErro.item));
-    throw new AppError('Erro ao salvar chamadas', 500);
+    const msg = comErro.error.message || JSON.stringify(comErro.error);
+    console.error('[salvar] Erro:', msg, 'item:', JSON.stringify(comErro.item));
+    throw new AppError(`Erro ao salvar chamadas: ${msg}`, 500);
   }
 }
 
