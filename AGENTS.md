@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-02 — Fix calendario statuses não aplicados ao grid -->
+<!-- última-sessão: 2026-07-03 — Fix feriado não bloqueia + error 500 + persistencia filtros -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Identidade
@@ -465,4 +465,37 @@
 - Frontend: 0 erros
 - Backend: 0 erros
 - Testes: 41/41 passam
+
+---
+
+## Sessão: 03/07/2026 — Fix Feriado Não Bloqueia + Error 500 + Persistência Filtros
+
+### O que foi feito
+- **Feriado/bloqueio**: `DataGrid.getStatus` agora checa `eventosPorData(data)` antes de consultar `logs`. Qualquer evento de calendário (feriado, ponte, reuniao, evento) retorna seu tipo como status, bloqueando células e exibindo cor correspondente — independente de `indice_aula`
+- **Error 500 salvar**: Removido `.select().single()` do `Promise.all` em `salvar` (lançava exceção sem captura). `upsert` agora usa `onConflict: 'tenant_id,data,grupo_id,indice_aula'` com unique constraint para UPDATE em vez de INSERT. Adicionados `console.error` detalhados em `salvar`, `aplicarEventoCalendario`, `extrapolarPresenca`
+- **Migration 010**: Remove duplicatas de `chamadas_log` (mantém mais recente por partição) e adiciona `UNIQUE (tenant_id, data, grupo_id, indice_aula)`. Executada no Supabase
+- **Persistência filtros**: `labelSelecionada`, `professorId`, `mes`, `ano` lidos/escritos no `sessionStorage`. Inicialização via `getSessionState`/`getSessionNumber` com armazenamento direto (sem JSON). `limparFiltros` limpa o storage
+
+### Problemas resolvidos
+- Células de feriado permaneciam clicáveis (P/F/J) quando o `indice_aula` da turma atual diferia do índice onde o evento foi aplicado (`indice_aula: 0`). Agora `eventos` do calendário têm precedência sobre `logs` no `getStatus`
+- `salvar` quebrava com 500 porque `.single()` no Supabase lança exceção se 0 ou >1 linhas retornadas. Removido `.single()` e adicionado `onConflict` com unique constraint
+- Filtros de Chamadas perdidos ao navegar para outra página e voltar. Agora persistidos via `sessionStorage`
+
+### Decisões
+- Calendar events no frontend têm precedência sobre logs de DB para evitar depender de criação de logs por `indice_aula`
+- `onConflict` só funciona após executar migration 010 no banco
+- Persistência usa `sessionStorage` (escopo da aba), não `localStorage` (não persiste entre sessões)
+
+### Arquivos
+- `frontend/src/components/grid/DataGrid.tsx` (getStatus prioriza eventos)
+- `frontend/src/pages/Chamadas.tsx` (sessionStorage persistence)
+- `backend/src/services/chamadasService.ts` (upsert com onConflict, remove .single(), error logging)
+- `backend/src/migrations/010_add_unique_chamadas.sql` (novo)
+- `CHANGELOG.md` (v1.6.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros
+- Backend: 0 erros
+- Testes: 41/41 frontend + 25/25 backend passam
 

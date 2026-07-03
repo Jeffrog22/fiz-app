@@ -1,5 +1,21 @@
 # Changelog - Fiz! App
 
+## [v1.6.0] - 2026-07-03
+### Corrigido
+- **Feriado não bloqueia células** — `DataGrid.getStatus` agora checa `eventos` do calendário antes de `logs`, bloqueando cliques em qualquer índice de aula
+- **Erro 500 ao salvar chamadas** — removido `.select().single()` do `Promise.all` (lançava exceção sem captura). `upsert` agora usa `onConflict` com unique constraint para UPDATE correto em vez de INSERT duplicado
+- **Erro 500 ao verificar chamadas existentes** — adicionado `console.error` detalhado em `aplicarEventoCalendario` e `extrapolarPresenca` para diagnóstico
+
+### Adicionado
+- **Migration 010** — unique constraint `(tenant_id, data, grupo_id, indice_aula)` em `chamadas_log` + cleanup de duplicatas
+- **Persistência de filtros em Chamadas** — `labelSelecionada`, `professorId`, `mes`, `ano` salvos em `sessionStorage` e restaurados ao retornar à página
+
+### Arquivos alterados
+- `frontend/src/components/grid/DataGrid.tsx` — `getStatus` checa eventos antes de logs
+- `frontend/src/pages/Chamadas.tsx` — persistência via sessionStorage
+- `backend/src/services/chamadasService.ts` — upsert com onConflict, remove .single(), add error logging
+- `backend/src/migrations/010_add_unique_chamadas.sql` (novo)
+
 ## [v1.5.0] - 2026-07-02
 ### Adicionado
 - **Grid Mensal de Chamadas** — matriz alunos × dias com datas futuras desabilitadas, tri-state (P/F/J/C), formatação de nome mobile, capacity bar colorida
