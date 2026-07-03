@@ -43,13 +43,16 @@ chore: Atualização de dependências, configurações, etc.
 
 Exemplo real:
 
-text
+```text
 feat(auth): implementa login com JWT e middleware tenant
 
 - Cria endpoint POST /auth/login
 - Adiciona validação de hash SHA256
 - Gera token com tenant_id incluso
+```
+
 3. Rotina Obrigatória de Registros (Logging Routine)
+
 Toda sessão de desenvolvimento (com ou sem Cline) DEVE gerar registros.
 
 3.1. Arquivo SESSION.md
@@ -57,7 +60,7 @@ Crie/atualize o arquivo SESSION.md na raiz antes de começar a codar no dia, e a
 
 Estrutura obrigatória do SESSION.md:
 
-markdown
+```markdown
 # Sessão: DD/MM/YYYY - [NOME_DA_TAREFA_OU_FEATURE]
 
 ## 🔍 O que foi feito
@@ -75,6 +78,8 @@ markdown
 
 ## 🚀 Próximos Passos (para a próxima sessão)
 - O que precisa ser feito daqui para frente.
+```
+
 3.2. Registro no Cline (prompt padrão)
 Sempre que encerrar uma tarefa com o Cline, peça a ele:
 
@@ -100,18 +105,20 @@ O `AGENTS.md` é a **memória permanente do projeto**. Ele deve ser atualizado *
 3.4. Commits e pushes automáticos mediante aprovação
 Ao final de cada etapa, milestone ou entrega de uma sub-tarefa acordada, o assistente deve:
 1. Verificar as alterações realizadas.
-2. Formular uma mensagem de commit seguindo Conventional Commits.
-3. Solicitar aprovação explícita do usuário.
-4. Executar `git add`, `git commit` e `git push` quando aprovado, utilizando o fluxo de versionamento
+2. **Atualizar obrigatoriamente** `CHANGELOG.md`, `SESSION.md` e `AGENTS.md` com as mudanças da sessão.
+3. Formular uma mensagem de commit seguindo Conventional Commits.
+4. Solicitar aprovação explícita do usuário.
+5. Executar `git add`, `git commit` e `git push` quando aprovado, utilizando o fluxo de versionamento.
 
 4. Fluxo de Versionamento e Tags no Git
 A branch main contém o código em produção.
 
 Crie tags no Git para cada versão lançada:
 
-ex:
+```bash
 git tag -a v0.1.0 -m "feat: primeira versão com autenticação"
 git push origin v0.1.0
+```
 Sempre que um MINOR ou PATCH for finalizado, crie uma nova tag e atualize o CHANGELOG.md.
 
 5. Boas Práticas

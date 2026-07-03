@@ -1,5 +1,81 @@
 # Changelog - Fiz! App
 
+## [v1.5.0] - 2026-07-02
+### Adicionado
+- **Grid Mensal de Chamadas** — matriz alunos × dias com datas futuras desabilitadas, tri-state (P/F/J/C), formatação de nome mobile, capacity bar colorida
+- **Climate Engine** — motor de decisão com 3 filtros hierárquicos (clima WMO, piscina, cloro); sugestão final AULA_NORMAL/FALTA_JUSTIFICADA
+- **CardAula** — integração Open-Meteo, temperatura externa/piscina, slider cloro, chips sensação, fallback climático, botão "Abrir BO" condicional
+- **CardBO** — checkbox Pessoal/Professor, radio compromete aula/dia, tipos de cancelamento (Médica, Manutenção, Raios, Incidente), extrapolação 12 índices
+- **AnotacoesModal** — texto por aluno/dia, auto-save debounce 800ms, exclusão, destaque azul no nome quando há anotação
+- **JustificativaModal** — 8 motivos pré-definidos, salva status + motivo via callback
+- **Undo (10 ações)** — desfaz presença, anotação e limpar com pilha de até 10 ações
+- **Auto-save** — debounce de 1000ms, indicador visual (bolinha verde/cinza/vermelha com auto-hide 3s)
+- **Botão "Limpar"** — batch limpa status de todos os alunos no índice atual, desfazível
+- **logEngine** — `registrarOperacao`, `auditarAcesso`, `calcularOcupacao` para auditoria
+- **Capacity Bar** — barra visual verde/amarelo/vermelho com texto dinâmico (vagas/lotado/excedente)
+- **Upload de Planejamento** — upload/download/remoção de arquivos (PDF/TXT/CSV/XLS/XLSX) via multer + disco local
+- **Professor no AlunoModal** — select "Professor(a)" filtra turmas; relação bidirecional (trocar professor limpa turma)
+- **Persistência de Sessão** — `lastSession` mantém Gênero/Turma/Professor/Nível entre cadastros de novos alunos
+- **Migration 006** — tabelas `calendario` e `periodos_letivos`
+- **Migration 007** — tabela `anotacoes_alunos`
+- **Migration 008** — tabela `planejamento_arquivos`
+- **Migration 009** — converte `alunos.turma_id` de UUID para `turmas.grupo_id` (chave tríplice)
+
+### Alterado
+- `ChamadaFilters.tsx` reescrito — cascata label→professor→horário (labels únicos, grid só renderiza com grupo_id completo)
+- `Chamadas.tsx` — estado `labelSelecionada`, `grupoId` computado de label+professorId+horario
+- `DataGrid.tsx` — capacity bar, anotacao modal, justificativa modal, intercept de clique em 'J'
+- `relatoriosService.ts` — removido JOIN sem FK (causava 500); merge manual no frontend
+- `Alunos.tsx` — `turmaMap` key por `t.grupo_id`; `handleAlocar` e dropdowns usam grupo_id
+- `AlunoModal.tsx` — todos os lookups/selects de turma por `t.grupo_id`
+- `professor_id` em turmas mapeado via `Map<professorId, nome>` no frontend
+- Ativo badge substitui checkbox editável (read-only)
+
+### Corrigido
+- Fallback de `getCondicaoFromWeatherCode` normalizado para lowercase (combinava com WMO_MAP)
+- `CardAula.tsx` — `.catch` e `useState` usam `'parcialmente nublado'` (minúsculo)
+- Backend `condicoes` em `chamadasService.ts` normalizado para lowercase
+- Reverse mapping `getWeatherCode()` completo — 9 entradas WMO faltantes adicionadas
+
+### Arquivos alterados
+- `frontend/src/utils/climateEngine.ts` (novo + modificado)
+- `frontend/src/utils/chamadaUtils.ts` (novo)
+- `frontend/src/utils/formatters.ts` (+normalizeSearch)
+- `frontend/src/components/grid/ChamadaFilters.tsx` (reescrito)
+- `frontend/src/components/grid/DataGrid.tsx` (reescrito)
+- `frontend/src/components/grid/GridPagination.tsx`
+- `frontend/src/components/modals/CardAula.tsx` (reescrito)
+- `frontend/src/components/modals/CardBO.tsx` (reescrito)
+- `frontend/src/components/modals/AnotacoesModal.tsx` (novo)
+- `frontend/src/components/modals/JustificativaModal.tsx` (novo)
+- `frontend/src/components/modals/AlunoModal.tsx` (+professorId, +lastSession, +resetCounter, +grupo_id)
+- `frontend/src/pages/Chamadas.tsx` (reescrito)
+- `frontend/src/pages/Alunos.tsx` (checkboxes, action bar, grupo_id)
+- `frontend/src/pages/Turmas.tsx` (lotação via GET /alunos)
+- `frontend/src/pages/Calendario.tsx` (upload real)
+- `frontend/src/types/index.ts` (+Aluno.turma, +EnrollmentPeriod, +ChamadaLog, +AnotacaoAluno)
+- `backend/src/utils/idGenerator.ts` (+generateGrupoId, gerarLabelFromDias)
+- `backend/src/utils/logEngine.ts` (novo)
+- `backend/src/utils/weather.ts`
+- `backend/src/services/chamadasService.ts` (reescrito + logs + audit)
+- `backend/src/services/alunosService.ts`
+- `backend/src/services/enrollmentService.ts` (logs)
+- `backend/src/services/calendarioService.ts` (logs)
+- `backend/src/services/relatoriosService.ts` (fix merge)
+- `backend/src/services/planejamentoService.ts` (novo)
+- `backend/src/services/anotacoesService.ts` (novo)
+- `backend/src/controllers/chamadasController.ts` (+compromete_dia)
+- `backend/src/controllers/planejamentoController.ts` (novo)
+- `backend/src/controllers/anotacoesController.ts` (novo)
+- `backend/src/routes/planejamentoRoutes.ts` (novo)
+- `backend/src/routes/anotacoesRoutes.ts` (novo)
+- `backend/src/index.ts` (+rotas)
+- `backend/src/types/index.ts` (+ChamadaLog.compromete_dia, +AnotacaoAluno)
+- `backend/src/migrations/006_create_calendario_tables.sql` (novo)
+- `backend/src/migrations/007_create_anotacoes_alunos.sql` (novo)
+- `backend/src/migrations/008_create_planejamento_arquivos.sql` (novo)
+- `backend/src/migrations/009_convert_turma_id_to_grupo_id.sql` (novo)
+
 ## [v1.4.0] - 2026-07-02
 ### Adicionado
 - **Componente `SearchInput`** — input com lupa (SVG) à esquerda + botão X de limpar à direita; reutilizado em Alunos, Turmas, Chamadas, Relatorios e Exclusões
