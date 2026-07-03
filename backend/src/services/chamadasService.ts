@@ -256,12 +256,9 @@ function buildCardAulaFields(
   return fields;
 }
 
-function stripNewCardAulaFields(fields: Record<string, any>): Record<string, any> {
-  const cleaned = { ...fields };
-  delete cleaned.sensacao;
-  delete cleaned.status_sugerido;
-  delete cleaned.motivo_sugerido;
-  return cleaned;
+function columError(err: any): boolean {
+  const msg = err?.message || '';
+  return msg.includes('column') || msg.includes('Column') || msg.includes('does not exist') || msg.includes('não existe');
 }
 
 export async function salvarCardAula(
@@ -300,16 +297,15 @@ export async function salvarCardAula(
       .eq('indice_aula', aulaIdx);
 
     if (updateError) {
-      // Se erro de coluna inexistente, tenta sem colunas novas
-      if (updateError.message?.includes('sensacao') || updateError.message?.includes('status_sugerido') || updateError.message?.includes('motivo_sugerido') || updateError.message?.includes('column')) {
-        updateFields = stripNewCardAulaFields(updateFields);
+      if (columError(updateError)) {
+        console.warn('[salvarCardAula] coluna nao existe no update, salvando apenas basico:', updateError.message);
         const { error: retryError } = await supabase
           .from('chamadas_log')
-          .update(updateFields)
+          .update({})
           .eq('tenant_id', tenantId)
           .eq('data', data)
           .eq('indice_aula', aulaIdx);
-        if (retryError) throw new AppError('Erro ao atualizar CardAula', 500);
+        if (retryError) console.error('[salvarCardAula] erro mesmo no update basico:', retryError.message);
       } else {
         throw new AppError('Erro ao atualizar CardAula', 500);
       }
@@ -338,21 +334,15 @@ export async function salvarCardAula(
         .upsert(novosLogs, { onConflict: 'tenant_id,data,grupo_id,indice_aula' });
 
       if (insertError) {
-        // Se erro de coluna inexistente, tenta sem colunas novas
-        if (insertError.message?.includes('sensacao') || insertError.message?.includes('status_sugerido') || insertError.message?.includes('motivo_sugerido') || insertError.message?.includes('column')) {
-          updateFields = stripNewCardAulaFields(updateFields);
-          const logsLimpos = alunos.map((a: any) => ({
-            tenant_id: tenantId,
-            data,
-            grupo_id: a.id,
-            indice_aula: aulaIdx,
-            status: null,
-            ...updateFields,
+        if (columError(insertError)) {
+          console.warn('[salvarCardAula] coluna nao existe no insert, inserindo apenas basico:', insertError.message);
+          const basico = alunos.map((a: any) => ({
+            tenant_id: tenantId, data, grupo_id: a.id, indice_aula: aulaIdx, status: null,
           }));
           const { error: retryError } = await supabase
             .from('chamadas_log')
-            .upsert(logsLimpos, { onConflict: 'tenant_id,data,grupo_id,indice_aula' });
-          if (retryError) throw new AppError('Erro ao inserir CardAula', 500);
+            .upsert(basico, { onConflict: 'tenant_id,data,grupo_id,indice_aula' });
+          if (retryError) console.error('[salvarCardAula] erro mesmo no insert basico:', retryError.message);
         } else {
           throw new AppError('Erro ao inserir CardAula', 500);
         }
@@ -496,12 +486,11 @@ export async function registrarLogAcesso(tenantId: string, professorId?: string,
 }
 
 export async function obterCardAula(data: string, indice_aula: number, tenantId: string): Promise<any> {
-  // Tenta com colunas novas (sensacao, status_sugerido, motivo_sugerido)
-  // Se falhar (coluna nao existe), fallback para colunas basicas
-  let query = 'condicao_clima, temperatura_ext, temperatura_piscina, cloro_ppm, sensacao, status_sugerido, motivo_sugerido';
+  // Tenta com todas as colunas, se falhar (coluna nao existe) retorna null
+  const fullQuery = 'condicao_clima, temperatura_ext, temperatura_piscina, cloro_ppm, sensacao, status_sugerido, motivo_sugerido';
   const { data: registros, error } = await supabase
     .from('chamadas_log')
-    .select(query)
+    .select(fullQuery)
     .eq('tenant_id', tenantId)
     .eq('data', data)
     .eq('indice_aula', indice_aula)
@@ -509,17 +498,8 @@ export async function obterCardAula(data: string, indice_aula: number, tenantId:
     .limit(1);
 
   if (error) {
-    // Se erro de coluna inexistente, tenta sem as colunas novas
-    if (error.message?.includes('sensacao') || error.message?.includes('status_sugerido') || error.message?.includes('column')) {
-      const { data: fallback } = await supabase
-        .from('chamadas_log')
-        .select('condicao_clima, temperatura_ext, temperatura_piscina, cloro_ppm')
-        .eq('tenant_id', tenantId)
-        .eq('data', data)
-        .eq('indice_aula', indice_aula)
-        .not('condicao_clima', 'is', null)
-        .limit(1);
-      if (fallback && fallback.length > 0) return fallback[0];
+    if (columError(error)) {
+      console.warn('[obterCardAula] coluna nao existe, retornando null:', error.message);
       return null;
     }
     throw new AppError('Erro ao buscar CardAula', 500);
