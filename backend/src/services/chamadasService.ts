@@ -59,6 +59,65 @@ export async function salvar(registros: any[], tenantId: string): Promise<void> 
   }
 }
 
+export async function aplicarEventoCalendario(
+  data: string,
+  tipo: string,
+  tenantId: string,
+): Promise<{ message: string; count: number }> {
+  if (!data || !tipo) throw new AppError('Campos data e tipo sao obrigatorios', 400);
+
+  const { data: existingLogs, error: fetchError } = await supabase
+    .from('chamadas_log')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('data', data)
+    .eq('indice_aula', 0)
+    .eq('origem', 'calendario')
+    .limit(1);
+
+  if (fetchError) throw new AppError('Erro ao verificar chamadas existentes', 500);
+
+  if (existingLogs && existingLogs.length > 0) {
+    return { message: `Evento ja aplicado para ${data}`, count: 0 };
+  }
+
+  const { data: alunos, error: alunosError } = await supabase
+    .from('alunos')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('ativo', true);
+
+  if (alunosError) throw new AppError('Erro ao buscar alunos', 500);
+
+  const novosLogs = (alunos || []).map((aluno: any) => ({
+    tenant_id: tenantId,
+    data,
+    grupo_id: aluno.id,
+    indice_aula: 0,
+    status: tipo,
+    origem: 'calendario',
+  }));
+
+  if (novosLogs.length === 0) {
+    return { message: 'Nenhum aluno ativo para aplicar evento', count: 0 };
+  }
+
+  const { error: insertError } = await supabase
+    .from('chamadas_log')
+    .insert(novosLogs);
+
+  if (insertError) throw new AppError('Erro ao aplicar evento do calendario', 500);
+
+  registrarOperacao({
+    tenant_id: tenantId,
+    tabela: 'chamadas_log',
+    operacao: 'calendario',
+    dados: { data, tipo, total: novosLogs.length },
+  });
+
+  return { message: `Evento ${tipo} aplicado para ${novosLogs.length} alunos`, count: novosLogs.length };
+}
+
 export async function extrapolarPresenca(data: string, indice_aula: number | undefined, tenantId: string): Promise<{ message: string; count: number }> {
   if (!data) throw new AppError('Campo data e obrigatorio', 400);
 

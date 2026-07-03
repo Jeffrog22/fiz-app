@@ -5,11 +5,10 @@ import ChamadaFilters from '../components/grid/ChamadaFilters';
 import GridPagination from '../components/grid/GridPagination';
 import CardAula from '../components/modals/CardAula';
 import CardBO from '../components/modals/CardBO';
-import SearchInput from '../components/SearchInput';
-import type { Aluno, Turma, Professor, ChamadaLog, AnotacaoAluno } from '../types';
+import type { Aluno, Turma, Professor, ChamadaLog, AnotacaoAluno, CalendarioEvento } from '../types';
 import { gerarDiasLetivos, hojeMesAno } from '../utils/chamadaUtils';
 
-type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | undefined;
+type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento' | undefined;
 
 const MAX_UNDO = 10;
 
@@ -29,6 +28,7 @@ const Chamadas: React.FC = () => {
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [professores, setProfessores] = useState<Professor[]>([]);
+  const [eventos, setEventos] = useState<CalendarioEvento[]>([]);
   const [logs, setLogs] = useState<Record<string, Record<string, ChamadaLog>>>({});
   const [carregando, setCarregando] = useState(true);
   const [statusSave, setStatusSave] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -38,11 +38,8 @@ const Chamadas: React.FC = () => {
   const [retroativo, setRetroativo] = useState(false);
   const [labelSelecionada, setLabelSelecionada] = useState('');
   const [professorId, setProfessorId] = useState('');
-  const [horario, setHorario] = useState('');
-  const [buscaTexto, setBuscaTexto] = useState('');
 
   const [indiceAtual, setIndiceAtual] = useState(0);
-  const totalIndices = 12;
 
   const [cardAulaAberto, setCardAulaAberto] = useState(false);
   const [cardBOAberto, setCardBOAberto] = useState(false);
@@ -58,18 +55,18 @@ const Chamadas: React.FC = () => {
 
   const statusSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const grupoId = useMemo(() => {
-    if (!labelSelecionada || !professorId || !horario) return '';
-    const turma = turmas.find(
-      (t) => t.label === labelSelecionada && t.professor_id === professorId && t.horario === horario
-    );
-    return turma?.grupo_id || '';
-  }, [labelSelecionada, professorId, horario, turmas]);
+  const turmasDoLabelProf = useMemo(() => {
+    if (!labelSelecionada || !professorId) return [];
+    return turmas
+      .filter((t) => t.label === labelSelecionada && t.professor_id === professorId)
+      .sort((a, b) => (a.horario || '').localeCompare(b.horario || ''));
+  }, [labelSelecionada, professorId, turmas]);
 
-  const turmaSelecionada = useMemo(
-    () => turmas.find((t) => t.grupo_id === grupoId) || null,
-    [turmas, grupoId],
-  );
+  const totalIndices = turmasDoLabelProf.length;
+  const turmaAtual = turmasDoLabelProf[indiceAtual] || null;
+  const grupoId = turmaAtual?.grupo_id || '';
+  const horario = turmaAtual?.horario || '';
+  const nivel = turmaAtual?.nivel || '';
 
   const dias = useMemo(
     () => gerarDiasLetivos(mes, ano, labelSelecionada),
@@ -81,31 +78,25 @@ const Chamadas: React.FC = () => {
     return alunos.filter((a) => a.turma_id === grupoId);
   }, [alunos, grupoId]);
 
-  const alunosFiltrados = useMemo(() => {
-    if (!buscaTexto.trim()) return alunosDaTurma;
-    const termo = buscaTexto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    return alunosDaTurma.filter((a) =>
-      a.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(termo),
-    );
-  }, [alunosDaTurma, buscaTexto]);
-
   const carregarDados = useCallback(async () => {
     setCarregando(true);
     try {
-      const [resAlunos, resTurmas, resProfs] = await Promise.all([
+      const [resAlunos, resTurmas, resProfs, resEventos] = await Promise.all([
         api.get('/alunos'),
         api.get('/turmas'),
         api.get('/professores'),
+        api.get(`/calendario?mes=${mes}&ano=${ano}`),
       ]);
       setAlunos(resAlunos.data);
       setTurmas(resTurmas.data);
       setProfessores(resProfs.data);
+      setEventos(resEventos.data || []);
     } catch (err) {
       console.error('Erro ao carregar dados', err);
     } finally {
       setCarregando(false);
     }
-  }, []);
+  }, [mes, ano]);
 
   const carregarLogs = useCallback(async () => {
     if (dias.length === 0) return;
@@ -126,6 +117,19 @@ const Chamadas: React.FC = () => {
     }
   }, [dias]);
 
+  const aplicarEventosCalendario = useCallback(async () => {
+    if (eventos.length === 0) return;
+    for (const ev of eventos) {
+      if (dias.includes(ev.data)) {
+        try {
+          await api.post('/chamadas/aplicar-evento', { data: ev.data, tipo: ev.tipo });
+        } catch {
+          // evento ja pode ter sido aplicado
+        }
+      }
+    }
+  }, [eventos, dias]);
+
   const carregarAnotacoes = useCallback(async () => {
     const ids = alunosDaTurma.map((a) => a.id);
     if (ids.length === 0) { setAlunosComAnotacao(new Set()); return; }
@@ -140,7 +144,18 @@ const Chamadas: React.FC = () => {
 
   useEffect(() => { carregarDados(); }, [carregarDados]);
   useEffect(() => { carregarLogs(); }, [carregarLogs]);
+  useEffect(() => { aplicarEventosCalendario(); }, [aplicarEventosCalendario]);
   useEffect(() => { carregarAnotacoes(); }, [carregarAnotacoes]);
+
+  useEffect(() => {
+    setIndiceAtual(0);
+  }, [labelSelecionada, professorId]);
+
+  useEffect(() => {
+    if (indiceAtual >= totalIndices && totalIndices > 0) {
+      setIndiceAtual(totalIndices - 1);
+    }
+  }, [totalIndices, indiceAtual]);
 
   useEffect(() => {
     if (statusSave === 'saved') {
@@ -155,8 +170,6 @@ const Chamadas: React.FC = () => {
   const limparFiltros = () => {
     setLabelSelecionada('');
     setProfessorId('');
-    setHorario('');
-    setBuscaTexto('');
     setRetroativo(false);
     const hoje = hojeMesAno();
     setMes(hoje.mes);
@@ -360,9 +373,9 @@ const Chamadas: React.FC = () => {
   }, [dias, indiceAtual, carregarLogs]);
 
   const handleLimpar = useCallback(() => {
-    if (alunosFiltrados.length === 0 || dias.length === 0) return;
+    if (alunosDaTurma.length === 0 || dias.length === 0) return;
     const data = dias[0];
-    const batch = alunosFiltrados.map((a) => ({
+    const batch = alunosDaTurma.map((a) => ({
       alunoId: a.id,
       statusAntigo: logs[a.id]?.[data]?.status,
     }));
@@ -386,7 +399,7 @@ const Chamadas: React.FC = () => {
     });
     agendarSalvamento(payload);
     setLimparConfirm(false);
-  }, [alunosFiltrados, dias, indiceAtual, logs, agendarSalvamento]);
+  }, [alunosDaTurma, dias, indiceAtual, logs, agendarSalvamento]);
 
   useEffect(() => {
     return () => {
@@ -410,8 +423,6 @@ const Chamadas: React.FC = () => {
     }
   };
 
-  const nivel = turmaSelecionada?.nivel || '';
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -431,9 +442,8 @@ const Chamadas: React.FC = () => {
         turmas={turmas}
         professores={professores}
         retroativo={retroativo}
-        onLabelChange={(v) => { setLabelSelecionada(v); setProfessorId(''); setHorario(''); }}
+        onLabelChange={(v) => { setLabelSelecionada(v); setProfessorId(''); }}
         onProfessorChange={setProfessorId}
-        onHorarioChange={setHorario}
         onMesChange={setMes}
         onAnoChange={setAno}
         onRetroativoChange={setRetroativo}
@@ -441,13 +451,6 @@ const Chamadas: React.FC = () => {
       />
 
       <div className="flex items-center gap-2 flex-wrap">
-        <SearchInput
-          value={buscaTexto}
-          onChange={setBuscaTexto}
-          placeholder="Buscar aluno..."
-          className="flex-1 max-w-xs"
-        />
-
         <GridPagination
           indiceAtual={indiceAtual}
           totalIndices={totalIndices}
@@ -460,7 +463,7 @@ const Chamadas: React.FC = () => {
             className="px-3 py-1.5 text-xs bg-gray-50 text-gray-600 rounded hover:bg-gray-100 border border-gray-200 transition disabled:opacity-30 disabled:cursor-not-allowed">
             Desfazer
           </button>
-          {alunosFiltrados.length > 0 && (
+          {alunosDaTurma.length > 0 && (
             <button onClick={() => setLimparConfirm(true)}
               className="px-3 py-1.5 text-xs bg-red-50 text-red-700 rounded hover:bg-red-100 border border-red-200 transition">
               Limpar
@@ -487,9 +490,13 @@ const Chamadas: React.FC = () => {
         <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-400 text-sm">
           Selecione uma turma para visualizar a chamada
         </div>
-      ) : !grupoId ? (
+      ) : !professorId ? (
         <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-400 text-sm">
-          Selecione professor e horário para definir a turma
+          Selecione um professor
+        </div>
+      ) : totalIndices === 0 ? (
+        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-400 text-sm">
+          Nenhuma turma encontrada para esta combinação
         </div>
       ) : dias.length === 0 ? (
         <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-400 text-sm">
@@ -497,10 +504,11 @@ const Chamadas: React.FC = () => {
         </div>
       ) : (
         <DataGrid
-          alunos={alunosFiltrados}
+          alunos={alunosDaTurma}
           dias={dias}
           logs={logs}
-          turma={turmaSelecionada}
+          turma={turmaAtual}
+          eventos={eventos}
           onTogglePresenca={handleTogglePresenca}
           onUpdateAnotacao={handleUpdateAnotacao}
           onDateHeaderClick={handleDateHeaderClick}
@@ -516,7 +524,7 @@ const Chamadas: React.FC = () => {
           <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl m-4" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-gray-800 mb-2">Limpar Chamada</h3>
             <p className="text-sm text-gray-600 mb-4">
-              Deseja limpar todas as presenças de <strong>{alunosFiltrados.length} alunos</strong>
+              Deseja limpar todas as presenças de <strong>{alunosDaTurma.length} alunos</strong>
               {' '}no índice de aula <strong>{indiceAtual + 1}</strong>?
             </p>
             <div className="flex justify-end gap-2">
@@ -542,7 +550,7 @@ const Chamadas: React.FC = () => {
         onClose={() => setCardBOAberto(false)}
         data={dateHeaderClickData}
         indiceAula={indiceAtual}
-        alunos={alunosFiltrados}
+        alunos={alunosDaTurma}
       />
     </div>
   );

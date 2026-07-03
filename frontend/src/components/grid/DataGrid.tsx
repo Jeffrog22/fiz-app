@@ -1,12 +1,12 @@
 import React, { useState, useCallback } from 'react';
-import type { ChamadaLog, Aluno, Turma } from '../../types';
+import type { ChamadaLog, Aluno, Turma, CalendarioEvento } from '../../types';
 import api from '../../utils/api';
 import { formatarNomeMobile } from '../../utils/formatters';
 import { isDataFutura } from '../../utils/chamadaUtils';
 import AnotacoesModal from '../modals/AnotacoesModal';
 import JustificativaModal from '../modals/JustificativaModal';
 
-type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | undefined;
+type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento' | undefined;
 
 const STATUS_CYCLE: (PresencaStatus)[] = [
   'presente',
@@ -20,6 +20,10 @@ const STATUS_COLORS: Record<string, string> = {
   falta: 'bg-red-100 hover:bg-red-200 text-red-800',
   justificado: 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800',
   cancelado: 'bg-gray-200 text-gray-600',
+  feriado: 'bg-red-200 text-red-800',
+  ponte: 'bg-orange-200 text-orange-800',
+  reuniao: 'bg-blue-200 text-blue-800',
+  evento: 'bg-purple-200 text-purple-800',
 };
 
 const STATUS_SYMBOLS: Record<string, string> = {
@@ -27,6 +31,17 @@ const STATUS_SYMBOLS: Record<string, string> = {
   falta: 'F',
   justificado: 'J',
   cancelado: 'C',
+  feriado: 'Fd',
+  ponte: 'Po',
+  reuniao: 'Re',
+  evento: 'Ev',
+};
+
+const TIPO_EVENTO_CORES: Record<string, string> = {
+  feriado: 'bg-red-100 border-red-300 text-red-700',
+  ponte: 'bg-orange-100 border-orange-300 text-orange-700',
+  reuniao: 'bg-blue-100 border-blue-300 text-blue-700',
+  evento: 'bg-purple-100 border-purple-300 text-purple-700',
 };
 
 interface DataGridProps {
@@ -34,6 +49,7 @@ interface DataGridProps {
   dias: string[];
   logs: Record<string, Record<string, ChamadaLog>>;
   turma?: Turma | null;
+  eventos?: CalendarioEvento[];
   onTogglePresenca: (alunoId: string, data: string, status: PresencaStatus) => void;
   onUpdateAnotacao: (alunoId: string, data: string, anotacao: string) => void;
   onDateHeaderClick: (data: string) => void;
@@ -47,6 +63,7 @@ const DataGrid: React.FC<DataGridProps> = ({
   dias,
   logs,
   turma,
+  eventos,
   onTogglePresenca,
   onUpdateAnotacao,
   onDateHeaderClick,
@@ -66,6 +83,11 @@ const DataGrid: React.FC<DataGridProps> = ({
   const [justificativaModal, setJustificativaModal] = useState<{
     aluno: Aluno; data: string; motivo?: string;
   } | null>(null);
+
+  const eventosPorData = useCallback((data: string): CalendarioEvento[] => {
+    if (!eventos) return [];
+    return eventos.filter((e) => e.data === data);
+  }, [eventos]);
 
   const getStatus = useCallback(
     (alunoId: string, data: string): PresencaStatus => {
@@ -117,6 +139,10 @@ const DataGrid: React.FC<DataGridProps> = ({
     return false;
   }, [dias, getAnotacao]);
 
+  const isEventoCalendario = useCallback((data: string): boolean => {
+    return eventosPorData(data).length > 0;
+  }, [eventosPorData]);
+
   const handleCellClick = useCallback(
     (alunoId: string, data: string) => {
       if (isDataFutura(data)) return;
@@ -128,6 +154,7 @@ const DataGrid: React.FC<DataGridProps> = ({
         }
         return;
       }
+      if (current === 'feriado' || current === 'ponte' || current === 'reuniao' || current === 'evento' || current === 'cancelado') return;
       const currentIndex = STATUS_CYCLE.indexOf(current);
       const nextStatus = STATUS_CYCLE[(currentIndex + 1) % STATUS_CYCLE.length];
       onTogglePresenca(alunoId, data, nextStatus);
@@ -179,6 +206,8 @@ const DataGrid: React.FC<DataGridProps> = ({
               {dias.map((dia) => {
                 const futura = isDataFutura(dia);
                 const temLog = temAlgumLog(dia);
+                const diaEventos = eventosPorData(dia);
+                const hasEvento = diaEventos.length > 0;
                 return (
                   <th
                     key={dia}
@@ -204,13 +233,28 @@ const DataGrid: React.FC<DataGridProps> = ({
                       }
                     >
                       <span className={`text-xs font-bold ${
-                        temLog && !futura
+                        hasEvento
+                          ? diaEventos[0].tipo === 'feriado'
+                            ? 'bg-red-200 text-red-800 px-1.5 py-0.5 rounded'
+                            : diaEventos[0].tipo === 'ponte'
+                            ? 'bg-orange-200 text-orange-800 px-1.5 py-0.5 rounded'
+                            : diaEventos[0].tipo === 'reuniao'
+                            ? 'bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded'
+                            : 'bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded'
+                          : temLog && !futura
                           ? 'bg-primary-100 text-primary-700 px-1.5 py-0.5 rounded'
                           : ''
                       }`}>
                         {new Date(dia + 'T12:00:00').getDate()}
                       </span>
                     </button>
+                    {hasEvento && (
+                      <div className="mt-0.5">
+                        <span className={`text-[8px] px-1 py-0.5 rounded border ${TIPO_EVENTO_CORES[diaEventos[0].tipo] || 'bg-gray-100'}`}>
+                          {diaEventos[0].tipo}
+                        </span>
+                      </div>
+                    )}
                   </th>
                 );
               })}
@@ -238,15 +282,18 @@ const DataGrid: React.FC<DataGridProps> = ({
                   {dias.map((dia) => {
                     const status = getStatus(aluno.id, dia);
                     const futura = isDataFutura(dia);
+                    const isCalendario = status === 'feriado' || status === 'ponte' || status === 'reuniao' || status === 'evento';
                     return (
                       <td key={dia} className="px-1 py-1 text-center">
                         <div className="flex flex-col items-center gap-0.5">
                           <button
                             onClick={() => handleCellClick(aluno.id, dia)}
-                            disabled={futura}
+                            disabled={futura || isCalendario}
                             className={`w-7 h-7 rounded-md text-xs font-bold transition-all ${
                               futura
                                 ? 'bg-gray-50 text-gray-200 cursor-not-allowed'
+                                : isCalendario
+                                ? `${STATUS_COLORS[status || '']} cursor-default`
                                 : status
                                 ? `${STATUS_COLORS[status]} cursor-pointer`
                                 : 'bg-gray-100 hover:bg-gray-200 text-gray-400 cursor-pointer'

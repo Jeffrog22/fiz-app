@@ -16,7 +16,7 @@ const GridPagination: React.FC<GridPaginationProps> = ({
   return (
     <div className="flex items-center justify-between bg-white px-4 py-3 rounded-lg border border-gray-200">
       <span className="text-sm text-gray-500">
-        Aula {indiceAtual + 1} de {totalIndices}
+        Turma {indiceAtual + 1} de {totalIndices}
       </span>
       <div className="flex gap-2">
         <button

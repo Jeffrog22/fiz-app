@@ -15,6 +15,7 @@ router.get('/:data', ChamadasController.listarPorData);
 
 router.post('/', ChamadasController.salvar);
 router.post('/extrapolar', ChamadasController.extrapolarPresenca);
+router.post('/aplicar-evento', ChamadasController.aplicarEventoCalendario);
 router.post('/card-aula', ChamadasController.salvarCardAula);
 router.post('/card-bo', ChamadasController.salvarCardBO);
 router.post('/log-acesso', ChamadasController.registrarLogAcesso);

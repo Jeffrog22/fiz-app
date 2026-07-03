@@ -1,6 +1,6 @@
 import { supabase } from '../services/supabaseClient';
 
-type Operacao = 'insercao' | 'atualizacao' | 'remocao' | 'extrapolacao' | 'cancelamento';
+type Operacao = 'insercao' | 'atualizacao' | 'remocao' | 'extrapolacao' | 'cancelamento' | 'calendario';
 
 interface LogEntry {
   tenant_id: string;

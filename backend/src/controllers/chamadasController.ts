@@ -35,6 +35,17 @@ export class ChamadasController {
     }
   }
 
+  static async aplicarEventoCalendario(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const tenantId = req.tenantId!;
+      const { data, tipo } = req.body;
+      const result = await chamadasService.aplicarEventoCalendario(data, tipo, tenantId);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async extrapolarPresenca(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const tenantId = req.tenantId!;

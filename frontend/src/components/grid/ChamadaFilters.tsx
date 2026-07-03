@@ -14,7 +14,6 @@ interface ChamadaFiltersProps {
   retroativo: boolean;
   onLabelChange: (v: string) => void;
   onProfessorChange: (v: string) => void;
-  onHorarioChange: (v: string) => void;
   onMesChange: (v: number) => void;
   onAnoChange: (v: number) => void;
   onRetroativoChange: (v: boolean) => void;
@@ -33,7 +32,6 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
   retroativo,
   onLabelChange,
   onProfessorChange,
-  onHorarioChange,
   onMesChange,
   onAnoChange,
   onRetroativoChange,
@@ -55,16 +53,7 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
     return professores.filter((p) => profIds.has(p.id));
   }, [label, turmasComLabel, professores]);
 
-  const horariosDisponiveis = useMemo(() => {
-    if (!label || !professorId) return [];
-    const set = new Set<string>();
-    turmasComLabel
-      .filter((t) => t.professor_id === professorId)
-      .forEach((t) => { if (t.horario) set.add(t.horario); });
-    return Array.from(set).sort();
-  }, [label, professorId, turmasComLabel]);
-
-  const temFiltro = label || professorId || horario;
+  const temFiltro = label || professorId;
 
   const hoje = hojeMesAno();
   const anos = [hoje.ano - 1, hoje.ano, hoje.ano + 1];
@@ -123,7 +112,7 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
           <label className="text-xs text-gray-500 font-medium">Turma</label>
           <select
             value={label}
-            onChange={(e) => { onLabelChange(e.target.value); onProfessorChange(''); onHorarioChange(''); }}
+            onChange={(e) => { onLabelChange(e.target.value); onProfessorChange(''); }}
             className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
             <option value="">Selecione</option>
@@ -137,7 +126,7 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
           <label className="text-xs text-gray-500 font-medium">Professor</label>
           <select
             value={professorId}
-            onChange={(e) => { onProfessorChange(e.target.value); onHorarioChange(''); }}
+            onChange={(e) => { onProfessorChange(e.target.value); }}
             disabled={!label}
             className={`px-3 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
               !label ? 'bg-gray-50 text-gray-500 border-gray-200' : 'border-gray-300'
@@ -152,19 +141,11 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
 
         <div className="flex flex-col gap-1">
           <label className="text-xs text-gray-500 font-medium">Horário</label>
-          <select
-            value={horario}
-            onChange={(e) => onHorarioChange(e.target.value)}
-            disabled={!label || !professorId}
-            className={`px-3 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-              !label || !professorId ? 'bg-gray-50 text-gray-500 border-gray-200' : 'border-gray-300'
-            }`}
-          >
-            <option value="">{label && professorId ? 'Selecione' : 'Selecione professor'}</option>
-            {horariosDisponiveis.map((h) => (
-              <option key={h} value={h}>{h.substring(0, 5)}</option>
-            ))}
-          </select>
+          <input
+            disabled
+            value={horario ? horario.substring(0, 5) : '-'}
+            className="px-3 py-1.5 border border-gray-200 rounded-md text-sm bg-gray-50 text-gray-500"
+          />
         </div>
 
         <div className="flex flex-col gap-1">

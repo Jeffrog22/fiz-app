@@ -52,7 +52,7 @@ export interface ChamadaLog {
   data: string;
   grupo_id?: string;
   indice_aula: number;
-  status?: 'presente' | 'falta' | 'justificado' | 'cancelado';
+  status?: 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento';
   motivo?: string;
   condicao_clima?: string;
   temperatura_ext?: number;
@@ -61,7 +61,7 @@ export interface ChamadaLog {
   tipo_select?: 'geral' | 'pessoal';
   tipo_ocorrencia?: string;
   compromete_dia?: boolean;
-  origem?: 'manual' | 'extrapolado';
+  origem?: 'manual' | 'extrapolado' | 'calendario';
   criado_em: string;
 }
 

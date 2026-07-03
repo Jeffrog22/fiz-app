@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-02 — Fix acentuação clima + Chave Tríplice: alunos.turma_id agora armazena grupo_id -->
+<!-- última-sessão: 2026-07-02 — Remove Search chamada, integração calendário, pagination por grupo_id -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Identidade
@@ -46,9 +46,13 @@
 - `SearchInput.tsx` é componente reutilizável com lupa + X clearable + onFocus select (+ onMouseUp preventDefault)
 - Migrations 006 e 007 executadas em produção (Supabase)
 - Migration 008 (`planejamento_arquivos`) pendente execução
-- Migration 009 executada em produção (Supabase) — converte `alunos.turma_id` e `enrollment_period.turma_id` de UUID para `turmas.grupo_id`
+- Migration 009 executada em 02/07/2026 — converteu `alunos.turma_id` de UUID para `turmas.grupo_id` (3 alunos em `jeftq04`). `enrollment_period.turma_id` não foi convertido por ser coluna tipo UUID
 - `alunos.turma_id` agora armazena `turmas.grupo_id` (ex: `jeftq03`), não UUID — a alocação do aluno é pelo grupo_id (chave tríplice: label + professor_id + horario)
 - Upload de planejamento usa multer + disco local (`backend/uploads/`)
+- `indice_aula` em `chamadas_log` agora armazena índice da turma na lista ordenada por horário (0 a N-1), não mais slot de aula 0-11
+- Status `ChamadaLog.status` inclui 4 novos: `'feriado' | 'ponte' | 'reuniao' | 'evento'` — aplicados automaticamente via `POST /chamadas/aplicar-evento` quando há eventos no calendário
+- Paginação em Chamadas: `anterior`/`próximo` navega entre grupo_ids (jeftq01→jeftq02→...) ordenados por horário, dentro do mesmo label+professor
+- Horário no ChamadaFilters é read-only (auto-preenchido pela paginação), não mais dropdown selecionável
 
 ---
 
@@ -410,3 +414,35 @@
 - `frontend/src/components/modals/AlunoModal.tsx` (lookups/selects → grupo_id)
 - `frontend/src/components/grid/ChamadaFilters.tsx` (reescrito — cascade label→prof→horario)
 - `frontend/src/pages/Chamadas.tsx` (labelSelecionada, grupoId, grid condicional)
+
+---
+
+## Sessão: 02/07/2026 — Remove Search + Integração Calendário + Pagination por grupo_id
+
+### O que foi feito
+- **Remove SearchInput**: removida busca textual do grid de chamada (desnecessária)
+- **Calendário no grid**: `POST /chamadas/aplicar-evento` cria logs com status `feriado`/`ponte`/`reuniao`/`evento` para todos os alunos ativos quando há evento no calendário
+- **Auto-aplicar**: `Chamadas.tsx` faz fetch de `GET /calendario?mes=&ano=` e chama `POST /chamadas/aplicar-evento` para cada data com evento dentro dos dias letivos
+- **DataGrid**: headers de coluna com evento recebem cor correspondente (vermelho/feriado, laranja/ponte, etc.); células com status de calendário são read-only (não clicáveis)
+- **Pagination por grupo_id**: `indiceAtual` passou de 0-11 (slot de aula) para índice na lista de turmas do label+professor (0 a N-1)
+- **Horário read-only**: dropdown de horário substituído por input read-only; valor auto-preenchido pela turma atual da paginação
+- **Cascade**: label + professor continuam obrigatórios; horário e nível são derivados da turma atual
+- Typecheck limpo (frontend + backend); 41/41 testes
+
+### Decisões
+- `indice_aula` salvo nos logs agora representa o índice da turma na ordenação por horário (0-5 para 6 turmas Ter/Qui)
+- Status de calendário são read-only no grid (não ciclam P/F/J)
+- Eventos são idempotentes: endpoint checa se já existem logs com `origem=calendario` antes de criar
+
+### Arquivos
+- `frontend/src/pages/Chamadas.tsx` (reescrito — remove search, add calendario, pagination)
+- `frontend/src/components/grid/ChamadaFilters.tsx` (reescrito — horario read-only)
+- `frontend/src/components/grid/DataGrid.tsx` (+eventos prop, +status calendario, header colorido)
+- `frontend/src/components/grid/GridPagination.tsx` (texto "Turma X de Y")
+- `frontend/src/types/index.ts` (+CalendarioEvento, +4 statuses)
+- `backend/src/services/chamadasService.ts` (+aplicarEventoCalendario)
+- `backend/src/controllers/chamadasController.ts` (+aplicarEventoCalendario)
+- `backend/src/routes/chamadasRoutes.ts` (+rota)
+- `backend/src/types/index.ts` (+4 statuses, +origem calendario)
+- `backend/src/utils/logEngine.ts` (+operacao calendario)
+
