@@ -123,18 +123,16 @@ const Chamadas: React.FC = () => {
 
   const aplicarEventosCalendario = useCallback(async () => {
     if (eventos.length === 0) return;
-    let aplicou = false;
     for (const ev of eventos) {
       if (dias.includes(ev.data)) {
         try {
-          const res = await api.post('/chamadas/aplicar-evento', { data: ev.data, tipo: ev.tipo });
-          if (res.data?.count > 0) aplicou = true;
+          await api.post('/chamadas/aplicar-evento', { data: ev.data, tipo: ev.tipo });
         } catch {
           // evento ja pode ter sido aplicado
         }
       }
     }
-    if (aplicou) carregarLogs();
+    carregarLogs();
   }, [eventos, dias, carregarLogs]);
 
   const carregarAnotacoes = useCallback(async () => {

@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-02 — Remove Search chamada, integração calendário, pagination por grupo_id -->
+<!-- última-sessão: 2026-07-02 — Fix calendario statuses não aplicados ao grid -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Identidade
@@ -445,4 +445,24 @@
 - `backend/src/routes/chamadasRoutes.ts` (+rota)
 - `backend/src/types/index.ts` (+4 statuses, +origem calendario)
 - `backend/src/utils/logEngine.ts` (+operacao calendario)
+
+---
+
+## Sessão: 02/07/2026 — Fix Calendário Statuses Não Aplicados ao Grid
+
+### O que foi feito
+- Removido guard `if (aplicou)` em `aplicarEventosCalendario` — `carregarLogs()` agora é **sempre** chamada após o loop de eventos
+- Removida variável `aplicou` e checagem `res.data?.count > 0` (inutilizadas)
+
+### Problema resolvido
+- `aplicarEventosCalendario` só recarregava logs se `count > 0` (novos eventos criados). Quando eventos já haviam sido aplicados em render anterior, `carregarLogs()` nunca era chamado → grid renderizava sem os status de calendário → células permaneciam clicáveis (P/F/J)
+- `DataGrid` já tinha lógica para bloquear clicks em status de calendário (`handleCellClick` linha 157), mas precisava que os logs contivessem esses status
+
+### Arquivos
+- `frontend/src/pages/Chamadas.tsx` (remove guard `if (aplicou)`, remove variável `aplicou`)
+
+### Typecheck
+- Frontend: 0 erros
+- Backend: 0 erros
+- Testes: 41/41 passam
 
