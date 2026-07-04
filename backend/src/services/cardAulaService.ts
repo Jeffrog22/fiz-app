@@ -50,6 +50,8 @@ export async function salvarCardAula(
   if (sensacao !== undefined) logFields.sensacao = sensacao;
   if (status_sugerido !== undefined) logFields.status_sugerido = status_sugerido;
   if (motivo_sugerido !== undefined) logFields.motivo_sugerido = motivo_sugerido;
+  if (status_sugerido === 'AULA_CANCELADA') logFields.status = 'cancelado';
+  else if (status_sugerido === 'FALTA_JUSTIFICADA') logFields.status = 'justificado';
 
   const { error: updateError } = await supabase
     .from('chamadas_log')
