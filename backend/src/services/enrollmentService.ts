@@ -83,7 +83,7 @@ export async function iniciarPeriodoService(
       data_inicio: new Date().toISOString().split('T')[0],
     })
     .select()
-    .single();
+    .maybeSingle();
 
   if (error || !data) {
     console.error('[enrollment/iniciarPeriodo] Insert error:', error);

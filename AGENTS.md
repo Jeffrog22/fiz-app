@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-03 — Fix feriado não bloqueia + error 500 + persistencia filtros -->
+<!-- última-sessão: 2026-07-04 — Fix enrollment 500: turma_id UUID vs grupo_id -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Identidade
@@ -498,4 +498,25 @@
 - Frontend: 0 erros
 - Backend: 0 erros
 - Testes: 41/41 frontend + 25/25 backend passam
+
+---
+
+## Sessão: 04/07/2026 — Fix Enrollment 500: turma_id UUID vs grupo_id
+
+### Problema
+- `POST /alunos/:id/enrollment` retornava 500 com `Erro ao criar período`
+- **Causa**: `enrollment_period.turma_id` era coluna `UUID` (migration 002), mas o frontend envia `turma_id` como `grupo_id` (ex: `jeftq04`), texto de 7 caracteres
+- Migration 009 atualizou dados existentes de UUID→grupo_id, mas **não alterou o tipo da coluna** — novos inserts falhavam com `invalid input syntax for type uuid`
+
+### O que foi feito
+- Migration `016_enrollment_turma_id_text.sql`: drop FK + alter column type para TEXT
+- `enrollmentService.ts`: `.single()` → `.maybeSingle()` no insert (consistente com fix do chamadasService)
+
+### Arquivos
+- `backend/src/migrations/016_enrollment_turma_id_text.sql` (novo)
+- `backend/src/services/enrollmentService.ts` (.single → .maybeSingle)
+
+### Typecheck
+- Frontend: 0 erros
+- Backend: 0 erros
 
