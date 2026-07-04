@@ -226,7 +226,7 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, onAbrirB
                     {tempPiscina >= 23 && tempPiscina < 25 && <li>Água muito fria ({tempPiscina}°C) — risco para menores de 16 anos</li>}
                     {cloro === 0 && <li>Cloro zerado — condições inadequadas para aula</li>}
                   </ul>
-                  {onAbrirBO && (
+                  {cloro === 0 && onAbrirBO && (
                     <button type="button" onClick={onAbrirBO}
                       className="text-xs px-3 py-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition">
                       Abrir BO de Cancelamento

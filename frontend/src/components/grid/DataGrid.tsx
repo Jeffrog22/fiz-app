@@ -248,36 +248,10 @@ const DataGrid: React.FC<DataGridProps> = ({
                           : 'Clique para registrar aula'
                       }
                     >
-                      <span className={`text-xs font-bold ${
-                        hasEvento
-                          ? diaEventos[0].tipo === 'feriado'
-                            ? 'bg-red-200 text-red-800 px-1.5 py-0.5 rounded'
-                            : diaEventos[0].tipo === 'ponte'
-                            ? 'bg-orange-200 text-orange-800 px-1.5 py-0.5 rounded'
-                            : diaEventos[0].tipo === 'reuniao'
-                            ? 'bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded'
-                            : 'bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded'
-                          : temLog && !futura
-                          ? 'bg-primary-100 text-primary-700 px-1.5 py-0.5 rounded'
-                          : ''
-                      }`}>
+                      <span className="text-xs font-bold">
                         {new Date(dia + 'T12:00:00').getDate()}
                       </span>
                     </button>
-                    {cardAulaData?.[dia]?.condicao_clima && (
-                      <div className="mt-0.5">
-                        <span className="text-[8px] px-1 py-0.5 rounded bg-cyan-50 text-cyan-700 border border-cyan-200">
-                          {cardAulaData[dia].condicao_clima}
-                        </span>
-                      </div>
-                    )}
-                    {hasEvento && (
-                      <div className="mt-0.5">
-                        <span className={`text-[8px] px-1 py-0.5 rounded border ${TIPO_EVENTO_CORES[diaEventos[0].tipo] || 'bg-gray-100'}`}>
-                          {diaEventos[0].tipo}
-                        </span>
-                      </div>
-                    )}
                   </th>
                 );
               })}
@@ -307,7 +281,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                     const futura = isDataFutura(dia);
                     const isCalendario = status === 'feriado' || status === 'ponte' || status === 'reuniao' || status === 'evento';
                     return (
-                      <td key={dia} className="px-1 py-1 text-center">
+                      <td key={dia} className="px-2 py-1 text-center border-r border-gray-100">
                         <div className="flex flex-col items-center gap-0.5">
                           <button
                             onClick={() => handleCellClick(aluno.id, dia)}
