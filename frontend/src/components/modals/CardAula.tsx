@@ -16,6 +16,8 @@ interface Props {
   data: string;
   indiceAula: number;
   grupoId: string;
+  nivelTurma?: string;
+  faixaEtariaTurma?: string;
   onAbrirBO?: () => void;
 }
 
@@ -23,7 +25,7 @@ const SENSACOES = ['Calor', 'Abafado', 'Seco', 'Agradável', 'Vento', 'Frio', 'F
 
 const CONDICOES = Object.values(WMO_MAP).filter((v, i, a) => a.indexOf(v) === i);
 
-const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, onAbrirBO }) => {
+const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, nivelTurma, faixaEtariaTurma, onAbrirBO }) => {
   const [tempExterna, setTempExterna] = useState(26);
   const [tempPiscina, setTempPiscina] = useState(28);
   const [cloro, setCloro] = useState(2.5);
@@ -99,7 +101,7 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
   }, [tempExterna]);
 
   const climaSugestao = getClimaSugestao(condicao, sensacoes);
-  const piscinaSugestao = getTempPiscinaSugestao(tempPiscina);
+  const piscinaSugestao = getTempPiscinaSugestao(tempPiscina, nivelTurma, faixaEtariaTurma);
   const cloroSugestao = getCloroSugestao(cloro);
   const sugestaoFinal = getSugestaoFinal(climaSugestao, piscinaSugestao, cloroSugestao);
 
@@ -107,7 +109,8 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
     setSensacoes(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
   };
 
-  const sugestaoCor = sugestaoFinal.status === 'FALTA_JUSTIFICADA' ? 'text-red-600'
+  const sugestaoCor = sugestaoFinal.status === 'AULA_CANCELADA' ? 'text-red-700 font-bold'
+    : sugestaoFinal.status === 'FALTA_JUSTIFICADA' ? 'text-red-600'
     : 'text-green-600';
 
   const handleSalvar = async () => {
@@ -211,14 +214,18 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
                 <p className="text-xs text-gray-500">Filtro 2 (Piscina): {piscinaSugestao.status === 'FALTA_JUSTIFICADA' ? `❌ ${piscinaSugestao.motivo}` : '✅ AULA NORMAL'}</p>
                 <p className="text-xs text-gray-500">Filtro 3 (Cloro): {cloroSugestao.status === 'FALTA_JUSTIFICADA' ? `❌ ${cloroSugestao.motivo}` : '✅ AULA NORMAL'}</p>
                 <div className={'pt-1 font-medium ' + sugestaoCor}>
-                  Status Sugerido: <strong>{sugestaoFinal.status === 'FALTA_JUSTIFICADA' ? 'FALTA JUSTIFICADA' : 'AULA NORMAL'}</strong>
+                  Status Sugerido: <strong>{
+                    sugestaoFinal.status === 'AULA_CANCELADA' ? 'AULA CANCELADA' :
+                    sugestaoFinal.status === 'FALTA_JUSTIFICADA' ? 'FALTA JUSTIFICADA' :
+                    'AULA NORMAL'
+                  }</strong>
                   {sugestaoFinal.motivo && (
                     <span className="block text-xs mt-0.5">Motivo: {sugestaoFinal.motivo}</span>
                   )}
                 </div>
               </div>
 
-              {(tempPiscina < 25 || cloro === 0) && (
+              {(sugestaoFinal.status === 'AULA_CANCELADA') && (
                 <div className="p-3 border border-red-200 bg-red-50 rounded space-y-2">
                   <p className="text-xs font-medium text-red-700">
                     Condição de cancelamento detectada:

@@ -1,5 +1,5 @@
 export interface Sugestao {
-  status: 'AULA_NORMAL' | 'FALTA_JUSTIFICADA';
+  status: 'AULA_NORMAL' | 'FALTA_JUSTIFICADA' | 'AULA_CANCELADA';
   motivo: string | null;
 }
 
@@ -110,7 +110,29 @@ export function getClimaSugestao(condicao: string, sensacoes: string[]): Sugesta
   return { status: 'AULA_NORMAL', motivo: null };
 }
 
-export function getTempPiscinaSugestao(temp: number): Sugestao {
+/**
+ * Filtro 2 - Temperatura Piscina
+ *
+ * Regras de cancelamento:
+ * - < 23.0 → AULA_CANCELADA (risco para todos)
+ * - < 25.0 → AULA_CANCELADA (exceto faixa etária "+ 16 anos")
+ * - < 28.0 + nivel === "INICIAÇÃO" → AULA_CANCELADA
+ * - Demais casos frios → FALTA_JUSTIFICADA (água fria)
+ */
+export function getTempPiscinaSugestao(
+  temp: number,
+  nivelTurma?: string,
+  faixaEtariaTurma?: string,
+): Sugestao {
+  if (temp < 23) {
+    return { status: 'AULA_CANCELADA', motivo: 'Água crítica' };
+  }
+  if (temp < 25 && faixaEtariaTurma !== '+ 16 anos') {
+    return { status: 'AULA_CANCELADA', motivo: 'Água muito fria para menores' };
+  }
+  if (temp < 28 && nivelTurma?.toUpperCase() === 'INICIAÇÃO') {
+    return { status: 'AULA_CANCELADA', motivo: 'Água fria para iniciação' };
+  }
   if (temp < 26) {
     return { status: 'FALTA_JUSTIFICADA', motivo: 'Água muito fria' };
   }
@@ -120,7 +142,17 @@ export function getTempPiscinaSugestao(temp: number): Sugestao {
   return { status: 'AULA_NORMAL', motivo: null };
 }
 
+/**
+ * Filtro 3 - Cloro
+ *
+ * Regras:
+ * - 0.0 → AULA_CANCELADA (sugere abertura de cardBO)
+ * - < 1 ou > 5 → FALTA_JUSTIFICADA
+ */
 export function getCloroSugestao(cloro: number): Sugestao {
+  if (cloro === 0) {
+    return { status: 'AULA_CANCELADA', motivo: 'Cloro zerado' };
+  }
   if (cloro < 1 || cloro > 5) {
     return { status: 'FALTA_JUSTIFICADA', motivo: 'Parâmetros de Cloro Inadequados' };
   }
@@ -132,6 +164,9 @@ export function getSugestaoFinal(
   piscina: Sugestao,
   cloro: Sugestao,
 ): Sugestao {
+  // Prioridade: AULA_CANCELADA > FALTA_JUSTIFICADA > AULA_NORMAL
+  if (piscina.status === 'AULA_CANCELADA') return piscina;
+  if (cloro.status === 'AULA_CANCELADA') return cloro;
   if (clima.status === 'FALTA_JUSTIFICADA') return clima;
   if (piscina.status === 'FALTA_JUSTIFICADA') return piscina;
   if (cloro.status === 'FALTA_JUSTIFICADA') return cloro;

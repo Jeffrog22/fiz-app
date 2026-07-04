@@ -65,12 +65,21 @@ export class ChamadasController {
       const { data, indice_aula, grupo_id, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido } = req.body;
       await cardAulaService.salvarCardAula(tenantId, data, indice_aula || 0, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido);
 
-      // Auto-extrapolar 'J' para índices subsequentes se cardAula sugeriu FALTA_JUSTIFICADA
-      if (status_sugerido === 'FALTA_JUSTIFICADA' && grupo_id) {
-        try {
-          await extrapolarService.extrapolarJustificativa(tenantId, data, grupo_id, indice_aula || 0, 12, motivo_sugerido || '');
-        } catch (extError) {
-          console.error('[salvarCardAula] Erro ao extrapolar justificativa:', extError);
+      // Auto-extrapolar para índices subsequentes conforme status sugerido
+      if (grupo_id) {
+        if (status_sugerido === 'AULA_CANCELADA') {
+          try {
+            // Cancelamento por condições climáticas (não cloro) - extrapola para todas as aulas do dia
+            await extrapolarService.extrapolarCancelamento(tenantId, data, grupo_id, indice_aula || 0, 12, motivo_sugerido || '');
+          } catch (extError) {
+            console.error('[salvarCardAula] Erro ao extrapolar cancelamento:', extError);
+          }
+        } else if (status_sugerido === 'FALTA_JUSTIFICADA') {
+          try {
+            await extrapolarService.extrapolarJustificativa(tenantId, data, grupo_id, indice_aula || 0, 12, motivo_sugerido || '');
+          } catch (extError) {
+            console.error('[salvarCardAula] Erro ao extrapolar justificativa:', extError);
+          }
         }
       }
 

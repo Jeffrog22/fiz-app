@@ -649,6 +649,8 @@ const Chamadas: React.FC = () => {
         data={dateHeaderClickData}
         indiceAula={indiceAtual}
         grupoId={grupoId}
+        nivelTurma={turmaAtual?.nivel}
+        faixaEtariaTurma={turmaAtual?.faixa_etaria}
         onAbrirBO={() => { setCardAulaAberto(false); setCardBOAberto(true); }}
       />
 
