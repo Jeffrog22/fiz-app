@@ -41,6 +41,12 @@ const Turmas: React.FC = () => {
 
   useEffect(() => { carregar(); }, [carregar]);
 
+  useEffect(() => {
+    const handler = () => { if (!document.hidden) carregar(); };
+    document.addEventListener('visibilitychange', handler);
+    return () => document.removeEventListener('visibilitychange', handler);
+  }, [carregar]);
+
   const handleSave = async (data: any) => {
     try {
       if (editando) {

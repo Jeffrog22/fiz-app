@@ -1,10 +1,10 @@
-<!-- última-sessão: 2026-07-04 — Fix enrollment 500: turma_id UUID vs grupo_id -->
+<!-- última-sessão: 2026-07-04 — Fix Log Refresh + Lotação + Version Tag v1.8.1 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v1.5.0
+- **Versão atual:** v1.8.1
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Unidades atendidas:** Bela Vista, São Matheus, Vila, Parque (multi-tenant via X-Tenant-ID ou domínio)
@@ -519,4 +519,41 @@
 ### Typecheck
 - Frontend: 0 erros
 - Backend: 0 erros
+
+---
+
+## Sessão: 04/07/2026 — Fix Log Refresh + Lotação + Version Tag v1.8.1
+
+### Problemas Resolvidos
+
+**1. CardBO não recarregava logs após salvar**
+- `onClose` do `<CardBO>` em `Chamadas.tsx:601-607` chamava apenas `setCardBOAberto(false)` sem invocar `carregarLogs()`
+- Após salvar um BO com cancelamento, o grid permanecia desatualizado
+- **Fix**: adicionado `carregarLogs()` ao callback `onClose`
+
+**2. Logs extrapolados poluíam o grid (indice_aula ignorado)**
+- `carregarLogs` indexava logs por `(alunoId, data)` apenas, ignorando `indice_aula`
+- Após `extrapolarJustificativa` criar logs nos índices N+1..N+11, o último (maior `indice_aula`) sobrescrevia o correto no estado `logs`
+- O grid exibia 'J' (ou 'C') para todos os alunos no índice atual, quando deveria mostrar o status original
+- **Fix**: `carregarLogs` agora filtra por `log.indice_aula !== indiceAtual`; `indiceAtual` adicionado às dependências do `useCallback`
+
+**3. Lotação de Turmas desatualizada**
+- `Turmas.tsx:42` — `useEffect` só executava no mount; alocações via Alunos/AlunoModal não disparam refetch
+- **Fix**: adicionado listener `visibilitychange` que re-executa `carregar()` ao retornar à aba
+
+**4. Version tag v1.8.1 desatualizada**
+- A versão no frontend (`Login.tsx` + `vite.config.ts`) é lida de `git describe --tags --abbrev=0`
+- O último tag real era `v1.6.1`; commits `v1.8.1`, `v1.8.0` etc. existiam apenas como mensagens de commit
+- **Fix**: criado `git tag -a v1.8.1` no HEAD; frontend exibirá v1.8.1 após rebuildar
+
+### Arquivos alterados
+- `frontend/src/pages/Chamadas.tsx` — CardBO.onClose chama carregarLogs; carregarLogs filtra por indiceAtual
+- `frontend/src/pages/Turmas.tsx` — visibilitychange listener para refresh automático
+- `CHANGELOG.md` — consolidado v1.8.1
+- `AGENTS.md` — esta sessão
+
+### Typecheck
+- Frontend: 0 erros
+- Backend: 0 erros
+- Testes: 41/41 passam
 

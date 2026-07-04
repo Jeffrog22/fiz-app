@@ -24,18 +24,25 @@
 ### Arquivos alterados
 - `backend/src/migrations/012_drop_grupo_id_fk.sql` (novo)
 
-## [v1.8.1] - 2026-07-03
+## [v1.8.1] - 2026-07-04
 ### Corrigido
 - **CardAula não persistia sem tabela `card_aula`** — `obterCardAula` agora tem fallback para `chamadas_log` quando a tabela não existe ou está vazia
 - **JustificativaModal abria ao clicar em 'J'** — célula 'J' agora cicla normalmente (P→F→J→vazio); justificativa movida para botão "Just" na coluna Ações
+- **CardBO não recarregava logs após salvar** — `onClose` do CardBO nunca chamava `carregarLogs()`; após salvar um BO com cancelamento, o grid permanecia desatualizado até o usuário recarregar manualmente
+- **Logs extrapolados poluíam o grid** — `carregarLogs` indexava logs por `(alunoId, data)` ignorando `indice_aula`. Extrapolações em índices N + 1..N+11 sobrescreviam o status do índice atual, fazendo o grid exibir 'J' ou 'C' incorretamente no índice de aula corrente
+- **Lotação de Turmas desatualizada** — `Turmas.tsx` só carregava dados no mount; alocações feitas via Alunos/AlunoModal não eram refletidas sem refresh manual da página
 
 ### Alterado
 - **DataGrid.tsx** — `handleCellClick` não intercepta mais 'justificado'; botão "Anot" substituído por "Just" que abre JustificativaModal no primeiro dia com status `justificado` do aluno (ou `dias[0]` se não houver)
-- **cardAulaService.ts** — `obterCardAula` busca `chamadas_log` como fallback quando `card_aula` retorna vazio
+- **ChiCardBO.onClose em Chamadas.tsx** — agora chama `carregarLogs()` após fechar o modal, refletindo imediatamente cancelamentos/BOs no grid
+- **carregarLogs** — adicionado filtro `if (log.indice_aula !== indiceAtual) continue` e dependência `indiceAtual` no `useCallback`. Ao paginar entre turmas, os logs corretos são carregados automaticamente
+- **Turmas.tsx** — adicionado listener `visibilitychange` que re-executa `carregar()` ao retornar à aba, atualizando lotação em tempo real
 
 ### Arquivos alterados
 - `frontend/src/components/grid/DataGrid.tsx` — remove intercept de 'J', troca Anot por Just
 - `backend/src/services/cardAulaService.ts` — fallback para chamadas_log
+- `frontend/src/pages/Chamadas.tsx` — CardBO.onClose chama carregarLogs; carregarLogs filtra por indiceAtual
+- `frontend/src/pages/Turmas.tsx` — visibilitychange listener para refresh automático
 
 ## [v1.8.0] - 2026-07-03
 ### Adicionado

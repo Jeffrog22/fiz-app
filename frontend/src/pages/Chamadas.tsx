@@ -128,6 +128,7 @@ const Chamadas: React.FC = () => {
       const raw: ChamadaLog[] = res.data;
       const indexed: Record<string, Record<string, ChamadaLog>> = {};
       for (const log of raw) {
+        if (log.indice_aula !== indiceAtual) continue;
         const alunoId = log.grupo_id || 'unknown';
         if (!indexed[alunoId]) indexed[alunoId] = {};
         indexed[alunoId][log.data] = log;
@@ -136,7 +137,7 @@ const Chamadas: React.FC = () => {
     } catch (err) {
       console.error('Erro ao carregar chamadas', err);
     }
-  }, [dias]);
+  }, [dias, indiceAtual]);
 
   const aplicarEventosCalendario = useCallback(async () => {
     if (eventos.length === 0) return;
@@ -600,7 +601,7 @@ const Chamadas: React.FC = () => {
 
       <CardBO
         aberto={cardBOAberto}
-        onClose={() => setCardBOAberto(false)}
+        onClose={() => { setCardBOAberto(false); carregarLogs(); }}
         data={dateHeaderClickData}
         indiceAula={indiceAtual}
         alunos={alunosDaTurma}
