@@ -109,6 +109,13 @@ const DataGrid: React.FC<DataGridProps> = ({
     [logs, eventosPorData]
   );
 
+  const getOrigem = useCallback(
+    (alunoId: string, data: string): string | undefined => {
+      return logs[alunoId]?.[data]?.origem;
+    },
+    [logs]
+  );
+
   const getAnotacao = useCallback(
     (alunoId: string, data: string): string | undefined => {
       return logs[alunoId]?.[data]?.motivo;
@@ -292,9 +299,18 @@ const DataGrid: React.FC<DataGridProps> = ({
                                 : isCalendario
                                 ? `${STATUS_COLORS[status || '']} cursor-default`
                                 : status
-                                ? `${STATUS_COLORS[status]} cursor-pointer`
+                                ? `${STATUS_COLORS[status]} cursor-pointer ${getOrigem(aluno.id, dia) === 'extrapolado' ? 'border border-dashed border-amber-400' : ''}`
                                 : 'bg-gray-100 hover:bg-gray-200 text-gray-400 cursor-pointer'
                             }`}
+                            title={
+                              getOrigem(aluno.id, dia) === 'extrapolado'
+                                ? 'Justificado (extrapolado do Card Aula)'
+                                : status === 'justificado'
+                                ? 'Justificado'
+                                : status === 'cancelado'
+                                ? 'Aula cancelada - bloqueado'
+                                : `Clique para alterar presença`
+                            }
                           >
                             {futura ? '-' : statusToSymbol(status)}
                           </button>

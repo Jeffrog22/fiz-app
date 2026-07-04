@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { TenantRequest } from '../types';
 import * as chamadasService from '../services/chamadasService';
 import * as cardAulaService from '../services/cardAulaService';
+import * as extrapolarService from '../services/extrapolarService';
 
 export class ChamadasController {
   static async listarPorData(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
@@ -61,8 +62,18 @@ export class ChamadasController {
   static async salvarCardAula(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const tenantId = req.tenantId!;
-      const { data, indice_aula, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido } = req.body;
+      const { data, indice_aula, grupo_id, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido } = req.body;
       await cardAulaService.salvarCardAula(tenantId, data, indice_aula || 0, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido);
+
+      // Auto-extrapolar 'J' para índices subsequentes se cardAula sugeriu FALTA_JUSTIFICADA
+      if (status_sugerido === 'FALTA_JUSTIFICADA' && grupo_id) {
+        try {
+          await extrapolarService.extrapolarJustificativa(tenantId, data, grupo_id, indice_aula || 0, 12, motivo_sugerido || '');
+        } catch (extError) {
+          console.error('[salvarCardAula] Erro ao extrapolar justificativa:', extError);
+        }
+      }
+
       res.json({ ok: true });
     } catch (error) {
       next(error);

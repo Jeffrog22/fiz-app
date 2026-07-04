@@ -15,6 +15,7 @@ interface Props {
   onClose: () => void;
   data: string;
   indiceAula: number;
+  grupoId: string;
   onAbrirBO?: () => void;
 }
 
@@ -22,7 +23,7 @@ const SENSACOES = ['Calor', 'Abafado', 'Seco', 'Agradável', 'Vento', 'Frio', 'F
 
 const CONDICOES = Object.values(WMO_MAP).filter((v, i, a) => a.indexOf(v) === i);
 
-const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, onAbrirBO }) => {
+const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, onAbrirBO }) => {
   const [tempExterna, setTempExterna] = useState(26);
   const [tempPiscina, setTempPiscina] = useState(28);
   const [cloro, setCloro] = useState(2.5);
@@ -114,6 +115,7 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, onAbrirB
     try {
       await api.post('/chamadas/card-aula', {
         data, indice_aula: indiceAula,
+        grupo_id: grupoId,
         temperatura_externa: tempExterna,
         temperatura_piscina: tempPiscina,
         cloro_ppm: cloro,

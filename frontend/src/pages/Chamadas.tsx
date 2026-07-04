@@ -645,9 +645,10 @@ const Chamadas: React.FC = () => {
 
       <CardAula
         aberto={cardAulaAberto}
-        onClose={() => setCardAulaAberto(false)}
+        onClose={() => { setCardAulaAberto(false); carregarLogs(); }}
         data={dateHeaderClickData}
         indiceAula={indiceAtual}
+        grupoId={grupoId}
         onAbrirBO={() => { setCardAulaAberto(false); setCardBOAberto(true); }}
       />
 
