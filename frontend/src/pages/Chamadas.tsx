@@ -60,7 +60,6 @@ const Chamadas: React.FC = () => {
   const [cardAulaAberto, setCardAulaAberto] = useState(false);
   const [cardBOAberto, setCardBOAberto] = useState(false);
   const [dateHeaderClickData, setDateHeaderClickData] = useState<string>('');
-  const [pendingToggle, setPendingToggle] = useState<{ alunoId: string; data: string; status: PresencaStatus } | null>(null);
   const [alunosComAnotacao, setAlunosComAnotacao] = useState<Set<string>>(new Set());
   const [cardAulaData, setCardAulaData] = useState<Record<string, any>>({});
 
@@ -264,14 +263,6 @@ const Chamadas: React.FC = () => {
     (alunoId: string, data: string, status: PresencaStatus) => {
       if (!retroativo && data < dias[0]) return;
 
-      const hasPriorLog = alunosDaTurma.some((a) => logs[a.id]?.[data]?.status != null);
-      if (!hasPriorLog) {
-        setPendingToggle({ alunoId, data, status });
-        setDateHeaderClickData(data);
-        setCardAulaAberto(true);
-        return;
-      }
-
       const currentStatus = logs[alunoId]?.[data]?.status;
       undoStack.current.push({ type: 'presenca', alunoId, data, indice: indiceAtual, statusAntigo: currentStatus });
       if (undoStack.current.length > MAX_UNDO) undoStack.current.shift();
@@ -298,38 +289,8 @@ const Chamadas: React.FC = () => {
       });
       agendarSalvamento(payload);
     },
-    [indiceAtual, agendarSalvamento, logs, retroativo, dias, alunosDaTurma],
+    [indiceAtual, agendarSalvamento, logs, retroativo, dias],
   );
-
-  useEffect(() => {
-    if (!cardAulaAberto && pendingToggle) {
-      const { alunoId, data, status } = pendingToggle;
-      setPendingToggle(null);
-      const currentStatus = logs[alunoId]?.[data]?.status;
-      undoStack.current.push({ type: 'presenca', alunoId, data, indice: indiceAtual, statusAntigo: currentStatus });
-      if (undoStack.current.length > MAX_UNDO) undoStack.current.shift();
-      setUndoCount((c) => c + 1);
-      const payload = [{
-        grupo_id: alunoId, data, indice_aula: indiceAtual,
-        status: status || null, origem: 'manual',
-      }];
-      setLogs((prev) => {
-        const next = { ...prev };
-        if (!next[alunoId]) next[alunoId] = {};
-        if (status) {
-          next[alunoId][data] = {
-            id: '', tenant_id: '', data, grupo_id: alunoId,
-            indice_aula: indiceAtual, status, origem: 'manual',
-            criado_em: new Date().toISOString(),
-          };
-        } else {
-          delete next[alunoId][data];
-        }
-        return next;
-      });
-      agendarSalvamento(payload);
-    }
-  }, [cardAulaAberto, pendingToggle, indiceAtual, agendarSalvamento, logs]);
 
   const handleUpdateAnotacao = useCallback(
     (alunoId: string, data: string, anotacao: string) => {
@@ -460,19 +421,6 @@ const Chamadas: React.FC = () => {
     }
   }, [indiceAtual, agendarSalvamento]);
 
-  const handleExtrapolar = useCallback(async () => {
-    if (dias.length === 0) return;
-    try {
-      const res = await api.post('/chamadas/extrapolar', {
-        data: dias[0], indice_aula: indiceAtual,
-      });
-      alert(res.data.message || 'Presenca extrapolada');
-      carregarLogs();
-    } catch (err: any) {
-      alert(err?.response?.data?.error || 'Erro ao extrapolar');
-    }
-  }, [dias, indiceAtual, carregarLogs]);
-
   const handleLimpar = useCallback(() => {
     if (alunosDaTurma.length === 0 || dias.length === 0) return;
     const data = dias[0];
@@ -574,10 +522,6 @@ const Chamadas: React.FC = () => {
               Limpar
             </button>
           )}
-          <button onClick={handleExtrapolar} disabled={!grupoId}
-            className="px-3 py-1.5 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100 border border-blue-200 transition disabled:opacity-30 disabled:cursor-not-allowed">
-            Extrapolar
-          </button>
           <button onClick={() => { setDateHeaderClickData(dias[0] || ''); setCardAulaAberto(true); }} disabled={!grupoId}
             className="px-3 py-1.5 text-xs bg-cyan-50 text-cyan-700 rounded hover:bg-cyan-100 border border-cyan-200 transition disabled:opacity-30 disabled:cursor-not-allowed">
             Card Aula
