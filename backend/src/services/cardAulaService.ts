@@ -53,15 +53,42 @@ export async function salvarCardAula(
   if (status_sugerido === 'AULA_CANCELADA') logFields.status = 'cancelado';
   else if (status_sugerido === 'FALTA_JUSTIFICADA') logFields.status = 'justificado';
 
-  const { error: updateError } = await supabase
+  const { data: registros } = await supabase
     .from('chamadas_log')
-    .update(logFields)
+    .select('id')
     .eq('tenant_id', tenantId)
     .eq('data', data)
-    .eq('indice_aula', indice_aula);
+    .eq('indice_aula', indice_aula)
+    .limit(1);
 
-  if (updateError) {
-    console.error('[cardAulaService] Erro ao propagar p/ chamadas_log:', updateError.message);
+  if (registros && registros.length > 0) {
+    const { error: updateError } = await supabase
+      .from('chamadas_log')
+      .update(logFields)
+      .eq('tenant_id', tenantId)
+      .eq('data', data)
+      .eq('indice_aula', indice_aula);
+    if (updateError) console.error('[cardAulaService] Erro ao propagar p/ chamadas_log:', updateError.message);
+  } else {
+    const { data: alunos } = await supabase
+      .from('alunos')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .eq('ativo', true);
+    if (alunos && alunos.length > 0) {
+      const novosLogs = alunos.map((a: any) => ({
+        tenant_id: tenantId,
+        data,
+        grupo_id: a.id,
+        indice_aula,
+        status: null,
+        ...logFields,
+      }));
+      const { error: insertError } = await supabase
+        .from('chamadas_log')
+        .upsert(novosLogs, { onConflict: 'tenant_id,data,grupo_id,indice_aula' });
+      if (insertError) console.error('[cardAulaService] Erro ao criar logs:', insertError.message);
+    }
   }
 
   registrarOperacao({
