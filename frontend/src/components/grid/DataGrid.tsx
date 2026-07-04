@@ -302,35 +302,9 @@ const DataGrid: React.FC<DataGridProps> = ({
                                 ? `${STATUS_COLORS[status]} cursor-pointer ${getOrigem(aluno.id, dia) === 'extrapolado' ? 'border border-dashed border-amber-400' : ''}`
                                 : 'bg-gray-100 hover:bg-gray-200 text-gray-400 cursor-pointer'
                             }`}
-                            title={
-                              getOrigem(aluno.id, dia) === 'extrapolado'
-                                ? 'Justificado (extrapolado do Card Aula)'
-                                : status === 'justificado'
-                                ? 'Justificado'
-                                : status === 'cancelado'
-                                ? 'Aula cancelada - bloqueado'
-                                : `Clique para alterar presença`
-                            }
                           >
                             {futura ? '-' : statusToSymbol(status)}
                           </button>
-                          {editandoAnotacao?.alunoId === aluno.id &&
-                          editandoAnotacao?.data === dia ? (
-                            <input
-                              autoFocus
-                              className="w-16 text-[10px] px-1 py-0.5 border border-gray-300 rounded"
-                              value={anotacaoTemp}
-                              onChange={(e) => setAnotacaoTemp(e.target.value)}
-                              onBlur={() => handleAnotacaoBlur(aluno.id, dia)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleAnotacaoBlur(aluno.id, dia);
-                              }}
-                            />
-                          ) : (
-                            <span className="text-[10px] text-gray-400 max-w-[60px] truncate block leading-tight">
-                              {getAnotacao(aluno.id, dia) || ''}
-                            </span>
-                          )}
                         </div>
                       </td>
                     );
