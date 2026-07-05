@@ -1,19 +1,24 @@
 #!/bin/sh
-# Auto-creates git tag from CHANGELOG.md after every commit
+# Auto-creates git tag on every commit by bumping the latest tag
+# Uses: v<major>.<minor>.<patch> scheme
 
-CHANGELOG="CHANGELOG.md"
-VERSION=$(grep -m1 '^## \[' "$CHANGELOG" | sed 's/^## \[v\?\(.*\)\].*/\1/')
+LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+VERSION=${LAST_TAG#v}
 
-if [ -z "$VERSION" ]; then
-  exit 0
-fi
+MAJOR=$(echo "$VERSION" | cut -d. -f1)
+MINOR=$(echo "$VERSION" | cut -d. -f2)
+PATCH=$(echo "$VERSION" | cut -d. -f3)
 
-TAG="v$VERSION"
+# Strip any suffix like -rc1, -beta etc
+PATCH=$(echo "$PATCH" | sed 's/[^0-9].*//')
 
-# Only create tag if it doesn't exist yet
-if git rev-parse "$TAG" >/dev/null 2>&1; then
-  exit 0
-fi
+# Default to 0 if empty
+MAJOR=${MAJOR:-0}
+MINOR=${MINOR:-0}
+PATCH=${PATCH:-0}
 
-git tag "$TAG"
-echo "post-commit: created tag $TAG"
+PATCH=$((PATCH + 1))
+NEW_TAG="v$MAJOR.$MINOR.$PATCH"
+
+git tag "$NEW_TAG"
+echo "post-commit: created tag $NEW_TAG (previous: $LAST_TAG)"
