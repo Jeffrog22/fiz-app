@@ -60,7 +60,7 @@ async function extrapolarPorLabel(
     let indicesAProcessar: number[];
     if (apenasSubsequentesOrigem && profId === (sourceTurma.professor_id || 'sem_professor')) {
       indicesAProcessar = [];
-      for (let i = indiceAulaOrigem + 1; i < maxIndices; i++) indicesAProcessar.push(i);
+      for (let i = indiceAulaOrigem; i < maxIndices; i++) indicesAProcessar.push(i);
     } else {
       indicesAProcessar = [];
       for (let i = 0; i < maxIndices; i++) indicesAProcessar.push(i);

@@ -125,8 +125,8 @@ const Turmas: React.FC = () => {
                 <th className="text-left px-4 py-2 font-medium text-gray-500">Turma</th>
                 <th className="text-left px-4 py-2 font-medium text-gray-500">Horário</th>
                 <th className="text-left px-4 py-2 font-medium text-gray-500">Nível</th>
-                <th className="text-left px-4 py-2 font-medium text-gray-500">Faixa Etária</th>
                 <th className="text-left px-4 py-2 font-medium text-gray-500">Professor</th>
+                <th className="text-left px-4 py-2 font-medium text-gray-500">Faixa Etária</th>
                 <th className="text-left px-4 py-2 font-medium text-gray-500">Lotação</th>
                 <th className="text-right px-4 py-2 font-medium text-gray-500">Ações</th>
               </tr>
@@ -144,8 +144,8 @@ const Turmas: React.FC = () => {
                     </td>
                     <td className="px-4 py-2 text-gray-600">{(t.horario || '').slice(0, 5)}</td>
                     <td className="px-4 py-2 text-gray-600">{t.nivel || '-'}</td>
-                    <td className="px-4 py-2 text-gray-600">{t.faixa_etaria || '-'}</td>
                     <td className="px-4 py-2 text-gray-600">{professorNome(t.professor_id)}</td>
+                    <td className="px-4 py-2 text-gray-600">{t.faixa_etaria || '-'}</td>
                     <td className="px-4 py-2">
                       <span
                         className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${lotacaoClass(alunosCount, t.capacidade)}`}
