@@ -44,7 +44,7 @@ const Chamadas: React.FC = () => {
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [professores, setProfessores] = useState<Professor[]>([]);
   const [eventos, setEventos] = useState<CalendarioEvento[]>([]);
-  const [logs, setLogs] = useState<Record<string, Record<string, ChamadaLog>>>({});
+  const [logs, setLogs] = useState<Record<string, Record<string, Record<number, ChamadaLog>>>>({});
   const [carregando, setCarregando] = useState(true);
   const [statusSave, setStatusSave] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
@@ -126,11 +126,12 @@ const Chamadas: React.FC = () => {
       const fim = dias[dias.length - 1];
       const res = await api.get(`/chamadas/periodo?inicio=${inicio}&fim=${fim}`);
       const raw: ChamadaLog[] = res.data;
-      const indexed: Record<string, Record<string, ChamadaLog>> = {};
+      const indexed: Record<string, Record<string, Record<number, ChamadaLog>>> = {};
       for (const log of raw) {
         const alunoId = log.grupo_id || 'unknown';
         if (!indexed[alunoId]) indexed[alunoId] = {};
-        indexed[alunoId][log.data] = log;
+        if (!indexed[alunoId][log.data]) indexed[alunoId][log.data] = {};
+        indexed[alunoId][log.data][log.indice_aula] = log;
       }
       setLogs(indexed);
     } catch (err) {
@@ -263,7 +264,7 @@ const Chamadas: React.FC = () => {
     (alunoId: string, data: string, status: PresencaStatus) => {
       if (!retroativo && data < dias[0]) return;
 
-      const currentStatus = logs[alunoId]?.[data]?.status;
+      const currentStatus = logs[alunoId]?.[data]?.[indiceAtual]?.status;
       undoStack.current.push({ type: 'presenca', alunoId, data, indice: indiceAtual, statusAntigo: currentStatus });
       if (undoStack.current.length > MAX_UNDO) undoStack.current.shift();
       setUndoCount((c) => c + 1);
@@ -276,14 +277,16 @@ const Chamadas: React.FC = () => {
       setLogs((prev) => {
         const next = { ...prev };
         if (!next[alunoId]) next[alunoId] = {};
+        if (!next[alunoId][data]) next[alunoId][data] = {};
         if (status) {
-          next[alunoId][data] = {
+          next[alunoId][data][indiceAtual] = {
             id: '', tenant_id: '', data, grupo_id: alunoId,
             indice_aula: indiceAtual, status, origem: 'manual',
             criado_em: new Date().toISOString(),
           };
         } else {
-          delete next[alunoId][data];
+          delete next[alunoId][data][indiceAtual];
+          if (Object.keys(next[alunoId][data]).length === 0) delete next[alunoId][data];
         }
         return next;
       });
@@ -294,7 +297,7 @@ const Chamadas: React.FC = () => {
 
   const handleUpdateAnotacao = useCallback(
     (alunoId: string, data: string, anotacao: string) => {
-      const motivoAntigo = logs[alunoId]?.[data]?.motivo;
+      const motivoAntigo = logs[alunoId]?.[data]?.[indiceAtual]?.motivo;
       undoStack.current.push({ type: 'anotacao', alunoId, data, indice: indiceAtual, motivoAntigo });
       if (undoStack.current.length > MAX_UNDO) undoStack.current.shift();
       setUndoCount((c) => c + 1);
@@ -306,7 +309,8 @@ const Chamadas: React.FC = () => {
       setLogs((prev) => {
         const next = { ...prev };
         if (!next[alunoId]) next[alunoId] = {};
-        next[alunoId][data] = { ...next[alunoId][data], motivo: anotacao } as ChamadaLog;
+        if (!next[alunoId][data]) next[alunoId][data] = {};
+        next[alunoId][data][indiceAtual] = { ...next[alunoId][data][indiceAtual], motivo: anotacao } as ChamadaLog;
         return next;
       });
       agendarSalvamento(payload);
@@ -332,9 +336,16 @@ const Chamadas: React.FC = () => {
       setLogs((prev) => {
         const next = { ...prev };
         if (!next[alunoId]) next[alunoId] = {};
-        next[alunoId][data] = {
-          ...next[alunoId][data],
+        if (!next[alunoId][data]) next[alunoId][data] = {};
+        next[alunoId][data][indiceAtual] = {
+          ...next[alunoId][data][indiceAtual],
+          id: next[alunoId][data][indiceAtual]?.id || '',
+          tenant_id: next[alunoId][data][indiceAtual]?.tenant_id || '',
+          data, grupo_id: alunoId,
+          indice_aula: indiceAtual,
           status: 'justificado', motivo,
+          origem: next[alunoId][data][indiceAtual]?.origem || 'manual',
+          criado_em: next[alunoId][data][indiceAtual]?.criado_em || new Date().toISOString(),
         } as ChamadaLog;
         return next;
       });
@@ -351,22 +362,27 @@ const Chamadas: React.FC = () => {
     switch (action.type) {
       case 'presenca': {
         if (!action.alunoId || !action.data) return;
+        const idx = action.indice ?? indiceAtual;
         const payload = [{
           grupo_id: action.alunoId, data: action.data,
-          indice_aula: action.indice ?? indiceAtual,
+          indice_aula: idx,
           status: action.statusAntigo || null, origem: 'manual',
         }];
         setLogs((prev) => {
           const next = { ...prev };
           if (!next[action.alunoId!]) next[action.alunoId!] = {};
+          if (!next[action.alunoId!][action.data!]) next[action.alunoId!][action.data!] = {};
           if (action.statusAntigo) {
-            next[action.alunoId!][action.data!] = {
+            next[action.alunoId!][action.data!][idx] = {
               id: '', tenant_id: '', data: action.data!, grupo_id: action.alunoId!,
-              indice_aula: action.indice ?? indiceAtual, status: action.statusAntigo, origem: 'manual',
+              indice_aula: idx, status: action.statusAntigo, origem: 'manual',
               criado_em: new Date().toISOString(),
             };
           } else {
-            delete next[action.alunoId!][action.data!];
+            delete next[action.alunoId!][action.data!][idx];
+            if (Object.keys(next[action.alunoId!][action.data!]).length === 0) {
+              delete next[action.alunoId!][action.data!];
+            }
           }
           return next;
         });
@@ -375,16 +391,18 @@ const Chamadas: React.FC = () => {
       }
       case 'anotacao': {
         if (!action.alunoId || !action.data) return;
+        const idx = action.indice ?? indiceAtual;
         const payload = [{
           grupo_id: action.alunoId, data: action.data,
-          indice_aula: action.indice ?? indiceAtual,
+          indice_aula: idx,
           motivo: action.motivoAntigo || null, origem: 'manual',
         }];
         setLogs((prev) => {
           const next = { ...prev };
           if (!next[action.alunoId!]) next[action.alunoId!] = {};
-          next[action.alunoId!][action.data!] = {
-            ...next[action.alunoId!][action.data!],
+          if (!next[action.alunoId!][action.data!]) next[action.alunoId!][action.data!] = {};
+          next[action.alunoId!][action.data!][idx] = {
+            ...next[action.alunoId!][action.data!][idx],
             motivo: action.motivoAntigo,
           } as ChamadaLog;
           return next;
@@ -394,23 +412,28 @@ const Chamadas: React.FC = () => {
       }
       case 'limpar': {
         if (!action.batch) return;
+        const idx = action.indice ?? indiceAtual;
         const payload = action.batch.map((b) => ({
           grupo_id: b.alunoId, data: action.data,
-          indice_aula: action.indice ?? indiceAtual,
+          indice_aula: idx,
           status: b.statusAntigo || null, origem: 'manual',
         }));
         setLogs((prev) => {
           const next = { ...prev };
           for (const b of action.batch!) {
             if (!next[b.alunoId]) next[b.alunoId] = {};
+            if (!next[b.alunoId][action.data!]) next[b.alunoId][action.data!] = {};
             if (b.statusAntigo) {
-              next[b.alunoId][action.data!] = {
+              next[b.alunoId][action.data!][idx] = {
                 id: '', tenant_id: '', data: action.data!, grupo_id: b.alunoId,
-                indice_aula: action.indice ?? indiceAtual, status: b.statusAntigo, origem: 'manual',
+                indice_aula: idx, status: b.statusAntigo, origem: 'manual',
                 criado_em: new Date().toISOString(),
               };
             } else {
-              delete next[b.alunoId][action.data!];
+              delete next[b.alunoId][action.data!][idx];
+              if (Object.keys(next[b.alunoId][action.data!]).length === 0) {
+                delete next[b.alunoId][action.data!];
+              }
             }
           }
           return next;
@@ -426,7 +449,7 @@ const Chamadas: React.FC = () => {
     const data = dias[0];
     const batch = alunosDaTurma.map((a) => ({
       alunoId: a.id,
-      statusAntigo: logs[a.id]?.[data]?.status,
+      statusAntigo: logs[a.id]?.[data]?.[indiceAtual]?.status,
     }));
     undoStack.current.push({ type: 'limpar', data, indice: indiceAtual, batch });
     if (undoStack.current.length > MAX_UNDO) undoStack.current.shift();
@@ -440,8 +463,11 @@ const Chamadas: React.FC = () => {
     setLogs((prev) => {
       const next = { ...prev };
       for (const b of batch) {
-        if (next[b.alunoId]?.[data]) {
-          delete next[b.alunoId][data];
+        if (next[b.alunoId]?.[data]?.[indiceAtual]) {
+          delete next[b.alunoId][data][indiceAtual];
+          if (Object.keys(next[b.alunoId][data]).length === 0) {
+            delete next[b.alunoId][data];
+          }
         }
       }
       return next;
@@ -556,6 +582,7 @@ const Chamadas: React.FC = () => {
           alunos={alunosDaTurma}
           dias={dias}
           logs={logs}
+          indiceAtual={indiceAtual}
           turma={turmaAtual}
           eventos={eventos}
           cardAulaData={cardAulaData}

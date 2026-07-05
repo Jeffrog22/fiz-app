@@ -54,7 +54,8 @@ interface CardAulaRecord {
 interface DataGridProps {
   alunos: Aluno[];
   dias: string[];
-  logs: Record<string, Record<string, ChamadaLog>>;
+  logs: Record<string, Record<string, Record<number, ChamadaLog>>>;
+  indiceAtual: number;
   turma?: Turma | null;
   eventos?: CalendarioEvento[];
   cardAulaData?: Record<string, CardAulaRecord>;
@@ -70,6 +71,7 @@ const DataGrid: React.FC<DataGridProps> = ({
   alunos,
   dias,
   logs,
+  indiceAtual,
   turma,
   eventos,
   cardAulaData,
@@ -104,23 +106,23 @@ const DataGrid: React.FC<DataGridProps> = ({
       if (dataEventos.length > 0) {
         return dataEventos[0].tipo as PresencaStatus;
       }
-      return logs[alunoId]?.[data]?.status as PresencaStatus;
+      return logs[alunoId]?.[data]?.[indiceAtual]?.status as PresencaStatus;
     },
-    [logs, eventosPorData]
+    [logs, eventosPorData, indiceAtual]
   );
 
   const getOrigem = useCallback(
     (alunoId: string, data: string): string | undefined => {
-      return logs[alunoId]?.[data]?.origem;
+      return logs[alunoId]?.[data]?.[indiceAtual]?.origem;
     },
-    [logs]
+    [logs, indiceAtual]
   );
 
   const getAnotacao = useCallback(
     (alunoId: string, data: string): string | undefined => {
-      return logs[alunoId]?.[data]?.motivo;
+      return logs[alunoId]?.[data]?.[indiceAtual]?.motivo;
     },
-    [logs]
+    [logs, indiceAtual]
   );
 
   const getCondicaoClima = useCallback(
@@ -129,22 +131,22 @@ const DataGrid: React.FC<DataGridProps> = ({
         return cardAulaData[data].condicao_clima;
       }
       for (const alunoId of Object.keys(logs)) {
-        const c = logs[alunoId]?.[data]?.condicao_clima;
+        const c = logs[alunoId]?.[data]?.[indiceAtual]?.condicao_clima;
         if (c) return c;
       }
       return undefined;
     },
-    [logs, cardAulaData]
+    [logs, cardAulaData, indiceAtual]
   );
 
   const temAlgumLog = useCallback(
     (data: string): boolean => {
       for (const alunoId of Object.keys(logs)) {
-        if (logs[alunoId]?.[data]?.status) return true;
+        if (logs[alunoId]?.[data]?.[indiceAtual]?.status) return true;
       }
       return false;
     },
-    [logs]
+    [logs, indiceAtual]
   );
 
   const contarFaltasMes = useCallback((alunoId: string): number => {
