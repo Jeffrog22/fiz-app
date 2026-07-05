@@ -54,6 +54,9 @@
 - Status `ChamadaLog.status` inclui 4 novos: `'feriado' | 'ponte' | 'reuniao' | 'evento'` — aplicados automaticamente via `POST /chamadas/aplicar-evento` quando há eventos no calendário
 - Paginação em Chamadas: `anterior`/`próximo` navega entre grupo_ids (jeftq01→jeftq02→...) ordenados por horário, dentro do mesmo label+professor
 - Horário no ChamadaFilters é read-only (auto-preenchido pela paginação), não mais dropdown selecionável
+- `chamadas_log.grupo_id` é TEXT (migration 017) — aceita `jeftq01`, necessário para extrapolação (antes UUID rejeitava)
+- PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
+- Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
 
 ---
 
