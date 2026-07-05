@@ -124,7 +124,7 @@ const Chamadas: React.FC = () => {
     try {
       const inicio = dias[0];
       const fim = dias[dias.length - 1];
-      const res = await api.get(`/chamadas/periodo?inicio=${inicio}&fim=${fim}`);
+      const res = await api.get(`/chamadas/periodo?inicio=${inicio}&fim=${fim}&_t=${Date.now()}`);
       const raw: ChamadaLog[] = res.data;
       const indexed: Record<string, Record<string, Record<number, ChamadaLog>>> = {};
       for (const log of raw) {
