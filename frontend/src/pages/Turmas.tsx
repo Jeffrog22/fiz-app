@@ -29,7 +29,7 @@ const Turmas: React.FC = () => {
       }
       setTurmas(resTurmas.data.map((t: any) => ({
         ...t,
-        alunos_count: alunosPorTurma[t.id] || 0,
+        alunos_count: alunosPorTurma[t.grupo_id] || 0,
       })));
       setProfessores(resProf.data);
     } catch (err) {
@@ -125,6 +125,7 @@ const Turmas: React.FC = () => {
                 <th className="text-left px-4 py-2 font-medium text-gray-500">Turma</th>
                 <th className="text-left px-4 py-2 font-medium text-gray-500">Horário</th>
                 <th className="text-left px-4 py-2 font-medium text-gray-500">Nível</th>
+                <th className="text-left px-4 py-2 font-medium text-gray-500">Faixa Etária</th>
                 <th className="text-left px-4 py-2 font-medium text-gray-500">Professor</th>
                 <th className="text-left px-4 py-2 font-medium text-gray-500">Lotação</th>
                 <th className="text-right px-4 py-2 font-medium text-gray-500">Ações</th>
@@ -143,6 +144,7 @@ const Turmas: React.FC = () => {
                     </td>
                     <td className="px-4 py-2 text-gray-600">{(t.horario || '').slice(0, 5)}</td>
                     <td className="px-4 py-2 text-gray-600">{t.nivel || '-'}</td>
+                    <td className="px-4 py-2 text-gray-600">{t.faixa_etaria || '-'}</td>
                     <td className="px-4 py-2 text-gray-600">{professorNome(t.professor_id)}</td>
                     <td className="px-4 py-2">
                       <span
@@ -170,7 +172,7 @@ const Turmas: React.FC = () => {
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
                     Nenhuma turma encontrada
                   </td>
                 </tr>

@@ -1,28 +1,22 @@
 # Changelog - Fiz! App
 
-## [v1.6.1] - 2026-07-03
+## [v1.9.0] - 2026-07-04
 ### Corrigido
-- **Erro 500 ao salvar chamadas** — colunas `origem` e `compromete_dia` faltando em produção causavam falha em SELECT (`eq('origem', 'calendario')`) e UPSERT. Migration 011 adiciona as colunas; `aplicarEventoCalendario` agora checa por `status` em vez de `origem`; fallback no `salvar` remove campos inexistentes automaticamente
-- **Persistência do índice da turma no grid** — `indiceAtual` salvo/restaurado via `sessionStorage`, mantendo exata posição visual ao navegar entre páginas
+- **Grid mostrava status errado ao navegar entre turmas** — `logs` state mudou de 2D `[alunoId][data]` para 3D `[alunoId][data][indice_aula]`, permitindo que cada slot de aula tenha seu próprio status independente
+- **Extrapolação só afetava um grupo_id** — `extrapolarService` reescrito: descobre o `label` da turma origem e aplica o CardAula a TODAS as turmas do mesmo label (todos professores, todos horários), com `maxIndices` dinâmico por grupo
+- **Versão incorreta no build Cloudflare** — adicionado `git fetch --tags --unshallow` ao build command para garantir que `git describe --tags` funcione mesmo em clone shallow
+- **Lotação de Turmas sempre 0** — lookup usava `t.id` (UUID) mas `alunos.turma_id` agora armazena `grupo_id` (texto). Corrigido para `t.grupo_id`
+- **Testes**: 41/41 frontend, 25/25 backend
 
 ### Adicionado
-- **Migration 011** — `ADD COLUMN IF NOT EXISTS origem` e `compromete_dia` em `chamadas_log`
-- **Log de erro no processarFila** — `console.error` com detalhes do erro de salvamento no frontend
+- **Coluna "Faixa Etária"** na página Turmas, entre Nível e Professor
 
 ### Arquivos alterados
-- `frontend/src/pages/Chamadas.tsx` — persistência de `indiceAtual`, reset condicional no mount inicial, log de erro no catch
-- `backend/src/services/chamadasService.ts` — verificação de eventos por `status` em vez de `origem`, fallback removendo colunas inexistentes, erro do Supabase incluído na resposta
-- `backend/src/migrations/011_add_missing_columns.sql` (novo)
-
-## [v1.6.2] - 2026-07-03
-### Corrigido
-- **FK constraint bloqueia salvamento** — `chamadas_log.grupo_id` tinha FK constraint adicionada acidentalmente via dashboard, violada ao salvar (UUID do aluno != grupo_id). Migration 012 remove a constraint
-
-### Adicionado
-- **Migration 012** — `DROP CONSTRAINT IF EXISTS chamadas_log_grupo_id_fkey`
-
-### Arquivos alterados
-- `backend/src/migrations/012_drop_grupo_id_fk.sql` (novo)
+- `backend/src/services/extrapolarService.ts` — reescrito (label-based)
+- `backend/src/utils/logEngine.ts` — tipos Operacao estendidos
+- `frontend/src/pages/Chamadas.tsx` — logs 3D, todos callbacks atualizados
+- `frontend/src/components/grid/DataGrid.tsx` — indiceAtual prop, lookups 3D
+- `frontend/src/pages/Turmas.tsx` — fix lotação (t.grupo_id) + coluna Faixa Etária
 
 ## [v1.8.1] - 2026-07-04
 ### Corrigido
@@ -80,6 +74,30 @@
 - `backend/src/controllers/chamadasController.ts` — destrutura `temperatura_externa` e demais campos
 - `backend/src/services/chamadasService.ts` — `salvarCardAula` aceita todos os campos, cria linhas se não existirem; `obterCardAula` retorna `temperatura_ext` e novos campos
 - `backend/src/migrations/013_add_card_aula_columns.sql` (novo)
+
+## [v1.6.2] - 2026-07-03
+### Corrigido
+- **FK constraint bloqueia salvamento** — `chamadas_log.grupo_id` tinha FK constraint adicionada acidentalmente via dashboard, violada ao salvar (UUID do aluno != grupo_id). Migration 012 remove a constraint
+
+### Adicionado
+- **Migration 012** — `DROP CONSTRAINT IF EXISTS chamadas_log_grupo_id_fkey`
+
+### Arquivos alterados
+- `backend/src/migrations/012_drop_grupo_id_fk.sql` (novo)
+
+## [v1.6.1] - 2026-07-03
+### Corrigido
+- **Erro 500 ao salvar chamadas** — colunas `origem` e `compromete_dia` faltando em produção causavam falha em SELECT (`eq('origem', 'calendario')`) e UPSERT. Migration 011 adiciona as colunas; `aplicarEventoCalendario` agora checa por `status` em vez de `origem`; fallback no `salvar` remove campos inexistentes automaticamente
+- **Persistência do índice da turma no grid** — `indiceAtual` salvo/restaurado via `sessionStorage`, mantendo exata posição visual ao navegar entre páginas
+
+### Adicionado
+- **Migration 011** — `ADD COLUMN IF NOT EXISTS origem` e `compromete_dia` em `chamadas_log`
+- **Log de erro no processarFila** — `console.error` com detalhes do erro de salvamento no frontend
+
+### Arquivos alterados
+- `frontend/src/pages/Chamadas.tsx` — persistência de `indiceAtual`, reset condicional no mount inicial, log de erro no catch
+- `backend/src/services/chamadasService.ts` — verificação de eventos por `status` em vez de `origem`, fallback removendo colunas inexistentes, erro do Supabase incluído na resposta
+- `backend/src/migrations/011_add_missing_columns.sql` (novo)
 
 ## [v1.6.0] - 2026-07-03
 ### Corrigido
