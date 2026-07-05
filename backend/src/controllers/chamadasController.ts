@@ -63,24 +63,33 @@ export class ChamadasController {
     try {
       const tenantId = req.tenantId!;
       const { data, indice_aula, grupo_id, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido } = req.body;
+      console.log('[salvarCardAula] Recebido:', { data, indice_aula, grupo_id, status_sugerido, motivo_sugerido, temperatura_piscina, cloro_ppm, condicao_clima });
+
       await cardAulaService.salvarCardAula(tenantId, data, indice_aula || 0, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido);
 
-      // Auto-extrapolar para índices subsequentes conforme status sugerido
+      // Auto-extrapolar conforme status sugerido
       if (grupo_id) {
         if (status_sugerido === 'AULA_CANCELADA') {
+          console.log('[salvarCardAula] Disparando extrapolarCancelamento para grupo_id:', grupo_id, 'data:', data, 'indice:', indice_aula);
           try {
-            // Cancelamento por condições climáticas (não cloro) - extrapola para todas as aulas do dia
-            await extrapolarService.extrapolarCancelamento(tenantId, data, grupo_id, indice_aula || 0, 12, motivo_sugerido || '');
+            const result = await extrapolarService.extrapolarCancelamento(tenantId, data, grupo_id, indice_aula || 0, 12, motivo_sugerido || '');
+            console.log('[salvarCardAula] Resultado extrapolarCancelamento:', result);
           } catch (extError) {
             console.error('[salvarCardAula] Erro ao extrapolar cancelamento:', extError);
           }
         } else if (status_sugerido === 'FALTA_JUSTIFICADA') {
+          console.log('[salvarCardAula] Disparando extrapolarJustificativa para grupo_id:', grupo_id, 'data:', data, 'indice:', indice_aula);
           try {
-            await extrapolarService.extrapolarJustificativa(tenantId, data, grupo_id, indice_aula || 0, 12, motivo_sugerido || '');
+            const result = await extrapolarService.extrapolarJustificativa(tenantId, data, grupo_id, indice_aula || 0, 12, motivo_sugerido || '');
+            console.log('[salvarCardAula] Resultado extrapolarJustificativa:', result);
           } catch (extError) {
             console.error('[salvarCardAula] Erro ao extrapolar justificativa:', extError);
           }
+        } else {
+          console.log('[salvarCardAula] status_sugerido ignorado para extrapolacao:', status_sugerido);
         }
+      } else {
+        console.log('[salvarCardAula] grupo_id vazio â€” extrapolacao ignorada');
       }
 
       res.json({ ok: true });

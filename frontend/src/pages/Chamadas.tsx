@@ -548,11 +548,11 @@ const Chamadas: React.FC = () => {
               Limpar
             </button>
           )}
-          <button onClick={() => { setDateHeaderClickData(dias[0] || ''); setCardAulaAberto(true); }} disabled={!grupoId}
+          <button onClick={() => { if (!dateHeaderClickData) setDateHeaderClickData(dias[0] || ''); setCardAulaAberto(true); }} disabled={!grupoId}
             className="px-3 py-1.5 text-xs bg-cyan-50 text-cyan-700 rounded hover:bg-cyan-100 border border-cyan-200 transition disabled:opacity-30 disabled:cursor-not-allowed">
             Card Aula
           </button>
-          <button onClick={() => { setDateHeaderClickData(dias[0] || ''); setCardBOAberto(true); }} disabled={!grupoId}
+          <button onClick={() => { if (!dateHeaderClickData) setDateHeaderClickData(dias[0] || ''); setCardBOAberto(true); }} disabled={!grupoId}
             className="px-3 py-1.5 text-xs bg-orange-50 text-orange-700 rounded hover:bg-orange-100 border border-orange-200 transition disabled:opacity-30 disabled:cursor-not-allowed">
             Card BO
           </button>
