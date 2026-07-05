@@ -40,62 +40,14 @@ export async function salvarCardAula(
     }
   }
 
-  // 2. Propagar para chamadas_log (apenas alunos do indice_aula)
-  const logFields: Record<string, any> = {
-    condicao_clima: condicao_clima ?? null,
-    temperatura_ext: temperatura_externa ?? null,
-    temperatura_piscina: temperatura_piscina ?? null,
-    cloro_ppm: cloro_ppm ?? null,
-  };
-  if (sensacao !== undefined) logFields.sensacao = sensacao;
-  if (status_sugerido !== undefined) logFields.status_sugerido = status_sugerido;
-  if (motivo_sugerido !== undefined) logFields.motivo_sugerido = motivo_sugerido;
-  if (status_sugerido === 'AULA_CANCELADA') logFields.status = 'cancelado';
-  else if (status_sugerido === 'FALTA_JUSTIFICADA') logFields.status = 'justificado';
-
-  const { data: registros } = await supabase
-    .from('chamadas_log')
-    .select('id')
-    .eq('tenant_id', tenantId)
-    .eq('data', data)
-    .eq('indice_aula', indice_aula)
-    .limit(1);
-
-  if (registros && registros.length > 0) {
-    const { error: updateError } = await supabase
-      .from('chamadas_log')
-      .update(logFields)
-      .eq('tenant_id', tenantId)
-      .eq('data', data)
-      .eq('indice_aula', indice_aula);
-    if (updateError) console.error('[cardAulaService] Erro ao propagar p/ chamadas_log:', updateError.message);
-  } else {
-    const { data: alunos } = await supabase
-      .from('alunos')
-      .select('id')
-      .eq('tenant_id', tenantId)
-      .eq('ativo', true);
-    if (alunos && alunos.length > 0) {
-      const novosLogs = alunos.map((a: any) => ({
-        tenant_id: tenantId,
-        data,
-        grupo_id: a.id,
-        indice_aula,
-        status: null,
-        ...logFields,
-      }));
-      const { error: insertError } = await supabase
-        .from('chamadas_log')
-        .upsert(novosLogs, { onConflict: 'tenant_id,data,grupo_id,indice_aula' });
-      if (insertError) console.error('[cardAulaService] Erro ao criar logs:', insertError.message);
-    }
-  }
+  // 2. CardAula é diário da piscina — NÃO propaga para chamadas_log (evita 125 logs/dia)
+  // A extrapolação (cancela/justifica) cria 1 log por turma no chamadas_log
 
   registrarOperacao({
     tenant_id: tenantId,
     tabela: 'card_aula',
     operacao: 'atualizacao',
-    dados: { data, indice_aula, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima },
+    dados: { data, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima },
   });
 }
 

@@ -126,15 +126,13 @@ const Chamadas: React.FC = () => {
       const fim = dias[dias.length - 1];
       const res = await api.get(`/chamadas/periodo?inicio=${inicio}&fim=${fim}&_t=${Date.now()}`);
       const raw: ChamadaLog[] = res.data;
-      console.log('[carregarLogs] raw.length:', raw.length, 'primeiro log:', raw[0] ? { data: raw[0].data, grupo_id: raw[0].grupo_id, indice: raw[0].indice_aula, status: raw[0].status } : 'vazio');
       const indexed: Record<string, Record<string, Record<number, ChamadaLog>>> = {};
       for (const log of raw) {
-        const alunoId = log.grupo_id || 'unknown';
-        if (!indexed[alunoId]) indexed[alunoId] = {};
-        if (!indexed[alunoId][log.data]) indexed[alunoId][log.data] = {};
-        indexed[alunoId][log.data][log.indice_aula] = log;
+        const key = log.grupo_id || 'unknown';
+        if (!indexed[key]) indexed[key] = {};
+        if (!indexed[key][log.data]) indexed[key][log.data] = {};
+        indexed[key][log.data][log.indice_aula] = log;
       }
-      console.log('[carregarLogs] indexed keys para 2026-06-11:', Object.values(indexed).some(a => a['2026-06-11']) ? Object.keys(Object.values(indexed).find((a: any) => a['2026-06-11'])!['2026-06-11']) : 'nenhum');
       setLogs(indexed);
     } catch (err) {
       console.error('Erro ao carregar chamadas', err);
@@ -588,6 +586,7 @@ const Chamadas: React.FC = () => {
           turma={turmaAtual}
           eventos={eventos}
           cardAulaData={cardAulaData}
+          turmaGrupoId={grupoId}
           onTogglePresenca={handleTogglePresenca}
           onUpdateAnotacao={handleUpdateAnotacao}
           onDateHeaderClick={handleDateHeaderClick}

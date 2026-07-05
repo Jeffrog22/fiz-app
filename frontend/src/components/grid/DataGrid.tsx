@@ -59,6 +59,7 @@ interface DataGridProps {
   turma?: Turma | null;
   eventos?: CalendarioEvento[];
   cardAulaData?: Record<string, CardAulaRecord>;
+  turmaGrupoId?: string;
   onTogglePresenca: (alunoId: string, data: string, status: PresencaStatus) => void;
   onUpdateAnotacao: (alunoId: string, data: string, anotacao: string) => void;
   onDateHeaderClick: (data: string) => void;
@@ -75,6 +76,7 @@ const DataGrid: React.FC<DataGridProps> = ({
   turma,
   eventos,
   cardAulaData,
+  turmaGrupoId,
   onTogglePresenca,
   onUpdateAnotacao,
   onDateHeaderClick,
@@ -106,13 +108,17 @@ const DataGrid: React.FC<DataGridProps> = ({
       if (dataEventos.length > 0) {
         return dataEventos[0].tipo as PresencaStatus;
       }
-      const log = logs[alunoId]?.[data]?.[indiceAtual];
-      if (data === '2026-06-11' || data === '2026-06-16') {
-        console.log('[DataGrid.getStatus]', { alunoId, data, indiceAtual, status: log?.status, origem: log?.origem, hasLog: !!log });
+      // P/F/J manual do aluno
+      const alunoStatus = logs[alunoId]?.[data]?.[indiceAtual]?.status;
+      if (alunoStatus) return alunoStatus as PresencaStatus;
+      // Fallback: status da turma (cancelado/justificado via extrapolação)
+      if (turmaGrupoId) {
+        const turmaLog = logs[turmaGrupoId]?.[data]?.[indiceAtual];
+        if (turmaLog?.status) return turmaLog.status as PresencaStatus;
       }
-      return log?.status as PresencaStatus;
+      return undefined;
     },
-    [logs, eventosPorData, indiceAtual]
+    [logs, eventosPorData, indiceAtual, turmaGrupoId]
   );
 
   const getOrigem = useCallback(

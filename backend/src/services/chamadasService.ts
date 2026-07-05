@@ -28,7 +28,8 @@ export async function listarPorPeriodo(inicio: string, fim: string, tenantId: st
     .gte('data', inicio)
     .lte('data', fim)
     .order('data', { ascending: true })
-    .order('indice_aula', { ascending: true });
+    .order('indice_aula', { ascending: true })
+    .limit(100000);
 
   if (error) throw new AppError('Erro ao buscar chamadas', 500);
   return logs || [];

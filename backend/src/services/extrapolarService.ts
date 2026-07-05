@@ -25,10 +25,8 @@ async function extrapolarPorLabel(
     throw new AppError('Erro ao buscar turma de origem', 500);
   }
   if (!sourceTurma) {
-    console.log('[extrapolarPorLabel] Turma nao encontrada para grupo_id:', grupoId);
     return { message: `Turma ${grupoId} não encontrada`, count: 0 };
   }
-  console.log('[extrapolarPorLabel] Turma origem encontrada:', { grupoId, label: sourceTurma.label, professor_id: sourceTurma.professor_id });
 
   const { data: allTurmas, error: turmasError } = await supabase
     .from('turmas')
@@ -44,22 +42,21 @@ async function extrapolarPorLabel(
   }
 
   if (!allTurmas || allTurmas.length === 0) {
-    console.log('[extrapolarPorLabel] Nenhuma turma encontrada para o label:', sourceTurma.label);
     return { message: `Nenhuma turma encontrada para o label ${sourceTurma.label}`, count: 0 };
   }
-  console.log('[extrapolarPorLabel] Turmas do mesmo label:', allTurmas.map(t => ({ grupo_id: t.grupo_id, professor_id: t.professor_id, horario: t.horario })));
 
-  const profGroups = new Map<string, string[]>();
+  // Agrupa turmas por professor para determinar maxIndices por grupo
+  const profGroups = new Map<string, { grupo_id: string; horario: string }[]>();
   for (const t of allTurmas) {
     const prof = t.professor_id || 'sem_professor';
     if (!profGroups.has(prof)) profGroups.set(prof, []);
-    profGroups.get(prof)!.push(t.grupo_id);
+    profGroups.get(prof)!.push({ grupo_id: t.grupo_id, horario: t.horario });
   }
 
   const logsCriados: any[] = [];
 
-  for (const [profId, grupoIds] of profGroups) {
-    const maxIndices = grupoIds.length;
+  for (const [profId, turmas] of profGroups) {
+    const maxIndices = turmas.length;
 
     let indicesAProcessar: number[];
     if (apenasSubsequentesOrigem && profId === (sourceTurma.professor_id || 'sem_professor')) {
@@ -72,75 +69,18 @@ async function extrapolarPorLabel(
 
     if (indicesAProcessar.length === 0) continue;
 
-    console.log('[extrapolarPorLabel] Prof:', profId, 'grupoIds:', grupoIds, 'maxIndices:', maxIndices, 'indicesAProcessar:', indicesAProcessar);
-
-    const { data: alunos, error: alunosError } = await supabase
-      .from('alunos')
-      .select('id')
-      .eq('tenant_id', tenantId)
-      .in('turma_id', grupoIds)
-      .eq('ativo', true);
-
-    if (alunosError) {
-      console.error('[extrapolarPorLabel] Erro ao buscar alunos:', alunosError.message);
-      continue;
-    }
-
-    const alunoIds = (alunos || []).map((a: any) => a.id);
-    if (alunoIds.length === 0) {
-      console.log('[extrapolarPorLabel] Nenhum aluno ativo nos grupoIds:', grupoIds);
-      continue;
-    }
-    console.log('[extrapolarPorLabel] Alunos encontrados:', alunoIds.length);
-
-    const { data: existingLogs, error: fetchError } = await supabase
-      .from('chamadas_log')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .eq('data', data)
-      .in('grupo_id', alunoIds);
-
-    if (fetchError) {
-      console.error('[extrapolarPorLabel] Erro ao buscar logs:', fetchError.message);
-      continue;
-    }
-    console.log('[extrapolarPorLabel] Logs existentes para data', data, ':', existingLogs?.length || 0);
-
-    const existingMap = new Map<string, any>();
-    for (const log of existingLogs || []) {
-      existingMap.set(`${log.grupo_id}_${log.indice_aula}`, log);
-    }
-
-    let criadosNesteProf = 0;
     for (const idx of indicesAProcessar) {
-      for (const alunoId of alunoIds) {
-        const key = `${alunoId}_${idx}`;
-        const existing = existingMap.get(key);
-
-        if (existing) {
-          if (existing.origem === 'manual' || existing.origem === 'calendario') {
-            if (criadosNesteProf === 0 && idx === indicesAProcessar[0]) console.log('[extrapolarPorLabel] Pulando aluno', alunoId, 'idx', idx, '— origem:', existing.origem);
-            continue;
-          }
-          if (existing.status === 'cancelado') {
-            if (criadosNesteProf === 0 && idx === indicesAProcessar[0]) console.log('[extrapolarPorLabel] Pulando aluno', alunoId, 'idx', idx, '— status cancelado');
-            continue;
-          }
-        }
-
-        logsCriados.push({
-          tenant_id: tenantId,
-          data,
-          grupo_id: alunoId,
-          indice_aula: idx,
-          status,
-          motivo: motivo || existing?.motivo || null,
-          origem: 'extrapolado',
-        });
-        criadosNesteProf++;
-      }
+      const turmaGrupoId = turmas[idx].grupo_id;
+      logsCriados.push({
+        tenant_id: tenantId,
+        data,
+        grupo_id: turmaGrupoId,
+        indice_aula: idx,
+        status,
+        motivo: motivo || null,
+        origem: 'extrapolado',
+      });
     }
-    console.log('[extrapolarPorLabel] Logs criados para prof', profId, ':', criadosNesteProf);
   }
 
   if (logsCriados.length === 0) {
@@ -175,7 +115,7 @@ async function extrapolarPorLabel(
   });
 
   const label = status === 'cancelado' ? 'Cancelamento' : 'Justificativa';
-  return { message: `${label} extrapolado para ${logsCriados.length} registros em ${sourceTurma.label}`, count: logsCriados.length };
+  return { message: `${label} extrapolado para ${logsCriados.length} turmas em ${sourceTurma.label}`, count: logsCriados.length };
 }
 
 export async function extrapolarJustificativa(
