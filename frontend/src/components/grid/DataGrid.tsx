@@ -106,7 +106,11 @@ const DataGrid: React.FC<DataGridProps> = ({
       if (dataEventos.length > 0) {
         return dataEventos[0].tipo as PresencaStatus;
       }
-      return logs[alunoId]?.[data]?.[indiceAtual]?.status as PresencaStatus;
+      const log = logs[alunoId]?.[data]?.[indiceAtual];
+      if (data === '2026-06-11' || data === '2026-06-16') {
+        console.log('[DataGrid.getStatus]', { alunoId, data, indiceAtual, status: log?.status, origem: log?.origem, hasLog: !!log });
+      }
+      return log?.status as PresencaStatus;
     },
     [logs, eventosPorData, indiceAtual]
   );
