@@ -53,59 +53,30 @@ feat(auth): implementa login com JWT e middleware tenant
 
 3. Rotina Obrigatória de Registros (Logging Routine)
 
-Toda sessão de desenvolvimento (com ou sem Cline) DEVE gerar registros.
+Toda sessão de desenvolvimento (com ou sem Cline) DEVE gerar registros no `AGENTS.md`.
 
-3.1. Arquivo SESSION.md
-Crie/atualize o arquivo SESSION.md na raiz antes de começar a codar no dia, e atualize ao final de cada tarefa.
+### 3.1. Arquivo AGENTS.md (Histórico Único)
 
-Estrutura obrigatória do SESSION.md:
+O `AGENTS.md` é a **memória permanente do projeto** e **substitui o antigo SESSION.md**. Ele deve ser atualizado **ao final de cada sessão**.
 
-```markdown
-# Sessão: DD/MM/YYYY - [NOME_DA_TAREFA_OU_FEATURE]
-
-## 🔍 O que foi feito
-- [x] Descreva aqui cada ação concluída.
-- [ ] Itens pendentes.
-
-## 🧠 Decisões Técnicas Tomadas
-- Explique por que você fez X ao invés de Y.
-
-## 🔗 Arquivos Alterados/Criados
-- `caminho/do/arquivo.ts` (criado/modificado)
-
-## ⚠️ Blockers ou Problemas Encontrados
-- Descreva bugs, dúvidas ou impedimentos.
-
-## 🚀 Próximos Passos (para a próxima sessão)
-- O que precisa ser feito daqui para frente.
-```
-
-3.2. Registro no Cline (prompt padrão)
-Sempre que encerrar uma tarefa com o Cline, peça a ele:
-
-"Atualize o SESSION.md com tudo o que foi feito nesta sessão, listando os arquivos alterados e as decisões tomadas."
-
-### 3.3. Arquivo AGENTS.md (Referência Cumulativa)
-
-O `AGENTS.md` é a **memória permanente do projeto**. Ele deve ser atualizado **ao final de cada sessão**, junto com o `SESSION.md`.
-
-**O que adicionar no AGENTS.md a cada sessão:**
+**Estrutura de cada sessão no AGENTS.md:**
 - Nova seção no formato `## Sessão: DD/MM/YYYY — Título`
-- Decisões técnicas relevantes (se forem mudanças de rota)
+- O que foi feito (ações concluídas)
+- Decisões técnicas relevantes
 - Arquivos alterados (links com linha, se relevante)
+- Blockers ou problemas encontrados
 - Contexto crítico novo (ex: "descoberto que X causa Y")
 
 **O que NÃO colocar no AGENTS.md:**
 - Detalhes de implementação temporários
-- Listas de tarefas pendentes (isso fica no SESSION.md ou todo list)
 - Commits individuais
 
-> **Regra de ouro:** Se uma AI nova ler só o `AGENTS.md`, ela deve conseguir trabalhar no projeto sem ler `SESSION.md` ou `git log`.
+> **Regra de ouro:** Se uma AI nova ler só o `AGENTS.md`, ela deve conseguir trabalhar no projeto sem ler `git log`.
 
-3.4. Commits e pushes automáticos mediante aprovação
+3.2. Commits e pushes automáticos mediante aprovação
 Ao final de cada etapa, milestone ou entrega de uma sub-tarefa acordada, o assistente deve:
 1. Verificar as alterações realizadas.
-2. **Atualizar obrigatoriamente** `CHANGELOG.md`, `SESSION.md` e `AGENTS.md` com as mudanças da sessão.
+2. **Atualizar obrigatoriamente** `CHANGELOG.md` e `AGENTS.md` com as mudanças da sessão.
 3. Formular uma mensagem de commit seguindo Conventional Commits.
 4. Solicitar aprovação explícita do usuário.
 5. Executar `git add`, `git commit` e `git push` quando aprovado, utilizando o fluxo de versionamento.
@@ -149,7 +120,7 @@ Para otimizar o uso do Cline, adoto uma estratégia de **handover (passagem de b
 ### 6.3. Como Executar o Handover no Cline
 
 - Ao mudar de modelo, sempre forneça um **contexto resumido** do que já foi feito (ex: "DeepSeek criou o esqueleto do componente X. Agora preciso que o Qwen adicione suporte a drag & drop e validação de arquivo").
-- Mantenha o **arquivo `SESSION.md`** atualizado com cada handover, registrando qual modelo foi usado e o que foi produzido.
+- Mantenha o **arquivo `AGENTS.md`** atualizado com cada handover, registrando qual modelo foi usado e o que foi produzido.
 - Use o prompt: *"Mude para o modelo [nome]. Continuando a partir do que [modelo anterior] fez, agora preciso [descrição da próxima etapa]."*
 
 ### 6.4. Exemplo Prático
@@ -175,7 +146,7 @@ Para otimizar o uso do Cline, adoto uma estratégia de **handover (passagem de b
 2. **Manter a estrutura de pastas** inalterada (não criar pastas/arquivos fora do padrão definido no `ARCHITECTURE.md`).
 3. **Usar os serviços e utilitários existentes** antes de criar novos (ex: não duplicar funções de validação se já existirem em `utils/`).
 4. **Seguir as convenções de nomenclatura** (ex: `camelCase` para variáveis, `PascalCase` para componentes React, `snake_case` para colunas no banco).
-5. **Não propor mudanças arquiteturais** sem antes registrar no `SESSION.md` e obter aprovação explícita no modo "Plan".
+5. **Não propor mudanças arquiteturais** sem antes registrar no `AGENTS.md` e obter aprovação explícita no modo "Plan".
 
 ### 7.3. Verificação Obrigatória (Checklist)
 
@@ -184,14 +155,13 @@ Antes de finalizar qualquer tarefa, o Cline deve verificar:
 - [ ] O código gerado está em conformidade com o `ARCHITECTURE.md`?
 - [ ] As regras de negócio seguem o `PRD.md`?
 - [ ] Os commits seguem o padrão do `DEVELOPMENT.md`?
-- [ ] O `SESSION.md` foi atualizado com as mudanças?
 - [ ] O `AGENTS.md` foi atualizado com a nova sessão?
 
 ### 7.4. Penalidade por Desvio
 
 **Qualquer desvio da arquitetura documentada será considerado um erro crítico** e deverá ser corrigido imediatamente.
 
-- Mudanças estruturais sem aprovação → reverter e registrar no `SESSION.md` como "desvio arquitetural".
+- Mudanças estruturais sem aprovação → reverter e registrar no `AGENTS.md` como "desvio arquitetural".
 - Código que não siga os padrões → refatorar antes de continuar.
 
 ### 7.5. Como o Cline Deve Proceder
@@ -202,13 +172,13 @@ Ao receber uma solicitação, o Cline deve:
 2. **Localizar a seção correspondente nos documentos** (ex: `PRD.md` → seção "Fluxo de Primeiro Acesso").
 3. **Consultar o `ARCHITECTURE.md`** para saber onde colocar o código (ex: controller, service, middleware).
 4. **Implementar** seguindo as regras e padrões.
-5. **Registrar** no `SESSION.md` (o que foi feito, arquivos alterados, decisões).
+5. **Registrar** no `AGENTS.md` (o que foi feito, arquivos alterados, decisões).
 
 ### 7.6. Exemplo de Prompt para o Cline
 
 Ao solicitar uma nova feature, sempre inclua no prompt:
 
-> *"Consulte o `ARCHITECTURE.md` e o `PRD.md` antes de implementar. Siga estritamente a estrutura de pastas e as regras de negócio definidas. Registre as mudanças no `SESSION.md`."*
+> *"Consulte o `ARCHITECTURE.md` e o `PRD.md` antes de implementar. Siga estritamente a estrutura de pastas e as regras de negócio definidas. Registre as mudanças no `AGENTS.md`."*
 
 
 

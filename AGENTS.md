@@ -20,7 +20,7 @@
 | `CHANGELOG.md` | Histórico de versões |
 | `PRD.md` | Requisitos do produto |
 | `DEVELOPMENT.md` | Diretrizes de desenvolvimento entre agentes |
-| `SESSION.md` | Registro das duas últimas sessões |
+| `AGENTS.md` | Histórico completo do projeto (substitui SESSION.md) |
 | `database/init.sql` | Schema completo do banco |
 | `backend/src/services/` | Lógica de negócio |
 | `backend/src/controllers/` | Handlers HTTP |
