@@ -17,8 +17,15 @@ MAJOR=${MAJOR:-0}
 MINOR=${MINOR:-0}
 PATCH=${PATCH:-0}
 
+# Find next available tag (handles orphaned/conflicting tags)
 PATCH=$((PATCH + 1))
-NEW_TAG="v$MAJOR.$MINOR.$PATCH"
+while true; do
+  NEW_TAG="v$MAJOR.$MINOR.$PATCH"
+  if ! git rev-parse "$NEW_TAG" >/dev/null 2>&1; then
+    break
+  fi
+  PATCH=$((PATCH + 1))
+done
 
 git tag "$NEW_TAG"
 echo "post-commit: created tag $NEW_TAG (previous: $LAST_TAG)"
