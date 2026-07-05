@@ -29,7 +29,7 @@ export async function listarPorPeriodo(inicio: string, fim: string, tenantId: st
     .lte('data', fim)
     .order('data', { ascending: true })
     .order('indice_aula', { ascending: true })
-    .limit(100000);
+    .range(0, 1000000);
 
   if (error) throw new AppError('Erro ao buscar chamadas', 500);
   const turmasCount = (logs || []).filter((l: any) => typeof l.grupo_id === 'string' && l.grupo_id.length < 20).length;
