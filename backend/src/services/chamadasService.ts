@@ -32,8 +32,6 @@ export async function listarPorPeriodo(inicio: string, fim: string, tenantId: st
     .range(0, 1000000);
 
   if (error) throw new AppError('Erro ao buscar chamadas', 500);
-  const turmasCount = (logs || []).filter((l: any) => typeof l.grupo_id === 'string' && l.grupo_id.length < 20).length;
-  console.log(`[listarPorPeriodo] ${logs?.length || 0} logs, ${turmasCount} com grupo_id curto (provavel turma)`);
   return logs || [];
 }
 

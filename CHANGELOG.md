@@ -1,5 +1,22 @@
 # Changelog - Fiz! App
 
+## [v1.9.5] - 2026-07-05
+### Corrigido
+- **Extrapolação não chegava ao frontend**: PostgREST limitava a 1000 rows (max-rows default do free plan). Aumentado para 1000000 no Supabase Dashboard + `.limit()` → `.range()` no código
+- **Versionamento automático quebrado**: post-commit agora auto-incrementa patch + pula tags conflitantes (orphan tag fora da master)
+- **Erros logEngine/notifications no console**: migration 018 cria tabelas faltantes (logs_operacoes, notificacoes_config, notificacoes_subscriptions)
+
+### Adicionado
+- **Migration 017**: `chamadas_log.grupo_id` passa de UUID para TEXT, permitindo armazenar `jeftq01` (grupo_id da turma) para extrapolação
+- **Migration 018**: tabelas `logs_operacoes`, `notificacoes_config`, `notificacoes_subscriptions`
+- `core.hooksPath` fixo em `.githooks` via `prepare` script (package.json)
+
+### Arquivos alterados
+- `backend/src/migrations/017_chamadas_log_grupo_id_text.sql` (novo)
+- `backend/src/migrations/018_create_missing_tables.sql` (novo)
+- `.githooks/post-commit` — auto-incremento + skip conflito
+- `backend/src/services/chamadasService.ts` — .limit(100000) → .range(0, 1000000)
+
 ## [v1.9.0] - 2026-07-04
 ### Corrigido
 - **Grid mostrava status errado ao navegar entre turmas** — `logs` state mudou de 2D `[alunoId][data]` para 3D `[alunoId][data][indice_aula]`, permitindo que cada slot de aula tenha seu próprio status independente

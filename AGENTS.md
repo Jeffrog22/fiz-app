@@ -1,10 +1,10 @@
-<!-- última-sessão: 2026-07-04 — Fix Log Refresh + Lotação + Version Tag v1.8.1 -->
+<!-- última-sessão: 2026-07-05 — Fix extrapolação não chegava ao frontend + range + v1.9.5 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v1.8.1
+- **Versão atual:** v1.9.5
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Build Cloudflare:** `git fetch --tags --unshallow` é necessário no build command para `git describe --tags` funcionar (clone shallow sem tags)
@@ -557,4 +557,35 @@
 - Frontend: 0 erros
 - Backend: 0 erros
 - Testes: 41/41 passam
+
+---
+
+## Sessão: 05/07/2026 — Fix Extrapolação + Range + Versionamento + Migration 017/018
+
+### O que foi feito
+- **Migration 017**: `ALTER TABLE chamadas_log ALTER COLUMN grupo_id TYPE TEXT` — permite grupo_id textual (`jeftq01`) para extrapolação
+- **Migration 018**: cria `logs_operacoes`, `notificacoes_config`, `notificacoes_subscriptions` (silencia erros logEngine/notifications)
+- **Versionamento automático refatorado**: post-commit agora auto-incrementa patch da última tag + pula tags conflitantes (loop `while git rev-parse`)
+- **Tag `v1.9.1` órfã deletada e recriada na master** (estava em commit fora do branch)
+- **Limit 1000 rows**: `listarPorPeriodo` batia no default do PostgREST (1000 rows). Trocado `.limit(100000)` → `.range(0, 1000000)`. Config `max-rows` no Supabase Dashboard ajustada para 1000000
+- **CardAula salva + extrapola funcionando**: 5 logs com `grupo_id = jeftq01..jeftq05` criados com sucesso e exibidos no grid
+
+### Decisões
+- `.range()` em vez de `.limit()` porque PostgREST free plan ignora `.limit()` além de `max-rows`
+- `max-rows` configurado via Supabase Dashboard (Project Settings → API → PostgREST)
+- Auto-incremento de patch em vez de depender do CHANGELOG — todo commit vira tag
+
+### Arquivos
+- `backend/src/migrations/017_chamadas_log_grupo_id_text.sql` (novo)
+- `backend/src/migrations/018_create_missing_tables.sql` (novo)
+- `.githooks/post-commit` (reescrito — auto-incremento + skip conflito)
+- `backend/src/services/chamadasService.ts` (.limit → .range)
+- `frontend/src/components/grid/DataGrid.tsx` (debug log getStatus)
+- `frontend/src/pages/Chamadas.tsx` (debug log carregarLogs)
+- `CHANGELOG.md` (v1.9.5)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros
+- Backend: 0 erros
 

@@ -114,10 +114,7 @@ const DataGrid: React.FC<DataGridProps> = ({
       // Fallback: status da turma (cancelado/justificado via extrapolação)
       if (turmaGrupoId) {
         const turmaLog = logs[turmaGrupoId]?.[data]?.[indiceAtual];
-        if (turmaLog?.status) {
-          console.log('[getStatus] TURMA FALLBACK:', { alunoId, data, turmaGrupoId, indiceAtual, status: turmaLog.status });
-          return turmaLog.status as PresencaStatus;
-        }
+        if (turmaLog?.status) return turmaLog.status as PresencaStatus;
       }
       return undefined;
     },

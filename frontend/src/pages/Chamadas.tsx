@@ -133,8 +133,6 @@ const Chamadas: React.FC = () => {
         if (!indexed[key][log.data]) indexed[key][log.data] = {};
         indexed[key][log.data][log.indice_aula] = log;
       }
-      console.log('[carregarLogs] keys:', Object.keys(indexed).slice(0, 10), 'total:', Object.keys(indexed).length);
-      console.log('[carregarLogs] turma keys:', Object.keys(indexed).filter(k => k.startsWith('jeft') || k.startsWith('jef')));
       setLogs(indexed);
     } catch (err) {
       console.error('Erro ao carregar chamadas', err);
