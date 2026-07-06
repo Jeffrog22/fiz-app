@@ -58,7 +58,7 @@ interface DataGridProps {
   indiceAtual: number;
   turma?: Turma | null;
   eventos?: CalendarioEvento[];
-  cardAulaData?: Record<string, CardAulaRecord>;
+  cardAulaData?: Record<string, Record<number, CardAulaRecord>>;
   turmaGrupoId?: string;
   onTogglePresenca: (alunoId: string, data: string, status: PresencaStatus) => void;
   onUpdateAnotacao: (alunoId: string, data: string, anotacao: string) => void;
@@ -137,16 +137,23 @@ const DataGrid: React.FC<DataGridProps> = ({
 
   const getCondicaoClima = useCallback(
     (data: string): string | undefined => {
-      if (cardAulaData?.[data]?.condicao_clima) {
-        return cardAulaData[data].condicao_clima;
+      const diaRecords = cardAulaData?.[data];
+      if (!diaRecords) return undefined;
+      // Exact match for current indice
+      if (diaRecords[indiceAtual]?.condicao_clima) {
+        return diaRecords[indiceAtual].condicao_clima;
       }
-      for (const alunoId of Object.keys(logs)) {
-        const c = logs[alunoId]?.[data]?.[indiceAtual]?.condicao_clima;
-        if (c) return c;
+      // Propagation: find most recent prior indice with data
+      const indices = Object.keys(diaRecords).map(Number).sort((a, b) => a - b);
+      for (let i = indices.length - 1; i >= 0; i--) {
+        if (indices[i] <= indiceAtual) {
+          const c = diaRecords[indices[i]]?.condicao_clima;
+          if (c) return c;
+        }
       }
       return undefined;
     },
-    [logs, cardAulaData, indiceAtual]
+    [cardAulaData, indiceAtual]
   );
 
   const temAlgumLog = useCallback(

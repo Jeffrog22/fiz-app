@@ -61,7 +61,7 @@ const Chamadas: React.FC = () => {
   const [cardBOAberto, setCardBOAberto] = useState(false);
   const [dateHeaderClickData, setDateHeaderClickData] = useState<string>('');
   const [alunosComAnotacao, setAlunosComAnotacao] = useState<Set<string>>(new Set());
-  const [cardAulaData, setCardAulaData] = useState<Record<string, any>>({});
+  const [cardAulaData, setCardAulaData] = useState<Record<string, Record<number, any>>>({});
 
   const [limparConfirm, setLimparConfirm] = useState(false);
   const [undoCount, setUndoCount] = useState(0);
@@ -167,12 +167,20 @@ const Chamadas: React.FC = () => {
 
   const carregarCardAulaData = useCallback(async () => {
     if (dias.length === 0) return;
-    const map: Record<string, any> = {};
+    const map: Record<string, Record<number, any>> = {};
     const promises = dias.map(async (dia) => {
       try {
         const res = await api.get(`/chamadas/card-aula/daily/${dia}`);
-        if (res.data?.id) {
-          map[dia] = res.data;
+        if (Array.isArray(res.data)) {
+          const diaMap: Record<number, any> = {};
+          for (const rec of res.data) {
+            if (rec.indice_aula != null) {
+              diaMap[rec.indice_aula] = rec;
+            }
+          }
+          if (Object.keys(diaMap).length > 0) {
+            map[dia] = diaMap;
+          }
         }
       } catch {
         // card_aula nao existe para este dia
@@ -533,6 +541,7 @@ const Chamadas: React.FC = () => {
         <GridPagination
           indiceAtual={indiceAtual}
           totalIndices={totalIndices}
+          grupoId={grupoId}
           onAnterior={() => setIndiceAtual((i) => Math.max(0, i - 1))}
           onProximo={() => setIndiceAtual((i) => Math.min(totalIndices - 1, i + 1))}
         />

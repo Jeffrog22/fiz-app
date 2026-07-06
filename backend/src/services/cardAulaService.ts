@@ -31,7 +31,7 @@ export async function salvarCardAula(
 
   const { error: cardError } = await supabase
     .from('card_aula')
-    .upsert(cardAulaFields, { onConflict: 'tenant_id,data' });
+    .upsert(cardAulaFields, { onConflict: 'tenant_id,data,indice_aula' });
 
   if (cardError) {
     // Se tabela card_aula nao existe, ignora (apenas propaga p/ chamadas_log)
@@ -51,13 +51,13 @@ export async function salvarCardAula(
   });
 }
 
-export async function obterCardAula(data: string, tenantId: string): Promise<any> {
-  const { data: registro, error } = await supabase
+export async function obterCardAula(data: string, tenantId: string): Promise<any[]> {
+  const { data: registros, error } = await supabase
     .from('card_aula')
     .select('*')
     .eq('tenant_id', tenantId)
     .eq('data', data)
-    .maybeSingle();
+    .order('indice_aula', { ascending: true });
 
   if (error) {
     if (error.message?.includes('relation') || error.message?.includes('does not exist')) {
@@ -71,33 +71,33 @@ export async function obterCardAula(data: string, tenantId: string): Promise<any
     }
   }
 
-  if (registro) return registro;
+  if (registros && registros.length > 0) return registros;
 
   // Fallback: tentar de chamadas_log
   return buscarCardAulaFallback(tenantId, data);
 }
 
-async function buscarCardAulaFallback(tenantId: string, data: string): Promise<any> {
+async function buscarCardAulaFallback(tenantId: string, data: string): Promise<any[]> {
   const { data: logs } = await supabase
     .from('chamadas_log')
-    .select('condicao_clima, temperatura_ext, temperatura_piscina, cloro_ppm, sensacao, status_sugerido, motivo_sugerido')
+    .select('condicao_clima, temperatura_ext, temperatura_piscina, cloro_ppm, sensacao, status_sugerido, motivo_sugerido, indice_aula')
     .eq('tenant_id', tenantId)
     .eq('data', data)
     .not('condicao_clima', 'is', null)
-    .limit(1)
-    .maybeSingle();
+    .order('indice_aula', { ascending: true });
 
-  if (logs) {
-    return {
-      condicao_clima: logs.condicao_clima,
-      temperatura_externa: logs.temperatura_ext,
-      temperatura_piscina: logs.temperatura_piscina,
-      cloro_ppm: logs.cloro_ppm,
-      sensacao: logs.sensacao,
-      status_sugerido: logs.status_sugerido,
-      motivo_sugerido: logs.motivo_sugerido,
-    };
+  if (logs && logs.length > 0) {
+    return logs.map((l: any) => ({
+      condicao_clima: l.condicao_clima,
+      temperatura_externa: l.temperatura_ext,
+      temperatura_piscina: l.temperatura_piscina,
+      cloro_ppm: l.cloro_ppm,
+      sensacao: l.sensacao,
+      status_sugerido: l.status_sugerido,
+      motivo_sugerido: l.motivo_sugerido,
+      indice_aula: l.indice_aula,
+    }));
   }
 
-  return null;
+  return [];
 }

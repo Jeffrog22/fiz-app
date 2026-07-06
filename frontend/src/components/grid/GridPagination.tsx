@@ -3,6 +3,7 @@ import React from 'react';
 interface GridPaginationProps {
   indiceAtual: number;
   totalIndices: number;
+  grupoId: string;
   onAnterior: () => void;
   onProximo: () => void;
 }
@@ -10,13 +11,14 @@ interface GridPaginationProps {
 const GridPagination: React.FC<GridPaginationProps> = ({
   indiceAtual,
   totalIndices,
+  grupoId,
   onAnterior,
   onProximo,
 }) => {
   return (
     <div className="flex items-center justify-between bg-white px-4 py-3 rounded-lg border border-gray-200">
-      <span className="text-sm text-gray-500">
-        Turma {indiceAtual + 1} de {totalIndices}
+      <span className="text-sm text-gray-500 font-mono">
+        {grupoId || `Turma ${indiceAtual + 1} de ${totalIndices}`}
       </span>
       <div className="flex gap-2">
         <button

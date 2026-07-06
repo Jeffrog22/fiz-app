@@ -38,15 +38,22 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
     if (aberto && data) {
       setCarregou(false);
       setSensacoes([]);
-      // Tenta ler do card_aula (documento diario)
+      // Tenta ler do card_aula (documento diario, agora por indice_aula)
       api.get(`/chamadas/card-aula/daily/${data}`)
         .then((res) => {
-          if (res.data && res.data.id) {
-            if (res.data.condicao_clima) setCondicao(res.data.condicao_clima);
-            if (res.data.temperatura_externa != null) setTempExterna(res.data.temperatura_externa);
-            if (res.data.temperatura_piscina != null) setTempPiscina(res.data.temperatura_piscina);
-            if (res.data.cloro_ppm != null) setCloro(res.data.cloro_ppm);
-            if (res.data.sensacao) setSensacoes(res.data.sensacao);
+          const records = Array.isArray(res.data) ? res.data : [];
+          // Busca registro do indice atual; se nao achar, propaga do anterior mais recente
+          let cardRecord = records.find((r: any) => r.indice_aula === indiceAula);
+          if (!cardRecord) {
+            const sorted = [...records].sort((a: any, b: any) => b.indice_aula - a.indice_aula);
+            cardRecord = sorted.find((r: any) => r.indice_aula <= indiceAula);
+          }
+          if (cardRecord) {
+            if (cardRecord.condicao_clima) setCondicao(cardRecord.condicao_clima);
+            if (cardRecord.temperatura_externa != null) setTempExterna(cardRecord.temperatura_externa);
+            if (cardRecord.temperatura_piscina != null) setTempPiscina(cardRecord.temperatura_piscina);
+            if (cardRecord.cloro_ppm != null) setCloro(cardRecord.cloro_ppm);
+            if (cardRecord.sensacao) setSensacoes(cardRecord.sensacao);
             return;
           }
           // Fallback: clima da API
@@ -90,7 +97,7 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
         })
         .finally(() => setCarregou(true));
     }
-  }, [aberto, data]);
+  }, [aberto, data, indiceAula]);
 
   useEffect(() => {
     const sens = getSensacoesFromTemperatura(tempExterna);
