@@ -143,13 +143,15 @@ const DataGrid: React.FC<DataGridProps> = ({
       if (diaRecords[indiceAtual]?.condicao_clima) {
         return diaRecords[indiceAtual].condicao_clima;
       }
-      // Propagation: find most recent prior indice with data
-      const indices = Object.keys(diaRecords).map(Number).sort((a, b) => a - b);
-      for (let i = indices.length - 1; i >= 0; i--) {
-        if (indices[i] <= indiceAtual) {
-          const c = diaRecords[indices[i]]?.condicao_clima;
-          if (c) return c;
-        }
+      // Propagation: log mais recentemente salvo (criado_em DESC)
+      // que tenha indice_aula <= atual
+      const values = Object.values(diaRecords)
+        .filter((r: any) => r.indice_aula <= indiceAtual)
+        .sort((a: any, b: any) =>
+          new Date(b.criado_em || 0).getTime() - new Date(a.criado_em || 0).getTime()
+        );
+      if (values.length > 0 && values[0].condicao_clima) {
+        return values[0].condicao_clima;
       }
       return undefined;
     },

@@ -45,12 +45,11 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
       api.get(`/chamadas/card-aula/daily/${data}`)
         .then((res) => {
           const records: any[] = Array.isArray(res.data) ? res.data : [];
-          // Propaga ate encontrar outro log: ultimo indice salvo cobre
-          // os seguintes ate o proximo log. Ordena por indice_aula DESC
-          // + criado_em DESC (desempate).
+          // Propaga do log mais recentemente salvo (criado_em DESC)
+          // que tenha indice_aula <= atual.
           const sorted = [...records].sort((a: any, b: any) =>
-            b.indice_aula - a.indice_aula ||
-            new Date(b.criado_em || 0).getTime() - new Date(a.criado_em || 0).getTime()
+            new Date(b.criado_em || 0).getTime() - new Date(a.criado_em || 0).getTime() ||
+            b.indice_aula - a.indice_aula
           );
           const cardRecord = sorted.find((r: any) => r.indice_aula <= indiceAula);
           if (cardRecord) {
@@ -63,7 +62,7 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
             if (cardRecord.indice_aula === indiceAula) {
               setDebugInfo(`Registro próprio (Aula ${indiceAula + 1})`);
             } else {
-              setDebugInfo(`Propagado de Aula ${cardRecord.indice_aula + 1}`);
+              setDebugInfo(`Propagado de Aula ${cardRecord.indice_aula + 1} (mais recente)`);
             }
             return;
           }
