@@ -217,9 +217,9 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
               </div>
 
               <div className="space-y-1 p-3 rounded bg-gray-50 text-sm">
-                <p className="text-xs text-gray-500">Filtro 1 (Clima): {climaSugestao.status === 'FALTA_JUSTIFICADA' ? `❌ ${climaSugestao.motivo}` : '✅ AULA NORMAL'}</p>
-                <p className="text-xs text-gray-500">Filtro 2 (Piscina): {piscinaSugestao.status === 'FALTA_JUSTIFICADA' ? `❌ ${piscinaSugestao.motivo}` : '✅ AULA NORMAL'}</p>
-                <p className="text-xs text-gray-500">Filtro 3 (Cloro): {cloroSugestao.status === 'FALTA_JUSTIFICADA' ? `❌ ${cloroSugestao.motivo}` : '✅ AULA NORMAL'}</p>
+                <p className="text-xs text-gray-500">Filtro 1 (Clima): {climaSugestao.status !== 'AULA_NORMAL' ? `❌ ${climaSugestao.motivo}` : '✅ AULA NORMAL'}</p>
+                <p className="text-xs text-gray-500">Filtro 2 (Piscina): {piscinaSugestao.status !== 'AULA_NORMAL' ? `❌ ${piscinaSugestao.motivo}` : '✅ AULA NORMAL'}</p>
+                <p className="text-xs text-gray-500">Filtro 3 (Cloro): {cloroSugestao.status !== 'AULA_NORMAL' ? `❌ ${cloroSugestao.motivo}` : '✅ AULA NORMAL'}</p>
                 <div className={'pt-1 font-medium ' + sugestaoCor}>
                   Status Sugerido: <strong>{
                     sugestaoFinal.status === 'AULA_CANCELADA' ? 'AULA CANCELADA' :
