@@ -262,7 +262,7 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
             <input
               value={faixaEtaria}
               onChange={(e) => setFaixaEtaria(e.target.value)}
-              placeholder="ex: 6-10 anos"
+              placeholder="ex: 6-10 anos, +16 anos"
               className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
