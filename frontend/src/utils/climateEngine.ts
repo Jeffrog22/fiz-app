@@ -128,7 +128,7 @@ export function getTempPiscinaSugestao(
     return { status: 'AULA_CANCELADA', motivo: 'Água crítica' };
   }
   if (temp < 25 && faixaEtariaTurma !== '+ 16 anos') {
-    return { status: 'AULA_CANCELADA', motivo: 'Água muito fria para menores' };
+    return { status: 'FALTA_JUSTIFICADA', motivo: 'Água muito fria para menores' };
   }
   if (temp < 28 && nivelTurma?.toUpperCase() === 'INICIAÇÃO') {
     return { status: 'AULA_CANCELADA', motivo: 'Água fria para iniciação' };

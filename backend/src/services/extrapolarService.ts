@@ -51,7 +51,7 @@ async function extrapolarPorLabel(
   }
 
   // Regra: temperatura 23-25°C só cancela para menores de 16
-  const isTempCancelMenores = status === 'cancelado' && motivo === 'Água muito fria para menores';
+  const isTempCancelMenores = motivo === 'Água muito fria para menores';
 
   // Agrupa turmas por professor para determinar maxIndices por grupo
   const profGroups = new Map<string, { grupo_id: string; horario: string }[]>();
