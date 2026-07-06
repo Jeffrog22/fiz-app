@@ -54,13 +54,12 @@ async function extrapolarPorLabel(
   const isTempCancelMenores = motivo === 'Água muito fria para menores';
 
   // Agrupa turmas por professor para determinar maxIndices por grupo
-  const profGroups = new Map<string, { grupo_id: string; horario: string }[]>();
+  // IMPORTANTE: NÃO pular turmas aqui (manter índice real no array)
+  const profGroups = new Map<string, { grupo_id: string; horario: string; faixa_etaria: string }[]>();
   for (const t of allTurmas) {
-    const faixa = faixaEtariaMap.get(t.grupo_id) || '';
-    if (isTempCancelMenores && (faixa === '+ 16 anos' || faixa === '+16 anos')) continue;
     const prof = t.professor_id || 'sem_professor';
     if (!profGroups.has(prof)) profGroups.set(prof, []);
-    profGroups.get(prof)!.push({ grupo_id: t.grupo_id, horario: t.horario });
+    profGroups.get(prof)!.push({ grupo_id: t.grupo_id, horario: t.horario, faixa_etaria: faixaEtariaMap.get(t.grupo_id) || '' });
   }
 
   const logsCriados: any[] = [];
@@ -80,11 +79,13 @@ async function extrapolarPorLabel(
     if (indicesAProcessar.length === 0) continue;
 
     for (const idx of indicesAProcessar) {
-      const turmaGrupoId = turmas[idx].grupo_id;
+      const turma = turmas[idx];
+      const faixa = turma.faixa_etaria || '';
+      if (isTempCancelMenores && (faixa === '+ 16 anos' || faixa === '+16 anos')) continue;
       logsCriados.push({
         tenant_id: tenantId,
         data,
-        grupo_id: turmaGrupoId,
+        grupo_id: turma.grupo_id,
         indice_aula: idx,
         status,
         motivo: motivo || null,

@@ -3,7 +3,14 @@
 
 ## Regras de Ouro
 
-- **Report style**: ao finalizar uma tarefa, responder com `Done.` + bullets concisos do que foi feito (nunca explicações longas)
+- **Report style**: ao finalizar, responder com `Done.` + bullets do que foi feito + `commit hash + tag → destino` (nunca omitir bullets).
+  Ex:
+  ```
+  Done.
+  - Corrige A
+  - Adiciona B
+  `abc123 + v1.9.20 → origin/master`
+  ```
 - **AGENTS.md é o único histórico**: SESSION.md não existe mais. Toda sessão registrada aqui.
 - **Commits**: só commitar quando o usuário pedir explicitamente
 
