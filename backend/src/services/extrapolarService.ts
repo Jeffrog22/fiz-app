@@ -30,7 +30,7 @@ async function extrapolarPorLabel(
 
   const { data: allTurmas, error: turmasError } = await supabase
     .from('turmas')
-    .select('grupo_id, professor_id, horario')
+    .select('grupo_id, professor_id, horario, faixa_etaria')
     .eq('tenant_id', tenantId)
     .eq('label', sourceTurma.label)
     .order('professor_id')
@@ -45,9 +45,18 @@ async function extrapolarPorLabel(
     return { message: `Nenhuma turma encontrada para o label ${sourceTurma.label}`, count: 0 };
   }
 
+  const faixaEtariaMap = new Map<string, string>();
+  for (const t of allTurmas) {
+    faixaEtariaMap.set(t.grupo_id, t.faixa_etaria || '');
+  }
+
+  // Regra: temperatura 23-25°C só cancela para menores de 16
+  const isTempCancelMenores = status === 'cancelado' && motivo === 'Água muito fria para menores';
+
   // Agrupa turmas por professor para determinar maxIndices por grupo
   const profGroups = new Map<string, { grupo_id: string; horario: string }[]>();
   for (const t of allTurmas) {
+    if (isTempCancelMenores && faixaEtariaMap.get(t.grupo_id) === '+ 16 anos') continue;
     const prof = t.professor_id || 'sem_professor';
     if (!profGroups.has(prof)) profGroups.set(prof, []);
     profGroups.get(prof)!.push({ grupo_id: t.grupo_id, horario: t.horario });
