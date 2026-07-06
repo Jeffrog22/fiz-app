@@ -20,6 +20,7 @@ export async function salvarCardAula(
   const cardAulaFields: Record<string, any> = {
     tenant_id: tenantId,
     data,
+    indice_aula,
     temperatura_externa: temperatura_externa ?? null,
     temperatura_piscina: temperatura_piscina ?? null,
     cloro_ppm: cloro_ppm ?? null,

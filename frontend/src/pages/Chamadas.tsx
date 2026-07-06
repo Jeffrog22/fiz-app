@@ -626,7 +626,7 @@ const Chamadas: React.FC = () => {
 
       <CardAula
         aberto={cardAulaAberto}
-        onClose={() => { setCardAulaAberto(false); carregarLogs(); }}
+        onClose={() => { setCardAulaAberto(false); carregarLogs(); carregarCardAulaData(); }}
         data={dateHeaderClickData}
         indiceAula={indiceAtual}
         grupoId={grupoId}
@@ -637,7 +637,7 @@ const Chamadas: React.FC = () => {
 
       <CardBO
         aberto={cardBOAberto}
-        onClose={() => { setCardBOAberto(false); carregarLogs(); }}
+        onClose={() => { setCardBOAberto(false); carregarLogs(); carregarCardAulaData(); }}
         data={dateHeaderClickData}
         indiceAula={indiceAtual}
         alunos={alunosDaTurma}

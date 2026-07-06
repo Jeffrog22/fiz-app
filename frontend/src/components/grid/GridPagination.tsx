@@ -16,7 +16,7 @@ const GridPagination: React.FC<GridPaginationProps> = ({
   onProximo,
 }) => {
   return (
-    <div className="flex items-center justify-between bg-white px-4 py-3 rounded-lg border border-gray-200">
+    <div className="flex items-center justify-between gap-x-0.5 bg-white px-4 py-3 rounded-lg border border-gray-200">
       <span className="text-sm text-gray-500 font-mono">
         {grupoId || `Turma ${indiceAtual + 1} de ${totalIndices}`}
       </span>
