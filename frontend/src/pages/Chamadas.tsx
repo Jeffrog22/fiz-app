@@ -195,6 +195,7 @@ const Chamadas: React.FC = () => {
   useEffect(() => { aplicarEventosCalendario(); }, [aplicarEventosCalendario]);
   useEffect(() => { carregarAnotacoes(); }, [carregarAnotacoes]);
   useEffect(() => { carregarCardAulaData(); }, [carregarCardAulaData]);
+  useEffect(() => { carregarCardAulaData(); }, [indiceAtual]);
 
   useEffect(() => {
     try {
