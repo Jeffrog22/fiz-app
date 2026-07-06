@@ -107,6 +107,41 @@ async function extrapolarPorLabel(
     }
   }
 
+  if (status === 'cancelado') {
+    for (const log of logsCriados) {
+      const { data: alunos } = await supabase
+        .from('alunos')
+        .select('id')
+        .eq('turma_id', log.grupo_id)
+        .eq('tenant_id', tenantId)
+        .eq('ativo', true);
+
+      if (alunos && alunos.length > 0) {
+        const studentLogs = alunos.map((a: any) => ({
+          tenant_id: tenantId,
+          data,
+          grupo_id: a.id,
+          indice_aula: log.indice_aula,
+          status,
+          origem: 'extrapolado',
+        }));
+        for (let j = 0; j < studentLogs.length; j += BATCH_SIZE) {
+          const batch = studentLogs.slice(j, j + BATCH_SIZE);
+          const { error: studentError } = await supabase
+            .from('chamadas_log')
+            .upsert(batch, { onConflict: 'tenant_id,data,grupo_id,indice_aula' });
+          if (studentError) {
+            console.error('[extrapolarPorLabel] Erro student-level batch:', studentError.message);
+            for (const sl of batch) {
+              const { error: se } = await supabase.from('chamadas_log').upsert(sl, { onConflict: 'tenant_id,data,grupo_id,indice_aula' });
+              if (se) console.error('[extrapolarPorLabel] Erro student-level individual:', se.message);
+            }
+          }
+        }
+      }
+    }
+  }
+
   registrarOperacao({
     tenant_id: tenantId,
     tabela: 'chamadas_log',

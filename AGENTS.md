@@ -1,6 +1,12 @@
 <!-- última-sessão: 2026-07-05 — Fix extrapolação não chegava ao frontend + range + v1.9.5 -->
 # AGENTS.md — Histórico Completo do Projeto
 
+## Regras de Ouro
+
+- **Report style**: ao finalizar uma tarefa, responder com `Done.` + bullets concisos do que foi feito (nunca explicações longas)
+- **AGENTS.md é o único histórico**: SESSION.md não existe mais. Toda sessão registrada aqui.
+- **Commits**: só commitar quando o usuário pedir explicitamente
+
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`

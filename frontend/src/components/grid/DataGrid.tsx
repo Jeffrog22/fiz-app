@@ -190,11 +190,16 @@ const DataGrid: React.FC<DataGridProps> = ({
       if (isDataFutura(data)) return;
       const current = getStatus(alunoId, data);
       if (current === 'feriado' || current === 'ponte' || current === 'reuniao' || current === 'evento' || current === 'cancelado') return;
+      const studentLog = logs[alunoId]?.[data]?.[indiceAtual]?.status;
+      if (!studentLog && current) {
+        onTogglePresenca(alunoId, data, 'presente');
+        return;
+      }
       const currentIndex = STATUS_CYCLE.indexOf(current);
       const nextStatus = STATUS_CYCLE[(currentIndex + 1) % STATUS_CYCLE.length];
       onTogglePresenca(alunoId, data, nextStatus);
     },
-    [getStatus, onTogglePresenca]
+    [getStatus, onTogglePresenca, logs, indiceAtual]
   );
 
   const handleNomeClick = useCallback((aluno: Aluno) => {
