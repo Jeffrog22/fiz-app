@@ -34,11 +34,13 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
   const [salvando, setSalvando] = useState(false);
   const [carregou, setCarregou] = useState(false);
   const [ultimoHash, setUltimoHash] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string>('');
 
   useEffect(() => {
     if (aberto && data) {
       setCarregou(false);
       setSensacoes([]);
+      setDebugInfo('');
       // Tenta ler do card_aula (documento diario, agora por indice_aula)
       api.get(`/chamadas/card-aula/daily/${data}`)
         .then((res) => {
@@ -51,7 +53,6 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
             new Date(b.criado_em || 0).getTime() - new Date(a.criado_em || 0).getTime()
           );
           const cardRecord = sorted.find((r: any) => r.indice_aula <= indiceAula);
-          console.log('[CardAula] propagate', { indiceAula, records: records.map((r: any) => ({ i: r.indice_aula, t: r.temperatura_externa, c: r.criado_em?.slice(11, 19) })), found: cardRecord?.indice_aula });
           if (cardRecord) {
             if (cardRecord.condicao_clima) setCondicao(cardRecord.condicao_clima);
             if (cardRecord.temperatura_externa != null) setTempExterna(cardRecord.temperatura_externa);
@@ -59,8 +60,14 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
             if (cardRecord.cloro_ppm != null) setCloro(cardRecord.cloro_ppm);
             if (cardRecord.sensacao) setSensacoes(cardRecord.sensacao);
             if (cardRecord.id) setUltimoHash(cardRecord.id.slice(0, 8));
+            if (cardRecord.indice_aula === indiceAula) {
+              setDebugInfo(`Registro próprio (Aula ${indiceAula + 1})`);
+            } else {
+              setDebugInfo(`Propagado de Aula ${cardRecord.indice_aula + 1}`);
+            }
             return;
           }
+          setDebugInfo('Fallback climático (sem registro anterior)');
           // Fallback: clima da API
           api.get('/chamadas/clima')
             .then((res2) => {
@@ -81,6 +88,7 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
             });
         })
         .catch(() => {
+          setDebugInfo('Erro ao carregar registros');
           // Fallback: clima da API
           api.get('/chamadas/clima')
             .then((res2) => {
@@ -264,9 +272,14 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
                 className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400">
                 {salvando ? 'Salvando...' : 'Salvar'}</button>
             </div>
-            {ultimoHash && (
-              <p className="text-[10px] text-gray-300 text-right mt-2 select-all">#{ultimoHash}</p>
-            )}
+            <div className="text-right mt-2 space-y-0.5">
+              {ultimoHash && (
+                <p className="text-[10px] text-gray-300 select-all">#{ultimoHash}</p>
+              )}
+              {debugInfo && (
+                <p className="text-[10px] text-gray-400">{debugInfo}</p>
+              )}
+            </div>
           </>
         )}
       </div>
