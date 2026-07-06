@@ -21,6 +21,7 @@ export async function salvarCardAula(
     tenant_id: tenantId,
     data,
     indice_aula,
+    criado_em: new Date().toISOString(),
     temperatura_externa: temperatura_externa ?? null,
     temperatura_piscina: temperatura_piscina ?? null,
     cloro_ppm: cloro_ppm ?? null,
