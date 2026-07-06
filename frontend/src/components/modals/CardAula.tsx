@@ -43,12 +43,9 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
       api.get(`/chamadas/card-aula/daily/${data}`)
         .then((res) => {
           const records = Array.isArray(res.data) ? res.data : [];
-          // Busca registro do indice atual; se nao achar, propaga do anterior mais recente
-          let cardRecord = records.find((r: any) => r.indice_aula === indiceAula);
-          if (!cardRecord) {
-            const sorted = [...records].sort((a: any, b: any) => b.indice_aula - a.indice_aula);
-            cardRecord = sorted.find((r: any) => r.indice_aula <= indiceAula);
-          }
+          // Sempre propaga do ultimo registro anterior mais recente
+          const sorted = [...records].sort((a: any, b: any) => b.indice_aula - a.indice_aula);
+          const cardRecord = sorted.find((r: any) => r.indice_aula <= indiceAula);
           if (cardRecord) {
             if (cardRecord.condicao_clima) setCondicao(cardRecord.condicao_clima);
             if (cardRecord.temperatura_externa != null) setTempExterna(cardRecord.temperatura_externa);
