@@ -13,7 +13,7 @@ export async function salvarCardAula(
   sensacao?: string[],
   status_sugerido?: string,
   motivo_sugerido?: string,
-): Promise<void> {
+): Promise<{ id: string; criado_em: string } | null> {
   if (!data) throw new AppError('Campo data e obrigatorio', 400);
 
   // 1. Upsert no card_aula (documento diario da piscina)
@@ -30,19 +30,19 @@ export async function salvarCardAula(
   if (status_sugerido !== undefined) cardAulaFields.status_sugerido = status_sugerido;
   if (motivo_sugerido !== undefined) cardAulaFields.motivo_sugerido = motivo_sugerido;
 
-  const { error: cardError } = await supabase
+  const { data: upserted, error: cardError } = await supabase
     .from('card_aula')
-    .upsert(cardAulaFields, { onConflict: 'tenant_id,data,indice_aula' });
+    .upsert(cardAulaFields, { onConflict: 'tenant_id,data,indice_aula' })
+    .select('id, criado_em')
+    .maybeSingle();
 
   if (cardError) {
-    // Se tabela card_aula nao existe, ignora (apenas propaga p/ chamadas_log)
+    // Se tabela card_aula nao existe, ignora
     if (!cardError.message?.includes('relation') && !cardError.message?.includes('does not exist')) {
       console.error('[cardAulaService] Erro ao salvar card_aula:', cardError.message);
     }
+    return null;
   }
-
-  // 2. CardAula é diário da piscina — NÃO propaga para chamadas_log (evita 125 logs/dia)
-  // A extrapolação (cancela/justifica) cria 1 log por turma no chamadas_log
 
   registrarOperacao({
     tenant_id: tenantId,
@@ -50,6 +50,8 @@ export async function salvarCardAula(
     operacao: 'atualizacao',
     dados: { data, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima },
   });
+
+  return upserted ? { id: upserted.id, criado_em: upserted.criado_em } : null;
 }
 
 export async function obterCardAula(data: string, tenantId: string): Promise<any[]> {

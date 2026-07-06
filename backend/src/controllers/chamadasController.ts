@@ -65,7 +65,7 @@ export class ChamadasController {
       const { data, indice_aula, grupo_id, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido } = req.body;
       console.log('[salvarCardAula] Recebido:', { data, indice_aula, grupo_id, status_sugerido, motivo_sugerido, temperatura_piscina, cloro_ppm, condicao_clima });
 
-      await cardAulaService.salvarCardAula(tenantId, data, indice_aula || 0, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido);
+      const hash = await cardAulaService.salvarCardAula(tenantId, data, indice_aula || 0, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido);
 
       // Auto-extrapolar conforme status sugerido
       if (grupo_id) {
@@ -92,7 +92,7 @@ export class ChamadasController {
         console.log('[salvarCardAula] grupo_id vazio — extrapolacao ignorada');
       }
 
-      res.json({ ok: true });
+      res.json({ ok: true, hash });
     } catch (error) {
       next(error);
     }

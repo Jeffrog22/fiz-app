@@ -33,6 +33,7 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
   const [sensacoes, setSensacoes] = useState<string[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [carregou, setCarregou] = useState(false);
+  const [ultimoHash, setUltimoHash] = useState<string | null>(null);
 
   useEffect(() => {
     if (aberto && data) {
@@ -54,6 +55,7 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
             if (cardRecord.temperatura_piscina != null) setTempPiscina(cardRecord.temperatura_piscina);
             if (cardRecord.cloro_ppm != null) setCloro(cardRecord.cloro_ppm);
             if (cardRecord.sensacao) setSensacoes(cardRecord.sensacao);
+            if (cardRecord.id) setUltimoHash(cardRecord.id.slice(0, 8));
             return;
           }
           // Fallback: clima da API
@@ -123,7 +125,7 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
   const handleSalvar = async () => {
     setSalvando(true);
     try {
-      await api.post('/chamadas/card-aula', {
+      const res = await api.post('/chamadas/card-aula', {
         data, indice_aula: indiceAula,
         grupo_id: grupoId,
         temperatura_externa: tempExterna,
@@ -134,6 +136,7 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
         status_sugerido: sugestaoFinal.status,
         motivo_sugerido: sugestaoFinal.motivo,
       });
+      if (res.data?.hash?.id) setUltimoHash(res.data.hash.id.slice(0, 8));
       onClose();
     } catch (err) {
       console.error(err);
@@ -258,6 +261,9 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
                 className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400">
                 {salvando ? 'Salvando...' : 'Salvar'}</button>
             </div>
+            {ultimoHash && (
+              <p className="text-[10px] text-gray-300 text-right mt-2 select-all">#{ultimoHash}</p>
+            )}
           </>
         )}
       </div>
