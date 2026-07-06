@@ -190,8 +190,10 @@ const DataGrid: React.FC<DataGridProps> = ({
       if (isDataFutura(data)) return;
       const current = getStatus(alunoId, data);
       if (current === 'feriado' || current === 'ponte' || current === 'reuniao' || current === 'evento' || current === 'cancelado') return;
-      const studentLog = logs[alunoId]?.[data]?.[indiceAtual]?.status;
-      if (!studentLog && current) {
+      const studentLogEntry = logs[alunoId]?.[data]?.[indiceAtual];
+      const studentStatus = studentLogEntry?.status;
+      const isExtrapolado = studentLogEntry?.origem === 'extrapolado';
+      if ((!studentStatus || isExtrapolado) && current) {
         onTogglePresenca(alunoId, data, 'presente');
         return;
       }
