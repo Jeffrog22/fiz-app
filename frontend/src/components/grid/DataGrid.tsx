@@ -108,14 +108,14 @@ const DataGrid: React.FC<DataGridProps> = ({
       if (dataEventos.length > 0) {
         return dataEventos[0].tipo as PresencaStatus;
       }
-      // P/F/J manual do aluno
-      const alunoStatus = logs[alunoId]?.[data]?.[indiceAtual]?.status;
-      if (alunoStatus) return alunoStatus as PresencaStatus;
-      // Fallback: status da turma (cancelado/justificado via extrapolação)
+      // Prioridade: status da turma (cancelado/justificado via extrapolação)
       if (turmaGrupoId) {
         const turmaLog = logs[turmaGrupoId]?.[data]?.[indiceAtual];
         if (turmaLog?.status) return turmaLog.status as PresencaStatus;
       }
+      // P/F/J manual do aluno
+      const alunoStatus = logs[alunoId]?.[data]?.[indiceAtual]?.status;
+      if (alunoStatus) return alunoStatus as PresencaStatus;
       return undefined;
     },
     [logs, eventosPorData, indiceAtual, turmaGrupoId]
@@ -312,7 +312,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                   {dias.map((dia) => {
                     const status = getStatus(aluno.id, dia);
                     const futura = isDataFutura(dia);
-                    const isCalendario = status === 'feriado' || status === 'ponte' || status === 'reuniao' || status === 'evento';
+                    const isCalendario = status === 'feriado' || status === 'ponte' || status === 'reuniao' || status === 'evento' || status === 'cancelado';
                     return (
                       <td key={dia} className="px-2 py-1 text-center border-r border-gray-100">
                         <div className="flex flex-col items-center gap-0.5">
