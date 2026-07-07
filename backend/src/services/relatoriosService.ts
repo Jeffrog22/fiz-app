@@ -23,9 +23,10 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
   const { data: chamadas, error } = await query.range(0, 1000000).order('data', { ascending: true });
   if (error) throw new AppError('Erro ao buscar frequencia', 500);
 
-  const [alunosResult, turmasResult] = await Promise.all([
+  const [alunosResult, turmasResult, professoresResult] = await Promise.all([
     supabase.from('alunos').select('id, nome, nivel, turma_id').eq('tenant_id', tenantId),
     supabase.from('turmas').select('id, grupo_id, nivel, horario, professor_id').eq('tenant_id', tenantId),
+    supabase.from('professores').select('id, nome').eq('tenant_id', tenantId),
   ]);
 
   if (alunosResult.error) throw new AppError('Erro ao buscar alunos: ' + alunosResult.error.message, 500);
@@ -37,6 +38,9 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
   const turmasMap = new Map<string, any>();
   turmasResult.data?.forEach((t: any) => turmasMap.set(t.grupo_id || t.id, t));
 
+  const professorMap = new Map<string, string>();
+  professoresResult.data?.forEach((p: any) => professorMap.set(p.id, p.nome));
+
   const totalRegistros = chamadas?.length || 0;
   const presentes = chamadas?.filter((r: any) => r.status === 'presente').length || 0;
   const faltas = chamadas?.filter((r: any) => r.status === 'falta').length || 0;
@@ -45,6 +49,8 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
   const porNivel: Record<string, { total: number; presentes: number }> = {};
   const porHorario: Record<string, { total: number; presentes: number }> = {};
   const porProfessor: Record<string, { total: number; presentes: number }> = {};
+
+  const alunosFreq = new Map<string, { nome: string; total: number; presentes: number; justificados: number; faltas: number }>();
 
   (chamadas || []).forEach((r: any) => {
     const aluno = alunosMap.get(r.grupo_id);
@@ -60,17 +66,42 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
     porHorario[periodo].total++;
     if (r.status === 'presente') porHorario[periodo].presentes++;
 
-    const professor = turma?.professor_id || 'Geral';
-    if (!porProfessor[professor]) porProfessor[professor] = { total: 0, presentes: 0 };
-    porProfessor[professor].total++;
-    if (r.status === 'presente') porProfessor[professor].presentes++;
+    const profKey = turma?.professor_id || 'Geral';
+    const profNome = professorMap.get(profKey) || profKey;
+    if (!porProfessor[profNome]) porProfessor[profNome] = { total: 0, presentes: 0 };
+    porProfessor[profNome].total++;
+    if (r.status === 'presente') porProfessor[profNome].presentes++;
+
+    if (aluno) {
+      if (!alunosFreq.has(aluno.id)) {
+        alunosFreq.set(aluno.id, { nome: aluno.nome, total: 0, presentes: 0, justificados: 0, faltas: 0 });
+      }
+      const entry = alunosFreq.get(aluno.id)!;
+      entry.total++;
+      if (r.status === 'presente') entry.presentes++;
+      if (r.status === 'justificado') entry.justificados++;
+      if (r.status === 'falta') entry.faltas++;
+    }
   });
+
+  const alunosArray = Array.from(alunosFreq.values());
+  const topPresenca = alunosArray
+    .filter(a => a.total > 0)
+    .sort((a, b) => (b.presentes / b.total) - (a.presentes / a.total))
+    .slice(0, 5)
+    .map(a => ({ nome: a.nome, presencas: a.presentes, total: a.total }));
+
+  const topFaltas = alunosArray
+    .sort((a, b) => b.faltas - a.faltas)
+    .slice(0, 5)
+    .map(a => ({ nome: a.nome, faltas: a.faltas, total: a.total }));
 
   return {
     resumo: { totalRegistros, presentes, faltas, justificados },
     porNivel,
     porHorario,
     porProfessor,
+    topAlunos: { topPresenca, topFaltas },
   };
 }
 

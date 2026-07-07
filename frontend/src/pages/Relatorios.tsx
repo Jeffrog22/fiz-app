@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import api from '../utils/api';
 import SearchInput from '../components/SearchInput';
+import ErrorBoundary from '../components/ErrorBoundary';
 import { normalizeSearch } from '../utils/formatters';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -12,6 +13,10 @@ interface FrequenciaData {
   porNivel: Record<string, { total: number; presentes: number }>;
   porHorario: Record<string, { total: number; presentes: number }>;
   porProfessor: Record<string, { total: number; presentes: number }>;
+  topAlunos: {
+    topPresenca: Array<{ nome: string; presencas: number; total: number }>;
+    topFaltas: Array<{ nome: string; faltas: number; total: number }>;
+  };
 }
 
 interface CancelamentoData {
@@ -113,6 +118,7 @@ const Relatorios: React.FC = () => {
   };
 
   return (
+    <ErrorBoundary>
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-gray-800">Relatórios</h1>
 
@@ -194,7 +200,7 @@ const Relatorios: React.FC = () => {
           <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Frequência por Nível</h3>
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={Object.entries(freqData.porNivel).map(([nivel, dados]) => ({ name: nivel, presentes: dados.presentes, faltas: dados.total - dados.presentes }))}>
+              <BarChart data={Object.entries(freqData.porNivel || {}).map(([nivel, dados]) => ({ name: nivel, presentes: dados.presentes, faltas: dados.total - dados.presentes }))}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis />
@@ -206,13 +212,44 @@ const Relatorios: React.FC = () => {
             </ResponsiveContainer>
           </div>
 
-
+          {freqData.topAlunos && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Top 5 - Maior Presença</h3>
+                <div className="space-y-2">
+                  {(freqData.topAlunos.topPresenca || []).map((item, i) => (
+                    <div key={i} className="flex items-center justify-between text-sm">
+                      <span className="text-gray-700">{i + 1}. {item.nome}</span>
+                      <span className="text-green-600 font-medium">{item.presencas}/{item.total} ({((item.presencas / item.total) * 100).toFixed(1)}%)</span>
+                    </div>
+                  ))}
+                  {(!freqData.topAlunos.topPresenca || freqData.topAlunos.topPresenca.length === 0) && (
+                    <p className="text-xs text-gray-400">Nenhum dado disponível.</p>
+                  )}
+                </div>
+              </div>
+              <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Top 5 - Mais Faltas</h3>
+                <div className="space-y-2">
+                  {(freqData.topAlunos.topFaltas || []).map((item, i) => (
+                    <div key={i} className="flex items-center justify-between text-sm">
+                      <span className="text-gray-700">{i + 1}. {item.nome}</span>
+                      <span className="text-red-600 font-medium">{item.faltas} faltas</span>
+                    </div>
+                  ))}
+                  {(!freqData.topAlunos.topFaltas || freqData.topAlunos.topFaltas.length === 0) && (
+                    <p className="text-xs text-gray-400">Nenhum dado disponível.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Por Período</h3>
               <div className="space-y-2">
-                {Object.entries(freqData.porHorario).map(([periodo, dados]) => (
+                {Object.entries(freqData.porHorario || {}).map(([periodo, dados]) => (
                   <div key={periodo}>
                     <div className="flex justify-between text-xs text-gray-600 mb-0.5">
                       <span>{periodo}</span>
@@ -227,7 +264,7 @@ const Relatorios: React.FC = () => {
             <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Por Professor</h3>
               <div className="space-y-2">
-                {Object.entries(freqData.porProfessor).map(([prof, dados]) => (
+                {Object.entries(freqData.porProfessor || {}).map(([prof, dados]) => (
                   <div key={prof}>
                     <div className="flex justify-between text-xs text-gray-600 mb-0.5">
                       <span>{prof}</span>
@@ -247,9 +284,9 @@ const Relatorios: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             {[
               { label: 'Total Cancelamentos', value: cancelData.total, cor: 'text-red-500' },
-              { label: 'Motivos Distintos', value: Object.keys(cancelData.porMotivo).length, cor: 'text-orange-500' },
-              { label: 'Níveis Afetados', value: Object.keys(cancelData.porNivel).length, cor: 'text-blue-500' },
-              { label: 'Meses com Registro', value: Object.keys(cancelData.porMes).length, cor: 'text-purple-500' },
+              { label: 'Motivos Distintos', value: Object.keys(cancelData.porMotivo || {}).length, cor: 'text-orange-500' },
+              { label: 'Níveis Afetados', value: Object.keys(cancelData.porNivel || {}).length, cor: 'text-blue-500' },
+              { label: 'Meses com Registro', value: Object.keys(cancelData.porMes || {}).length, cor: 'text-purple-500' },
             ].map((card) => (
               <div key={card.label} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
                 <p className="text-xs text-gray-500">{card.label}</p>
@@ -265,14 +302,14 @@ const Relatorios: React.FC = () => {
                 <ResponsiveContainer width="100%" height={250}>
                   <PieChart>
                     <Pie
-                      data={Object.entries(cancelData.porMotivo)
+                      data={Object.entries(cancelData.porMotivo || {})
                         .sort(([, a], [, b]) => b - a)
                         .slice(0, 6)
                         .map(([motivo, qtd], i) => ({ name: motivo, value: qtd, fill: CORES_PIE[i % CORES_PIE.length] }))}
                       cx="50%" cy="50%" outerRadius={80} dataKey="value"
                       label={({ name, percent }: any) => `${name || ''} (${((percent || 0) * 100).toFixed(0)}%)`}
                     >
-                      {Object.entries(cancelData.porMotivo).slice(0, 6).map((_, i) => (
+                      {Object.entries(cancelData.porMotivo || {}).slice(0, 6).map((_, i) => (
                         <Cell key={i} fill={CORES_PIE[i % CORES_PIE.length]} />
                       ))}
                     </Pie>
@@ -287,7 +324,7 @@ const Relatorios: React.FC = () => {
             <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Evolução Mensal</h3>
               <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={Object.entries(cancelData.porMes).sort(([a], [b]) => a.localeCompare(b)).map(([mesKey, qtd]) => ({ name: mesKey, cancelamentos: qtd }))}>
+                <LineChart data={Object.entries(cancelData.porMes || {}).sort(([a], [b]) => a.localeCompare(b)).map(([mesKey, qtd]) => ({ name: mesKey, cancelamentos: qtd }))}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                   <YAxis />
@@ -301,10 +338,10 @@ const Relatorios: React.FC = () => {
           <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Por Motivo (Detalhado)</h3>
             <div className="space-y-2">
-              {Object.entries(cancelData.porMotivo)
+              {Object.entries(cancelData.porMotivo || {})
                 .sort(([, a], [, b]) => b - a)
                 .map(([motivo, qtd]) => {
-                  const max = Math.max(1, ...Object.values(cancelData.porMotivo));
+                  const max = Math.max(1, ...Object.values(cancelData.porMotivo || {}));
                   return (
                     <div key={motivo}>
                       <div className="flex justify-between text-xs text-gray-600 mb-0.5">
@@ -407,7 +444,7 @@ const Relatorios: React.FC = () => {
                             </div>
                           </div>
                         ))}
-                        {(!freqData?.porNivel || Object.keys(freqData.porNivel).length === 0) && (
+                        {(!freqData?.porNivel || Object.keys(freqData.porNivel || {}).length === 0) && (
                           <p className="text-xs text-gray-400">Nenhum dado de nível disponível para este período.</p>
                         )}
                       </div>
@@ -426,6 +463,7 @@ const Relatorios: React.FC = () => {
         </div>
       )}
     </div>
+    </ErrorBoundary>
   );
 };
 
