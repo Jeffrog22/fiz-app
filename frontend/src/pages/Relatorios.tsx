@@ -17,6 +17,10 @@ interface FrequenciaData {
     topPresenca: Array<{ nome: string; presencas: number; total: number }>;
     topFaltas: Array<{ nome: string; faltas: number; total: number }>;
   };
+  alunosGrid: Array<{
+    id: string; nome: string; ativo: boolean;
+    presencas: number; justificados: number; faltas: number; total: number;
+  }>;
 }
 
 interface CancelamentoData {
@@ -36,6 +40,14 @@ function calcPercentual(parte: number, total: number): string {
   return ((parte / total) * 100).toFixed(1);
 }
 
+function LoadingSpinner() {
+  return (
+    <div className="flex justify-center py-12">
+      <div className="animate-spin h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full" />
+    </div>
+  );
+}
+
 function BarraProgresso({ valor, max, cor }: { valor: number; max: number; cor: string }) {
   const pct = max > 0 ? Math.min(100, (valor / max) * 100) : 0;
   return (
@@ -53,34 +65,32 @@ const Relatorios: React.FC = () => {
   const [ano, setAno] = useState(String(new Date().getFullYear()));
 
   const [buscaHistorico, setBuscaHistorico] = useState('');
-  const [alunosLista, setAlunosLista] = useState<any[]>([]);
+  const [filtroStatus, setFiltroStatus] = useState<'todos' | 'ativos' | 'inativos'>('todos');
   const [alunoSelecionado, setAlunoSelecionado] = useState<any>(null);
+  const [carregandoFreq, setCarregandoFreq] = useState(false);
+  const [carregandoCancel, setCarregandoCancel] = useState(false);
   const [carregandoHistorico, setCarregandoHistorico] = useState(false);
 
   const carregarFrequencia = useCallback(async () => {
+    setCarregandoFreq(true);
     try {
       const res = await api.get(`/relatorios/frequencia?mes=${mes}&ano=${ano}`);
       setFreqData(res.data);
     } catch { setFreqData(null); }
+    setCarregandoFreq(false);
   }, [mes, ano]);
 
   const carregarCancelamentos = useCallback(async () => {
+    setCarregandoCancel(true);
     try {
       const res = await api.get(`/relatorios/cancelamentos?mes=${mes}&ano=${ano}`);
       setCancelData(res.data);
     } catch { setCancelData(null); }
+    setCarregandoCancel(false);
   }, [mes, ano]);
 
-  const carregarAlunos = useCallback(async () => {
-    try {
-      const res = await api.get('/alunos');
-      setAlunosLista(res.data);
-    } catch { setAlunosLista([]); }
-  }, []);
-
-  useEffect(() => { if (tab === 'frequencia') carregarFrequencia(); }, [tab, carregarFrequencia]);
+  useEffect(() => { if (tab === 'frequencia' || tab === 'historico') carregarFrequencia(); }, [tab, carregarFrequencia]);
   useEffect(() => { if (tab === 'cancelamentos') carregarCancelamentos(); }, [tab, carregarCancelamentos]);
-  useEffect(() => { if (tab === 'historico') carregarAlunos(); }, [tab, carregarAlunos]);
 
   const exportCSV = () => {
     if (!cancelData) return;
@@ -98,12 +108,16 @@ const Relatorios: React.FC = () => {
   };
 
   const alunosFiltrados = useMemo(() => {
-    if (!buscaHistorico.trim()) return alunosLista;
-    const q = normalizeSearch(buscaHistorico);
-    return alunosLista.filter((a: any) =>
-      normalizeSearch(a.nome).includes(q)
-    );
-  }, [alunosLista, buscaHistorico]);
+    const grid = freqData?.alunosGrid || [];
+    let filtered = grid;
+    if (filtroStatus === 'ativos') filtered = filtered.filter((a: any) => a.ativo);
+    if (filtroStatus === 'inativos') filtered = filtered.filter((a: any) => !a.ativo);
+    if (buscaHistorico.trim()) {
+      const q = normalizeSearch(buscaHistorico);
+      filtered = filtered.filter((a: any) => normalizeSearch(a.nome).includes(q));
+    }
+    return filtered;
+  }, [freqData?.alunosGrid, buscaHistorico, filtroStatus]);
 
   const handleVerHistorico = async (aluno: any) => {
     setCarregandoHistorico(true);
@@ -116,6 +130,8 @@ const Relatorios: React.FC = () => {
     }
     setCarregandoHistorico(false);
   };
+
+  const carregando = tab === 'frequencia' ? carregandoFreq : tab === 'cancelamentos' ? carregandoCancel : true;
 
   return (
     <ErrorBoundary>
@@ -157,7 +173,8 @@ const Relatorios: React.FC = () => {
         </div>
       </div>
 
-      {tab === 'frequencia' && freqData && (
+      {tab === 'frequencia' && (
+        carregandoFreq ? <LoadingSpinner /> : freqData && (
         <div className="space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
@@ -277,9 +294,11 @@ const Relatorios: React.FC = () => {
             </div>
           </div>
         </div>
+        )
       )}
 
-      {tab === 'cancelamentos' && cancelData && (
+      {tab === 'cancelamentos' && (
+        carregandoCancel ? <LoadingSpinner /> : cancelData && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             {[
@@ -355,41 +374,95 @@ const Relatorios: React.FC = () => {
             </div>
           </div>
         </div>
+        )
       )}
 
       {tab === 'historico' && (
         <div className="space-y-4">
           <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Histórico do Aluno</h3>
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-2 mb-4 flex-wrap items-center">
               <SearchInput
                 value={buscaHistorico}
                 onChange={setBuscaHistorico}
                 placeholder="Buscar aluno por nome..."
-                className="flex-1"
+                className="flex-1 min-w-[200px]"
               />
+              <select
+                value={filtroStatus}
+                onChange={(e) => setFiltroStatus(e.target.value as any)}
+                className="text-sm px-2 py-1.5 border border-gray-300 rounded"
+              >
+                <option value="todos">Todos</option>
+                <option value="ativos">Ativos</option>
+                <option value="inativos">Inativos</option>
+              </select>
             </div>
 
-            {buscaHistorico && (
-              <div className="max-h-60 overflow-y-auto border border-gray-200 rounded divide-y divide-gray-100">
-                {alunosFiltrados.map((aluno: any) => (
-                  <button
-                    key={aluno.id}
-                    onClick={() => handleVerHistorico(aluno)}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition flex justify-between items-center"
-                  >
-                    <span className="font-medium text-gray-800">{aluno.nome}</span>
-                    <span className="text-xs text-gray-400">Ver histórico →</span>
-                  </button>
-                ))}
-                {alunosFiltrados.length === 0 && (
-                  <p className="px-3 py-4 text-sm text-gray-400 text-center">Nenhum aluno encontrado.</p>
-                )}
-              </div>
+            {carregandoFreq ? <LoadingSpinner /> : freqData?.alunosGrid ? (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 text-left text-gray-500 text-xs uppercase">
+                        <th className="py-2 pr-3">Nome</th>
+                        <th className="py-2 pr-3 text-center">Presenças</th>
+                        <th className="py-2 pr-3 text-center">Justificativas</th>
+                        <th className="py-2 pr-3 text-center">Faltas</th>
+                        <th className="py-2 pr-3 text-center">Total</th>
+                        <th className="py-2 pr-3 text-center">Taxa</th>
+                        <th className="py-2"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {alunosFiltrados.map((aluno: any) => {
+                        const taxa = aluno.total > 0 ? ((aluno.presencas / aluno.total) * 100).toFixed(1) : 'N/A';
+                        const taxaNum = aluno.total > 0 ? (aluno.presencas / aluno.total) * 100 : 0;
+                        return (
+                          <tr key={aluno.id} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="py-2 pr-3 font-medium text-gray-800 flex items-center gap-2">
+                              <span className={`w-2 h-2 rounded-full ${aluno.ativo ? 'bg-green-400' : 'bg-red-400'}`} />
+                              {aluno.nome}
+                            </td>
+                            <td className="py-2 pr-3 text-center text-green-600">{aluno.presencas}</td>
+                            <td className="py-2 pr-3 text-center text-yellow-600">{aluno.justificados}</td>
+                            <td className="py-2 pr-3 text-center text-red-600">{aluno.faltas}</td>
+                            <td className="py-2 pr-3 text-center text-gray-600">{aluno.total}</td>
+                            <td className="py-2 pr-3 text-center">
+                              <span className={`font-medium ${taxaNum >= 75 ? 'text-green-600' : taxaNum >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                {typeof taxa === 'string' ? taxa : taxa + '%'}
+                              </span>
+                            </td>
+                            <td className="py-2">
+                              <button
+                                onClick={() => handleVerHistorico(aluno)}
+                                className="text-xs text-primary-600 hover:underline"
+                              >
+                                Histórico
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {alunosFiltrados.length === 0 && (
+                        <tr><td colSpan={7} className="py-6 text-center text-gray-400">Nenhum aluno encontrado.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-gray-400 mt-2 text-right">{alunosFiltrados.length} de {(freqData?.alunosGrid?.length || 0)} alunos</p>
+              </>
+            ) : (
+              <p className="text-sm text-gray-400 text-center py-4">Selecione um mês/ano para carregar os dados.</p>
             )}
 
             {alunoSelecionado && (
               <div className="mt-4 border-t border-gray-200 pt-4">
+                <button
+                  onClick={() => setAlunoSelecionado(null)}
+                  className="text-xs text-gray-500 hover:text-gray-700 mb-2"
+                >
+                  ← Voltar à lista
+                </button>
                 <h4 className="text-base font-semibold text-gray-800 mb-3">
                   {alunoSelecionado.nome}
                 </h4>
@@ -456,7 +529,7 @@ const Relatorios: React.FC = () => {
 
             {!buscaHistorico && !alunoSelecionado && (
               <p className="text-sm text-gray-400 text-center py-4">
-                Digite o nome de um aluno para consultar o histórico completo de presenças e permanência.
+                Use a busca acima para encontrar alunos e ver o histórico de presenças.
               </p>
             )}
           </div>

@@ -24,7 +24,7 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
   if (error) throw new AppError('Erro ao buscar frequencia', 500);
 
   const [alunosResult, turmasResult, professoresResult] = await Promise.all([
-    supabase.from('alunos').select('id, nome, nivel, turma_id').eq('tenant_id', tenantId),
+    supabase.from('alunos').select('id, nome, nivel, turma_id, ativo').eq('tenant_id', tenantId),
     supabase.from('turmas').select('id, grupo_id, nivel, horario, professor_id').eq('tenant_id', tenantId),
     supabase.from('professores').select('id, nome').eq('tenant_id', tenantId),
   ]);
@@ -84,17 +84,30 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
     }
   });
 
-  const alunosArray = Array.from(alunosFreq.values());
-  const topPresenca = alunosArray
+  const alunosComRegistro = Array.from(alunosFreq.values());
+  const topPresenca = alunosComRegistro
     .filter(a => a.total > 0)
     .sort((a, b) => (b.presentes / b.total) - (a.presentes / a.total))
     .slice(0, 5)
     .map(a => ({ nome: a.nome, presencas: a.presentes, total: a.total }));
 
-  const topFaltas = alunosArray
+  const topFaltas = alunosComRegistro
     .sort((a, b) => b.faltas - a.faltas)
     .slice(0, 5)
     .map(a => ({ nome: a.nome, faltas: a.faltas, total: a.total }));
+
+  const alunosGrid = (alunosResult.data || []).map((a: any) => {
+    const freq = alunosFreq.get(a.id);
+    return {
+      id: a.id,
+      nome: a.nome,
+      ativo: a.ativo ?? true,
+      presencas: freq?.presentes || 0,
+      justificados: freq?.justificados || 0,
+      faltas: freq?.faltas || 0,
+      total: freq?.total || 0,
+    };
+  });
 
   return {
     resumo: { totalRegistros, presentes, faltas, justificados },
@@ -102,6 +115,7 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
     porHorario,
     porProfessor,
     topAlunos: { topPresenca, topFaltas },
+    alunosGrid,
   };
 }
 
