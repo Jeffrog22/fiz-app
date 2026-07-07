@@ -3,6 +3,7 @@ import { ChamadaLog } from '../types';
 import { AppError } from '../middleware/errorHandler';
 import { fetchWeather } from '../utils/weather';
 import { registrarOperacao } from '../utils/logEngine';
+import * as extrapolarService from './extrapolarService';
 
 export async function listarPorData(data: string, tenantId: string): Promise<any[]> {
   const { data: logs, error } = await supabase
@@ -360,59 +361,47 @@ export async function salvarCardAula(
 }
 
 const CANCELAMENTO_TIPOS = new Set([
-  'Falta Particular do Professor',
-  'Falta Médica',
-  'Manutenção Emergencial',
+  'Médico/particular/trabalho',
+  'Manutenção/Incidente',
   'Raios e Trovões',
-  'Incidente Crítico',
 ]);
 
-async function aplicarBOEmIndice(
+async function salvarMetadadosBO(
   tenantId: string,
   data: string,
   indice_aula: number,
-  tipo_select: string,
   tipo_ocorrencia: string,
   motivo: string,
-  grupo_id?: string,
 ): Promise<void> {
-  const isCancelamento = CANCELAMENTO_TIPOS.has(tipo_ocorrencia);
-  const statusFinal = tipo_select === 'pessoal' && grupo_id
-    ? 'justificado'
-    : isCancelamento
-      ? 'cancelado'
-      : undefined;
+  const { data: existente } = await supabase
+    .from('chamadas_log')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('data', data)
+    .eq('indice_aula', indice_aula)
+    .limit(1);
 
-  if (grupo_id) {
+  if (existente && existente.length > 0) {
     const { error } = await supabase
       .from('chamadas_log')
-      .upsert({
-        tenant_id: tenantId,
-        data,
-        grupo_id,
-        indice_aula,
-        tipo_select,
-        tipo_ocorrencia,
-        status: statusFinal || 'justificado',
-        motivo,
-        origem: 'manual',
-      });
-    if (error) throw new AppError('Erro ao salvar BO', 500);
-  } else {
-    const updateFields: Record<string, any> = {
-      tipo_select,
-      tipo_ocorrencia,
-      motivo,
-    };
-    if (statusFinal) updateFields.status = statusFinal;
-
-    const { error } = await supabase
-      .from('chamadas_log')
-      .update(updateFields)
+      .update({ tipo_ocorrencia, motivo })
       .eq('tenant_id', tenantId)
       .eq('data', data)
       .eq('indice_aula', indice_aula);
-    if (error) throw new AppError('Erro ao atualizar BO', 500);
+    if (error) throw new AppError('Erro ao salvar metadados BO', 500);
+  } else {
+    const { error } = await supabase
+      .from('chamadas_log')
+      .insert({
+        tenant_id: tenantId,
+        data,
+        indice_aula,
+        tipo_ocorrencia,
+        motivo,
+        origem: 'manual',
+        status: null,
+      });
+    if (error) throw new AppError('Erro ao salvar metadados BO', 500);
   }
 }
 
@@ -420,49 +409,42 @@ export async function salvarCardBO(
   tenantId: string,
   data: string,
   indice_aula: number | undefined,
-  tipo_select?: string,
-  tipo_ocorrencia?: string,
-  motivo?: string,
-  grupo_id?: string,
+  via: 'via_1' | 'via_2',
+  tipo_ocorrencia: string,
+  motivo: string,
   compromete_dia?: boolean,
+  professorId?: string,
+  grupoId?: string,
 ): Promise<void> {
   if (!data) throw new AppError('Campo data e obrigatorio', 400);
 
   const aulaIdx = indice_aula ?? 0;
-  const tSelect = tipo_select || 'pessoal';
-  const tOcorrencia = tipo_ocorrencia || 'Outro';
   const tMotivo = motivo || '';
+  const isCancelamento = CANCELAMENTO_TIPOS.has(tipo_ocorrencia);
 
-  if (compromete_dia) {
-    const maxIndices = 12;
-    for (let i = 0; i < maxIndices; i++) {
-      await aplicarBOEmIndice(tenantId, data, i, tSelect, tOcorrencia, tMotivo, grupo_id);
-    }
-    if (tSelect === 'geral') {
-      const { data: outros } = await supabase
-        .from('chamadas_log')
-        .select('grupo_id, indice_aula')
-        .eq('tenant_id', tenantId)
-        .eq('data', data);
-      if (outros) {
-        const visto = new Set<string>();
-        for (const log of outros) {
-          const key = `${log.grupo_id}|${log.indice_aula}`;
-          if (visto.has(key)) continue;
-          visto.add(key);
-          await aplicarBOEmIndice(tenantId, data, log.indice_aula, tSelect, tOcorrencia, tMotivo, log.grupo_id);
-        }
-      }
-    }
+  if (!isCancelamento || !grupoId) {
+    await salvarMetadadosBO(tenantId, data, aulaIdx, tipo_ocorrencia, tMotivo);
+    registrarOperacao({
+      tenant_id: tenantId,
+      tabela: 'chamadas_log',
+      operacao: 'insercao',
+      dados: { data, indice_aula: aulaIdx, tipo_ocorrencia, via, compromete_dia },
+    });
+    return;
+  }
+
+  if (via === 'via_2') {
+    if (!professorId) throw new AppError('Professor ID obrigatorio para via_2', 400);
+    await extrapolarService.extrapolarCancelamentoPessoal(tenantId, data, grupoId, aulaIdx, !!compromete_dia, professorId, tMotivo);
   } else {
-    await aplicarBOEmIndice(tenantId, data, aulaIdx, tSelect, tOcorrencia, tMotivo, grupo_id);
+    await extrapolarService.extrapolarCancelamentoGeral(tenantId, data, grupoId, aulaIdx, !!compromete_dia, tMotivo);
   }
 
   registrarOperacao({
     tenant_id: tenantId,
     tabela: 'chamadas_log',
-    operacao: tSelect === 'geral' && CANCELAMENTO_TIPOS.has(tOcorrencia) ? 'cancelamento' : 'insercao',
-    dados: { data, indice_aula: aulaIdx, tipo_select: tSelect, tipo_ocorrencia: tOcorrencia, compromete_dia },
+    operacao: 'cancelamento',
+    dados: { data, indice_aula: aulaIdx, tipo_ocorrencia, via, compromete_dia },
   });
 }
 

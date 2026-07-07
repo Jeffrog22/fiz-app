@@ -10,6 +10,8 @@ async function extrapolarPorLabel(
   status: 'justificado' | 'cancelado',
   motivo?: string,
   apenasSubsequentesOrigem?: boolean,
+  professorIdFilter?: string,
+  apenasIndiceUnico?: boolean,
 ): Promise<{ message: string; count: number }> {
   if (!data) throw new AppError('Campo data é obrigatório', 400);
 
@@ -50,14 +52,12 @@ async function extrapolarPorLabel(
     faixaEtariaMap.set(t.grupo_id, t.faixa_etaria || '');
   }
 
-  // Regra: temperatura 23-25°C só cancela para menores de 16
   const isTempCancelMenores = motivo === 'Água muito fria para menores';
 
-  // Agrupa turmas por professor para determinar maxIndices por grupo
-  // IMPORTANTE: NÃO pular turmas aqui (manter índice real no array)
   const profGroups = new Map<string, { grupo_id: string; horario: string; faixa_etaria: string }[]>();
   for (const t of allTurmas) {
     const prof = t.professor_id || 'sem_professor';
+    if (professorIdFilter && prof !== professorIdFilter) continue;
     if (!profGroups.has(prof)) profGroups.set(prof, []);
     profGroups.get(prof)!.push({ grupo_id: t.grupo_id, horario: t.horario, faixa_etaria: faixaEtariaMap.get(t.grupo_id) || '' });
   }
@@ -68,7 +68,9 @@ async function extrapolarPorLabel(
     const maxIndices = turmas.length;
 
     let indicesAProcessar: number[];
-    if (apenasSubsequentesOrigem && profId === (sourceTurma.professor_id || 'sem_professor')) {
+    if (apenasIndiceUnico) {
+      indicesAProcessar = [indiceAulaOrigem];
+    } else if (apenasSubsequentesOrigem && profId === (sourceTurma.professor_id || 'sem_professor')) {
       indicesAProcessar = [];
       for (let i = indiceAulaOrigem; i < maxIndices; i++) indicesAProcessar.push(i);
     } else {
@@ -79,6 +81,7 @@ async function extrapolarPorLabel(
     if (indicesAProcessar.length === 0) continue;
 
     for (const idx of indicesAProcessar) {
+      if (idx >= maxIndices) continue;
       const turma = turmas[idx];
       const faixa = turma.faixa_etaria || '';
       if (isTempCancelMenores && (faixa === '+ 16 anos' || faixa === '+16 anos')) continue;
@@ -155,7 +158,7 @@ async function extrapolarPorLabel(
     tenant_id: tenantId,
     tabela: 'chamadas_log',
     operacao: `extrapolacao_${status}`,
-    dados: { data, label: sourceTurma.label, total: logsCriados.length, motivo },
+    dados: { data, label: sourceTurma.label, total: logsCriados.length, motivo, professorIdFilter, apenasIndiceUnico },
   });
 
   const label = status === 'cancelado' ? 'Cancelamento' : 'Justificativa';
@@ -182,4 +185,27 @@ export async function extrapolarCancelamento(
   motivo?: string,
 ): Promise<{ message: string; count: number }> {
   return extrapolarPorLabel(tenantId, data, grupoId, indiceAulaOrigem, 'cancelado', motivo, false);
+}
+
+export async function extrapolarCancelamentoPessoal(
+  tenantId: string,
+  data: string,
+  grupoId: string,
+  indiceAula: number,
+  comprometeDia: boolean,
+  professorId: string,
+  motivo?: string,
+): Promise<{ message: string; count: number }> {
+  return extrapolarPorLabel(tenantId, data, grupoId, indiceAula, 'cancelado', motivo, false, professorId, !comprometeDia);
+}
+
+export async function extrapolarCancelamentoGeral(
+  tenantId: string,
+  data: string,
+  grupoId: string,
+  indiceAula: number,
+  comprometeDia: boolean,
+  motivo?: string,
+): Promise<{ message: string; count: number }> {
+  return extrapolarPorLabel(tenantId, data, grupoId, indiceAula, 'cancelado', motivo, false, undefined, !comprometeDia);
 }

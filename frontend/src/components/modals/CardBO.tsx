@@ -1,44 +1,36 @@
 import React, { useState } from 'react';
 import api from '../../utils/api';
-import type { Aluno } from '../../types';
 
 interface Props {
   aberto: boolean;
   onClose: () => void;
   data: string;
   indiceAula: number;
-  alunos?: Aluno[];
+  grupoId: string;
 }
 
 const CANCELAMENTO_TIPOS = new Set([
-  'Falta Particular do Professor',
-  'Falta Médica',
-  'Manutenção Emergencial',
+  'Médico/particular/trabalho',
+  'Manutenção/Incidente',
   'Raios e Trovões',
-  'Incidente Crítico',
 ]);
 
 const TIPOS_PESSOAIS = [
-  'Médico/Particular/Trabalho',
+  'Médico/particular/trabalho',
   'Reunião',
   'Secretaria',
-  'Falta Particular do Professor',
 ];
 
 const TIPOS_GERAIS = [
-  'Falta Particular do Professor',
-  'Falta Médica',
-  'Manutenção Emergencial',
+  'Manutenção/Incidente',
   'Raios e Trovões',
-  'Incidente Crítico',
   'Reunião',
 ];
 
-const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, alunos }) => {
+const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId }) => {
   const [isPessoal, setIsPessoal] = useState(true);
   const [comprometeDia, setComprometeDia] = useState(false);
   const [tipo, setTipo] = useState(TIPOS_PESSOAIS[0]);
-  const [grupoId, setGrupoId] = useState('');
   const [descricao, setDescricao] = useState('');
   const [salvando, setSalvando] = useState(false);
 
@@ -51,6 +43,7 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, alunos }) 
 
   const tipos = isPessoal ? TIPOS_PESSOAIS : TIPOS_GERAIS;
   const isCancelamento = CANCELAMENTO_TIPOS.has(tipo);
+  const via = isPessoal ? 'via_2' : 'via_1';
 
   const handleSalvar = async () => {
     setSalvando(true);
@@ -58,11 +51,11 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, alunos }) 
       await api.post('/chamadas/card-bo', {
         data,
         indice_aula: indiceAula,
-        tipo_select: isPessoal ? 'pessoal' : 'geral',
+        via,
         tipo_ocorrencia: tipo,
         motivo: descricao,
-        grupo_id: isPessoal ? grupoId || undefined : undefined,
         compromete_dia: comprometeDia || undefined,
+        grupo_id: grupoId,
       });
       onClose();
     } catch (err) {
@@ -91,6 +84,9 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, alunos }) 
             <label htmlFor="pessoalCheck" className="text-sm font-medium text-gray-700">
               Pessoal / Professor
             </label>
+            <span className="text-[10px] text-gray-400 ml-auto">
+              {via === 'via_2' ? 'Exclusivo do professor' : 'Afeta todos os professores'}
+            </span>
           </div>
 
           <div>
@@ -111,19 +107,6 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, alunos }) 
             </div>
           </div>
 
-          {isPessoal && alunos && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Aluno</label>
-              <select value={grupoId} onChange={(e) => setGrupoId(e.target.value)}
-                className="w-full border border-gray-300 rounded p-2 mt-1 text-sm">
-                <option value="">Selecionar aluno...</option>
-                {alunos.map((a: Aluno) => (
-                  <option key={a.id} value={a.id}>{a.nome}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
           <div>
             <label className="block text-sm font-medium text-gray-700">Tipo</label>
             <select value={tipo} onChange={(e) => setTipo(e.target.value)}
@@ -134,10 +117,15 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, alunos }) 
             </select>
           </div>
 
-          {!isPessoal && isCancelamento && (
-            <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
-              Este tipo de ocorrência irá <strong>cancelar a aula</strong> na matriz de chamada.
-              {comprometeDia && ' O cancelamento será aplicado em todas as aulas do dia.'}
+          {isCancelamento && (
+            <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600 space-y-1">
+              <p>Este tipo de ocorrência irá <strong>cancelar a aula</strong> na matriz de chamada.</p>
+              {comprometeDia && <p>O cancelamento será aplicado em todas as aulas do dia.</p>}
+              <p className="text-red-500">
+                {via === 'via_2'
+                  ? 'Apenas as turmas deste professor serão afetadas (via_2).'
+                  : 'Todas as turmas de todos os professores serão afetadas (via_1).'}
+              </p>
             </div>
           )}
 

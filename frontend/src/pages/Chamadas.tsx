@@ -641,7 +641,7 @@ const Chamadas: React.FC = () => {
         onClose={() => { setCardBOAberto(false); carregarLogs(); carregarCardAulaData(); }}
         data={dateHeaderClickData}
         indiceAula={indiceAtual}
-        alunos={alunosDaTurma}
+        grupoId={grupoId}
       />
     </div>
   );
