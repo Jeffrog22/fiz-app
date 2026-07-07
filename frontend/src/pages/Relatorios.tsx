@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import api from '../utils/api';
 import SearchInput from '../components/SearchInput';
-import ErrorBoundary from '../components/ErrorBoundary';
 import { normalizeSearch } from '../utils/formatters';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -76,22 +75,32 @@ const Relatorios: React.FC = () => {
   const [carregandoFreq, setCarregandoFreq] = useState(false);
   const [carregandoCancel, setCarregandoCancel] = useState(false);
   const [carregandoHistorico, setCarregandoHistorico] = useState(false);
+  const [erroFreq, setErroFreq] = useState<string | null>(null);
+  const [erroCancel, setErroCancel] = useState<string | null>(null);
 
   const carregarFrequencia = useCallback(async () => {
     setCarregandoFreq(true);
+    setErroFreq(null);
     try {
       const res = await api.get(`/relatorios/frequencia?mes=${mes}&ano=${ano}`);
       setFreqData(res.data);
-    } catch { setFreqData(null); }
+    } catch {
+      setFreqData(null);
+      setErroFreq('Erro ao carregar dados de frequência. Verifique sua conexão.');
+    }
     setCarregandoFreq(false);
   }, [mes, ano]);
 
   const carregarCancelamentos = useCallback(async () => {
     setCarregandoCancel(true);
+    setErroCancel(null);
     try {
       const res = await api.get(`/relatorios/cancelamentos?mes=${mes}&ano=${ano}`);
       setCancelData(res.data);
-    } catch { setCancelData(null); }
+    } catch {
+      setCancelData(null);
+      setErroCancel('Erro ao carregar dados de cancelamentos. Verifique sua conexão.');
+    }
     setCarregandoCancel(false);
   }, [mes, ano]);
 
@@ -137,10 +146,7 @@ const Relatorios: React.FC = () => {
     setCarregandoHistorico(false);
   };
 
-  const carregando = tab === 'frequencia' ? carregandoFreq : tab === 'cancelamentos' ? carregandoCancel : true;
-
   return (
-    <ErrorBoundary>
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-gray-800">Relatórios</h1>
 
@@ -180,7 +186,9 @@ const Relatorios: React.FC = () => {
       </div>
 
       {tab === 'frequencia' && (
-        carregandoFreq ? <LoadingSpinner /> : freqData && (
+        carregandoFreq ? <LoadingSpinner /> : erroFreq ? (
+          <p className="text-sm text-red-500 text-center py-4">{erroFreq}</p>
+        ) : freqData && (
         <div className="space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
@@ -304,7 +312,9 @@ const Relatorios: React.FC = () => {
       )}
 
       {tab === 'cancelamentos' && (
-        carregandoCancel ? <LoadingSpinner /> : cancelData && (
+        carregandoCancel ? <LoadingSpinner /> : erroCancel ? (
+          <p className="text-sm text-red-500 text-center py-4">{erroCancel}</p>
+        ) : cancelData && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             {[
@@ -473,7 +483,7 @@ const Relatorios: React.FC = () => {
                   {alunoSelecionado.nome}
                 </h4>
                 {carregandoHistorico ? (
-                  <p className="text-sm text-gray-500">Carregando...</p>
+                  <LoadingSpinner />
                 ) : (
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -560,7 +570,6 @@ const Relatorios: React.FC = () => {
         </div>
       )}
     </div>
-    </ErrorBoundary>
   );
 };
 

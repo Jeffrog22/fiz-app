@@ -20,7 +20,7 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
     query = query.eq('grupo_id', aluno_id);
   }
 
-  const { data: chamadas, error } = await query.range(0, 1000000).order('data', { ascending: true });
+  const { data: chamadas, error } = await query.order('data', { ascending: true });
   if (error) throw new AppError('Erro ao buscar frequencia', 500);
 
   const [alunosResult, turmasResult, professoresResult] = await Promise.all([
@@ -195,7 +195,7 @@ export async function cancelamentos(tenantId: string, filters?: { mes?: number; 
       .lte('data', `${ano}-${mesStr}-31`);
   }
 
-  const { data, error } = await query.range(0, 1000000).order('data', { ascending: true });
+  const { data, error } = await query.order('data', { ascending: true });
   if (error) throw new AppError('Erro ao buscar cancelamentos', 500);
 
   const [alunosResult, turmasResult] = await Promise.all([
