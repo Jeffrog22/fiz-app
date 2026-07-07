@@ -11,9 +11,10 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
 
   if (mes && ano) {
     const mesStr = String(mes).padStart(2, '0');
+    const ultimoDia = String(new Date(ano, mes, 0).getDate()).padStart(2, '0');
     query = query
       .gte('data', `${ano}-${mesStr}-01`)
-      .lte('data', `${ano}-${mesStr}-31`);
+      .lte('data', `${ano}-${mesStr}-${ultimoDia}`);
   }
 
   if (aluno_id) {
@@ -190,9 +191,10 @@ export async function cancelamentos(tenantId: string, filters?: { mes?: number; 
 
   if (mes && ano) {
     const mesStr = String(mes).padStart(2, '0');
+    const ultimoDia = String(new Date(ano, mes, 0).getDate()).padStart(2, '0');
     query = query
       .gte('data', `${ano}-${mesStr}-01`)
-      .lte('data', `${ano}-${mesStr}-31`);
+      .lte('data', `${ano}-${mesStr}-${ultimoDia}`);
   }
 
   const { data, error } = await query.order('data', { ascending: true });
