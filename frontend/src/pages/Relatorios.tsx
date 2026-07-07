@@ -110,24 +110,6 @@ const Relatorios: React.FC = () => {
     setCarregandoHistorico(false);
   };
 
-  const rankings = (() => {
-    if (!freqData) return null;
-    const alunosRank: { nome: string; presencas: number; faltas: number; total: number }[] = [];
-    const nomes = Object.keys(freqData.porProfessor);
-    nomes.forEach((nome) => {
-      const dados = freqData.porProfessor[nome];
-      alunosRank.push({
-        nome,
-        presencas: dados.presentes,
-        faltas: dados.total - dados.presentes,
-        total: dados.total,
-      });
-    });
-    const topPresenca = [...alunosRank].sort((a, b) => b.presencas - a.presencas).slice(0, 5);
-    const topFaltas = [...alunosRank].sort((a, b) => b.faltas - a.faltas).slice(0, 5);
-    return { topPresenca, topFaltas };
-  })();
-
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-gray-800">Relatórios</h1>
@@ -185,22 +167,26 @@ const Relatorios: React.FC = () => {
 
           <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribuição de Presença</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={[
-                    { name: 'Presentes', value: freqData.resumo.presentes },
-                    { name: 'Faltas', value: freqData.resumo.faltas },
-                    { name: 'Justificados', value: freqData.resumo.justificados },
-                  ]}
-                  cx="50%" cy="50%" outerRadius={80} dataKey="value"
-                  label={({ name, percent }: any) => `${name || ''} ${((percent || 0) * 100).toFixed(0)}%`}
-                >
-                  {[0, 1, 2].map((i) => <Cell key={i} fill={CORES_PIE[i]} />)}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            {freqData.resumo.totalRegistros > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Presentes', value: freqData.resumo.presentes },
+                      { name: 'Faltas', value: freqData.resumo.faltas },
+                      { name: 'Justificados', value: freqData.resumo.justificados },
+                    ]}
+                    cx="50%" cy="50%" outerRadius={80} dataKey="value"
+                    label={({ name, percent }: any) => `${name || ''} ${((percent || 0) * 100).toFixed(0)}%`}
+                  >
+                    {[0, 1, 2].map((i) => <Cell key={i} fill={CORES_PIE[i]} />)}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-sm text-gray-400 text-center py-8">Nenhum registro no período.</p>
+            )}
           </div>
 
           <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
@@ -218,32 +204,7 @@ const Relatorios: React.FC = () => {
             </ResponsiveContainer>
           </div>
 
-          {rankings && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Top 5 - Maior Presença</h3>
-                <div className="space-y-2">
-                  {rankings.topPresenca.map((item, i) => (
-                    <div key={i} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-700">{i + 1}. {item.nome}</span>
-                      <span className="text-green-600 font-medium">{item.presencas}/{item.total} ({calcPercentual(item.presencas, item.total)}%)</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Top 5 - Mais Faltas</h3>
-                <div className="space-y-2">
-                  {rankings.topFaltas.map((item, i) => (
-                    <div key={i} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-700">{i + 1}. {item.nome}</span>
-                      <span className="text-red-600 font-medium">{item.faltas} faltas</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
@@ -298,23 +259,27 @@ const Relatorios: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribuição por Motivo</h3>
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={Object.entries(cancelData.porMotivo)
-                      .sort(([, a], [, b]) => b - a)
-                      .slice(0, 6)
-                      .map(([motivo, qtd], i) => ({ name: motivo, value: qtd, fill: CORES_PIE[i % CORES_PIE.length] }))}
-                    cx="50%" cy="50%" outerRadius={80} dataKey="value"
-                    label={({ name, percent }: any) => `${name || ''} (${((percent || 0) * 100).toFixed(0)}%)`}
-                  >
-                    {Object.entries(cancelData.porMotivo).slice(0, 6).map((_, i) => (
-                      <Cell key={i} fill={CORES_PIE[i % CORES_PIE.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+              {cancelData.total > 0 ? (
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie
+                      data={Object.entries(cancelData.porMotivo)
+                        .sort(([, a], [, b]) => b - a)
+                        .slice(0, 6)
+                        .map(([motivo, qtd], i) => ({ name: motivo, value: qtd, fill: CORES_PIE[i % CORES_PIE.length] }))}
+                      cx="50%" cy="50%" outerRadius={80} dataKey="value"
+                      label={({ name, percent }: any) => `${name || ''} (${((percent || 0) * 100).toFixed(0)}%)`}
+                    >
+                      {Object.entries(cancelData.porMotivo).slice(0, 6).map((_, i) => (
+                        <Cell key={i} fill={CORES_PIE[i % CORES_PIE.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-sm text-gray-400 text-center py-8">Nenhum cancelamento no período.</p>
+              )}
             </div>
 
             <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">

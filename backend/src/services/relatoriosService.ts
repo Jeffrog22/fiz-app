@@ -21,7 +21,7 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
     query = query.eq('grupo_id', aluno_id);
   }
 
-  const { data: chamadas, error } = await query.order('data', { ascending: true });
+  const { data: chamadas, error } = await query.range(0, 1000000).order('data', { ascending: true });
   if (error) throw new AppError('Erro ao buscar frequencia', 500);
 
   const [alunos, turmas] = await Promise.all([
@@ -90,7 +90,7 @@ export async function cancelamentos(tenantId: string, filters?: { mes?: number; 
       .lte('data', `${ano}-${mesStr}-31`);
   }
 
-  const { data, error } = await query.order('data', { ascending: true });
+  const { data, error } = await query.range(0, 1000000).order('data', { ascending: true });
   if (error) throw new AppError('Erro ao buscar cancelamentos', 500);
 
   const [alunos, turmas] = await Promise.all([
@@ -134,9 +134,9 @@ export async function cancelamentos(tenantId: string, filters?: { mes?: number; 
 
 export async function exportarCancelamentosCSV(tenantId: string, filters?: { mes?: number; ano?: number }): Promise<string> {
   const result = await cancelamentos(tenantId, filters);
-  const linhas = ['data,grupo_id,status,motivo,nivel,indice_aula'];
+  const linhas = ['data,grupo_id,status,motivo,indice_aula'];
   for (const r of result.registros) {
-    linhas.push(`${r.data},${r.grupo_id},${r.status},${r.motivo || ''},${r.nivel || ''},${r.indice_aula}`);
+    linhas.push(`${r.data},${r.grupo_id},${r.status},${r.motivo || ''},${r.indice_aula}`);
   }
   return linhas.join('\n');
 }
