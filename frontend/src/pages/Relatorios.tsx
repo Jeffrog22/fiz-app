@@ -79,9 +79,9 @@ const Relatorios: React.FC = () => {
 
   const exportCSV = () => {
     if (!cancelData) return;
-    const headers = 'Data,Horario,Nivel,Motivo,Pessoal/Geral\n';
+    const headers = 'Data,Horario,Motivo,Pessoal/Geral\n';
     const rows = cancelData.registros.map((r: any) =>
-      `${r.data || ''},${r.indice_aula || ''},${r.nivel || ''},${r.motivo || ''},${r.tipo_select || ''}`
+      `${r.data || ''},${r.indice_aula || ''},${r.motivo || ''},${r.tipo_select || ''}`
     ).join('\n');
     const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -104,7 +104,7 @@ const Relatorios: React.FC = () => {
     setCarregandoHistorico(true);
     setAlunoSelecionado(aluno);
     try {
-      const res = await api.get(`/relatorios/frequencia?mes=${mes}&ano=${ano}`);
+      const res = await api.get(`/relatorios/frequencia?mes=${mes}&ano=${ano}&aluno_id=${aluno.id}`);
       setFreqData(res.data);
     } catch { /* ignore */ }
     setCarregandoHistorico(false);

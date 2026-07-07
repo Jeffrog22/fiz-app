@@ -21,6 +21,7 @@ interface Exclusao {
 
 interface Turma {
   id: string;
+  grupo_id?: string;
   label: string;
   horario: string;
   professor_id?: string;
@@ -125,7 +126,7 @@ const Exclusoes: React.FC = () => {
             {filtered.map((exc) => (
               <tr key={exc.id} className="hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium text-gray-800">{exc.alunos?.nome || '---'}</td>
-                <td className="px-4 py-3 text-gray-600">{exc.alunos?.turma_id ? turmas.find(t => t.id === exc.alunos.turma_id)?.label || exc.alunos.turma_id : '---'}</td>
+                <td className="px-4 py-3 text-gray-600">{exc.alunos?.turma_id ? turmas.find(t => (t.grupo_id || t.id) === exc.alunos.turma_id)?.label || exc.alunos.turma_id : '---'}</td>
                 <td className="px-4 py-3 text-gray-600">{exc.alunos?.nivel || '---'}</td>
                 <td className="px-4 py-3 text-gray-600 capitalize">{exc.motivo || '---'}</td>
                 <td className="px-4 py-3 text-gray-500 text-xs">{formatDate(exc.data_exclusao)}</td>
@@ -171,7 +172,7 @@ const Exclusoes: React.FC = () => {
               >
                 <option value="">Turma original</option>
                 {turmas.map((t) => (
-                  <option key={t.id} value={t.id}>{t.label} - {t.horario}</option>
+                  <option key={t.grupo_id || t.id} value={t.grupo_id || t.id}>{t.label} - {t.horario}</option>
                 ))}
               </select>
             </div>

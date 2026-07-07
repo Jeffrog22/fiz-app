@@ -36,9 +36,9 @@ export async function listar(tenantId: string, filters?: { nivel?: string; perio
     professor: t.professores?.nome || '---',
     nivel: t.nivel,
     capacidade: t.capacidade || 0,
-    alunos_ativos: ocupacao[t.id] || 0,
-    vagas: Math.max(0, (t.capacidade || 0) - (ocupacao[t.id] || 0)),
-    excedente: Math.max(0, (ocupacao[t.id] || 0) - (t.capacidade || 0)),
+    alunos_ativos: ocupacao[t.grupo_id || t.id] || 0,
+    vagas: Math.max(0, (t.capacidade || 0) - (ocupacao[t.grupo_id || t.id] || 0)),
+    excedente: Math.max(0, (ocupacao[t.grupo_id || t.id] || 0) - (t.capacidade || 0)),
   }));
 
   const totais = resultado.reduce(
