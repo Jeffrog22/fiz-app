@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-05 — Fix extrapolação não chegava ao frontend + range + v1.9.5 -->
+<!-- última-sessão: 2026-07-07 — Fix regra temperatura + iniciação bugada + v1.9.36 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -12,12 +12,12 @@
   `abc123 + v1.9.20 → origin/master`
   ```
 - **AGENTS.md é o único histórico**: SESSION.md não existe mais. Toda sessão registrada aqui.
-- **Commits**: só commitar quando o usuário pedir explicitamente
+- **Commits**: só commitar quando o usuário pedir explicitamente, EXCETO quando ele disser "done" (ou "done + commit tag destino", "anote ai! done") — nesse caso executar automaticamente o ciclo completo: `git add → git commit → git push origin master && git push origin <tag>`. Sempre. Sem perguntar.
 
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v1.9.5
+- **Versão atual:** v1.9.36
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Build Cloudflare:** `git fetch --tags --unshallow` é necessário no build command para `git describe --tags` funcionar (clone shallow sem tags)
@@ -604,4 +604,28 @@
 ### Typecheck
 - Frontend: 0 erros
 - Backend: 0 erros
+
+---
+
+## Sessão: 07/07/2026 — Fix Regra Temperatura + Iniciação Bugada + Regra "done" Automático
+
+### O que foi feito
+- **climateEngine.ts**: reordenada `getTempPiscinaSugestao()` — checagem de `INICIAÇÃO` movida para antes da checagem de faixa etária. Turmas com nível "Iniciação" agora recebem `AULA_CANCELADA` (motivo: "Água fria para iniciação") para temperaturas < 28°C, sem serem interceptadas pela regra de menores de 16 anos (23-25°C)
+- **CardAula.tsx**: adicionada UI "risco para alunos de iniciação" + guarda `nivelTurma !== 'INICIAÇÃO'` na linha de menores para evitar duplicação
+- **extrapolarService.ts**: inalterado — com o novo motivo `'Água fria para iniciação'`, `isTempCancelMenores` fica `false`, pulando corretamente o skip de turmas +16 anos (comportamento desejado para iniciação)
+- **AGENTS.md**: regra de auto-commit corrigida — "done" do usuário dispara ciclo completo (add → commit → push)
+
+### Decisões
+- Ordem da nova árvore: < 23°C → crítica > INICIAÇÃO < 28°C → cancel > < 25°C + faixa → menores > < 25°C → +16 justificado > < 26°C → muito fria > < 28°C → fria
+- A regra de iniciação tem precedência sobre faixa etária porque iniciação é mais restritiva (cancela em temperatura mais alta)
+
+### Arquivos
+- `frontend/src/utils/climateEngine.ts` (reordenação getTempPiscinaSugestao)
+- `frontend/src/components/modals/CardAula.tsx` (+UI iniciação)
+- `AGENTS.md` (regra auto-commit + sessão)
+
+### Typecheck
+- Frontend: 0 erros
+- Backend: 0 erros
+- Testes: 41/41 frontend + 25/25 backend passam
 
