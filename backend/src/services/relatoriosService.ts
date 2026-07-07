@@ -109,7 +109,7 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
     };
   });
 
-  return {
+  const result: any = {
     resumo: { totalRegistros, presentes, faltas, justificados },
     porNivel,
     porHorario,
@@ -117,6 +117,66 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
     topAlunos: { topPresenca, topFaltas },
     alunosGrid,
   };
+
+  if (aluno_id) {
+    const { data: periods, error: periodsError } = await supabase
+      .from('enrollment_period')
+      .select('*')
+      .eq('aluno_id', aluno_id)
+      .order('data_inicio', { ascending: true });
+
+    if (!periodsError && periods) {
+      const turmasLookup = new Map<string, any>();
+      turmasResult.data?.forEach((t: any) => {
+        turmasLookup.set(t.id, t);
+        if (t.grupo_id) turmasLookup.set(t.grupo_id, t);
+      });
+
+      const enrollmentPeriods = await Promise.all(periods.map(async (p: any) => {
+        const turma = turmasLookup.get(p.turma_id);
+        const { data: logs, error: logsError } = await supabase
+          .from('chamadas_log')
+          .select('status')
+          .eq('tenant_id', tenantId)
+          .eq('grupo_id', aluno_id)
+          .gte('data', p.data_inicio)
+          .lte('data', p.data_fim || '2099-12-31');
+
+        const periodLogs = logs || [];
+        return {
+          id: p.id,
+          nivel: turma?.nivel || aluno_id || 'Sem nivel',
+          turma_label: turma ? `${turma.nivel || ''} ${turma.horario || ''}`.trim() : 'Turma',
+          data_inicio: p.data_inicio,
+          data_fim: p.data_fim,
+          total: periodLogs.length,
+          presentes: periodLogs.filter((l: any) => l.status === 'presente').length,
+          faltas: periodLogs.filter((l: any) => l.status === 'falta').length,
+          justificados: periodLogs.filter((l: any) => l.status === 'justificado').length,
+        };
+      }));
+
+      const totalDias = enrollmentPeriods.reduce((acc: number, p: any) => {
+        const inicio = new Date(p.data_inicio).getTime();
+        const fim = p.data_fim ? new Date(p.data_fim).getTime() : Date.now();
+        return acc + Math.max(0, Math.ceil((fim - inicio) / (1000 * 60 * 60 * 24)));
+      }, 0);
+
+      const primeiraData = enrollmentPeriods.length > 0 ? enrollmentPeriods[0].data_inicio : null;
+      const diasDesdeInicio = primeiraData
+        ? Math.max(1, Math.ceil((Date.now() - new Date(primeiraData).getTime()) / (1000 * 60 * 60 * 24)))
+        : 1;
+
+      result.enrollmentPeriods = enrollmentPeriods;
+      result.retencao = {
+        totalDias,
+        diasDesdeInicio,
+        percentual: Math.min(100, Math.round((totalDias / diasDesdeInicio) * 100)),
+      };
+    }
+  }
+
+  return result;
 }
 
 export async function cancelamentos(tenantId: string, filters?: { mes?: number; ano?: number }): Promise<any> {

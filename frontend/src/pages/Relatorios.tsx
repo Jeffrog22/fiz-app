@@ -21,6 +21,12 @@ interface FrequenciaData {
     id: string; nome: string; ativo: boolean;
     presencas: number; justificados: number; faltas: number; total: number;
   }>;
+  enrollmentPeriods?: Array<{
+    id: string; nivel: string; turma_label: string;
+    data_inicio: string; data_fim: string | null;
+    total: number; presentes: number; faltas: number; justificados: number;
+  }>;
+  retencao?: { totalDias: number; diasDesdeInicio: number; percentual: number };
 }
 
 interface CancelamentoData {
@@ -498,30 +504,48 @@ const Relatorios: React.FC = () => {
                       />
                     </div>
 
-                    <div className="bg-gray-50 rounded p-4">
-                      <p className="text-sm font-medium text-gray-700 mb-3">Linha do Tempo de Permanência</p>
-                      <div className="space-y-3">
-                        {Object.entries(freqData?.porNivel || {}).map(([nivel, dados], i) => (
-                          <div key={nivel} className="flex gap-3">
-                            <div className="flex flex-col items-center">
-                              <div className="w-3 h-3 rounded-full bg-primary-500" />
-                              {i < Object.keys(freqData?.porNivel || {}).length - 1 && (
-                                <div className="w-0.5 flex-1 bg-gray-300" />
-                              )}
-                            </div>
-                            <div className="flex-1 pb-3">
-                              <p className="text-sm font-medium text-gray-800">{nivel}</p>
-                              <p className="text-xs text-gray-500">
-                                Presenças: {dados.presentes}/{dados.total} ({calcPercentual(dados.presentes, dados.total)}%)
-                              </p>
-                            </div>
+                    {freqData?.retencao && (
+                      <div className="bg-gray-50 rounded p-4">
+                        <p className="text-sm font-semibold text-gray-700 mb-3">Índice de Retenção Total do Aluno</p>
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="flex-1">
+                            <BarraProgresso valor={freqData.retencao.totalDias} max={freqData.retencao.diasDesdeInicio} cor="bg-blue-500" />
                           </div>
-                        ))}
-                        {(!freqData?.porNivel || Object.keys(freqData.porNivel || {}).length === 0) && (
-                          <p className="text-xs text-gray-400">Nenhum dado de nível disponível para este período.</p>
-                        )}
+                          <span className="text-lg font-bold text-blue-600">{freqData.retencao.percentual}%</span>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          {freqData.retencao.totalDias} dias de permanência em {freqData.retencao.diasDesdeInicio} dias desde a primeira matrícula
+                        </p>
                       </div>
-                    </div>
+                    )}
+
+                    {freqData?.enrollmentPeriods && freqData.enrollmentPeriods.length > 0 && (
+                      <div className="bg-gray-50 rounded p-4">
+                        <p className="text-sm font-medium text-gray-700 mb-3">Linha do Tempo de Permanência</p>
+                        <div className="space-y-3">
+                          {freqData.enrollmentPeriods.map((p: any, i: number) => (
+                            <div key={p.id} className="flex gap-3">
+                              <div className="flex flex-col items-center">
+                                <div className="w-3 h-3 rounded-full bg-primary-500" />
+                                {i < freqData.enrollmentPeriods!.length - 1 && (
+                                  <div className="w-0.5 flex-1 bg-gray-300" />
+                                )}
+                              </div>
+                              <div className="flex-1 pb-3">
+                                <p className="text-sm font-medium text-gray-800">{p.turma_label || p.nivel}</p>
+                                <p className="text-xs text-gray-500">
+                                  De {new Date(p.data_inicio).toLocaleDateString('pt-BR')}
+                                  {p.data_fim ? ` até ${new Date(p.data_fim).toLocaleDateString('pt-BR')}` : ' até o momento'}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Presenças: {p.presentes}/{p.total} ({calcPercentual(p.presentes, p.total || 0)}%)
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
