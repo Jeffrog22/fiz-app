@@ -16,7 +16,6 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
       .lte('data', `${ano}-${mesStr}-31`);
   }
 
-  // Filtro por aluno específico (histórico)
   if (aluno_id) {
     query = query.eq('grupo_id', aluno_id);
   }
@@ -24,33 +23,34 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
   const { data: chamadas, error } = await query.range(0, 1000000).order('data', { ascending: true });
   if (error) throw new AppError('Erro ao buscar frequencia', 500);
 
-  const [alunos, turmas] = await Promise.all([
+  const [alunosResult, turmasResult] = await Promise.all([
     supabase.from('alunos').select('id, nome, nivel, turma_id').eq('tenant_id', tenantId),
     supabase.from('turmas').select('id, grupo_id, nivel, horario, professor_id').eq('tenant_id', tenantId),
   ]);
 
+  if (alunosResult.error) throw new AppError('Erro ao buscar alunos: ' + alunosResult.error.message, 500);
+  if (turmasResult.error) throw new AppError('Erro ao buscar turmas: ' + turmasResult.error.message, 500);
+
   const alunosMap = new Map<string, any>();
-  alunos.data?.forEach((a: any) => alunosMap.set(a.id, a));
+  alunosResult.data?.forEach((a: any) => alunosMap.set(a.id, a));
 
   const turmasMap = new Map<string, any>();
-  turmas.data?.forEach((t: any) => turmasMap.set(t.grupo_id || t.id, t));
+  turmasResult.data?.forEach((t: any) => turmasMap.set(t.grupo_id || t.id, t));
 
-  const logsAluno = (chamadas || []).filter((r: any) => alunosMap.has(r.grupo_id));
-
-  const totalRegistros = logsAluno.length;
-  const presentes = logsAluno.filter((r: any) => r.status === 'presente').length;
-  const faltas = logsAluno.filter((r: any) => r.status === 'falta').length;
-  const justificados = logsAluno.filter((r: any) => r.status === 'justificado').length;
+  const totalRegistros = chamadas?.length || 0;
+  const presentes = chamadas?.filter((r: any) => r.status === 'presente').length || 0;
+  const faltas = chamadas?.filter((r: any) => r.status === 'falta').length || 0;
+  const justificados = chamadas?.filter((r: any) => r.status === 'justificado').length || 0;
 
   const porNivel: Record<string, { total: number; presentes: number }> = {};
   const porHorario: Record<string, { total: number; presentes: number }> = {};
   const porProfessor: Record<string, { total: number; presentes: number }> = {};
 
-  logsAluno.forEach((r: any) => {
+  (chamadas || []).forEach((r: any) => {
     const aluno = alunosMap.get(r.grupo_id);
-    const turmaAluno = turmasMap.get(aluno?.turma_id);
+    const turma = aluno ? turmasMap.get(aluno.turma_id) : turmasMap.get(r.grupo_id);
 
-    const nivel = turmaAluno?.nivel || aluno?.nivel || 'Sem nivel';
+    const nivel = turma?.nivel || aluno?.nivel || 'Sem nivel';
     if (!porNivel[nivel]) porNivel[nivel] = { total: 0, presentes: 0 };
     porNivel[nivel].total++;
     if (r.status === 'presente') porNivel[nivel].presentes++;
@@ -60,7 +60,7 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
     porHorario[periodo].total++;
     if (r.status === 'presente') porHorario[periodo].presentes++;
 
-    const professor = turmaAluno?.professor_id || 'Geral';
+    const professor = turma?.professor_id || 'Geral';
     if (!porProfessor[professor]) porProfessor[professor] = { total: 0, presentes: 0 };
     porProfessor[professor].total++;
     if (r.status === 'presente') porProfessor[professor].presentes++;
@@ -93,30 +93,31 @@ export async function cancelamentos(tenantId: string, filters?: { mes?: number; 
   const { data, error } = await query.range(0, 1000000).order('data', { ascending: true });
   if (error) throw new AppError('Erro ao buscar cancelamentos', 500);
 
-  const [alunos, turmas] = await Promise.all([
+  const [alunosResult, turmasResult] = await Promise.all([
     supabase.from('alunos').select('id, nome, nivel, turma_id').eq('tenant_id', tenantId),
     supabase.from('turmas').select('id, grupo_id, nivel').eq('tenant_id', tenantId),
   ]);
 
+  if (alunosResult.error) throw new AppError('Erro ao buscar alunos: ' + alunosResult.error.message, 500);
+  if (turmasResult.error) throw new AppError('Erro ao buscar turmas: ' + turmasResult.error.message, 500);
+
   const alunosMap = new Map<string, any>();
-  alunos.data?.forEach((a: any) => alunosMap.set(a.id, a));
+  alunosResult.data?.forEach((a: any) => alunosMap.set(a.id, a));
 
   const turmasMap = new Map<string, any>();
-  turmas.data?.forEach((t: any) => turmasMap.set(t.grupo_id || t.id, t));
+  turmasResult.data?.forEach((t: any) => turmasMap.set(t.grupo_id || t.id, t));
 
   const porMotivo: Record<string, number> = {};
   const porNivel: Record<string, number> = {};
   const porMes: Record<string, number> = {};
 
-  const logsAluno = (data || []).filter((r: any) => alunosMap.has(r.grupo_id));
-
-  logsAluno.forEach((r: any) => {
+  (data || []).forEach((r: any) => {
     const motivo = r.motivo || 'Sem motivo';
     porMotivo[motivo] = (porMotivo[motivo] || 0) + 1;
 
     const aluno = alunosMap.get(r.grupo_id);
-    const turmaAluno = turmasMap.get(aluno?.turma_id);
-    const nivel = turmaAluno?.nivel || aluno?.nivel || 'Sem nivel';
+    const turma = aluno ? turmasMap.get(aluno.turma_id) : turmasMap.get(r.grupo_id);
+    const nivel = turma?.nivel || aluno?.nivel || 'Sem nivel';
     porNivel[nivel] = (porNivel[nivel] || 0) + 1;
 
     const mesKey = r.data ? r.data.substring(0, 7) : 'desconhecido';
@@ -124,11 +125,11 @@ export async function cancelamentos(tenantId: string, filters?: { mes?: number; 
   });
 
   return {
-    total: logsAluno.length,
+    total: data?.length || 0,
     porMotivo,
     porNivel,
     porMes,
-    registros: logsAluno,
+    registros: data || [],
   };
 }
 

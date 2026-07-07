@@ -106,7 +106,9 @@ const Relatorios: React.FC = () => {
     try {
       const res = await api.get(`/relatorios/frequencia?mes=${mes}&ano=${ano}&aluno_id=${aluno.id}`);
       setFreqData(res.data);
-    } catch { /* ignore */ }
+    } catch {
+      setFreqData(null);
+    }
     setCarregandoHistorico(false);
   };
 
