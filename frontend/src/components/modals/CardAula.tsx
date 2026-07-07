@@ -253,7 +253,7 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
                   <ul className="text-xs text-red-600 list-disc list-inside">
                     {tempPiscina < 23 && <li>Água crítica ({tempPiscina}°C) — risco para todos os alunos</li>}
                     {sugestaoFinal.motivo === 'Água fria para iniciação' && <li>Água fria ({tempPiscina}°C) — risco para alunos de iniciação</li>}
-                    {tempPiscina >= 23 && tempPiscina < 25 && !nivelTurma?.toUpperCase()?.startsWith('INICIAÇÃO') && <li>Água muito fria ({tempPiscina}°C) — risco para menores de 16 anos</li>}
+                    {sugestaoFinal.motivo === 'Água muito fria para menores' && <li>Água muito fria ({tempPiscina}°C) — risco para menores de 16 anos</li>}
                     {cloro === 0 && <li>Cloro zerado — condições inadequadas para aula</li>}
                   </ul>
                   {cloro === 0 && onAbrirBO && (

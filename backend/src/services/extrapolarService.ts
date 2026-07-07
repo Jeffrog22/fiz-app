@@ -32,7 +32,7 @@ async function extrapolarPorLabel(
 
   const { data: allTurmas, error: turmasError } = await supabase
     .from('turmas')
-    .select('grupo_id, professor_id, horario, faixa_etaria')
+    .select('grupo_id, professor_id, horario, faixa_etaria, nivel')
     .eq('tenant_id', tenantId)
     .eq('label', sourceTurma.label)
     .order('professor_id')
@@ -48,18 +48,29 @@ async function extrapolarPorLabel(
   }
 
   const faixaEtariaMap = new Map<string, string>();
+  const nivelMap = new Map<string, string>();
   for (const t of allTurmas) {
     faixaEtariaMap.set(t.grupo_id, t.faixa_etaria || '');
+    nivelMap.set(t.grupo_id, t.nivel || '');
   }
 
-  const isTempCancelMenores = motivo === 'Água muito fria para menores';
+  const motivoIniciacao = motivo === 'Água fria para iniciação';
+  const motivoMenores = motivo === 'Água muito fria para menores';
+  const motivoMaiores16 = motivo === 'Água fria para maiores de 16';
+  const motivoMuitoFria = motivo === 'Água muito fria';
+  const motivoFria = motivo === 'Água fria';
 
-  const profGroups = new Map<string, { grupo_id: string; horario: string; faixa_etaria: string }[]>();
+  const profGroups = new Map<string, { grupo_id: string; horario: string; faixa_etaria: string; nivel: string }[]>();
   for (const t of allTurmas) {
     const prof = t.professor_id || 'sem_professor';
     if (professorIdFilter && prof !== professorIdFilter) continue;
     if (!profGroups.has(prof)) profGroups.set(prof, []);
-    profGroups.get(prof)!.push({ grupo_id: t.grupo_id, horario: t.horario, faixa_etaria: faixaEtariaMap.get(t.grupo_id) || '' });
+    profGroups.get(prof)!.push({
+      grupo_id: t.grupo_id,
+      horario: t.horario,
+      faixa_etaria: faixaEtariaMap.get(t.grupo_id) || '',
+      nivel: nivelMap.get(t.grupo_id) || '',
+    });
   }
 
   const logsCriados: any[] = [];
@@ -84,7 +95,11 @@ async function extrapolarPorLabel(
       if (idx >= maxIndices) continue;
       const turma = turmas[idx];
       const faixa = turma.faixa_etaria || '';
-      if (isTempCancelMenores && (faixa === '+ 16 anos' || faixa === '+16 anos')) continue;
+      const nivel = turma.nivel.toUpperCase();
+      if (motivoMenores && (faixa === '+ 16 anos' || faixa === '+16 anos')) continue;
+      if (motivoMaiores16 && faixa !== '+ 16 anos' && faixa !== '+16 anos') continue;
+      if (motivoIniciacao && !nivel.startsWith('INICIAÇÃO')) continue;
+      if ((motivoMuitoFria || motivoFria) && nivel.startsWith('INICIAÇÃO')) continue;
       logsCriados.push({
         tenant_id: tenantId,
         data,
