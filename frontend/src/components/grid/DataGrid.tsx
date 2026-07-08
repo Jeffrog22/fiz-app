@@ -174,6 +174,45 @@ const DataGrid: React.FC<DataGridProps> = ({
     [logs, indiceAtual]
   );
 
+  const getTooltipText = useCallback(
+    (alunoId: string, data: string): string | undefined => {
+      const status = getStatus(alunoId, data);
+      if (!status) return undefined;
+
+      const dataEventos = eventosPorData(data);
+      if (dataEventos.length > 0) {
+        const ev = dataEventos[0];
+        return `${ev.tipo}${ev.descricao ? `: ${ev.descricao}` : ''}`;
+      }
+
+      const logEntry = logs[alunoId]?.[data]?.[indiceAtual]
+        || (turmaGrupoId ? logs[turmaGrupoId]?.[data]?.[indiceAtual] : undefined);
+
+      const partes: string[] = [];
+
+      if (status === 'cancelado') {
+        partes.push('Cancelado');
+        if (logEntry?.tipo_ocorrencia) partes.push(`Ocorrência: ${logEntry.tipo_ocorrencia}`);
+        if (logEntry?.motivo) partes.push(`Motivo: ${logEntry.motivo}`);
+        if (logEntry?.tipo_select) partes.push(logEntry.tipo_select === 'geral' ? 'Geral' : 'Pessoal');
+      } else if (status === 'justificado') {
+        partes.push('Justificado');
+        if (logEntry?.motivo) partes.push(`Motivo: ${logEntry.motivo}`);
+      } else if (status === 'presente' || status === 'falta') {
+        partes.push(status === 'presente' ? 'Presente' : 'Falta');
+        const clima = cardAulaData?.[data]?.[indiceAtual];
+        if (clima?.condicao_clima) {
+          partes.push(`Clima: ${clima.condicao_clima}`);
+          if (clima.temperatura_piscina) partes.push(`Piscina: ${clima.temperatura_piscina}°C`);
+        }
+        if (logEntry?.origem === 'extrapolado') partes.push('(extrapolado)');
+      }
+
+      return partes.length > 0 ? partes.join(' — ') : status;
+    },
+    [getStatus, eventosPorData, logs, turmaGrupoId, indiceAtual, cardAulaData]
+  );
+
   const contarFaltasMes = useCallback((alunoId: string): number => {
     let count = 0;
     for (const dia of dias) {
@@ -327,6 +366,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                           <button
                             onClick={() => handleCellClick(aluno.id, dia)}
                             disabled={futura || isCalendario}
+                            title={getTooltipText(aluno.id, dia)}
                             className={`w-7 h-7 rounded-md text-xs font-bold transition-all ${
                               futura
                                 ? 'bg-gray-50 text-gray-200 cursor-not-allowed'
