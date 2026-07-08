@@ -150,7 +150,8 @@ async function extrapolarPorLabel(
         data,
         grupo_id: a.id,
         indice_aula: log.indice_aula,
-        status,
+        status: log.status,
+        motivo: log.motivo || null,
         origem: 'extrapolado',
       }));
       for (let j = 0; j < studentLogs.length; j += BATCH_SIZE) {

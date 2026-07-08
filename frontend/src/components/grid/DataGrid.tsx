@@ -187,17 +187,22 @@ const DataGrid: React.FC<DataGridProps> = ({
 
       const logEntry = logs[alunoId]?.[data]?.[indiceAtual]
         || (turmaGrupoId ? logs[turmaGrupoId]?.[data]?.[indiceAtual] : undefined);
+      const turmaLog = turmaGrupoId ? logs[turmaGrupoId]?.[data]?.[indiceAtual] : undefined;
 
       const partes: string[] = [];
 
       if (status === 'cancelado') {
         partes.push('Cancelado');
-        if (logEntry?.tipo_ocorrencia) partes.push(`Ocorrência: ${logEntry.tipo_ocorrencia}`);
-        if (logEntry?.motivo) partes.push(`Motivo: ${logEntry.motivo}`);
-        if (logEntry?.tipo_select) partes.push(logEntry.tipo_select === 'geral' ? 'Geral' : 'Pessoal');
+        const ocorrencia = logEntry?.tipo_ocorrencia || turmaLog?.tipo_ocorrencia;
+        const motivoFinal = logEntry?.motivo || turmaLog?.motivo;
+        const tipoSelect = logEntry?.tipo_select || turmaLog?.tipo_select;
+        if (ocorrencia) partes.push(`Ocorrência: ${ocorrencia}`);
+        if (motivoFinal) partes.push(`Motivo: ${motivoFinal}`);
+        if (tipoSelect) partes.push(tipoSelect === 'geral' ? 'Geral' : 'Pessoal');
       } else if (status === 'justificado') {
         partes.push('Justificado');
-        if (logEntry?.motivo) partes.push(`Motivo: ${logEntry.motivo}`);
+        const motivoFinal = logEntry?.motivo || turmaLog?.motivo;
+        if (motivoFinal) partes.push(`Motivo: ${motivoFinal}`);
       } else if (status === 'presente' || status === 'falta') {
         partes.push(status === 'presente' ? 'Presente' : 'Falta');
         const clima = cardAulaData?.[data]?.[indiceAtual];

@@ -250,7 +250,12 @@ const Chamadas: React.FC = () => {
   const processarFila = useCallback(async () => {
     if (filaSalvamento.current.length === 0) return;
     setStatusSave('saving');
-    const payload = [...filaSalvamento.current];
+    const unique = new Map<string, any>();
+    for (const r of filaSalvamento.current) {
+      const key = `${r.data}|${r.grupo_id}|${r.indice_aula}`;
+      unique.set(key, r);
+    }
+    const payload = Array.from(unique.values());
     filaSalvamento.current = [];
     try {
       const res = await api.post('/chamadas', payload);
