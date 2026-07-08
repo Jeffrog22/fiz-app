@@ -101,3 +101,33 @@ export interface LogAcesso {
   status: 'sucesso' | 'falha';
   ip: string;
 }
+
+export interface VagaGrupo {
+  grupo_id: string;
+  nivel: string;
+  professor: string;
+  capacidade: number;
+  alunos_ativos: number;
+  vagas: number;
+  excedente: number;
+}
+
+export interface VagaHorario {
+  horario: string;
+  label: string;
+  total_capacidade: number;
+  total_ativos: number;
+  total_vagas: number;
+  total_excedente: number;
+  grupos: VagaGrupo[];
+}
+
+export interface VagasResponse {
+  totais: {
+    capacidade: number;
+    ativos: number;
+    vagas: number;
+    excedente: number;
+  };
+  horarios: VagaHorario[];
+}
