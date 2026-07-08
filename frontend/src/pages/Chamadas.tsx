@@ -289,10 +289,11 @@ const Chamadas: React.FC = () => {
         if (!next[alunoId][data]) next[alunoId][data] = {};
         if (status) {
           next[alunoId][data][indiceAtual] = {
+            ...(next[alunoId][data][indiceAtual] || {}),
             id: '', tenant_id: '', data, grupo_id: alunoId,
             indice_aula: indiceAtual, status, origem: 'manual',
             criado_em: new Date().toISOString(),
-          };
+          } as ChamadaLog;
         } else {
           delete next[alunoId][data][indiceAtual];
           if (Object.keys(next[alunoId][data]).length === 0) delete next[alunoId][data];

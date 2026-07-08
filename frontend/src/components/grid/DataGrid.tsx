@@ -365,7 +365,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                         <div className="flex flex-col items-center gap-0.5">
                           <button
                             onClick={() => handleCellClick(aluno.id, dia)}
-                            disabled={futura || isCalendario}
+                            aria-disabled={futura || isCalendario}
                             title={getTooltipText(aluno.id, dia)}
                             className={`w-7 h-7 rounded-md text-xs font-bold transition-all ${
                               futura
