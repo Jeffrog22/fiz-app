@@ -37,24 +37,43 @@ async function calcularMetricasCore(tenantId: string, dataInicio: string, dataFi
     .from('chamadas_log')
     .select('data')
     .eq('tenant_id', tenantId)
+    .neq('origem', 'calendario')
     .gte('data', dataInicio)
     .lte('data', dataFim);
 
-  const diasDeAula = new Set<string>(diasAulaData?.map(r => r.data)).size;
+  const diasConcluidos = new Set<string>(diasAulaData?.map(r => r.data)).size;
 
   const { count: turmasCount } = await supabase
     .from('turmas')
     .select('*', { count: 'exact', head: true })
     .eq('tenant_id', tenantId);
 
-  const { count: aulasDadas } = await supabase
+  const { data: logsGrupo } = await supabase
     .from('chamadas_log')
-    .select('*', { count: 'exact', head: true })
+    .select('data, grupo_id')
     .eq('tenant_id', tenantId)
+    .neq('origem', 'calendario')
     .gte('data', dataInicio)
     .lte('data', dataFim);
 
-  let diasPrevistos = diasDeAula;
+  const { data: alunosData } = await supabase
+    .from('alunos')
+    .select('id, turma_id')
+    .eq('tenant_id', tenantId);
+
+  const alunoTurmaMap = new Map<string, string>();
+  (alunosData || []).forEach((a: any) => {
+    if (a.turma_id) alunoTurmaMap.set(a.id, a.turma_id);
+  });
+
+  const aulasSet = new Set<string>();
+  (logsGrupo || []).forEach((log: any) => {
+    const turmaId = alunoTurmaMap.get(log.grupo_id);
+    if (turmaId) aulasSet.add(`${log.data}|${turmaId}`);
+  });
+  const aulasDadas = aulasSet.size;
+
+  let diasPrevistos = diasConcluidos;
   try {
     const { data: periodosData } = await supabase
       .from('periodos_letivos')
@@ -71,7 +90,7 @@ async function calcularMetricasCore(tenantId: string, dataInicio: string, dataFi
 
   const aulasPrevistas = (turmasCount ?? 0) * Math.max(1, diasPrevistos);
 
-  return { diasDeAula, diasPrevistos, aulasDadas: aulasDadas ?? 0, aulasPrevistas };
+  return { diasConcluidos, diasPrevistos, aulasDadas, aulasPrevistas };
 }
 
 export async function metricas(tenantId: string, filters?: { periodo?: 'semana' | 'mes' | 'ano' }): Promise<FrequencyMetrics> {
@@ -160,8 +179,8 @@ export async function timeline(tenantId: string, filters?: { label?: string; pro
   };
 }
 
-export async function frequencia(tenantId: string, filters?: { mes?: number; ano?: number; aluno_id?: string }): Promise<FrequenciaData> {
-  const { mes, ano, aluno_id } = filters || {};
+export async function frequencia(tenantId: string, filters?: { mes?: number; ano?: number; aluno_id?: string; periodo?: string }): Promise<FrequenciaData> {
+  const { mes, ano, aluno_id, periodo } = filters || {};
 
   let query = supabase
     .from('chamadas_log')
@@ -337,7 +356,7 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
     .map(a => ({ id: '', nome: a.nome, faltas: a.faltas }));
 
   const result: FrequenciaData = {
-    metrics: { diasDeAula: 0, diasPrevistos: 0, aulasDadas: 0, aulasPrevistas: 0 },
+    metrics: { diasConcluidos: 0, diasPrevistos: 0, aulasDadas: 0, aulasPrevistas: 0 },
     resumo: { totalRegistros, presentes, faltas, justificados },
     porNivel,
     porHorario,
@@ -348,7 +367,24 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
     alunosResumo: { total: totalAlunos, ativos, inativos, retencaoMedia, frequenciaMedia },
   };
 
-  if (mes && ano) {
+  if (periodo) {
+    const agora = new Date();
+    let inicio: Date;
+    switch (periodo) {
+      case 'semana':
+        inicio = new Date(agora);
+        inicio.setDate(inicio.getDate() - 7);
+        break;
+      case 'ano':
+        inicio = new Date(agora.getFullYear(), 0, 1);
+        break;
+      default:
+        inicio = new Date(agora.getFullYear(), agora.getMonth(), 1);
+    }
+    const dataInicio = inicio.toISOString().split('T')[0];
+    const dataFim = agora.toISOString().split('T')[0];
+    result.metrics = await calcularMetricasCore(tenantId, dataInicio, dataFim);
+  } else if (mes && ano) {
     const mesStr = String(mes).padStart(2, '0');
     const ultimoDia = String(new Date(ano, mes, 0).getDate()).padStart(2, '0');
     result.metrics = await calcularMetricasCore(tenantId, `${ano}-${mesStr}-01`, `${ano}-${mesStr}-${ultimoDia}`);

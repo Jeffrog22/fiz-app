@@ -103,7 +103,7 @@ export interface AuthState {
 // --- Relatórios ---
 
 export interface FrequencyMetrics {
-  diasDeAula: number;
+  diasConcluidos: number;
   diasPrevistos: number;
   aulasDadas: number;
   aulasPrevistas: number;

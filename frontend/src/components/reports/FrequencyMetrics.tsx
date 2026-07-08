@@ -3,7 +3,7 @@ import BarraProgressoRelatorio from './BarraProgressoRelatorio';
 import TimeFilterToggle from './TimeFilterToggle';
 
 interface Props {
-  metrics: { diasDeAula: number; diasPrevistos: number; aulasDadas: number; aulasPrevistas: number } | null;
+  metrics: { diasConcluidos: number; diasPrevistos: number; aulasDadas: number; aulasPrevistas: number } | null;
   periodo: 'semana' | 'mes' | 'ano';
   onPeriodoChange: (v: 'semana' | 'mes' | 'ano') => void;
 }
@@ -24,11 +24,11 @@ const FrequencyMetrics: React.FC<Props> = ({ metrics, periodo, onPeriodoChange }
         <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
           <p className="text-xs text-gray-500 mb-1">Dias de Aula</p>
           <p className="text-2xl font-bold text-gray-800 mb-2">
-            {metrics.diasDeAula}
+            {metrics.diasConcluidos}
             <span className="text-sm text-gray-400 font-normal">/{metrics.diasPrevistos}</span>
           </p>
           <BarraProgressoRelatorio
-            valor={metrics.diasDeAula}
+            valor={metrics.diasConcluidos}
             max={metrics.diasPrevistos}
             cor="bg-blue-400"
             showPercent

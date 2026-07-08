@@ -34,7 +34,7 @@ const Relatorios: React.FC = () => {
     setCarregandoFreq(true);
     setErroFreq(null);
     try {
-      const res = await api.get(`/relatorios/frequencia?mes=${mes}&ano=${ano}`);
+      const res = await api.get(`/relatorios/frequencia?mes=${mes}&ano=${ano}&periodo=${periodo}`);
       const data = res.data as FrequenciaData;
       setFreqData(data);
       if (data.timeline) {
@@ -50,7 +50,7 @@ const Relatorios: React.FC = () => {
       setErroFreq('Erro ao carregar dados de frequência. Verifique sua conexão.');
     }
     setCarregandoFreq(false);
-  }, [mes, ano]);
+  }, [mes, ano, periodo]);
 
   const carregarCancelamentos = useCallback(async () => {
     setCarregandoCancel(true);
@@ -63,7 +63,7 @@ const Relatorios: React.FC = () => {
       setErroCancel('Erro ao carregar dados de cancelamentos. Verifique sua conexão.');
     }
     setCarregandoCancel(false);
-  }, [mes, ano]);
+  }, [mes, ano, periodo]);
 
   useEffect(() => { if (tab === 'frequencia' || tab === 'historico') carregarFrequencia(); }, [tab, carregarFrequencia]);
   useEffect(() => { if (tab === 'cancelamentos') carregarCancelamentos(); }, [tab, carregarCancelamentos]);

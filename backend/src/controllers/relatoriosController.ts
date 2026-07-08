@@ -28,11 +28,12 @@ export class RelatoriosController {
   static async frequencia(req: TenantRequest, res: Response, next: NextFunction) {
     try {
       const tenantId = req.tenantId!;
-      const { mes, ano, aluno_id } = req.query;
+      const { mes, ano, aluno_id, periodo } = req.query;
       const result = await relatoriosService.frequencia(tenantId, {
         mes: mes ? Number(mes) : undefined,
         ano: ano ? Number(ano) : undefined,
         aluno_id: aluno_id ? String(aluno_id) : undefined,
+        periodo: periodo === 'semana' || periodo === 'ano' ? String(periodo) : undefined,
       });
       res.json(result);
     } catch (e) { next(e); }
