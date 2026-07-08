@@ -1,6 +1,8 @@
 #!/bin/sh
-# Auto-creates git tag on every commit by bumping the latest tag
-# Uses: v<major>.<minor>.<patch> scheme
+# SemVer auto-tag on every commit (Conventional Commits)
+#   BREAKING CHANGE or !:  → MAJOR  (vX.0.0)
+#   feat:                  → MINOR  (v0.X.0)
+#   fix:, refactor:, etc   → PATCH  (v0.0.X)
 
 LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
 VERSION=${LAST_TAG#v}
@@ -8,17 +10,38 @@ VERSION=${LAST_TAG#v}
 MAJOR=$(echo "$VERSION" | cut -d. -f1)
 MINOR=$(echo "$VERSION" | cut -d. -f2)
 PATCH=$(echo "$VERSION" | cut -d. -f3)
-
-# Strip any suffix like -rc1, -beta etc
 PATCH=$(echo "$PATCH" | sed 's/[^0-9].*//')
-
-# Default to 0 if empty
 MAJOR=${MAJOR:-0}
 MINOR=${MINOR:-0}
 PATCH=${PATCH:-0}
 
-# Find next available tag (handles orphaned/conflicting tags)
-PATCH=$((PATCH + 1))
+COMMIT_MSG=$(git log -1 --format="%s")
+COMMIT_BODY=$(git log -1 --format="%b")
+
+BUMP="patch"
+if echo "$COMMIT_MSG" | grep -qi "BREAKING CHANGE" || \
+   echo "$COMMIT_BODY" | grep -qi "BREAKING CHANGE" || \
+   echo "$COMMIT_MSG" | grep -q "!:"; then
+  BUMP="major"
+elif echo "$COMMIT_MSG" | grep -qi "^feat:"; then
+  BUMP="minor"
+fi
+
+case "$BUMP" in
+  major)
+    MAJOR=$((MAJOR + 1))
+    MINOR=0
+    PATCH=0
+    ;;
+  minor)
+    MINOR=$((MINOR + 1))
+    PATCH=0
+    ;;
+  *)
+    PATCH=$((PATCH + 1))
+    ;;
+esac
+
 while true; do
   NEW_TAG="v$MAJOR.$MINOR.$PATCH"
   if ! git rev-parse "$NEW_TAG" >/dev/null 2>&1; then
@@ -28,4 +51,4 @@ while true; do
 done
 
 git tag "$NEW_TAG"
-echo "post-commit: created tag $NEW_TAG (previous: $LAST_TAG)"
+echo "post-commit: created tag $NEW_TAG (previous: $LAST_TAG, bump: $BUMP)"

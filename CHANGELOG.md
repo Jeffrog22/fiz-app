@@ -1,5 +1,34 @@
 # Changelog - Fiz! App
 
+## [v1.10.0] - 2026-07-08
+### Adicionado
+- **Frequência**: página Relatórios reescrita em 8 componentes modulares com FrequencyMetrics (diasDeAula/aulasDadas + TimeFilterToggle Semana/Mês/Ano), ClassTimelineChart (barras empilhadas horizontais por horário), GridAnalítico (4 quadrantes + 2 rankings) e CancelamentoDashboard (4 KPIs + 4 gráficos recharts)
+- **Histórico**: 5 cards de resumo (Total/Ativos/Inativos/Retenção média/Frequência média) + modal detalhado com linha do tempo vertical de EnrollmentPeriods
+- **Exportar**: endpoint `POST /relatorios/exportar-cancelamentos` com template .xlsx (exceljs)
+- **Backend**: `GET /relatorios/metricas`, `GET /relatorios/timeline`
+- **Dependências**: `exceljs` (backend), `jspdf` + `html2canvas` (frontend)
+
+### Alterado
+- **Versionamento**: post-commit agora segue SemVer (Conventional Commits): `feat:` → MINOR, `fix:` → PATCH, BREAKING CHANGE → MAJOR
+- **Tag v1.9.39** deletada e recriada como **v1.10.0** (MINOR — Vagas agrupadas por horário)
+
+### Corrigido
+- `relatoriosService`: `porNivel`/`porMotivo`/etc agora retornam arrays (não Records), `distribuicaoMotivo` inclui cores, adicionado `porPeriodo` em cancelamentos e frequência
+
+### Arquivos novos
+- `frontend/src/components/reports/` — 8 componentes (CardIndicadorRelatorio, BarraProgressoRelatorio, TimeFilterToggle, FrequencyMetrics, ClassTimelineChart, GridAnalitico, HistoricoAluno, CancelamentoDashboard)
+- `backend/scripts/gerar-template-cancelamentos.ts`
+- `backend/src/templates/relatorioCancelamentos.xlsx`
+
+### Arquivos alterados
+- `frontend/src/pages/Relatorios.tsx` — reescrito de 576 → ~120 linhas (orquestrador)
+- `frontend/src/types/index.ts` — tipos de relatório adicionados
+- `backend/src/services/relatoriosService.ts` — metricas, timeline, exportXLSX, melhorias
+- `backend/src/controllers/relatoriosController.ts` — novos handlers
+- `backend/src/routes/relatoriosRoutes.ts` — novas rotas
+- `backend/src/types/index.ts` — tipos de relatório adicionados
+- `.githooks/post-commit` — SemVer com Conventional Commits
+
 ## [v1.9.5] - 2026-07-05
 ### Corrigido
 - **Extrapolação não chegava ao frontend**: PostgREST limitava a 1000 rows (max-rows default do free plan). Aumentado para 1000000 no Supabase Dashboard + `.limit()` → `.range()` no código

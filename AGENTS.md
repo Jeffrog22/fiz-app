@@ -14,6 +14,23 @@
 - **AGENTS.md é o único histórico**: SESSION.md não existe mais. Toda sessão registrada aqui.
 - **Commits**: só commitar quando o usuário pedir explicitamente, EXCETO quando ele disser "done" (ou "done + commit tag destino", "anote ai! done") — nesse caso executar automaticamente o ciclo completo: `git add → git commit → git push origin master && git push origin <tag>`. Sempre. Sem perguntar.
 
+## Versionamento Semântico (SemVer 2.0.0)
+
+O post-commit hook (.githooks/post-commit) detecta automaticamente o bump baseado na mensagem do commit (Conventional Commits):
+
+| Mensagem do commit | Bump | Exemplo |
+|---|---|---|
+| `BREAKING CHANGE` no body ou `!:` no subject | **MAJOR** (vX.0.0) | `feat!: remove deprecated endpoint` |
+| `feat:` no subject | **MINOR** (v0.X.0) | `feat: add FrequencyMetrics panel` |
+| `fix:`, `refactor:`, `chore:`, `docs:`, etc | **PATCH** (v0.0.X) | `fix: corrige calculo de retencao` |
+
+Regras:
+- **MAJOR**: mudança incompatível na API ou no banco (breaking change)
+- **MINOR**: adição de funcionalidade retrocompatível
+- **PATCH**: correção de bugs e pequenas melhorias
+- O hook usa `git log -1` para ler a mensagem do commit recém-criado
+- Tags conflitantes (orphan) são puladas automaticamente (loop `while` incrementa PATCH)
+
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
@@ -623,6 +640,49 @@
 - `frontend/src/utils/climateEngine.ts` (reordenação getTempPiscinaSugestao)
 - `frontend/src/components/modals/CardAula.tsx` (+UI iniciação)
 - `AGENTS.md` (regra auto-commit + sessão)
+
+### Typecheck
+- Frontend: 0 erros
+- Backend: 0 erros
+- Testes: 41/41 frontend + 25/25 backend passam
+
+---
+
+## Sessão: 08/07/2026 — Relatórios Refatorado + SemVer + Version Tag
+
+### O que foi feito
+- **Relatórios reescrito**: página de 576 linhas extraída em 8 componentes modulares em `frontend/src/components/reports/`
+- **FrequencyMetrics**: `diasDeAula`/`aulasDadas` com barras de progresso + `TimeFilterToggle` (Semana/Mês/Ano)
+- **ClassTimelineChart**: barras empilhadas horizontais (verde/vermelho/laranja) com números internos + filtros label/professor
+- **GridAnalítico**: 4 quadrantes (Nível azul, Horário ciano, Período roxo, Professor índigo) + 2 rankings (Top Presença/Top Faltas)
+- **Histórico**: 5 cards de resumo (Total/Ativos/Inativos/Retenção média/Frequência média) + modal detalhado com linha do tempo vertical de EnrollmentPeriods
+- **CancelamentoDashboard**: 4 KPIs + 4 gráficos recharts (linha, rosca, barra horizontal, barra vertical) + tabela de registros
+- **Backend**: `GET /relatorios/metricas`, `GET /relatorios/timeline`, `POST /relatorios/exportar-cancelamentos`
+- **Template .xlsx**: `scripts/gerar-template-cancelamentos.ts` gera `src/templates/relatorioCancelamentos.xlsx` (3 abas)
+- **Versionamento**: post-commit hook reescrito com SemVer (Conventional Commits — `feat:`→MINOR, `fix:`→PATCH, BREAKING CHANGE→MAJOR)
+- **Tag corrigida**: v1.9.39 deletada (era PATCH, mas Vagas foi MINOR) → v1.10.0 criada
+- Dependências instaladas: `exceljs` (backend), `jspdf` + `html2canvas` (frontend)
+
+### Arquivos
+- `frontend/src/components/reports/CardIndicadorRelatorio.tsx` (novo)
+- `frontend/src/components/reports/BarraProgressoRelatorio.tsx` (novo)
+- `frontend/src/components/reports/TimeFilterToggle.tsx` (novo)
+- `frontend/src/components/reports/FrequencyMetrics.tsx` (novo)
+- `frontend/src/components/reports/ClassTimelineChart.tsx` (novo)
+- `frontend/src/components/reports/GridAnalitico.tsx` (novo)
+- `frontend/src/components/reports/HistoricoAluno.tsx` (novo)
+- `frontend/src/components/reports/CancelamentoDashboard.tsx` (novo)
+- `frontend/src/pages/Relatorios.tsx` (reescrito)
+- `frontend/src/types/index.ts` (+tipos de relatório)
+- `backend/src/services/relatoriosService.ts` (reescrito — metricas, timeline, melhorias)
+- `backend/src/controllers/relatoriosController.ts` (+metricas, timeline, exportarCancelamentos)
+- `backend/src/routes/relatoriosRoutes.ts` (+3 rotas)
+- `backend/src/types/index.ts` (+tipos de relatório)
+- `backend/scripts/gerar-template-cancelamentos.ts` (novo)
+- `backend/src/templates/relatorioCancelamentos.xlsx` (novo, gerado)
+- `.githooks/post-commit` (reescrito — SemVer)
+- `CHANGELOG.md` (+v1.10.0)
+- `AGENTS.md` (esta sessão + SemVer rules)
 
 ### Typecheck
 - Frontend: 0 erros

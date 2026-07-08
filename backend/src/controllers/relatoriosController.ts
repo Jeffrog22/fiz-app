@@ -3,6 +3,28 @@ import { TenantRequest } from '../types';
 import * as relatoriosService from '../services/relatoriosService';
 
 export class RelatoriosController {
+  static async metricas(req: TenantRequest, res: Response, next: NextFunction) {
+    try {
+      const tenantId = req.tenantId!;
+      const { periodo } = req.query;
+      const validPeriodo = periodo === 'semana' || periodo === 'ano' ? periodo : 'mes';
+      const result = await relatoriosService.metricas(tenantId, { periodo: validPeriodo });
+      res.json(result);
+    } catch (e) { next(e); }
+  }
+
+  static async timeline(req: TenantRequest, res: Response, next: NextFunction) {
+    try {
+      const tenantId = req.tenantId!;
+      const { label, professor_id } = req.query;
+      const result = await relatoriosService.timeline(tenantId, {
+        label: label ? String(label) : undefined,
+        professor_id: professor_id ? String(professor_id) : undefined,
+      });
+      res.json(result);
+    } catch (e) { next(e); }
+  }
+
   static async frequencia(req: TenantRequest, res: Response, next: NextFunction) {
     try {
       const tenantId = req.tenantId!;
@@ -33,6 +55,20 @@ export class RelatoriosController {
         ano: ano ? Number(ano) : undefined,
       });
       res.json(result);
+    } catch (e) { next(e); }
+  }
+
+  static async exportarCancelamentos(req: TenantRequest, res: Response, next: NextFunction) {
+    try {
+      const tenantId = req.tenantId!;
+      const { mes, ano } = req.query;
+      const buffer = await relatoriosService.exportarCancelamentosXLSX(tenantId, {
+        mes: mes ? Number(mes) : undefined,
+        ano: ano ? Number(ano) : undefined,
+      });
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="cancelamentos-${mes || 'todos'}-${ano || 'todos'}.xlsx"`);
+      res.send(buffer);
     } catch (e) { next(e); }
   }
 }
