@@ -435,9 +435,9 @@ export async function salvarCardBO(
 
   if (via === 'via_2') {
     if (!professorId) throw new AppError('Professor ID obrigatorio para via_2', 400);
-    await extrapolarService.extrapolarCancelamentoPessoal(tenantId, data, grupoId, aulaIdx, !!compromete_dia, professorId, tMotivo);
+    await extrapolarService.extrapolarCancelamentoPessoal(tenantId, data, grupoId, aulaIdx, !!compromete_dia, professorId, tMotivo, tipo_ocorrencia, 'pessoal');
   } else {
-    await extrapolarService.extrapolarCancelamentoGeral(tenantId, data, grupoId, aulaIdx, !!compromete_dia, tMotivo);
+    await extrapolarService.extrapolarCancelamentoGeral(tenantId, data, grupoId, aulaIdx, !!compromete_dia, tMotivo, tipo_ocorrencia, 'geral');
   }
 
   registrarOperacao({

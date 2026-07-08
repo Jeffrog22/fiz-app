@@ -12,6 +12,8 @@ async function extrapolarPorLabel(
   apenasSubsequentesOrigem?: boolean,
   professorIdFilter?: string,
   apenasIndiceUnico?: boolean,
+  tipoOcorrencia?: string,
+  tipoSelect?: string,
 ): Promise<{ message: string; count: number }> {
   if (!data) throw new AppError('Campo data é obrigatório', 400);
 
@@ -107,6 +109,8 @@ async function extrapolarPorLabel(
         indice_aula: idx,
         status,
         motivo: motivo || null,
+        tipo_ocorrencia: tipoOcorrencia || null,
+        tipo_select: tipoSelect || null,
         origem: 'extrapolado',
       });
     }
@@ -199,8 +203,10 @@ export async function extrapolarCancelamento(
   indiceAulaOrigem: number,
   _maxIndices?: number,
   motivo?: string,
+  tipoOcorrencia?: string,
+  tipoSelect?: string,
 ): Promise<{ message: string; count: number }> {
-  return extrapolarPorLabel(tenantId, data, grupoId, indiceAulaOrigem, 'cancelado', motivo, false);
+  return extrapolarPorLabel(tenantId, data, grupoId, indiceAulaOrigem, 'cancelado', motivo, false, undefined, false, tipoOcorrencia, tipoSelect);
 }
 
 export async function extrapolarCancelamentoPessoal(
@@ -211,8 +217,10 @@ export async function extrapolarCancelamentoPessoal(
   comprometeDia: boolean,
   professorId: string,
   motivo?: string,
+  tipoOcorrencia?: string,
+  tipoSelect?: string,
 ): Promise<{ message: string; count: number }> {
-  return extrapolarPorLabel(tenantId, data, grupoId, indiceAula, 'cancelado', motivo, false, professorId, !comprometeDia);
+  return extrapolarPorLabel(tenantId, data, grupoId, indiceAula, 'cancelado', motivo, false, professorId, !comprometeDia, tipoOcorrencia, tipoSelect);
 }
 
 export async function extrapolarCancelamentoGeral(
@@ -222,6 +230,8 @@ export async function extrapolarCancelamentoGeral(
   indiceAula: number,
   comprometeDia: boolean,
   motivo?: string,
+  tipoOcorrencia?: string,
+  tipoSelect?: string,
 ): Promise<{ message: string; count: number }> {
-  return extrapolarPorLabel(tenantId, data, grupoId, indiceAula, 'cancelado', motivo, false, undefined, !comprometeDia);
+  return extrapolarPorLabel(tenantId, data, grupoId, indiceAula, 'cancelado', motivo, false, undefined, !comprometeDia, tipoOcorrencia, tipoSelect);
 }
