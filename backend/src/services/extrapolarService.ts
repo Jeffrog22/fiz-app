@@ -102,6 +102,7 @@ async function extrapolarPorLabel(
       if (motivoMaiores16 && faixa !== '+ 16 anos' && faixa !== '+16 anos') continue;
       if (motivoIniciacao && !nivel.startsWith('INICIAÇÃO')) continue;
       if ((motivoMuitoFria || motivoFria) && nivel.startsWith('INICIAÇÃO')) continue;
+      console.log('[debugExtraPol] push turma log:', { grupo_id: turma.grupo_id, indice_aula: idx, status, motivo, tipoOcorrencia, tipoSelect });
       logsCriados.push({
         tenant_id: tenantId,
         data,

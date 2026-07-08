@@ -102,6 +102,7 @@ export class ChamadasController {
     try {
       const tenantId = req.tenantId!;
       const { data, indice_aula, via, tipo_ocorrencia, motivo, compromete_dia, grupo_id } = req.body;
+      console.log('[debugCardBO] controller recebeu:', { data, indice_aula, via, tipo_ocorrencia, motivo, compromete_dia, grupo_id });
       await chamadasService.salvarCardBO(tenantId, data, indice_aula, via, tipo_ocorrencia, motivo, compromete_dia, req.professorId, grupo_id);
       res.json({ ok: true });
     } catch (error) {
