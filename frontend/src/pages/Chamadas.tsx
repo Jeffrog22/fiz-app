@@ -133,7 +133,23 @@ const Chamadas: React.FC = () => {
         if (!indexed[key][log.data]) indexed[key][log.data] = {};
         indexed[key][log.data][log.indice_aula] = log;
       }
-      setLogs(indexed);
+      setLogs((prev) => {
+        const merged = { ...prev };
+        for (const [grupoId, datas] of Object.entries(indexed)) {
+          if (!merged[grupoId]) merged[grupoId] = {};
+          for (const [data, indices] of Object.entries(datas)) {
+            if (!merged[grupoId][data]) merged[grupoId][data] = {};
+            for (const [indice, log] of Object.entries(indices)) {
+              const idx = Number(indice);
+              const localLog = merged[grupoId][data][idx];
+              if (!localLog || localLog.origem !== 'manual') {
+                merged[grupoId][data][idx] = log;
+              }
+            }
+          }
+        }
+        return merged;
+      });
     } catch (err) {
       console.error('Erro ao carregar chamadas', err);
     }
@@ -633,7 +649,14 @@ const Chamadas: React.FC = () => {
 
       <CardAula
         aberto={cardAulaAberto}
-        onClose={() => { setCardAulaAberto(false); setTimeout(() => { carregarLogs(); carregarCardAulaData(); }, 300); }}
+        onClose={async () => {
+          setCardAulaAberto(false);
+          if (filaSalvamento.current.length > 0) {
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+            await processarFila();
+          }
+          setTimeout(() => { carregarLogs(); carregarCardAulaData(); }, 300);
+        }}
         data={dateHeaderClickData}
         indiceAula={indiceAtual}
         grupoId={grupoId}
@@ -644,7 +667,14 @@ const Chamadas: React.FC = () => {
 
       <CardBO
         aberto={cardBOAberto}
-        onClose={() => { setCardBOAberto(false); setTimeout(() => { carregarLogs(); carregarCardAulaData(); }, 300); }}
+        onClose={async () => {
+          setCardBOAberto(false);
+          if (filaSalvamento.current.length > 0) {
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+            await processarFila();
+          }
+          setTimeout(() => { carregarLogs(); carregarCardAulaData(); }, 300);
+        }}
         data={dateHeaderClickData}
         indiceAula={indiceAtual}
         grupoId={grupoId}
