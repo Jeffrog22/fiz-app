@@ -117,7 +117,7 @@ const Chamadas: React.FC = () => {
     } finally {
       setCarregando(false);
     }
-  }, [mes, ano]);
+  }, [mes, ano, labelSelecionada, professorId]);
 
   const carregarLogs = useCallback(async () => {
     if (dias.length === 0) return;
@@ -137,7 +137,7 @@ const Chamadas: React.FC = () => {
     } catch (err) {
       console.error('Erro ao carregar chamadas', err);
     }
-  }, [dias]);
+  }, [dias, professorId, indiceAtual]);
 
   const aplicarEventosCalendario = useCallback(async () => {
     if (eventos.length === 0) return;
@@ -170,7 +170,7 @@ const Chamadas: React.FC = () => {
     const map: Record<string, Record<number, any>> = {};
     const promises = dias.map(async (dia) => {
       try {
-        const res = await api.get(`/chamadas/card-aula/daily/${dia}`);
+        const res = await api.get(`/chamadas/card-aula/daily/${dia}?_t=${Date.now()}`);
         if (Array.isArray(res.data)) {
           const diaMap: Record<number, any> = {};
           for (const rec of res.data) {
@@ -190,7 +190,7 @@ const Chamadas: React.FC = () => {
     setCardAulaData(map);
   }, [dias]);
 
-  useEffect(() => { carregarDados(); }, [carregarDados]);
+  useEffect(() => { carregarDados(); }, [carregarDados, labelSelecionada, professorId]);
   useEffect(() => { carregarLogs(); }, [carregarLogs]);
   useEffect(() => { aplicarEventosCalendario(); }, [aplicarEventosCalendario]);
   useEffect(() => { carregarAnotacoes(); }, [carregarAnotacoes]);
@@ -633,7 +633,7 @@ const Chamadas: React.FC = () => {
 
       <CardAula
         aberto={cardAulaAberto}
-        onClose={() => { setCardAulaAberto(false); carregarLogs(); carregarCardAulaData(); }}
+        onClose={() => { setCardAulaAberto(false); setTimeout(() => { carregarLogs(); carregarCardAulaData(); }, 300); }}
         data={dateHeaderClickData}
         indiceAula={indiceAtual}
         grupoId={grupoId}
@@ -644,7 +644,7 @@ const Chamadas: React.FC = () => {
 
       <CardBO
         aberto={cardBOAberto}
-        onClose={() => { setCardBOAberto(false); carregarLogs(); carregarCardAulaData(); }}
+        onClose={() => { setCardBOAberto(false); setTimeout(() => { carregarLogs(); carregarCardAulaData(); }, 300); }}
         data={dateHeaderClickData}
         indiceAula={indiceAtual}
         grupoId={grupoId}
