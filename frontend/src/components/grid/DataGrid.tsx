@@ -192,7 +192,6 @@ const DataGrid: React.FC<DataGridProps> = ({
       const partes: string[] = [];
 
       if (status === 'cancelado') {
-        console.log('[debugCardBO]', { alunoId, data, indiceAtual, status, turmaGrupoId, logEntry, turmaLog, turmaMotivo: turmaLog?.motivo, logMotivo: logEntry?.motivo, turmaOcorrencia: turmaLog?.tipo_ocorrencia });
         partes.push('Cancelado');
         const ocorrencia = logEntry?.tipo_ocorrencia || turmaLog?.tipo_ocorrencia;
         const motivoFinal = logEntry?.motivo || turmaLog?.motivo;

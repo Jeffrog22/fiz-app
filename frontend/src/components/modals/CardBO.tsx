@@ -10,13 +10,17 @@ interface Props {
 }
 
 const CANCELAMENTO_TIPOS = new Set([
-  'Médico/particular/trabalho',
-  'Manutenção/Incidente',
-  'Raios e Trovões',
+  'Médico pessoal',
+  'Médico trabalho',
+  'Particular',
+  'Reunião',
+  'Secretaria',
 ]);
 
 const TIPOS_PESSOAIS = [
-  'Médico/particular/trabalho',
+  'Médico pessoal',
+  'Médico trabalho',
+  'Particular',
   'Reunião',
   'Secretaria',
 ];
