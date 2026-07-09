@@ -4,6 +4,7 @@ import ExcelJS from 'exceljs';
 import path from 'path';
 import type {
   FrequencyMetrics,
+  MetricasPorLabel,
   FrequenciaData,
   FrequenciaPorNivel,
   FrequenciaPorHorario,
@@ -90,7 +91,58 @@ async function calcularMetricasCore(tenantId: string, dataInicio: string, dataFi
 
   const aulasPrevistas = (turmasCount ?? 0) * Math.max(1, diasPrevistos);
 
-  return { diasConcluidos, diasPrevistos, aulasDadas, aulasPrevistas };
+  const porLabel = await calcularMetricasPorLabel(tenantId, dataInicio, dataFim);
+
+  return { diasConcluidos, diasPrevistos, aulasDadas, aulasPrevistas, porLabel };
+}
+
+async function calcularMetricasPorLabel(
+  tenantId: string,
+  dataInicio: string,
+  dataFim: string,
+): Promise<MetricasPorLabel[]> {
+  const { data: turmas } = await supabase
+    .from('turmas')
+    .select('label, grupo_id')
+    .eq('tenant_id', tenantId);
+
+  if (!turmas || turmas.length === 0) return [];
+
+  const labels = [...new Set<string>(turmas.map((t: any) => t.label).filter(Boolean))].sort();
+
+  const diffMs = new Date(dataFim).getTime() - new Date(dataInicio).getTime();
+  const semanas = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24 * 7)));
+
+  const results: MetricasPorLabel[] = [];
+
+  for (const label of labels) {
+    const turmasDoLabel = turmas.filter((t: any) => t.label === label);
+    const grupoIds = turmasDoLabel.map((t: any) => t.grupo_id).filter(Boolean);
+    if (grupoIds.length === 0) continue;
+
+    const turmasCount = grupoIds.length;
+    const previsto = semanas * turmasCount;
+
+    const { data: logs } = await supabase
+      .from('chamadas_log')
+      .select('data, grupo_id')
+      .eq('tenant_id', tenantId)
+      .in('grupo_id', grupoIds)
+      .neq('status', null)
+      .gte('data', dataInicio)
+      .lte('data', dataFim);
+
+    const concluidoSet = new Set<string>();
+    (logs || []).forEach((l: any) => {
+      const weekKey = `${l.data.substring(0, 7)}|${l.grupo_id}`;
+      concluidoSet.add(weekKey);
+    });
+    const concluido = concluidoSet.size;
+
+    results.push({ label, semanas, turmas: turmasCount, previsto, concluido });
+  }
+
+  return results;
 }
 
 export async function metricas(tenantId: string, filters?: { periodo?: 'semana' | 'mes' | 'ano' }): Promise<FrequencyMetrics> {
@@ -356,7 +408,7 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
     .map(a => ({ id: '', nome: a.nome, faltas: a.faltas }));
 
   const result: FrequenciaData = {
-    metrics: { diasConcluidos: 0, diasPrevistos: 0, aulasDadas: 0, aulasPrevistas: 0 },
+    metrics: { diasConcluidos: 0, diasPrevistos: 0, aulasDadas: 0, aulasPrevistas: 0, porLabel: [] },
     resumo: { totalRegistros, presentes, faltas, justificados },
     porNivel,
     porHorario,

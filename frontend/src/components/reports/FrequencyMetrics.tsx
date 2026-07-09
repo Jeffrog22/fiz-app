@@ -1,9 +1,16 @@
 import React from 'react';
 import BarraProgressoRelatorio from './BarraProgressoRelatorio';
 import TimeFilterToggle from './TimeFilterToggle';
+import type { MetricasPorLabel } from '../../types';
 
 interface Props {
-  metrics: { diasConcluidos: number; diasPrevistos: number; aulasDadas: number; aulasPrevistas: number } | null;
+  metrics: {
+    diasConcluidos: number;
+    diasPrevistos: number;
+    aulasDadas: number;
+    aulasPrevistas: number;
+    porLabel: MetricasPorLabel[];
+  } | null;
   periodo: 'semana' | 'mes' | 'ano';
   onPeriodoChange: (v: 'semana' | 'mes' | 'ano') => void;
 }
@@ -16,6 +23,9 @@ const FrequencyMetrics: React.FC<Props> = ({ metrics, periodo, onPeriodoChange }
       </div>
     );
   }
+
+  const totalPrevisto = metrics.porLabel.reduce((a, b) => a + b.previsto, 0);
+  const totalConcluido = metrics.porLabel.reduce((a, b) => a + b.concluido, 0);
 
   return (
     <div className="space-y-3">
@@ -48,6 +58,66 @@ const FrequencyMetrics: React.FC<Props> = ({ metrics, periodo, onPeriodoChange }
           />
         </div>
       </div>
+
+      {metrics.porLabel.length > 0 && (
+        <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+          <p className="text-xs text-gray-500 font-medium mb-2">Detalhamento por Turma</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-2 px-2 text-gray-500 font-medium">Label</th>
+                  <th className="text-right py-2 px-2 text-gray-500 font-medium">Semanas</th>
+                  <th className="text-right py-2 px-2 text-gray-500 font-medium">Turmas</th>
+                  <th className="text-right py-2 px-2 text-gray-500 font-medium">Previsto</th>
+                  <th className="text-right py-2 px-2 text-gray-500 font-medium">Concluído</th>
+                  <th className="text-right py-2 px-2 text-gray-500 font-medium">%</th>
+                </tr>
+              </thead>
+              <tbody>
+                {metrics.porLabel.map((row) => (
+                  <tr key={row.label} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-2 px-2 font-medium text-gray-700">{row.label}</td>
+                    <td className="py-2 px-2 text-right text-gray-600">{row.semanas}</td>
+                    <td className="py-2 px-2 text-right text-gray-600">{row.turmas}</td>
+                    <td className="py-2 px-2 text-right text-gray-600">{row.previsto}</td>
+                    <td className="py-2 px-2 text-right text-gray-600">{row.concluido}</td>
+                    <td className="py-2 px-2 text-right">
+                      <span className={`text-xs font-medium ${
+                        row.previsto > 0 && row.concluido / row.previsto >= 0.9
+                          ? 'text-green-600'
+                          : row.previsto > 0 && row.concluido / row.previsto >= 0.7
+                          ? 'text-yellow-600'
+                          : 'text-red-600'
+                      }`}>
+                        {row.previsto > 0 ? Math.round((row.concluido / row.previsto) * 100) : 0}%
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                <tr className="font-semibold bg-gray-50">
+                  <td className="py-2 px-2 text-gray-800">Total</td>
+                  <td className="py-2 px-2 text-right text-gray-800" />
+                  <td className="py-2 px-2 text-right text-gray-800" />
+                  <td className="py-2 px-2 text-right text-gray-800">{totalPrevisto}</td>
+                  <td className="py-2 px-2 text-right text-gray-800">{totalConcluido}</td>
+                  <td className="py-2 px-2 text-right">
+                    <span className={`text-xs font-medium ${
+                      totalPrevisto > 0 && totalConcluido / totalPrevisto >= 0.9
+                        ? 'text-green-600'
+                        : totalPrevisto > 0 && totalConcluido / totalPrevisto >= 0.7
+                        ? 'text-yellow-600'
+                        : 'text-red-600'
+                    }`}>
+                      {totalPrevisto > 0 ? Math.round((totalConcluido / totalPrevisto) * 100) : 0}%
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
