@@ -59,6 +59,20 @@ export class RelatoriosController {
     } catch (e) { next(e); }
   }
 
+  static async controleMensal(req: TenantRequest, res: Response, next: NextFunction) {
+    try {
+      const tenantId = req.tenantId!;
+      const { mes, ano, label, professor_id } = req.query;
+      const result = await relatoriosService.controleMensal(tenantId, {
+        mes: mes ? Number(mes) : undefined,
+        ano: ano ? Number(ano) : undefined,
+        label: label ? String(label) : undefined,
+        professor_id: professor_id ? String(professor_id) : undefined,
+      });
+      res.json(result);
+    } catch (e) { next(e); }
+  }
+
   static async exportarCancelamentos(req: TenantRequest, res: Response, next: NextFunction) {
     try {
       const tenantId = req.tenantId!;

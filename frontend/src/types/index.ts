@@ -178,6 +178,20 @@ export interface CancelamentoDashboard {
   registros: any[];
 }
 
+export interface ControleMensalRow {
+  horario: string;
+  dadas: number;
+  previstas: number;
+}
+
+export interface ControleMensalLabel {
+  label: string;
+  professor: string;
+  horarios: ControleMensalRow[];
+  totalDadas: number;
+  totalPrevistas: number;
+}
+
 export interface TurmaExportRow {
   horario: string; nivel: string; selecionado: boolean;
 }

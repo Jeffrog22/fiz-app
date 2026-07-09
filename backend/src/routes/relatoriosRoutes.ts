@@ -11,6 +11,7 @@ router.get('/timeline', RelatoriosController.timeline);
 router.get('/frequencia', RelatoriosController.frequencia);
 router.get('/vagas', RelatoriosController.vagas);
 router.get('/cancelamentos', RelatoriosController.cancelamentos);
+router.get('/controle-mensal', RelatoriosController.controleMensal);
 router.post('/exportar-cancelamentos', RelatoriosController.exportarCancelamentos);
 
 export default router;
