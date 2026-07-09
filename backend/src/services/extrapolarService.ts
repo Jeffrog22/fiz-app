@@ -127,19 +127,17 @@ async function extrapolarPorLabel(
           perTurmaMotivo = 'Água fria';
         }
 
-        if (perTurmaStatus) {
-          logsCriados.push({
-            tenant_id: tenantId,
-            data,
-            grupo_id: turma.grupo_id,
-            indice_aula: idx,
-            status: perTurmaStatus,
-            motivo: perTurmaMotivo,
-            tipo_ocorrencia: tipoOcorrencia || null,
-            tipo_select: tipoSelect || null,
-            origem: 'extrapolado',
-          });
-        }
+        logsCriados.push({
+          tenant_id: tenantId,
+          data,
+          grupo_id: turma.grupo_id,
+          indice_aula: idx,
+          status: perTurmaStatus || null,
+          motivo: perTurmaMotivo || null,
+          tipo_ocorrencia: perTurmaStatus ? (tipoOcorrencia || null) : null,
+          tipo_select: perTurmaStatus ? (tipoSelect || null) : null,
+          origem: perTurmaStatus ? 'extrapolado' : null,
+        });
         continue;
       }
 
