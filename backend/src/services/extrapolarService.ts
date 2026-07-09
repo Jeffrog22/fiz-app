@@ -98,7 +98,20 @@ async function extrapolarPorLabel(
       const turma = turmas[idx];
       const faixa = turma.faixa_etaria || '';
       const nivel = turma.nivel.toUpperCase();
-      if (motivoMenores && (faixa === '+ 16 anos' || faixa === '+16 anos')) continue;
+      if (motivoMenores && (faixa === '+ 16 anos' || faixa === '+16 anos')) {
+        logsCriados.push({
+          tenant_id: tenantId,
+          data,
+          grupo_id: turma.grupo_id,
+          indice_aula: idx,
+          status: 'justificado',
+          motivo: 'Água muito fria',
+          tipo_ocorrencia: tipoOcorrencia || null,
+          tipo_select: tipoSelect || null,
+          origem: 'extrapolado',
+        });
+        continue;
+      }
       if (motivoMaiores16 && faixa !== '+ 16 anos' && faixa !== '+16 anos') continue;
       if (motivoIniciacao && !nivel.startsWith('INICIAÇÃO')) continue;
       if ((motivoMuitoFria || motivoFria) && nivel.startsWith('INICIAÇÃO')) continue;
