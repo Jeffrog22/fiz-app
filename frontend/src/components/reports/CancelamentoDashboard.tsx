@@ -9,11 +9,13 @@ import type { CancelamentoDashboard as CancelamentoDashboardType } from '../../t
 interface Props {
   data: CancelamentoDashboardType | null;
   carregando: boolean;
+  incluirJustificados: boolean;
+  onToggleJustificados: () => void;
 }
 
 const CORES_PIE = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'];
 
-const CancelamentoDashboard: React.FC<Props> = ({ data, carregando }) => {
+const CancelamentoDashboard: React.FC<Props> = ({ data, carregando, incluirJustificados, onToggleJustificados }) => {
   if (carregando) {
     return (
       <div className="flex justify-center py-12">
@@ -32,6 +34,17 @@ const CancelamentoDashboard: React.FC<Props> = ({ data, carregando }) => {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-end">
+        <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={incluirJustificados}
+            onChange={onToggleJustificados}
+            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+          />
+          Incluir justificadas
+        </label>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         <CardIndicadorRelatorio
           titulo="Total Cancelamentos"

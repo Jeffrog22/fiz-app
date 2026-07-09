@@ -50,10 +50,11 @@ export class RelatoriosController {
   static async cancelamentos(req: TenantRequest, res: Response, next: NextFunction) {
     try {
       const tenantId = req.tenantId!;
-      const { mes, ano } = req.query;
+      const { mes, ano, incluir_justificados } = req.query;
       const result = await relatoriosService.cancelamentos(tenantId, {
         mes: mes ? Number(mes) : undefined,
         ano: ano ? Number(ano) : undefined,
+        incluir_justificados: incluir_justificados === 'true',
       });
       res.json(result);
     } catch (e) { next(e); }
@@ -76,10 +77,11 @@ export class RelatoriosController {
   static async exportarCancelamentos(req: TenantRequest, res: Response, next: NextFunction) {
     try {
       const tenantId = req.tenantId!;
-      const { mes, ano } = req.query;
+      const { mes, ano, incluir_justificados } = req.query;
       const buffer = await relatoriosService.exportarCancelamentosXLSX(tenantId, {
         mes: mes ? Number(mes) : undefined,
         ano: ano ? Number(ano) : undefined,
+        incluir_justificados: incluir_justificados === 'true',
       });
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename="cancelamentos-${mes || 'todos'}-${ano || 'todos'}.xlsx"`);

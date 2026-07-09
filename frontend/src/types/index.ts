@@ -102,20 +102,11 @@ export interface AuthState {
 
 // --- Relatórios ---
 
-export interface MetricasPorLabel {
-  label: string;
-  semanas: number;
-  turmas: number;
-  previsto: number;
-  concluido: number;
-}
-
 export interface FrequencyMetrics {
   diasConcluidos: number;
   diasPrevistos: number;
   aulasDadas: number;
   aulasPrevistas: number;
-  porLabel: MetricasPorLabel[];
 }
 
 export interface FrequenciaPorNivel { nivel: string; percentual: number; total: number; }

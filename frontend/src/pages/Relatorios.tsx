@@ -30,6 +30,7 @@ const Relatorios: React.FC = () => {
   const [labelSelecionada, setLabelSelecionada] = useState('');
   const [professorId, setProfessorId] = useState('');
   const [periodo, setPeriodo] = useState<'semana' | 'mes' | 'ano'>('mes');
+  const [incluirJustificados, setIncluirJustificados] = useState(false);
 
   const carregarFrequencia = useCallback(async () => {
     setCarregandoFreq(true);
@@ -57,29 +58,30 @@ const Relatorios: React.FC = () => {
     setCarregandoCancel(true);
     setErroCancel(null);
     try {
-      const res = await api.get(`/relatorios/cancelamentos?mes=${mes}&ano=${ano}`);
+      const res = await api.get(`/relatorios/cancelamentos?mes=${mes}&ano=${ano}&incluir_justificados=${incluirJustificados}`);
       setCancelData(res.data);
     } catch {
       setCancelData(null);
       setErroCancel('Erro ao carregar dados de cancelamentos. Verifique sua conexão.');
     }
     setCarregandoCancel(false);
-  }, [mes, ano, periodo]);
+  }, [mes, ano, incluirJustificados]);
 
   useEffect(() => { if (tab === 'frequencia' || tab === 'historico') carregarFrequencia(); }, [tab, carregarFrequencia]);
-  useEffect(() => { if (tab === 'cancelamentos') carregarCancelamentos(); }, [tab, carregarCancelamentos]);
+  useEffect(() => { if (tab === 'cancelamentos') carregarCancelamentos(); }, [tab, carregarCancelamentos, incluirJustificados]);
 
   const exportCSV = () => {
     if (!cancelData) return;
-    const headers = 'Data,Horario,Motivo,Pessoal/Geral\n';
+    const incluir = incluirJustificados ? 'com_justificadas' : 'so_cancelados';
+    const headers = 'Data,Horario,Status,Motivo,Tipo\n';
     const rows = cancelData.registros.map((r: any) =>
-      `${r.data || ''},${r.indice_aula || ''},${r.motivo || ''},${r.tipo_select || ''}`
+      `${r.data || ''},${r.indice_aula || ''},${r.status || ''},${r.motivo || ''},${r.tipo_select || ''}`
     ).join('\n');
     const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `cancelamentos_${mes}_${ano}.csv`;
+    a.download = `cancelamentos_${mes}_${ano}_${incluir}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -204,7 +206,12 @@ const Relatorios: React.FC = () => {
         erroCancel ? (
           <p className="text-sm text-red-500 text-center py-4">{erroCancel}</p>
         ) : (
-          <CancelamentoDashboard data={cancelData} carregando={carregandoCancel} />
+          <CancelamentoDashboard
+            data={cancelData}
+            carregando={carregandoCancel}
+            incluirJustificados={incluirJustificados}
+            onToggleJustificados={() => setIncluirJustificados(v => !v)}
+          />
         )
       )}
 

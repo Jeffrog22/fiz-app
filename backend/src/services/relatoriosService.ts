@@ -4,7 +4,6 @@ import ExcelJS from 'exceljs';
 import path from 'path';
 import type {
   FrequencyMetrics,
-  MetricasPorLabel,
   FrequenciaData,
   FrequenciaPorNivel,
   FrequenciaPorHorario,
@@ -56,61 +55,50 @@ function corParaMotivo(motivo: string, index: number): string {
   return CORES_MOTIVO[motivo] || `hsl(${(index * 47) % 360}, 70%, 55%)`;
 }
 
-async function calcularMetricasCore(tenantId: string, dataInicio: string, dataFim: string): Promise<FrequencyMetrics> {
-  const { data: diasAulaData } = await supabase
-    .from('chamadas_log')
-    .select('data')
-    .eq('tenant_id', tenantId)
-    .neq('origem', 'calendario')
-    .gte('data', dataInicio)
-    .lte('data', dataFim);
+async function calcularDiasPrevistosNoMes(tenantId: string, dataInicio: string, dataFim: string): Promise<{ dias: string[]; diasSemanaUnicos: number[] }> {
+  const { data: turmas } = await supabase
+    .from('turmas')
+    .select('label')
+    .eq('tenant_id', tenantId);
 
-  const diasConcluidos = new Set<string>(diasAulaData?.map(r => r.data)).size;
+  const diasSemanaUnicos = new Set<number>();
+  (turmas || []).forEach((t: any) => {
+    if (t.label) {
+      parseDiasFromLabel(t.label).forEach(d => diasSemanaUnicos.add(d));
+    }
+  });
 
-  // Dias previstos = periodos_letivos - eventos de calendario
-  let diasPrevistosSet = new Set<string>();
+  if (diasSemanaUnicos.size === 0) return { dias: [], diasSemanaUnicos: [] };
+
+  // Subtrair eventos de calendario
+  let diasEvento = new Set<string>();
   try {
-    const { data: periodosData } = await supabase
-      .from('periodos_letivos')
+    const { data: eventos } = await supabase
+      .from('calendario')
       .select('data')
       .eq('tenant_id', tenantId)
       .gte('data', dataInicio)
       .lte('data', dataFim);
-    if (periodosData && periodosData.length > 0) {
-      diasPrevistosSet = new Set<string>(periodosData.map(r => r.data));
-    }
+    if (eventos) diasEvento = new Set<string>(eventos.map(e => e.data));
   } catch { /* pode nao existir */ }
 
-  // Subtrair eventos de calendario dos dias previstos
-  if (diasPrevistosSet.size > 0) {
-    try {
-      const { data: eventos } = await supabase
-        .from('calendario')
-        .select('data')
-        .eq('tenant_id', tenantId)
-        .gte('data', dataInicio)
-        .lte('data', dataFim);
-      const diasEvento = new Set<string>(eventos?.map(e => e.data) || []);
-      diasPrevistosSet = new Set<string>([...diasPrevistosSet].filter(d => !diasEvento.has(d)));
-    } catch { /* pode nao existir */ }
+  const dias: string[] = [];
+  const inicio = new Date(dataInicio + 'T12:00:00');
+  const fim = new Date(dataFim + 'T12:00:00');
+  for (let d = new Date(inicio); d <= fim; d.setDate(d.getDate() + 1)) {
+    if (diasSemanaUnicos.has(d.getDay())) {
+      const ds = d.toISOString().split('T')[0];
+      if (!diasEvento.has(ds)) dias.push(ds);
+    }
   }
+  return { dias, diasSemanaUnicos: [...diasSemanaUnicos] };
+}
 
-  const diasPrevistos = diasPrevistosSet.size > 0 ? diasPrevistosSet.size : diasConcluidos;
+async function calcularMetricasCore(tenantId: string, dataInicio: string, dataFim: string): Promise<FrequencyMetrics> {
+  const { dias: diasPrevList } = await calcularDiasPrevistosNoMes(tenantId, dataInicio, dataFim);
+  const diasPrevistos = diasPrevList.length;
 
-  // Buscar turmas com grupo_id e label
-  const { data: turmasData } = await supabase
-    .from('turmas')
-    .select('id, grupo_id, label, horario, professor_id')
-    .eq('tenant_id', tenantId);
-
-  // Mapa turma por grupo_id
-  const turmasPorGrupoId = new Map<string, any>();
-  (turmasData || []).forEach((t: any) => {
-    if (t.grupo_id) turmasPorGrupoId.set(t.grupo_id, t);
-  });
-
-  // aulasDadas = combinacoes unicas (data, grupo_id) de logs (excluindo calendario)
-  const { data: logsGrupo } = await supabase
+  const { data: logs } = await supabase
     .from('chamadas_log')
     .select('data, grupo_id')
     .eq('tenant_id', tenantId)
@@ -118,85 +106,43 @@ async function calcularMetricasCore(tenantId: string, dataInicio: string, dataFi
     .gte('data', dataInicio)
     .lte('data', dataFim);
 
+  const logsDias = new Set<string>((logs || []).map(l => l.data));
+  const diasConcluidos = [...new Set(diasPrevList.filter(d => logsDias.has(d)))].length;
+
+  // Buscar turmas para aulas
+  const { data: turmasData } = await supabase
+    .from('turmas')
+    .select('id, grupo_id, label, horario, professor_id')
+    .eq('tenant_id', tenantId);
+
+  const turmasPorGrupoId = new Map<string, any>();
+  (turmasData || []).forEach((t: any) => {
+    if (t.grupo_id) turmasPorGrupoId.set(t.grupo_id, t);
+  });
+
+  // aulasDadas = combinacoes unicas (data, grupo_id)
   const aulasSet = new Set<string>();
-  (logsGrupo || []).forEach((log: any) => {
+  (logs || []).forEach((log: any) => {
     if (log.grupo_id && turmasPorGrupoId.has(log.grupo_id)) {
       aulasSet.add(`${log.data}|${log.grupo_id}`);
     }
   });
   const aulasDadas = aulasSet.size;
 
-  // aulasPrevistas = soma por turma de dias letivos que caem nos dias da semana da turma
+  // aulasPrevistas = soma por turma de dias que caem nos dias da semana da turma
   let aulasPrevistas = 0;
-  if (diasPrevistosSet.size > 0 && turmasData) {
-    const diasPrevList = [...diasPrevistosSet];
-    for (const turma of turmasData) {
-      if (!turma.grupo_id || !turma.label) continue;
-      const diasSemana = parseDiasFromLabel(turma.label);
-      if (diasSemana.length === 0) continue;
-      for (const dataStr of diasPrevList) {
-        const diaSemana = new Date(dataStr + 'T12:00:00').getDay();
-        if (diasSemana.includes(diaSemana)) {
-          aulasPrevistas++;
-        }
+  for (const turma of turmasData || []) {
+    if (!turma.grupo_id || !turma.label) continue;
+    const diasSemana = parseDiasFromLabel(turma.label);
+    if (diasSemana.length === 0) continue;
+    for (const dataStr of diasPrevList) {
+      if (diasSemana.includes(new Date(dataStr + 'T12:00:00').getDay())) {
+        aulasPrevistas++;
       }
     }
-  } else {
-    aulasPrevistas = (turmasData?.length || 0) * Math.max(1, diasPrevistos);
   }
 
-  const porLabel = await calcularMetricasPorLabel(tenantId, dataInicio, dataFim);
-
-  return { diasConcluidos, diasPrevistos, aulasDadas, aulasPrevistas, porLabel };
-}
-
-async function calcularMetricasPorLabel(
-  tenantId: string,
-  dataInicio: string,
-  dataFim: string,
-): Promise<MetricasPorLabel[]> {
-  const { data: turmas } = await supabase
-    .from('turmas')
-    .select('label, grupo_id')
-    .eq('tenant_id', tenantId);
-
-  if (!turmas || turmas.length === 0) return [];
-
-  const labels = [...new Set<string>(turmas.map((t: any) => t.label).filter(Boolean))].sort();
-
-  const diffMs = new Date(dataFim).getTime() - new Date(dataInicio).getTime();
-  const semanas = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24 * 7)));
-
-  const results: MetricasPorLabel[] = [];
-
-  for (const label of labels) {
-    const turmasDoLabel = turmas.filter((t: any) => t.label === label);
-    const grupoIds = turmasDoLabel.map((t: any) => t.grupo_id).filter(Boolean);
-    if (grupoIds.length === 0) continue;
-
-    const turmasCount = grupoIds.length;
-    const previsto = semanas * turmasCount;
-
-    const { data: logs } = await supabase
-      .from('chamadas_log')
-      .select('data, grupo_id')
-      .eq('tenant_id', tenantId)
-      .in('grupo_id', grupoIds)
-      .neq('status', null)
-      .gte('data', dataInicio)
-      .lte('data', dataFim);
-
-    const concluidoSet = new Set<string>();
-    (logs || []).forEach((l: any) => {
-      const weekKey = `${l.data.substring(0, 7)}|${l.grupo_id}`;
-      concluidoSet.add(weekKey);
-    });
-    const concluido = concluidoSet.size;
-
-    results.push({ label, semanas, turmas: turmasCount, previsto, concluido });
-  }
-
-  return results;
+  return { diasConcluidos, diasPrevistos, aulasDadas, aulasPrevistas };
 }
 
 export async function controleMensal(
@@ -601,7 +547,7 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
     .map(a => ({ id: '', nome: a.nome, faltas: a.faltas }));
 
   const result: FrequenciaData = {
-    metrics: { diasConcluidos: 0, diasPrevistos: 0, aulasDadas: 0, aulasPrevistas: 0, porLabel: [] },
+    metrics: { diasConcluidos: 0, diasPrevistos: 0, aulasDadas: 0, aulasPrevistas: 0 },
     resumo: { totalRegistros, presentes, faltas, justificados },
     porNivel,
     porHorario,
@@ -701,14 +647,16 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
   return result;
 }
 
-export async function cancelamentos(tenantId: string, filters?: { mes?: number; ano?: number }): Promise<CancelamentoDashboard> {
-  const { mes, ano } = filters || {};
+export async function cancelamentos(tenantId: string, filters?: { mes?: number; ano?: number; incluir_justificados?: boolean }): Promise<CancelamentoDashboard> {
+  const { mes, ano, incluir_justificados } = filters || {};
+
+  const statusFilter = incluir_justificados ? ['cancelado', 'justificado'] : ['cancelado'];
 
   let query = supabase
     .from('chamadas_log')
     .select('*')
     .eq('tenant_id', tenantId)
-    .in('status', ['justificado', 'cancelado']);
+    .in('status', statusFilter);
 
   if (mes && ano) {
     const mesStr = String(mes).padStart(2, '0');
@@ -802,7 +750,7 @@ export async function cancelamentos(tenantId: string, filters?: { mes?: number; 
   };
 }
 
-export async function exportarCancelamentosCSV(tenantId: string, filters?: { mes?: number; ano?: number }): Promise<string> {
+export async function exportarCancelamentosCSV(tenantId: string, filters?: { mes?: number; ano?: number; incluir_justificados?: boolean }): Promise<string> {
   const result = await cancelamentos(tenantId, filters);
   const linhas = ['data,grupo_id,status,motivo,indice_aula'];
   for (const r of result.registros) {
@@ -811,7 +759,7 @@ export async function exportarCancelamentosCSV(tenantId: string, filters?: { mes
   return linhas.join('\n');
 }
 
-export async function exportarCancelamentosXLSX(tenantId: string, filters?: { mes?: number; ano?: number }): Promise<Buffer> {
+export async function exportarCancelamentosXLSX(tenantId: string, filters?: { mes?: number; ano?: number; incluir_justificados?: boolean }): Promise<Buffer> {
   const dashboard = await cancelamentos(tenantId, filters);
   const templatePath = path.resolve(__dirname, '../templates/relatorioCancelamentos.xlsx');
 
