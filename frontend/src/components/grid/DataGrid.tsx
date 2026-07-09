@@ -104,20 +104,15 @@ const DataGrid: React.FC<DataGridProps> = ({
 
   const getStatus = useCallback(
     (alunoId: string, data: string): PresencaStatus => {
-      // 1. Eventos de calendário
+      // 1. Eventos de calendário — sempre bloqueiam
       const dataEventos = eventosPorData(data);
       if (dataEventos.length > 0) {
         return dataEventos[0].tipo as PresencaStatus;
       }
-      // 2. Turma CANCELADO — bloqueia todos os alunos
-      if (turmaGrupoId) {
-        const turmaLog = logs[turmaGrupoId]?.[data]?.[indiceAtual];
-        if (turmaLog?.status === 'cancelado') return 'cancelado';
-      }
-      // 3. Log manual do aluno (qualquer status inclusive cancelado) — sobrescreve turma
+      // 2. Log manual do aluno (qualquer status) — tem precedência
       const alunoStatus = logs[alunoId]?.[data]?.[indiceAtual]?.status;
       if (alunoStatus) return alunoStatus as PresencaStatus;
-      // 4. Turma JUSTIFICADO — fallback
+      // 3. Turma CANCELADO — fallback para alunos sem log individual
       if (turmaGrupoId) {
         const turmaLog = logs[turmaGrupoId]?.[data]?.[indiceAtual];
         if (turmaLog?.status) return turmaLog.status as PresencaStatus;
