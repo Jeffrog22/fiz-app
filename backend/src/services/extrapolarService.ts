@@ -14,6 +14,7 @@ async function extrapolarPorLabel(
   apenasIndiceUnico?: boolean,
   tipoOcorrencia?: string,
   tipoSelect?: string,
+  temperaturaPiscina?: number,
 ): Promise<{ message: string; count: number }> {
   if (!data) throw new AppError('Campo data é obrigatório', 400);
 
@@ -98,6 +99,50 @@ async function extrapolarPorLabel(
       const turma = turmas[idx];
       const faixa = turma.faixa_etaria || '';
       const nivel = turma.nivel.toUpperCase();
+
+      if (temperaturaPiscina !== undefined) {
+        const t = temperaturaPiscina;
+        const isIniciacao = nivel.startsWith('INICIAÇÃO');
+        const isMaior16 = faixa === '+ 16 anos' || faixa === '+16 anos';
+        let perTurmaStatus: string | null = null;
+        let perTurmaMotivo: string | null = null;
+
+        if (t < 23) {
+          perTurmaStatus = 'cancelado';
+          perTurmaMotivo = 'Água crítica';
+        } else if (isIniciacao && t < 28) {
+          perTurmaStatus = 'cancelado';
+          perTurmaMotivo = 'Água fria para iniciação';
+        } else if (t < 25 && !isMaior16) {
+          perTurmaStatus = 'cancelado';
+          perTurmaMotivo = 'Água muito fria para menores';
+        } else if (t < 25) {
+          perTurmaStatus = 'justificado';
+          perTurmaMotivo = 'Água muito fria';
+        } else if (t < 26) {
+          perTurmaStatus = 'justificado';
+          perTurmaMotivo = 'Água muito fria';
+        } else if (t < 28) {
+          perTurmaStatus = 'justificado';
+          perTurmaMotivo = 'Água fria';
+        }
+
+        if (perTurmaStatus) {
+          logsCriados.push({
+            tenant_id: tenantId,
+            data,
+            grupo_id: turma.grupo_id,
+            indice_aula: idx,
+            status: perTurmaStatus,
+            motivo: perTurmaMotivo,
+            tipo_ocorrencia: tipoOcorrencia || null,
+            tipo_select: tipoSelect || null,
+            origem: 'extrapolado',
+          });
+        }
+        continue;
+      }
+
       if (motivoMenores && (faixa === '+ 16 anos' || faixa === '+16 anos')) {
         logsCriados.push({
           tenant_id: tenantId,
@@ -205,8 +250,9 @@ export async function extrapolarJustificativa(
   indiceAulaOrigem: number,
   _maxIndices?: number,
   motivo?: string,
+  temperaturaPiscina?: number,
 ): Promise<{ message: string; count: number }> {
-  return extrapolarPorLabel(tenantId, data, grupoId, indiceAulaOrigem, 'justificado', motivo, true);
+  return extrapolarPorLabel(tenantId, data, grupoId, indiceAulaOrigem, 'justificado', motivo, true, undefined, undefined, undefined, undefined, temperaturaPiscina);
 }
 
 export async function extrapolarCancelamento(
@@ -218,8 +264,9 @@ export async function extrapolarCancelamento(
   motivo?: string,
   tipoOcorrencia?: string,
   tipoSelect?: string,
+  temperaturaPiscina?: number,
 ): Promise<{ message: string; count: number }> {
-  return extrapolarPorLabel(tenantId, data, grupoId, indiceAulaOrigem, 'cancelado', motivo, false, undefined, false, tipoOcorrencia, tipoSelect);
+  return extrapolarPorLabel(tenantId, data, grupoId, indiceAulaOrigem, 'cancelado', motivo, false, undefined, false, tipoOcorrencia, tipoSelect, temperaturaPiscina);
 }
 
 export async function extrapolarCancelamentoPessoal(
