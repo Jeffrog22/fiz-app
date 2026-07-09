@@ -548,7 +548,7 @@ const Chamadas: React.FC = () => {
         turmas={turmas}
         professores={professores}
         retroativo={retroativo}
-        onLabelChange={(v) => { setLabelSelecionada(v); setProfessorId(''); }}
+        onLabelChange={setLabelSelecionada}
         onProfessorChange={setProfessorId}
         onHorarioChange={(v) => {
           const idx = turmasDoLabelProf.findIndex((t) => t.horario === v);

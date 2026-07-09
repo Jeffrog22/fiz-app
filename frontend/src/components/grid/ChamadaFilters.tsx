@@ -40,29 +40,27 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
   onLimpar,
 }) => {
   const labelsUnicos = useMemo(() => {
-    const set = new Set(turmas.map((t) => t.label).filter(Boolean));
+    if (!professorId) return [];
+    const set = new Set(
+      turmas
+        .filter((t) => t.professor_id === professorId && t.label)
+        .map((t) => t.label)
+    );
     return Array.from(set).sort();
-  }, [turmas]);
-
-  const turmasComLabel = useMemo(() => {
-    if (!label) return [];
-    return turmas.filter((t) => t.label === label);
-  }, [turmas, label]);
+  }, [turmas, professorId]);
 
   const professoresDisponiveis = useMemo(() => {
-    if (!label) return [];
-    const profIds = new Set(turmasComLabel.map((t) => t.professor_id).filter(Boolean));
-    return professores.filter((p) => profIds.has(p.id));
-  }, [label, turmasComLabel, professores]);
+    return professores;
+  }, [professores]);
 
   const horariosDisponiveis = useMemo(() => {
     if (!label || !professorId) return [];
     const set = new Set<string>();
-    turmasComLabel
-      .filter((t) => t.professor_id === professorId)
+    turmas
+      .filter((t) => t.label === label && t.professor_id === professorId)
       .forEach((t) => { if (t.horario) set.add(t.horario); });
     return Array.from(set).sort();
-  }, [label, professorId, turmasComLabel]);
+  }, [label, professorId, turmas]);
 
   const temFiltro = label || professorId;
 
@@ -120,32 +118,32 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
 
       <div className="grid grid-cols-4 gap-3">
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-500 font-medium">Turma</label>
+          <label className="text-xs text-gray-500 font-medium">Professor(a)</label>
           <select
-            value={label}
-            onChange={(e) => { onLabelChange(e.target.value); onProfessorChange(''); }}
+            value={professorId}
+            onChange={(e) => { onProfessorChange(e.target.value); }}
             className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
             <option value="">Selecione</option>
-            {labelsUnicos.map((l) => (
-              <option key={l} value={l}>{l}</option>
+            {professoresDisponiveis.map((p) => (
+              <option key={p.id} value={p.id}>{p.nome}</option>
             ))}
           </select>
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-500 font-medium">Professor</label>
+          <label className="text-xs text-gray-500 font-medium">Turma</label>
           <select
-            value={professorId}
-            onChange={(e) => { onProfessorChange(e.target.value); }}
-            disabled={!label}
+            value={label}
+            onChange={(e) => { onLabelChange(e.target.value); }}
+            disabled={!professorId}
             className={`px-3 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-              !label ? 'bg-gray-50 text-gray-500 border-gray-200' : 'border-gray-300'
+              !professorId ? 'bg-gray-50 text-gray-500 border-gray-200' : 'border-gray-300'
             }`}
           >
-            <option value="">{label ? 'Selecione' : 'Selecione uma turma'}</option>
-            {professoresDisponiveis.map((p) => (
-              <option key={p.id} value={p.id}>{p.nome}</option>
+            <option value="">{professorId ? 'Selecione' : 'Selecione um professor'}</option>
+            {labelsUnicos.map((l) => (
+              <option key={l} value={l}>{l}</option>
             ))}
           </select>
         </div>
@@ -160,7 +158,7 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
               !label || !professorId ? 'bg-gray-50 text-gray-500 border-gray-200' : 'border-gray-300'
             }`}
           >
-            <option value="">{label && professorId ? 'Selecione' : 'Selecione professor'}</option>
+            <option value="">{label && professorId ? 'Selecione' : 'Selecione a turma'}</option>
             {horariosDisponiveis.map((h) => (
               <option key={h} value={h}>{h.substring(0, 5)}</option>
             ))}
