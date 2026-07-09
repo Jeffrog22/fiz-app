@@ -75,7 +75,7 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
                 setTempExterna(temp);
                 setCondicao(getCondicaoFromWeatherCode(res2.data.weatherCode ?? null));
                 const sens = getSensacoesFromTemperatura(temp);
-                if (sens.length > 0) setSensacoes(sens);
+                if (sens.length > 0) setSensacoes((prev) => [...new Set([...prev, ...sens])]);
               } else {
                 setTempExterna(26);
                 setCondicao('Parcialmente Nublado');
@@ -96,7 +96,7 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
                 setTempExterna(temp);
                 setCondicao(getCondicaoFromWeatherCode(res2.data.weatherCode ?? null));
                 const sens = getSensacoesFromTemperatura(temp);
-                if (sens.length > 0) setSensacoes(sens);
+                if (sens.length > 0) setSensacoes((prev) => [...new Set([...prev, ...sens])]);
               } else {
                 setTempExterna(26);
                 setCondicao('Parcialmente Nublado');

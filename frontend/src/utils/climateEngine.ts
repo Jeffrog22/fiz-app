@@ -49,7 +49,7 @@ export function getCondicaoFromWeatherCode(code: number | null): string {
 }
 
 export function getSensacoesFromTemperatura(temp: number): string[] {
-  if (temp < 10) return ['Frio'];
+  if (temp < 10) return ['Frio Intenso'];
   if (temp < 15) return ['Frio'];
   return [];
 }
