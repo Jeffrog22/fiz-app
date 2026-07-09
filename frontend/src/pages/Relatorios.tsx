@@ -6,6 +6,7 @@ import ClassTimelineChart from '../components/reports/ClassTimelineChart';
 import GridAnalitico from '../components/reports/GridAnalitico';
 import HistoricoAluno from '../components/reports/HistoricoAluno';
 import CancelamentoDashboard from '../components/reports/CancelamentoDashboard';
+import ControleMensalProfessor from '../components/reports/ControleMensalProfessor';
 import type { FrequenciaData, CancelamentoDashboard as CancelamentoDashboardType } from '../types';
 
 type Tab = 'frequencia' | 'cancelamentos' | 'historico';
@@ -177,6 +178,7 @@ const Relatorios: React.FC = () => {
               periodo={periodo}
               onPeriodoChange={setPeriodo}
             />
+            <ControleMensalProfessor mes={mes} ano={ano} />
             <ClassTimelineChart
               data={freqData.timeline || null}
               labelSelecionada={labelSelecionada}

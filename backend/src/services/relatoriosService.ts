@@ -17,7 +17,30 @@ import type {
   TimelineData,
   TimelineSlot,
   CancelamentoDashboard,
+  ControleMensalRow,
+  ControleMensalLabel,
 } from '../types';
+
+const ABREV_MAP: Record<string, number> = {
+  'Dom': 0, 'dom': 0,
+  'Seg': 1, 'seg': 1,
+  'Ter': 2, 'ter': 2,
+  'Qua': 3, 'qua': 3,
+  'Qui': 4, 'qui': 4,
+  'Sex': 5, 'sex': 5,
+  'Sab': 6, 'sab': 6,
+};
+
+function parseDiasFromLabel(label: string): number[] {
+  if (!label) return [];
+  const dias: number[] = [];
+  for (const parte of label.split('/')) {
+    const trimmed = parte.trim();
+    const idx = ABREV_MAP[trimmed];
+    if (idx !== undefined) dias.push(idx);
+  }
+  return [...new Set(dias)];
+}
 
 const CORES_MOTIVO: Record<string, string> = {
   'Doença': '#E74C3C',
@@ -44,37 +67,8 @@ async function calcularMetricasCore(tenantId: string, dataInicio: string, dataFi
 
   const diasConcluidos = new Set<string>(diasAulaData?.map(r => r.data)).size;
 
-  const { count: turmasCount } = await supabase
-    .from('turmas')
-    .select('*', { count: 'exact', head: true })
-    .eq('tenant_id', tenantId);
-
-  const { data: logsGrupo } = await supabase
-    .from('chamadas_log')
-    .select('data, grupo_id')
-    .eq('tenant_id', tenantId)
-    .neq('origem', 'calendario')
-    .gte('data', dataInicio)
-    .lte('data', dataFim);
-
-  const { data: alunosData } = await supabase
-    .from('alunos')
-    .select('id, turma_id')
-    .eq('tenant_id', tenantId);
-
-  const alunoTurmaMap = new Map<string, string>();
-  (alunosData || []).forEach((a: any) => {
-    if (a.turma_id) alunoTurmaMap.set(a.id, a.turma_id);
-  });
-
-  const aulasSet = new Set<string>();
-  (logsGrupo || []).forEach((log: any) => {
-    const turmaId = alunoTurmaMap.get(log.grupo_id);
-    if (turmaId) aulasSet.add(`${log.data}|${turmaId}`);
-  });
-  const aulasDadas = aulasSet.size;
-
-  let diasPrevistos = diasConcluidos;
+  // Dias previstos = periodos_letivos - eventos de calendario
+  let diasPrevistosSet = new Set<string>();
   try {
     const { data: periodosData } = await supabase
       .from('periodos_letivos')
@@ -83,13 +77,73 @@ async function calcularMetricasCore(tenantId: string, dataInicio: string, dataFi
       .gte('data', dataInicio)
       .lte('data', dataFim);
     if (periodosData && periodosData.length > 0) {
-      diasPrevistos = new Set<string>(periodosData.map(r => r.data)).size;
+      diasPrevistosSet = new Set<string>(periodosData.map(r => r.data));
     }
-  } catch {
-    /* periodos_letivos pode não existir ainda */
+  } catch { /* pode nao existir */ }
+
+  // Subtrair eventos de calendario dos dias previstos
+  if (diasPrevistosSet.size > 0) {
+    try {
+      const { data: eventos } = await supabase
+        .from('calendario')
+        .select('data')
+        .eq('tenant_id', tenantId)
+        .gte('data', dataInicio)
+        .lte('data', dataFim);
+      const diasEvento = new Set<string>(eventos?.map(e => e.data) || []);
+      diasPrevistosSet = new Set<string>([...diasPrevistosSet].filter(d => !diasEvento.has(d)));
+    } catch { /* pode nao existir */ }
   }
 
-  const aulasPrevistas = (turmasCount ?? 0) * Math.max(1, diasPrevistos);
+  const diasPrevistos = diasPrevistosSet.size > 0 ? diasPrevistosSet.size : diasConcluidos;
+
+  // Buscar turmas com grupo_id e label
+  const { data: turmasData } = await supabase
+    .from('turmas')
+    .select('id, grupo_id, label, horario, professor_id')
+    .eq('tenant_id', tenantId);
+
+  // Mapa turma por grupo_id
+  const turmasPorGrupoId = new Map<string, any>();
+  (turmasData || []).forEach((t: any) => {
+    if (t.grupo_id) turmasPorGrupoId.set(t.grupo_id, t);
+  });
+
+  // aulasDadas = combinacoes unicas (data, grupo_id) de logs (excluindo calendario)
+  const { data: logsGrupo } = await supabase
+    .from('chamadas_log')
+    .select('data, grupo_id')
+    .eq('tenant_id', tenantId)
+    .neq('origem', 'calendario')
+    .gte('data', dataInicio)
+    .lte('data', dataFim);
+
+  const aulasSet = new Set<string>();
+  (logsGrupo || []).forEach((log: any) => {
+    if (log.grupo_id && turmasPorGrupoId.has(log.grupo_id)) {
+      aulasSet.add(`${log.data}|${log.grupo_id}`);
+    }
+  });
+  const aulasDadas = aulasSet.size;
+
+  // aulasPrevistas = soma por turma de dias letivos que caem nos dias da semana da turma
+  let aulasPrevistas = 0;
+  if (diasPrevistosSet.size > 0 && turmasData) {
+    const diasPrevList = [...diasPrevistosSet];
+    for (const turma of turmasData) {
+      if (!turma.grupo_id || !turma.label) continue;
+      const diasSemana = parseDiasFromLabel(turma.label);
+      if (diasSemana.length === 0) continue;
+      for (const dataStr of diasPrevList) {
+        const diaSemana = new Date(dataStr + 'T12:00:00').getDay();
+        if (diasSemana.includes(diaSemana)) {
+          aulasPrevistas++;
+        }
+      }
+    }
+  } else {
+    aulasPrevistas = (turmasData?.length || 0) * Math.max(1, diasPrevistos);
+  }
 
   const porLabel = await calcularMetricasPorLabel(tenantId, dataInicio, dataFim);
 
@@ -145,6 +199,138 @@ async function calcularMetricasPorLabel(
   return results;
 }
 
+export async function controleMensal(
+  tenantId: string,
+  filters?: { mes?: number; ano?: number; label?: string; professor_id?: string }
+): Promise<ControleMensalLabel[]> {
+  const { mes, ano, label, professor_id } = filters || {};
+  if (!mes || !ano) return [];
+
+  const mesStr = String(mes).padStart(2, '0');
+  const ultimoDia = String(new Date(ano, mes, 0).getDate()).padStart(2, '0');
+  const dataInicio = `${ano}-${mesStr}-01`;
+  const dataFim = `${ano}-${mesStr}-${ultimoDia}`;
+
+  // Buscar turmas
+  let turmasQuery = supabase
+    .from('turmas')
+    .select('id, grupo_id, label, horario, professor_id, nivel')
+    .eq('tenant_id', tenantId);
+
+  if (label) turmasQuery = turmasQuery.eq('label', label);
+  if (professor_id) turmasQuery = turmasQuery.eq('professor_id', professor_id);
+
+  const { data: turmas } = await turmasQuery;
+  if (!turmas || turmas.length === 0) return [];
+
+  // Dias previstos no mes (periodos_letivos - eventos calendario)
+  const diasPrevList = await getDiasPrevistosNoPeriodo(tenantId, dataInicio, dataFim);
+  if (diasPrevList.length === 0) return [];
+
+  // Logs do periodo (excluindo calendario)
+  const { data: logs } = await supabase
+    .from('chamadas_log')
+    .select('data, grupo_id')
+    .eq('tenant_id', tenantId)
+    .neq('origem', 'calendario')
+    .gte('data', dataInicio)
+    .lte('data', dataFim);
+
+  const logsSet = new Set<string>();
+  (logs || []).forEach((l: any) => {
+    if (l.grupo_id) logsSet.add(`${l.data}|${l.grupo_id}`);
+  });
+
+  // Buscar professores para nome
+  const { data: professores } = await supabase
+    .from('professores')
+    .select('id, nome')
+    .eq('tenant_id', tenantId);
+
+  const profMap = new Map<string, string>();
+  (professores || []).forEach((p: any) => profMap.set(p.id, p.nome));
+
+  // Agrupar por label
+  const labelMap = new Map<string, { turmas: any[]; profMap: Map<string, string> }>();
+  for (const turma of turmas) {
+    if (!turma.grupo_id || !turma.label) continue;
+    const key = `${turma.label}|${turma.professor_id || ''}`;
+    if (!labelMap.has(key)) labelMap.set(key, { turmas: [], profMap: new Map() });
+    labelMap.get(key)!.turmas.push(turma);
+  }
+
+  const result: ControleMensalLabel[] = [];
+
+  for (const [key, grupo] of labelMap) {
+    const [labelStr, profId] = key.split('|');
+    const profNome = profMap.get(profId) || profId || 'Geral';
+    const diasSemana = parseDiasFromLabel(labelStr);
+    if (diasSemana.length === 0) continue;
+
+    // Filtrar dias previstos que caem nos dias da semana da label
+    const diasEfetivos = diasPrevList.filter(d => diasSemana.includes(new Date(d + 'T12:00:00').getDay()));
+
+    // Agrupar horarios
+    const horarioMap = new Map<string, { dadas: number; previstas: number }>();
+    for (const turma of grupo.turmas) {
+      if (!turma.horario) continue;
+      if (!horarioMap.has(turma.horario)) horarioMap.set(turma.horario, { dadas: 0, previstas: 0 });
+      const entry = horarioMap.get(turma.horario)!;
+      entry.previstas += diasEfetivos.length;
+      for (const dia of diasEfetivos) {
+        if (logsSet.has(`${dia}|${turma.grupo_id}`)) {
+          entry.dadas++;
+        }
+      }
+    }
+
+    const horarios: ControleMensalRow[] = [];
+    let totalDadas = 0;
+    let totalPrevistas = 0;
+    for (const [horario, h] of horarioMap) {
+      horarios.push({ horario, dadas: h.dadas, previstas: h.previstas });
+      totalDadas += h.dadas;
+      totalPrevistas += h.previstas;
+    }
+    horarios.sort((a, b) => a.horario.localeCompare(b.horario));
+
+    result.push({ label: labelStr, professor: profNome, horarios, totalDadas, totalPrevistas });
+  }
+
+  return result;
+}
+
+async function getDiasPrevistosNoPeriodo(tenantId: string, dataInicio: string, dataFim: string): Promise<string[]> {
+  try {
+    const { data: periodosData } = await supabase
+      .from('periodos_letivos')
+      .select('data')
+      .eq('tenant_id', tenantId)
+      .gte('data', dataInicio)
+      .lte('data', dataFim);
+
+    if (!periodosData || periodosData.length === 0) return [];
+
+    let dias = [...new Set<string>(periodosData.map(r => r.data))];
+
+    const { data: eventos } = await supabase
+      .from('calendario')
+      .select('data')
+      .eq('tenant_id', tenantId)
+      .gte('data', dataInicio)
+      .lte('data', dataFim);
+
+    if (eventos && eventos.length > 0) {
+      const diasEvento = new Set<string>(eventos.map(e => e.data));
+      dias = dias.filter(d => !diasEvento.has(d));
+    }
+
+    return dias;
+  } catch {
+    return [];
+  }
+}
+
 export async function metricas(tenantId: string, filters?: { periodo?: 'semana' | 'mes' | 'ano' }): Promise<FrequencyMetrics> {
   const { periodo = 'mes' } = filters || {};
   const agora = new Date();
@@ -180,24 +366,17 @@ export async function timeline(tenantId: string, filters?: { label?: string; pro
   const { data: turmas, error: turmasError } = await turmasQuery;
   if (turmasError) throw new AppError('Erro ao buscar turmas', 500);
 
-  const { data: alunos } = await supabase
-    .from('alunos')
-    .select('id, turma_id')
-    .eq('tenant_id', tenantId);
-
   const slots: TimelineSlot[] = [];
 
   for (const turma of turmas || []) {
-    const chave = turma.grupo_id || turma.id;
-    const alunosDaTurma = (alunos || []).filter(a => a.turma_id === chave);
-    const alunoIds = alunosDaTurma.map(a => a.id);
-    if (alunoIds.length === 0) continue;
+    const grupoId = turma.grupo_id;
+    if (!grupoId) continue;
 
     const { data: logs } = await supabase
       .from('chamadas_log')
       .select('status')
       .eq('tenant_id', tenantId)
-      .in('grupo_id', alunoIds);
+      .eq('grupo_id', grupoId);
 
     const presentes = logs?.filter(l => l.status === 'presente').length ?? 0;
     const ausentes = logs?.filter(l => l.status === 'falta').length ?? 0;
@@ -230,9 +409,34 @@ export async function timeline(tenantId: string, filters?: { label?: string; pro
     professores: professores || [],
   };
 }
-
 export async function frequencia(tenantId: string, filters?: { mes?: number; ano?: number; aluno_id?: string; periodo?: string }): Promise<FrequenciaData> {
   const { mes, ano, aluno_id, periodo } = filters || {};
+
+  const [alunosResult, turmasResult, professoresResult] = await Promise.all([
+    supabase.from('alunos').select('id, nome, nivel, turma_id, ativo').eq('tenant_id', tenantId),
+    supabase.from('turmas').select('id, grupo_id, label, nivel, horario, professor_id').eq('tenant_id', tenantId),
+    supabase.from('professores').select('id, nome').eq('tenant_id', tenantId),
+  ]);
+
+  if (alunosResult.error) throw new AppError('Erro ao buscar alunos: ' + alunosResult.error.message, 500);
+  if (turmasResult.error) throw new AppError('Erro ao buscar turmas: ' + turmasResult.error.message, 500);
+
+  const alunosMap = new Map<string, any>();
+  alunosResult.data?.forEach((a: any) => alunosMap.set(a.id, a));
+
+  const alunosPorTurma = new Map<string, any[]>();
+  (alunosResult.data || []).forEach((a: any) => {
+    if (a.turma_id) {
+      if (!alunosPorTurma.has(a.turma_id)) alunosPorTurma.set(a.turma_id, []);
+      alunosPorTurma.get(a.turma_id)!.push(a);
+    }
+  });
+
+  const turmasMap = new Map<string, any>();
+  turmasResult.data?.forEach((t: any) => turmasMap.set(t.grupo_id || t.id, t));
+
+  const professorMap = new Map<string, string>();
+  professoresResult.data?.forEach((p: any) => professorMap.set(p.id, p.nome));
 
   let query = supabase
     .from('chamadas_log')
@@ -248,29 +452,16 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
   }
 
   if (aluno_id) {
-    query = query.eq('grupo_id', aluno_id);
+    const aluno = alunosMap.get(aluno_id);
+    if (aluno?.turma_id) {
+      query = query.eq('grupo_id', aluno.turma_id);
+    } else {
+      query = query.eq('grupo_id', aluno_id);
+    }
   }
 
   const { data: chamadas, error } = await query.order('data', { ascending: true });
   if (error) throw new AppError('Erro ao buscar frequencia', 500);
-
-  const [alunosResult, turmasResult, professoresResult] = await Promise.all([
-    supabase.from('alunos').select('id, nome, nivel, turma_id, ativo').eq('tenant_id', tenantId),
-    supabase.from('turmas').select('id, grupo_id, label, nivel, horario, professor_id').eq('tenant_id', tenantId),
-    supabase.from('professores').select('id, nome').eq('tenant_id', tenantId),
-  ]);
-
-  if (alunosResult.error) throw new AppError('Erro ao buscar alunos: ' + alunosResult.error.message, 500);
-  if (turmasResult.error) throw new AppError('Erro ao buscar turmas: ' + turmasResult.error.message, 500);
-
-  const alunosMap = new Map<string, any>();
-  alunosResult.data?.forEach((a: any) => alunosMap.set(a.id, a));
-
-  const turmasMap = new Map<string, any>();
-  turmasResult.data?.forEach((t: any) => turmasMap.set(t.grupo_id || t.id, t));
-
-  const professorMap = new Map<string, string>();
-  professoresResult.data?.forEach((p: any) => professorMap.set(p.id, p.nome));
 
   const totalRegistros = chamadas?.length || 0;
   const presentes = chamadas?.filter((r: any) => r.status === 'presente').length || 0;
@@ -285,10 +476,10 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
   const alunosFreq = new Map<string, { nome: string; total: number; presentes: number; justificados: number; faltas: number }>();
 
   (chamadas || []).forEach((r: any) => {
-    const aluno = alunosMap.get(r.grupo_id);
-    const turma = aluno ? turmasMap.get(aluno.turma_id) : turmasMap.get(r.grupo_id);
+    const turma = turmasMap.get(r.grupo_id);
+    const alunosDaTurma = r.grupo_id ? alunosPorTurma.get(r.grupo_id) : [];
 
-    const nivel = turma?.nivel || aluno?.nivel || 'Sem nivel';
+    const nivel = turma?.nivel || 'Sem nivel';
     if (!porNivelMap.has(nivel)) porNivelMap.set(nivel, { total: 0, presentes: 0 });
     const nv = porNivelMap.get(nivel)!;
     nv.total++;
@@ -300,9 +491,9 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
     hr.total++;
     if (r.status === 'presente') hr.presentes++;
 
-    const periodo = (r.indice_aula ?? 0) < 6 ? 'manhã' : 'tarde';
-    if (!porPeriodoMap.has(periodo)) porPeriodoMap.set(periodo, { total: 0, presentes: 0 });
-    const pd = porPeriodoMap.get(periodo)!;
+    const periodoStr = (r.indice_aula ?? 0) < 6 ? 'manhã' : 'tarde';
+    if (!porPeriodoMap.has(periodoStr)) porPeriodoMap.set(periodoStr, { total: 0, presentes: 0 });
+    const pd = porPeriodoMap.get(periodoStr)!;
     pd.total++;
     if (r.status === 'presente') pd.presentes++;
 
@@ -313,15 +504,17 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
     pf.total++;
     if (r.status === 'presente') pf.presentes++;
 
-    if (aluno) {
-      if (!alunosFreq.has(aluno.id)) {
-        alunosFreq.set(aluno.id, { nome: aluno.nome, total: 0, presentes: 0, justificados: 0, faltas: 0 });
+    if (alunosDaTurma) {
+      for (const aluno of alunosDaTurma) {
+        if (!alunosFreq.has(aluno.id)) {
+          alunosFreq.set(aluno.id, { nome: aluno.nome, total: 0, presentes: 0, justificados: 0, faltas: 0 });
+        }
+        const entry = alunosFreq.get(aluno.id)!;
+        entry.total++;
+        if (r.status === 'presente') entry.presentes++;
+        if (r.status === 'justificado') entry.justificados++;
+        if (r.status === 'falta') entry.faltas++;
       }
-      const entry = alunosFreq.get(aluno.id)!;
-      entry.total++;
-      if (r.status === 'presente') entry.presentes++;
-      if (r.status === 'justificado') entry.justificados++;
-      if (r.status === 'falta') entry.faltas++;
     }
   });
 
@@ -462,8 +655,9 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
         const fim = p.data_fim ? new Date(p.data_fim).getTime() : Date.now();
         const permanenciaDias = Math.max(0, Math.ceil((fim - inicio) / (1000 * 60 * 60 * 24)));
 
+        const aluno = alunosMap.get(aluno_id);
         const logsDoPeriodo = (chamadas || []).filter(
-          (l: any) => l.grupo_id === aluno_id && l.data >= p.data_inicio && l.data <= (p.data_fim || '2099-12-31')
+          (l: any) => l.grupo_id === (aluno?.turma_id || aluno_id) && l.data >= p.data_inicio && l.data <= (p.data_fim || '2099-12-31')
         );
         const total = logsDoPeriodo.length;
         const presentesPeriodo = logsDoPeriodo.filter((l: any) => l.status === 'presente').length;
@@ -471,7 +665,7 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
         const justificadosPeriodo = logsDoPeriodo.filter((l: any) => l.status === 'justificado').length;
 
         return {
-          nivel: turma?.nivel || aluno_id || 'Sem nivel',
+          nivel: turma?.nivel || 'Sem nivel',
           turma_label: turma ? `${turma.nivel || ''} ${turma.horario || ''}`.trim() : 'Turma',
           data_inicio: p.data_inicio,
           data_fim: p.data_fim,
@@ -554,9 +748,8 @@ export async function cancelamentos(tenantId: string, filters?: { mes?: number; 
     const motivo = r.motivo || 'Sem motivo';
     porMotivo.set(motivo, (porMotivo.get(motivo) || 0) + 1);
 
-    const aluno = alunosMap.get(r.grupo_id);
-    const turma = aluno ? turmasMap.get(aluno.turma_id) : turmasMap.get(r.grupo_id);
-    const nivel = turma?.nivel || aluno?.nivel || 'Sem nivel';
+    const turma = turmasMap.get(r.grupo_id);
+    const nivel = turma?.nivel || 'Sem nivel';
     porNivelMap.set(nivel, (porNivelMap.get(nivel) || 0) + 1);
 
     const mesKey = r.data ? r.data.substring(0, 7) : 'desconhecido';

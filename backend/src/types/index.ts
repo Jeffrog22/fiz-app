@@ -223,3 +223,17 @@ export interface CancelamentoRow {
   professor: string; tipo: 'geral' | 'pessoal';
   motivo: string; origem: string;
 }
+
+export interface ControleMensalRow {
+  horario: string;
+  dadas: number;
+  previstas: number;
+}
+
+export interface ControleMensalLabel {
+  label: string;
+  professor: string;
+  horarios: ControleMensalRow[];
+  totalDadas: number;
+  totalPrevistas: number;
+}
