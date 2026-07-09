@@ -127,16 +127,21 @@ async function extrapolarPorLabel(
           perTurmaMotivo = 'Água fria';
         }
 
+        const finalStatus = perTurmaStatus && status
+          ? (perTurmaStatus === 'cancelado' || status === 'cancelado' ? 'cancelado' : 'justificado')
+          : (perTurmaStatus || status);
+        const finalMotivo = finalStatus === perTurmaStatus ? (perTurmaMotivo || null) : (motivo || null);
+
         logsCriados.push({
           tenant_id: tenantId,
           data,
           grupo_id: turma.grupo_id,
           indice_aula: idx,
-          status: perTurmaStatus || null,
-          motivo: perTurmaMotivo || null,
-          tipo_ocorrencia: perTurmaStatus ? (tipoOcorrencia || null) : null,
-          tipo_select: perTurmaStatus ? (tipoSelect || null) : null,
-          origem: perTurmaStatus ? 'extrapolado' : null,
+          status: finalStatus || null,
+          motivo: finalMotivo,
+          tipo_ocorrencia: finalStatus ? (tipoOcorrencia || null) : null,
+          tipo_select: finalStatus ? (tipoSelect || null) : null,
+          origem: finalStatus ? 'extrapolado' : null,
         });
         continue;
       }
