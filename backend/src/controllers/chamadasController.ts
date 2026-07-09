@@ -22,6 +22,12 @@ export class ChamadasController {
       const tenantId = req.tenantId!;
       const { inicio, fim } = req.query;
       const result = await chamadasService.listarPorPeriodo(inicio as string, fim as string, tenantId);
+      const turmaLogs = result.filter((r: any) =>
+        r.grupo_id && !r.grupo_id.includes('-') && r.grupo_id.length < 20
+      );
+      if (turmaLogs.length > 0) {
+        console.log('[listarPorPeriodo] Turma-level logs no result:', JSON.stringify(turmaLogs));
+      }
       res.json(result);
     } catch (error) {
       next(error);
