@@ -137,43 +137,18 @@ export async function aplicarEventoCalendario(
     throw new AppError('Erro ao buscar alunos', 500);
   }
 
-  const novosLogs = (alunos || []).map((aluno: any) => ({
-    tenant_id: tenantId,
-    data,
-    grupo_id: aluno.id,
-    indice_aula: 0,
-    status: tipo,
-    origem: 'calendario',
-  }));
-
-  if (novosLogs.length === 0) {
+  if (!alunos || alunos.length === 0) {
     return { message: 'Nenhum aluno ativo para aplicar evento', count: 0 };
-  }
-
-  const { error: insertError } = await supabase
-    .from('chamadas_log')
-    .upsert(novosLogs, { onConflict: 'tenant_id,data,grupo_id,indice_aula' });
-
-  if (insertError) {
-    console.error('[aplicarEventoCalendario] upsert falhou, tentando insert manual:', insertError.message, 'data:', data, 'tipo:', tipo);
-    const { error: insertFallback } = await supabase
-      .from('chamadas_log')
-      .insert(novosLogs);
-    if (insertFallback) {
-      const msg = insertFallback.message || JSON.stringify(insertFallback);
-      console.error('[aplicarEventoCalendario] insert manual tambem falhou:', msg);
-      throw new AppError(`Erro ao aplicar evento do calendario: ${msg}`, 500);
-    }
   }
 
   registrarOperacao({
     tenant_id: tenantId,
     tabela: 'chamadas_log',
     operacao: 'calendario',
-    dados: { data, tipo, total: novosLogs.length },
+    dados: { data, tipo, total: alunos.length },
   });
 
-  return { message: `Evento ${tipo} aplicado para ${novosLogs.length} alunos`, count: novosLogs.length };
+  return { message: `Evento ${tipo} aplicado para ${alunos.length} alunos (frontend-only)`, count: alunos.length };
 }
 
 export async function extrapolarPresenca(data: string, indice_aula: number | undefined, tenantId: string): Promise<{ message: string; count: number }> {

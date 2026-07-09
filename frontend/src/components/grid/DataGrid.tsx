@@ -109,13 +109,15 @@ const DataGrid: React.FC<DataGridProps> = ({
       if (dataEventos.length > 0) {
         return dataEventos[0].tipo as PresencaStatus;
       }
-      // 2. Log manual do aluno (qualquer status) — tem precedência
-      const alunoStatus = logs[alunoId]?.[data]?.[indiceAtual]?.status;
-      if (alunoStatus) return alunoStatus as PresencaStatus;
-      // 3. Turma CANCELADO — fallback para alunos sem log individual
+      // 2. Turma-level: status propagado por CardAula/CardBO
       if (turmaGrupoId) {
         const turmaLog = logs[turmaGrupoId]?.[data]?.[indiceAtual];
         if (turmaLog?.status) return turmaLog.status as PresencaStatus;
+      }
+      // 3. Student-level manual: clique do usuário P/F/J
+      const alunoLog = logs[alunoId]?.[data]?.[indiceAtual];
+      if (alunoLog?.origem === 'manual' && alunoLog?.status) {
+        return alunoLog.status as PresencaStatus;
       }
       return undefined;
     },
@@ -245,15 +247,14 @@ const DataGrid: React.FC<DataGridProps> = ({
       const current = getStatus(alunoId, data);
       if (current === 'feriado' || current === 'ponte' || current === 'reuniao' || current === 'evento' || current === 'cancelado') return;
       const studentLogEntry = logs[alunoId]?.[data]?.[indiceAtual];
-      const studentStatus = studentLogEntry?.status;
-      const isExtrapolado = studentLogEntry?.origem === 'extrapolado';
-      if ((!studentStatus || isExtrapolado) && current) {
+      const isManual = studentLogEntry?.origem === 'manual';
+      if (isManual) {
+        const currentIndex = STATUS_CYCLE.indexOf(current);
+        const nextStatus = STATUS_CYCLE[(currentIndex + 1) % STATUS_CYCLE.length];
+        onTogglePresenca(alunoId, data, nextStatus);
+      } else {
         onTogglePresenca(alunoId, data, 'presente');
-        return;
       }
-      const currentIndex = STATUS_CYCLE.indexOf(current);
-      const nextStatus = STATUS_CYCLE[(currentIndex + 1) % STATUS_CYCLE.length];
-      onTogglePresenca(alunoId, data, nextStatus);
     },
     [getStatus, onTogglePresenca, logs, indiceAtual]
   );
