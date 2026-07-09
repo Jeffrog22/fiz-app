@@ -74,26 +74,27 @@ export class ChamadasController {
 
       const hash = await cardAulaService.salvarCardAula(tenantId, data, indice_aula || 0, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido);
 
-      // Auto-extrapolar conforme status sugerido
+      // Auto-extrapolar conforme inputs brutos usando motor climatico unificado
       if (grupo_id) {
+        const rawInputs = { condicao_clima, sensacao, cloro_ppm, temperatura_piscina };
+        console.log('[salvarCardAula] Disparando extrapolacao unificada para grupo_id:', grupo_id, 'data:', data, 'indice:', indice_aula, 'inputs:', rawInputs, 'status_sugerido:', status_sugerido);
+
         if (status_sugerido === 'AULA_CANCELADA') {
-          console.log('[salvarCardAula] Disparando extrapolarCancelamento para grupo_id:', grupo_id, 'data:', data, 'indice:', indice_aula);
           try {
-            const result = await extrapolarService.extrapolarCancelamento(tenantId, data, grupo_id, indice_aula || 0, 12, motivo_sugerido || '', undefined, undefined, temperatura_piscina);
+            const result = await extrapolarService.extrapolarCancelamento(tenantId, data, grupo_id, indice_aula || 0, 12, motivo_sugerido || '', undefined, undefined, temperatura_piscina, condicao_clima, sensacao, cloro_ppm);
             console.log('[salvarCardAula] Resultado extrapolarCancelamento:', result);
           } catch (extError) {
             console.error('[salvarCardAula] Erro ao extrapolar cancelamento:', extError);
           }
         } else if (status_sugerido === 'FALTA_JUSTIFICADA') {
-          console.log('[salvarCardAula] Disparando extrapolarJustificativa para grupo_id:', grupo_id, 'data:', data, 'indice:', indice_aula);
           try {
-            const result = await extrapolarService.extrapolarJustificativa(tenantId, data, grupo_id, indice_aula || 0, 12, motivo_sugerido || '', temperatura_piscina);
+            const result = await extrapolarService.extrapolarJustificativa(tenantId, data, grupo_id, indice_aula || 0, 12, motivo_sugerido || '', temperatura_piscina, condicao_clima, sensacao, cloro_ppm);
             console.log('[salvarCardAula] Resultado extrapolarJustificativa:', result);
           } catch (extError) {
             console.error('[salvarCardAula] Erro ao extrapolar justificativa:', extError);
           }
         } else if (status_sugerido === 'AULA_NORMAL') {
-          console.log('[salvarCardAula] AULA_NORMAL — limpando logs extrapolados anteriores para o label');
+          // Cleanup: remove extrapolated logs for all turmas in this label at this indice
           try {
             const { data: turmaOrigem } = await supabase
               .from('turmas')
@@ -120,25 +121,7 @@ export class ChamadasController {
                   .eq('indice_aula', idx)
                   .in('grupo_id', grupoIds)
                   .eq('origem', 'extrapolado');
-
-                const { data: alunos } = await supabase
-                  .from('alunos')
-                  .select('id')
-                  .eq('tenant_id', tenantId)
-                  .in('turma_id', grupoIds)
-                  .eq('ativo', true);
-
-                if (alunos && alunos.length > 0) {
-                  const alunoIds = alunos.map((a: any) => a.id);
-                  await supabase
-                    .from('chamadas_log')
-                    .delete()
-                    .eq('tenant_id', tenantId)
-                    .eq('data', data)
-                    .eq('indice_aula', idx)
-                    .in('grupo_id', alunoIds)
-                    .eq('origem', 'extrapolado');
-                }
+                console.log('[salvarCardAula] Logs extrapolados limpos para label:', turmaOrigem.label, 'indice:', idx);
               }
             }
           } catch (err) {

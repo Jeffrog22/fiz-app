@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { AppError } from '../middleware/errorHandler';
 import { registrarOperacao } from '../utils/logEngine';
+import { getClimaSugestao, getTempPiscinaSugestao, getCloroSugestao, getSugestaoFinal } from '../utils/climateEngine';
 
 async function extrapolarPorLabel(
   tenantId: string,
@@ -15,6 +16,9 @@ async function extrapolarPorLabel(
   tipoOcorrencia?: string,
   tipoSelect?: string,
   temperaturaPiscina?: number,
+  condicaoClima?: string,
+  sensacoes?: string[],
+  cloroPpm?: number,
 ): Promise<{ message: string; count: number }> {
   if (!data) throw new AppError('Campo data é obrigatório', 400);
 
@@ -100,10 +104,36 @@ async function extrapolarPorLabel(
       const faixa = turma.faixa_etaria || '';
       const nivel = turma.nivel.toUpperCase();
 
+      if (condicaoClima !== undefined && sensacoes && cloroPpm !== undefined) {
+        const climaSugestao = getClimaSugestao(condicaoClima, sensacoes);
+        const cloroSugestao = getCloroSugestao(cloroPpm);
+        const piscinaSugestao = getTempPiscinaSugestao(temperaturaPiscina ?? 28, nivel, faixa);
+
+        const final = getSugestaoFinal(climaSugestao, piscinaSugestao, cloroSugestao);
+
+        const finalStatus = final.status === 'AULA_CANCELADA' ? 'cancelado'
+          : final.status === 'FALTA_JUSTIFICADA' ? 'justificado'
+          : null;
+        const finalMotivo = final.motivo;
+
+        logsCriados.push({
+          tenant_id: tenantId,
+          data,
+          grupo_id: turma.grupo_id,
+          indice_aula: idx,
+          status: finalStatus,
+          motivo: finalMotivo,
+          tipo_ocorrencia: finalStatus ? (tipoOcorrencia || null) : null,
+          tipo_select: finalStatus ? (tipoSelect || null) : null,
+          origem: finalStatus ? 'extrapolado' : null,
+        });
+        continue;
+      }
+
       if (temperaturaPiscina !== undefined) {
         const t = temperaturaPiscina;
         const isIniciacao = nivel.startsWith('INICIAÇÃO');
-        const isMaior16 = faixa === '+ 16 anos' || faixa === '+16 anos';
+        const isMaior16 = faixa === '+ 16 anos' || faixa === '+16 anos' || faixa === '+16';
         let perTurmaStatus: string | null = null;
         let perTurmaMotivo: string | null = null;
 
@@ -146,7 +176,7 @@ async function extrapolarPorLabel(
         continue;
       }
 
-      if (motivoMenores && (faixa === '+ 16 anos' || faixa === '+16 anos')) {
+      if (motivoMenores && (faixa === '+ 16 anos' || faixa === '+16 anos' || faixa === '+16')) {
         logsCriados.push({
           tenant_id: tenantId,
           data,
@@ -160,7 +190,7 @@ async function extrapolarPorLabel(
         });
         continue;
       }
-      if (motivoMaiores16 && faixa !== '+ 16 anos' && faixa !== '+16 anos') continue;
+      if (motivoMaiores16 && faixa !== '+ 16 anos' && faixa !== '+16 anos' && faixa !== '+16') continue;
       if (motivoIniciacao && !nivel.startsWith('INICIAÇÃO')) continue;
       if ((motivoMuitoFria || motivoFria) && nivel.startsWith('INICIAÇÃO')) continue;
       logsCriados.push({
@@ -220,8 +250,11 @@ export async function extrapolarJustificativa(
   _maxIndices?: number,
   motivo?: string,
   temperaturaPiscina?: number,
+  condicaoClima?: string,
+  sensacoes?: string[],
+  cloroPpm?: number,
 ): Promise<{ message: string; count: number }> {
-  return extrapolarPorLabel(tenantId, data, grupoId, indiceAulaOrigem, 'justificado', motivo, true, undefined, undefined, undefined, undefined, temperaturaPiscina);
+  return extrapolarPorLabel(tenantId, data, grupoId, indiceAulaOrigem, 'justificado', motivo, true, undefined, undefined, undefined, undefined, temperaturaPiscina, condicaoClima, sensacoes, cloroPpm);
 }
 
 export async function extrapolarCancelamento(
@@ -234,8 +267,11 @@ export async function extrapolarCancelamento(
   tipoOcorrencia?: string,
   tipoSelect?: string,
   temperaturaPiscina?: number,
+  condicaoClima?: string,
+  sensacoes?: string[],
+  cloroPpm?: number,
 ): Promise<{ message: string; count: number }> {
-  return extrapolarPorLabel(tenantId, data, grupoId, indiceAulaOrigem, 'cancelado', motivo, false, undefined, false, tipoOcorrencia, tipoSelect, temperaturaPiscina);
+  return extrapolarPorLabel(tenantId, data, grupoId, indiceAulaOrigem, 'cancelado', motivo, false, undefined, false, tipoOcorrencia, tipoSelect, temperaturaPiscina, condicaoClima, sensacoes, cloroPpm);
 }
 
 export async function extrapolarCancelamentoPessoal(
