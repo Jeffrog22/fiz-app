@@ -361,9 +361,11 @@ export async function salvarCardAula(
 }
 
 const CANCELAMENTO_TIPOS = new Set([
-  'Médico/particular/trabalho',
-  'Manutenção/Incidente',
-  'Raios e Trovões',
+  'Médico pessoal',
+  'Médico trabalho',
+  'Particular',
+  'Reunião',
+  'Secretaria',
 ]);
 
 async function salvarMetadadosBO(

@@ -1,5 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { TenantRequest } from '../types';
+import { supabase } from '../services/supabaseClient';
 import * as chamadasService from '../services/chamadasService';
 import * as cardAulaService from '../services/cardAulaService';
 import * as extrapolarService from '../services/extrapolarService';
@@ -85,8 +86,58 @@ export class ChamadasController {
           } catch (extError) {
             console.error('[salvarCardAula] Erro ao extrapolar justificativa:', extError);
           }
-        } else {
-          console.log('[salvarCardAula] status_sugerido ignorado para extrapolacao:', status_sugerido);
+        } else if (status_sugerido === 'AULA_NORMAL') {
+          console.log('[salvarCardAula] AULA_NORMAL — limpando logs extrapolados anteriores para o label');
+          try {
+            const { data: turmaOrigem } = await supabase
+              .from('turmas')
+              .select('label')
+              .eq('grupo_id', grupo_id)
+              .eq('tenant_id', tenantId)
+              .maybeSingle();
+
+            if (turmaOrigem?.label) {
+              const { data: turmasLabel } = await supabase
+                .from('turmas')
+                .select('grupo_id')
+                .eq('tenant_id', tenantId)
+                .eq('label', turmaOrigem.label);
+
+              const grupoIds = (turmasLabel || []).map((t: any) => t.grupo_id);
+              if (grupoIds.length > 0) {
+                const idx = indice_aula ?? 0;
+                await supabase
+                  .from('chamadas_log')
+                  .delete()
+                  .eq('tenant_id', tenantId)
+                  .eq('data', data)
+                  .eq('indice_aula', idx)
+                  .in('grupo_id', grupoIds)
+                  .eq('origem', 'extrapolado');
+
+                const { data: alunos } = await supabase
+                  .from('alunos')
+                  .select('id')
+                  .eq('tenant_id', tenantId)
+                  .in('turma_id', grupoIds)
+                  .eq('ativo', true);
+
+                if (alunos && alunos.length > 0) {
+                  const alunoIds = alunos.map((a: any) => a.id);
+                  await supabase
+                    .from('chamadas_log')
+                    .delete()
+                    .eq('tenant_id', tenantId)
+                    .eq('data', data)
+                    .eq('indice_aula', idx)
+                    .in('grupo_id', alunoIds)
+                    .eq('origem', 'extrapolado');
+                }
+              }
+            }
+          } catch (err) {
+            console.error('[salvarCardAula] Erro ao limpar logs extrapolados:', err);
+          }
         }
       } else {
         console.log('[salvarCardAula] grupo_id vazio — extrapolacao ignorada');
