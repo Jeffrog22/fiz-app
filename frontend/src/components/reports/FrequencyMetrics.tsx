@@ -4,8 +4,8 @@ import TimeFilterToggle from './TimeFilterToggle';
 
 interface Props {
   metrics: { diasConcluidos: number; diasPrevistos: number; aulasDadas: number; aulasPrevistas: number } | null;
-  periodo: 'semana' | 'mes' | 'ano';
-  onPeriodoChange: (v: 'semana' | 'mes' | 'ano') => void;
+  periodo: 'mes' | 'ano';
+  onPeriodoChange: (v: 'mes' | 'ano') => void;
 }
 
 const FrequencyMetrics: React.FC<Props> = ({ metrics, periodo, onPeriodoChange }) => {

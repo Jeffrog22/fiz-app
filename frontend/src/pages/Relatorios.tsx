@@ -32,7 +32,7 @@ const Relatorios: React.FC = () => {
 
   const [labelSelecionada, setLabelSelecionada] = useState('');
   const [professorId, setProfessorId] = useState('');
-  const [periodo, setPeriodo] = useState<'semana' | 'mes' | 'ano'>('mes');
+  const [periodo, setPeriodo] = useState<'mes' | 'ano'>('mes');
   const [incluirJustificados, setIncluirJustificados] = useState(false);
 
   const carregarFrequencia = useCallback(async () => {

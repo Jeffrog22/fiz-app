@@ -7,7 +7,7 @@ export class RelatoriosController {
     try {
       const tenantId = req.tenantId!;
       const { periodo } = req.query;
-      const validPeriodo = periodo === 'semana' || periodo === 'ano' ? periodo : 'mes';
+      const validPeriodo = periodo === 'ano' ? periodo : 'mes';
       const result = await relatoriosService.metricas(tenantId, { periodo: validPeriodo });
       res.json(result);
     } catch (e) { next(e); }

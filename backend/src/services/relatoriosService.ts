@@ -132,20 +132,14 @@ async function calcularMetricasCore(tenantId: string, dataInicio: string, dataFi
 
 export async function controleMensal(
   tenantId: string,
-  filters?: { mes?: number; ano?: number; label?: string; professor_id?: string; periodo?: 'semana' | 'mes' | 'ano' }
+  filters?: { mes?: number; ano?: number; label?: string; professor_id?: string; periodo?: 'mes' | 'ano' }
 ): Promise<ControleMensalLabel[]> {
   const { mes, ano, label, professor_id, periodo = 'mes' } = filters || {};
 
   let dataInicio: string;
   let dataFim: string;
 
-  if (periodo === 'semana') {
-    const agora = new Date();
-    const inicio = new Date(agora);
-    inicio.setDate(agora.getDate() - 6); // Últimos 7 dias (incluindo hoje)
-    dataInicio = inicio.toISOString().split('T')[0];
-    dataFim = agora.toISOString().split('T')[0];
-  } else if (periodo === 'ano') {
+  if (periodo === 'ano') {
     const agora = new Date();
     dataInicio = `${agora.getFullYear()}-01-01`;
     dataFim = `${agora.getFullYear()}-12-31`;
@@ -287,42 +281,44 @@ async function getDiasPrevistosNoPeriodo(tenantId: string, dataInicio: string, d
   }
 }
 
-export async function metricas(tenantId: string, filters?: { periodo?: 'semana' | 'mes' | 'ano' }): Promise<FrequencyMetrics> {
+export async function metricas(tenantId: string, filters?: { periodo?: 'mes' | 'ano' }): Promise<FrequencyMetrics> {
   const { periodo = 'mes' } = filters || {};
   const agora = new Date();
-  let inicio: Date;
 
-  switch (periodo) {
-    case 'semana':
-      inicio = new Date(agora);
-      inicio.setDate(inicio.getDate() - 7);
-      break;
-    case 'ano':
-      inicio = new Date(agora.getFullYear(), 0, 1);
-      break;
-    default:
-      inicio = new Date(agora.getFullYear(), agora.getMonth(), 1);
+  if (periodo === 'ano') {
+    const dataInicio = `${agora.getFullYear()}-01-01`;
+    const dataFim = `${agora.getFullYear()}-12-31`;
+
+    // dadas/concluidos via chamadas_log
+    const metrics = await calcularMetricasCore(tenantId, dataInicio, dataFim);
+
+    // previstos via turmas labels + calendario
+    const { dias } = await calcularDiasPrevistosNoMes(tenantId, dataInicio, dataFim);
+    const { count: numTurmas } = await supabase
+      .from('turmas')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId);
+
+    metrics.diasPrevistos = dias.length;
+    metrics.aulasPrevistas = dias.length * (numTurmas || 0);
+
+    return metrics;
   }
 
-  const dataInicio = inicio.toISOString().split('T')[0];
+  // mes
+  const dataInicio = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-01`;
   const dataFim = agora.toISOString().split('T')[0];
 
   return calcularMetricasCore(tenantId, dataInicio, dataFim);
 }
 
-export async function timeline(tenantId: string, filters?: { mes?: number; ano?: number; label?: string; professor_id?: string; periodo?: "semana" | "mes" | "ano" }): Promise<TimelineData> {
+export async function timeline(tenantId: string, filters?: { mes?: number; ano?: number; label?: string; professor_id?: string; periodo?: "mes" | "ano" }): Promise<TimelineData> {
   const { mes, ano, label, professor_id, periodo = "mes" } = filters || {};
 
   let dataInicio: string;
   let dataFim: string;
 
-  if (periodo === "semana") {
-    const agora = new Date();
-    const inicio = new Date(agora);
-    inicio.setDate(agora.getDate() - 6); // Últimos 7 dias (incluindo hoje)
-    dataInicio = inicio.toISOString().split("T")[0];
-    dataFim = agora.toISOString().split("T")[0];
-  } else if (periodo === "ano") {
+  if (periodo === "ano") {
     const agora = new Date();
     dataInicio = `${agora.getFullYear()}-01-01`;
     dataFim = `${agora.getFullYear()}-12-31`;

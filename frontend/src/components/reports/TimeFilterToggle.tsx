@@ -1,12 +1,11 @@
 import React from 'react';
 
 interface Props {
-  value: 'semana' | 'mes' | 'ano';
-  onChange: (v: 'semana' | 'mes' | 'ano') => void;
+  value: 'mes' | 'ano';
+  onChange: (v: 'mes' | 'ano') => void;
 }
 
-const OPCOES: { value: 'semana' | 'mes' | 'ano'; label: string }[] = [
-  { value: 'semana', label: 'Semana' },
+const OPCOES: { value: 'mes' | 'ano'; label: string }[] = [
   { value: 'mes', label: 'Mês' },
   { value: 'ano', label: 'Ano' },
 ];
