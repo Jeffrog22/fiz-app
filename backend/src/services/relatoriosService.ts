@@ -132,15 +132,30 @@ async function calcularMetricasCore(tenantId: string, dataInicio: string, dataFi
 
 export async function controleMensal(
   tenantId: string,
-  filters?: { mes?: number; ano?: number; label?: string; professor_id?: string }
+  filters?: { mes?: number; ano?: number; label?: string; professor_id?: string; periodo?: 'semana' | 'mes' | 'ano' }
 ): Promise<ControleMensalLabel[]> {
-  const { mes, ano, label, professor_id } = filters || {};
-  if (!mes || !ano) return [];
+  const { mes, ano, label, professor_id, periodo = 'mes' } = filters || {};
 
-  const mesStr = String(mes).padStart(2, '0');
-  const ultimoDia = String(new Date(ano, mes, 0).getDate()).padStart(2, '0');
-  const dataInicio = `${ano}-${mesStr}-01`;
-  const dataFim = `${ano}-${mesStr}-${ultimoDia}`;
+  let dataInicio: string;
+  let dataFim: string;
+
+  if (periodo === 'semana') {
+    const agora = new Date();
+    const inicio = new Date(agora);
+    inicio.setDate(agora.getDate() - 6); // Últimos 7 dias (incluindo hoje)
+    dataInicio = inicio.toISOString().split('T')[0];
+    dataFim = agora.toISOString().split('T')[0];
+  } else if (periodo === 'ano') {
+    const agora = new Date();
+    dataInicio = `${agora.getFullYear()}-01-01`;
+    dataFim = `${agora.getFullYear()}-12-31`;
+  } else { // mes
+    if (!mes || !ano) return [];
+    const mesStr = String(mes).padStart(2, '0');
+    const ultimoDia = String(new Date(ano, mes, 0).getDate()).padStart(2, '0');
+    dataInicio = `${ano}-${mesStr}-01`;
+    dataFim = `${ano}-${mesStr}-${ultimoDia}`;
+  }
 
   // Buscar turmas
   let turmasQuery = supabase

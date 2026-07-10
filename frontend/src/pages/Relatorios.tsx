@@ -89,7 +89,7 @@ const Relatorios: React.FC = () => {
     setCarregandoTimeline(false);
   }, [mes, ano, labelSelecionada, professorId]);
 
-  useEffect(() => { if (tab === 'frequencia' || tab === 'historico') carregarFrequencia(); }, [tab, carregarFrequencia]);
+  useEffect(() => { if (tab === 'frequencia' || tab === 'historico') carregarFrequencia(); }, [tab, carregarFrequencia, periodo]); // Adiciona 'periodo' como dependência
   useEffect(() => { if (tab === 'cancelamentos') carregarCancelamentos(); }, [tab, carregarCancelamentos, incluirJustificados]);
   useEffect(() => { if (tab === 'frequencia' && labelSelecionada && professorId) carregarTimeline(); }, [tab, carregarTimeline, labelSelecionada, professorId]);
 
@@ -203,7 +203,7 @@ const Relatorios: React.FC = () => {
               periodo={periodo}
               onPeriodoChange={setPeriodo}
             />
-            <ControleMensalProfessor mes={mes} ano={ano} />
+            <ControleMensalProfessor mes={mes} ano={ano} periodo={periodo} />
             {carregandoTimeline ? (
               <div className="flex justify-center py-6">
                 <div className="animate-spin h-6 w-6 border-4 border-primary-500 border-t-transparent rounded-full" />
