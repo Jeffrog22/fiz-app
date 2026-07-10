@@ -104,16 +104,6 @@ export async function metricas(
   const dataInicio = `${ano}-${mesStr}-01`;
   const dataFim = `${ano}-${mesStr}-${ultimoDia}`;
 
-  const { dias } = await calcularDiasPrevistosNoMes(tenantId, dataInicio, dataFim);
-  const diasPrevistos = dias.length;
-
-  const { count: numTurmas } = await supabase
-    .from('turmas')
-    .select('*', { count: 'exact', head: true })
-    .eq('tenant_id', tenantId);
-
-  const aulasPrevistas = diasPrevistos * (numTurmas || 0);
-
   const { data: logs } = await supabase
     .from('chamadas_log')
     .select('data, grupo_id, status')
@@ -124,15 +114,16 @@ export async function metricas(
   const logsList = logs || [];
   const uniqueDates = [...new Set<string>(logsList.map(l => l.data))].sort();
 
-  const diasConcluidos = uniqueDates.filter(d =>
-    logsList.some(l => l.data === d && l.status !== 'cancelado')
-  ).length;
-
-  const aulasDadas = new Set<string>(
-    logsList.filter(l => l.status !== 'cancelado').map(l => `${l.data}|${l.grupo_id}`)
-  ).size;
-
-  return { diasConcluidos, diasPrevistos, aulasDadas, aulasPrevistas };
+  return {
+    diasPrevistos: uniqueDates.length,
+    diasConcluidos: uniqueDates.filter(d =>
+      logsList.some(l => l.data === d && l.status !== 'cancelado')
+    ).length,
+    aulasPrevistas: new Set<string>(logsList.map(l => `${l.data}|${l.grupo_id}`)).size,
+    aulasDadas: new Set<string>(
+      logsList.filter(l => l.status !== 'cancelado').map(l => `${l.data}|${l.grupo_id}`)
+    ).size,
+  };
 }
 
 export async function controleMensal(
