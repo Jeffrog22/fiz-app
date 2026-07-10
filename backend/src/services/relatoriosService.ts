@@ -395,12 +395,7 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
   }
 
   if (aluno_id) {
-    const aluno = alunosMap.get(aluno_id);
-    if (aluno?.turma_id) {
-      query = query.eq('grupo_id', aluno.turma_id);
-    } else {
-      query = query.eq('grupo_id', aluno_id);
-    }
+    query = query.eq('grupo_id', aluno_id);
   }
 
   const { data: chamadas, error } = await query.order('data', { ascending: true });
@@ -596,9 +591,8 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
         const fim = p.data_fim ? new Date(p.data_fim).getTime() : Date.now();
         const permanenciaDias = Math.max(0, Math.ceil((fim - inicio) / (1000 * 60 * 60 * 24)));
 
-        const aluno = alunosMap.get(aluno_id);
         const logsDoPeriodo = (chamadas || []).filter(
-          (l: any) => l.grupo_id === (aluno?.turma_id || aluno_id) && l.data >= p.data_inicio && l.data <= (p.data_fim || '2099-12-31')
+          (l: any) => l.grupo_id === aluno_id && l.data >= p.data_inicio && l.data <= (p.data_fim || '2099-12-31')
         );
         const total = logsDoPeriodo.length;
         const presentesPeriodo = logsDoPeriodo.filter((l: any) => l.status === 'presente').length;
