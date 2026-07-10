@@ -310,30 +310,47 @@ export async function metricas(tenantId: string, filters?: { periodo?: 'semana' 
   return calcularMetricasCore(tenantId, dataInicio, dataFim);
 }
 
-export async function timeline(tenantId: string, filters?: { mes?: number; ano?: number; label?: string; professor_id?: string }): Promise<TimelineData> {
-  let turmasQuery = supabase
-    .from('turmas')
-    .select('*')
-    .eq('tenant_id', tenantId);
+export async function timeline(tenantId: string, filters?: { mes?: number; ano?: number; label?: string; professor_id?: string; periodo?: "semana" | "mes" | "ano" }): Promise<TimelineData> {
+  const { mes, ano, label, professor_id, periodo = "mes" } = filters || {};
 
-  if (filters?.label) turmasQuery = turmasQuery.eq('label', filters.label);
-  if (filters?.professor_id) turmasQuery = turmasQuery.eq('professor_id', filters.professor_id);
+  let dataInicio: string;
+  let dataFim: string;
+
+  if (periodo === "semana") {
+    const agora = new Date();
+    const inicio = new Date(agora);
+    inicio.setDate(agora.getDate() - 6); // Últimos 7 dias (incluindo hoje)
+    dataInicio = inicio.toISOString().split("T")[0];
+    dataFim = agora.toISOString().split("T")[0];
+  } else if (periodo === "ano") {
+    const agora = new Date();
+    dataInicio = `${agora.getFullYear()}-01-01`;
+    dataFim = `${agora.getFullYear()}-12-31`;
+  } else { // mes
+    if (!mes || !ano) throw new AppError("Mês e ano são obrigatórios para o período mensal", 400);
+    const mesStr = String(mes).padStart(2, "0");
+    const ultimoDia = String(new Date(ano, mes, 0).getDate()).padStart(2, "0");
+    dataInicio = `${ano}-${mesStr}-01`;
+    dataFim = `${ano}-${mesStr}-${ultimoDia}`;
+  }
+
+  let turmasQuery = supabase
+    .from("turmas")
+    .select("*")
+    .eq("tenant_id", tenantId);
+
+  if (label) turmasQuery = turmasQuery.eq("label", label);
+  if (professor_id) turmasQuery = turmasQuery.eq("professor_id", professor_id);
 
   const { data: turmas, error: turmasError } = await turmasQuery;
-  if (turmasError) throw new AppError('Erro ao buscar turmas', 500);
+  if (turmasError) throw new AppError("Erro ao buscar turmas", 500);
 
   // Montar query de chamadas com filtro de período
   let chamadasQuery = supabase
-    .from('chamadas_log')
-    .select('grupo_id, status');
-
-  if (filters?.mes && filters?.ano) {
-    const mesStr = String(filters.mes).padStart(2, '0');
-    const ultimoDia = String(new Date(filters.ano, filters.mes, 0).getDate()).padStart(2, '0');
-    chamadasQuery = chamadasQuery
-      .gte('data', `${filters.ano}-${mesStr}-01`)
-      .lte('data', `${filters.ano}-${mesStr}-${ultimoDia}`);
-  }
+    .from("chamadas_log")
+    .select("grupo_id, status")
+    .gte("data", dataInicio)
+    .lte("data", dataFim);
 
   const { data: chamadas, error: chamadasError } = await chamadasQuery;
   if (chamadasError) throw new AppError('Erro ao buscar chamadas', 500);
@@ -427,13 +444,14 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
       .lte('data', `${ano}-${mesStr}-${ultimoDia}`);
   }
 
+  let turmaIdDoAluno: string | undefined;
   if (aluno_id) {
     const aluno = alunosMap.get(aluno_id);
-    const turmaId = aluno?.turma_id;
-    if (turmaId) {
-      query = query.eq('grupo_id', turmaId);
+    turmaIdDoAluno = aluno?.turma_id;
+    if (turmaIdDoAluno) {
+      query = query.or(`grupo_id.eq.${aluno_id},grupo_id.eq.${turmaIdDoAluno}`);
     } else {
-      query = query.eq('grupo_id', '__nonexistent__');
+      query = query.eq('grupo_id', aluno_id);
     }
   }
 
@@ -455,8 +473,21 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
   const alunosFreq = new Map<string, { nome: string; total: number; presentes: number; justificados: number; faltas: number }>();
 
   (chamadas || []).forEach((r: any) => {
-    const turma = turmasMap.get(r.grupo_id);
-    const alunosDaTurma = r.grupo_id ? alunosPorTurma.get(r.grupo_id) : [];
+    // grupo_id pode ser UUID (aluno.id para P/F/J manual) ou TEXT (turmas.grupo_id para extrapolacao)
+    const isAlunoId = typeof r.grupo_id === 'string' && r.grupo_id.includes('-');
+    let turma: any;
+    let alunosParaContar: any[] = [];
+
+    if (isAlunoId) {
+      const aluno = alunosMap.get(r.grupo_id);
+      if (aluno) {
+        alunosParaContar = [aluno];
+        turma = turmasMap.get(aluno.turma_id);
+      }
+    } else {
+      turma = r.grupo_id ? turmasMap.get(r.grupo_id) : undefined;
+      alunosParaContar = r.grupo_id ? alunosPorTurma.get(r.grupo_id) || [] : [];
+    }
 
     const nivel = turma?.nivel || 'Sem nivel';
     if (!porNivelMap.has(nivel)) porNivelMap.set(nivel, { total: 0, presentes: 0 });
@@ -483,8 +514,8 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
     pf.total++;
     if (r.status === 'presente') pf.presentes++;
 
-    if (alunosDaTurma) {
-      for (const aluno of alunosDaTurma) {
+    if (alunosParaContar.length > 0) {
+      for (const aluno of alunosParaContar) {
         if (!alunosFreq.has(aluno.id)) {
           alunosFreq.set(aluno.id, { nome: aluno.nome, total: 0, presentes: 0, justificados: 0, faltas: 0 });
         }
@@ -617,11 +648,16 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
   }
 
   // Montar timeline a partir das chamadas já carregadas
-  const timelineGrupos = new Map<string, { presentes: number; ausentes: number; justificados: number }>();
+  // Mapeia chamadas para turma.grupo_id: UUID → resolve aluno → turma_id, TEXT → usa direto
+  const timelinePorGrupo = new Map<string, { presentes: number; ausentes: number; justificados: number }>();
   (chamadas || []).forEach((l: any) => {
     if (!l.grupo_id) return;
-    if (!timelineGrupos.has(l.grupo_id)) timelineGrupos.set(l.grupo_id, { presentes: 0, ausentes: 0, justificados: 0 });
-    const entry = timelineGrupos.get(l.grupo_id)!;
+    const isAlunoId = l.grupo_id.includes('-');
+    const chave = isAlunoId
+      ? alunosMap.get(l.grupo_id)?.turma_id || l.grupo_id
+      : l.grupo_id;
+    if (!timelinePorGrupo.has(chave)) timelinePorGrupo.set(chave, { presentes: 0, ausentes: 0, justificados: 0 });
+    const entry = timelinePorGrupo.get(chave)!;
     if (l.status === 'presente') entry.presentes++;
     else if (l.status === 'falta') entry.ausentes++;
     else if (l.status === 'justificado' || l.status === 'cancelado') entry.justificados++;
@@ -631,7 +667,7 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
   for (const turma of turmasResult.data || []) {
     const grupoId = turma.grupo_id;
     if (!grupoId) continue;
-    const counts = timelineGrupos.get(grupoId) || { presentes: 0, ausentes: 0, justificados: 0 };
+    const counts = timelinePorGrupo.get(grupoId) || { presentes: 0, ausentes: 0, justificados: 0 };
     const total = counts.presentes + counts.ausentes + counts.justificados;
     if (total === 0) continue;
     timelineSlots.push({
@@ -673,7 +709,7 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
         const permanenciaDias = Math.max(0, Math.ceil((fim - inicio) / (1000 * 60 * 60 * 24)));
 
         const logsDoPeriodo = (chamadas || []).filter(
-          (l: any) => l.grupo_id === aluno_id && l.data >= p.data_inicio && l.data <= (p.data_fim || '2099-12-31')
+          (l: any) => (l.grupo_id === aluno_id || l.grupo_id === turmaIdDoAluno) && l.data >= p.data_inicio && l.data <= (p.data_fim || '2099-12-31')
         );
         const total = logsDoPeriodo.length;
         const presentesPeriodo = logsDoPeriodo.filter((l: any) => l.status === 'presente').length;

@@ -203,7 +203,7 @@ const Relatorios: React.FC = () => {
               periodo={periodo}
               onPeriodoChange={setPeriodo}
             />
-            <ControleMensalProfessor mes={mes} ano={ano} periodo={periodo} />
+            <ControleMensalProfessor mes={mes} ano={ano} />
             {carregandoTimeline ? (
               <div className="flex justify-center py-6">
                 <div className="animate-spin h-6 w-6 border-4 border-primary-500 border-t-transparent rounded-full" />
