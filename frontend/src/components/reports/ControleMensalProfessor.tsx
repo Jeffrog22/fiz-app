@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../utils/api';
+import BarraProgressoRelatorio from './BarraProgressoRelatorio';
 import type { ControleMensalLabel } from '../../types';
 
 interface Props {
@@ -103,26 +104,43 @@ const ControleMensalProfessor: React.FC<Props> = ({ mes, ano }) => {
               <thead>
                 <tr className="text-gray-400 border-b">
                   <th className="text-left py-1 pr-4">Horário</th>
-                  <th className="text-right py-1">Aulas</th>
+                  <th className="text-right py-1 pr-3">Aulas</th>
+                  <th className="w-28 py-1">Progresso</th>
                 </tr>
               </thead>
               <tbody>
-                {item.horarios.map(h => (
-                  <tr key={h.horario} className="border-b border-gray-50">
-                    <td className="py-1.5 pr-4 text-gray-700">{h.horario}</td>
-                    <td className="py-1.5 text-right font-medium text-gray-800">
-                      {h.dadas}
-                      <span className="text-gray-400 font-normal">/{h.previstas}</span>
-                    </td>
-                  </tr>
-                ))}
-                <tr className="font-semibold text-gray-800">
-                  <td className="py-2 pr-4">Total</td>
-                  <td className="py-2 text-right">
-                    {item.totalDadas}
-                    <span className="text-gray-400 font-normal">/{item.totalPrevistas}</span>
-                  </td>
-                </tr>
+                {item.horarios.map(h => {
+                  const pct = h.previstas > 0 ? (h.dadas / h.previstas) : 0;
+                  const cor = pct >= 0.9 ? 'bg-green-400' : pct >= 0.7 ? 'bg-yellow-400' : 'bg-red-400';
+                  return (
+                    <tr key={h.horario} className="border-b border-gray-50">
+                      <td className="py-1.5 pr-4 text-gray-700">{h.horario}</td>
+                      <td className="py-1.5 pr-3 text-right font-medium text-gray-800">
+                        {h.dadas}
+                        <span className="text-gray-400 font-normal">/{h.previstas}</span>
+                      </td>
+                      <td className="py-1.5 w-28">
+                        <BarraProgressoRelatorio valor={h.dadas} max={h.previstas} cor={cor} height="h-2" showPercent />
+                      </td>
+                    </tr>
+                  );
+                })}
+                {(() => {
+                  const pct = item.totalPrevistas > 0 ? (item.totalDadas / item.totalPrevistas) : 0;
+                  const cor = pct >= 0.9 ? 'bg-green-400' : pct >= 0.7 ? 'bg-yellow-400' : 'bg-red-400';
+                  return (
+                    <tr className="font-semibold text-gray-800">
+                      <td className="py-2 pr-4">Total</td>
+                      <td className="py-2 pr-3 text-right">
+                        {item.totalDadas}
+                        <span className="text-gray-400 font-normal">/{item.totalPrevistas}</span>
+                      </td>
+                      <td className="py-2 w-28">
+                        <BarraProgressoRelatorio valor={item.totalDadas} max={item.totalPrevistas} cor={cor} height="h-2" showPercent />
+                      </td>
+                    </tr>
+                  );
+                })()}
               </tbody>
             </table>
           </div>
