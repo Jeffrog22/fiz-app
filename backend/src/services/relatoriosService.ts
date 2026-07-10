@@ -295,7 +295,7 @@ export async function metricas(tenantId: string, filters?: { periodo?: 'semana' 
   return calcularMetricasCore(tenantId, dataInicio, dataFim);
 }
 
-export async function timeline(tenantId: string, filters?: { label?: string; professor_id?: string }): Promise<TimelineData> {
+export async function timeline(tenantId: string, filters?: { mes?: number; ano?: number; label?: string; professor_id?: string }): Promise<TimelineData> {
   let turmasQuery = supabase
     .from('turmas')
     .select('*')
@@ -307,28 +307,48 @@ export async function timeline(tenantId: string, filters?: { label?: string; pro
   const { data: turmas, error: turmasError } = await turmasQuery;
   if (turmasError) throw new AppError('Erro ao buscar turmas', 500);
 
+  // Montar query de chamadas com filtro de período
+  let chamadasQuery = supabase
+    .from('chamadas_log')
+    .select('grupo_id, status');
+
+  if (filters?.mes && filters?.ano) {
+    const mesStr = String(filters.mes).padStart(2, '0');
+    const ultimoDia = String(new Date(filters.ano, filters.mes, 0).getDate()).padStart(2, '0');
+    chamadasQuery = chamadasQuery
+      .gte('data', `${filters.ano}-${mesStr}-01`)
+      .lte('data', `${filters.ano}-${mesStr}-${ultimoDia}`);
+  }
+
+  const { data: chamadas, error: chamadasError } = await chamadasQuery;
+  if (chamadasError) throw new AppError('Erro ao buscar chamadas', 500);
+
+  // Agrupar chamadas por grupo_id
+  const logsPorGrupo = new Map<string, { presentes: number; ausentes: number; justificados: number }>();
+  (chamadas || []).forEach((l: any) => {
+    if (!l.grupo_id) return;
+    if (!logsPorGrupo.has(l.grupo_id)) logsPorGrupo.set(l.grupo_id, { presentes: 0, ausentes: 0, justificados: 0 });
+    const entry = logsPorGrupo.get(l.grupo_id)!;
+    if (l.status === 'presente') entry.presentes++;
+    else if (l.status === 'falta') entry.ausentes++;
+    else if (l.status === 'justificado' || l.status === 'cancelado') entry.justificados++;
+  });
+
   const slots: TimelineSlot[] = [];
 
   for (const turma of turmas || []) {
     const grupoId = turma.grupo_id;
     if (!grupoId) continue;
 
-    const { data: logs } = await supabase
-      .from('chamadas_log')
-      .select('status')
-      .eq('tenant_id', tenantId)
-      .eq('grupo_id', grupoId);
-
-    const presentes = logs?.filter(l => l.status === 'presente').length ?? 0;
-    const ausentes = logs?.filter(l => l.status === 'falta').length ?? 0;
-    const justificados = logs?.filter(l => l.status === 'justificado' || l.status === 'cancelado').length ?? 0;
+    const counts = logsPorGrupo.get(grupoId) || { presentes: 0, ausentes: 0, justificados: 0 };
+    const total = counts.presentes + counts.ausentes + counts.justificados;
 
     slots.push({
       horario: turma.horario,
-      presentes,
-      ausentes,
-      justificados,
-      total: logs?.length ?? 0,
+      presentes: counts.presentes,
+      ausentes: counts.ausentes,
+      justificados: counts.justificados,
+      total,
     });
   }
 
@@ -574,6 +594,42 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
     const ultimoDia = String(new Date(ano, mes, 0).getDate()).padStart(2, '0');
     result.metrics = await calcularMetricasCore(tenantId, `${ano}-${mesStr}-01`, `${ano}-${mesStr}-${ultimoDia}`);
   }
+
+  // Montar timeline a partir das chamadas já carregadas
+  const timelineGrupos = new Map<string, { presentes: number; ausentes: number; justificados: number }>();
+  (chamadas || []).forEach((l: any) => {
+    if (!l.grupo_id) return;
+    if (!timelineGrupos.has(l.grupo_id)) timelineGrupos.set(l.grupo_id, { presentes: 0, ausentes: 0, justificados: 0 });
+    const entry = timelineGrupos.get(l.grupo_id)!;
+    if (l.status === 'presente') entry.presentes++;
+    else if (l.status === 'falta') entry.ausentes++;
+    else if (l.status === 'justificado' || l.status === 'cancelado') entry.justificados++;
+  });
+
+  const timelineSlots: TimelineSlot[] = [];
+  for (const turma of turmasResult.data || []) {
+    const grupoId = turma.grupo_id;
+    if (!grupoId) continue;
+    const counts = timelineGrupos.get(grupoId) || { presentes: 0, ausentes: 0, justificados: 0 };
+    const total = counts.presentes + counts.ausentes + counts.justificados;
+    if (total === 0) continue;
+    timelineSlots.push({
+      horario: turma.horario,
+      presentes: counts.presentes,
+      ausentes: counts.ausentes,
+      justificados: counts.justificados,
+      total,
+    });
+  }
+
+  const timelineLabels = [...new Set<string>((turmasResult.data || []).map(t => t.label).filter(Boolean))];
+
+  result.timeline = {
+    horarios: timelineSlots.map(s => s.horario),
+    slots: timelineSlots,
+    labels: timelineLabels,
+    professores: professoresResult.data || [],
+  };
 
   if (aluno_id) {
     const { data: periods, error: periodsError } = await supabase

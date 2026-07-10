@@ -180,6 +180,7 @@ export interface FrequenciaData {
   alunosResumo: { total: number; ativos: number; inativos: number; retencaoMedia: number; frequenciaMedia: number };
   enrollmentPeriods?: EnrollmentPeriodHistorico[];
   retencao?: RetencaoAluno;
+  timeline?: TimelineData;
 }
 
 export interface TimelineSlot {

@@ -16,8 +16,10 @@ export class RelatoriosController {
   static async timeline(req: TenantRequest, res: Response, next: NextFunction) {
     try {
       const tenantId = req.tenantId!;
-      const { label, professor_id } = req.query;
+      const { mes, ano, label, professor_id } = req.query;
       const result = await relatoriosService.timeline(tenantId, {
+        mes: mes ? Number(mes) : undefined,
+        ano: ano ? Number(ano) : undefined,
         label: label ? String(label) : undefined,
         professor_id: professor_id ? String(professor_id) : undefined,
       });
