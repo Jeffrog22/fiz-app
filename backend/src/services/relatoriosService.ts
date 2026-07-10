@@ -154,24 +154,8 @@ export async function controleMensal(
   const { data: turmas } = await turmasQuery;
   if (!turmas || turmas.length === 0) return [];
 
-  // Buscar alunos para mapear aluno_id → turma.grupo_id
-  const { data: alunos } = await supabase
-    .from('alunos')
-    .select('id, turma_id')
-    .eq('tenant_id', tenantId);
-
-  const alunoTurmaMap = new Map<string, string>();
-  let alunosComTurma = 0;
-  (alunos || []).forEach((a: any) => {
-    if (a.turma_id) {
-      alunoTurmaMap.set(a.id, a.turma_id);
-      alunoTurmaMap.set(a.id.replace(/-/g, '').toLowerCase(), a.turma_id);
-      alunosComTurma++;
-    }
-  });
-  console.log('[controleMensal] alunos com turma:', alunosComTurma, '/', alunos?.length || 0);
-
   // Logs do periodo (excluindo calendario) — inclui status para filtrar cancelados
+  // Nota: chamadas_log.grupo_id armazena o grupo_id da turma (ex: jeftq01)
   const { data: logs } = await supabase
     .from('chamadas_log')
     .select('data, grupo_id, status')
@@ -186,21 +170,16 @@ export async function controleMensal(
   const diasPrevList = [...new Set<string>(logs.map(l => l.data))].sort();
 
   // Set de todas as aulas (previstas) e set de aulas efetivamente dadas (nao canceladas)
-  // Nota: logs.grupo_id = aluno_id; converte para turma.grupo_id via alunoTurmaMap
+  // logs.grupo_id = turma.grupo_id (ex: jeftq01) — usamos direto
   const aulasPrevSet = new Set<string>();
   const aulasDadasSet = new Set<string>();
-  let logsComTurma = 0;
   (logs || []).forEach((l: any) => {
-    const turmaId = l.grupo_id
-      ? (alunoTurmaMap.get(l.grupo_id) || alunoTurmaMap.get(l.grupo_id.replace(/-/g, '').toLowerCase()))
-      : undefined;
-    if (turmaId) {
-      aulasPrevSet.add(`${l.data}|${turmaId}`);
-      if (l.status !== 'cancelado') aulasDadasSet.add(`${l.data}|${turmaId}`);
-      logsComTurma++;
+    if (l.grupo_id) {
+      aulasPrevSet.add(`${l.data}|${l.grupo_id}`);
+      if (l.status !== 'cancelado') aulasDadasSet.add(`${l.data}|${l.grupo_id}`);
     }
   });
-  console.log('[controleMensal] logs com turma:', logsComTurma, '/', logs.length, 'diasPrevList:', diasPrevList.length, 'aulasPrevSet:', aulasPrevSet.size);
+  console.log('[controleMensal] logs:', logs.length, 'diasPrevList:', diasPrevList.length, 'aulasPrevSet:', aulasPrevSet.size);
 
   // Buscar professores para nome
   const { data: professores } = await supabase
@@ -384,9 +363,14 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
   if (turmasResult.error) throw new AppError('Erro ao buscar turmas: ' + turmasResult.error.message, 500);
 
   const alunosMap = new Map<string, any>();
+  const alunosPorTurma = new Map<string, any[]>();
   alunosResult.data?.forEach((a: any) => {
     alunosMap.set(a.id, a);
     alunosMap.set(a.id.replace(/-/g, '').toLowerCase(), a);
+    if (a.turma_id) {
+      if (!alunosPorTurma.has(a.turma_id)) alunosPorTurma.set(a.turma_id, []);
+      alunosPorTurma.get(a.turma_id)!.push(a);
+    }
   });
 
   const turmasMap = new Map<string, any>();
@@ -415,18 +399,7 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
   const { data: chamadas, error } = await query.order('data', { ascending: true });
   if (error) throw new AppError('Erro ao buscar frequencia', 500);
 
-  console.log('[frequencia] chamadas count:', chamadas?.length, 'alunosMap size:', alunosMap.size, 'turmasMap size:', turmasMap.size);
-  if (chamadas && chamadas.length > 0) {
-    const sample = chamadas.slice(0, 3);
-    sample.forEach((r: any) => {
-      const found = alunosMap.get(r.grupo_id) || alunosMap.get(r.grupo_id?.replace(/-/g, '')?.toLowerCase());
-      console.log('[frequencia] sample grupo_id:', r.grupo_id, '→ aluno found:', !!found, 'status:', r.status);
-    });
-    const alunokey0 = alunosMap.keys().next().value;
-    console.log('[frequencia] first alunosMap key:', alunokey0, 'first chamada grupo_id:', chamadas[0].grupo_id, 'match:', alunosMap.has(chamadas[0].grupo_id));
-    const normalized = chamadas[0].grupo_id?.replace(/-/g, '')?.toLowerCase();
-    console.log('[frequencia] normalized match:', alunosMap.has(normalized));
-  }
+  console.log('[frequencia] chamadas:', chamadas?.length, 'alunosPorTurma:', alunosPorTurma.size, 'turmasMap:', turmasMap.size);
 
   const totalRegistros = chamadas?.length || 0;
   const presentes = chamadas?.filter((r: any) => r.status === 'presente').length || 0;
@@ -441,10 +414,10 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
   const alunosFreq = new Map<string, { nome: string; total: number; presentes: number; justificados: number; faltas: number }>();
 
   (chamadas || []).forEach((r: any) => {
-    const aluno = alunosMap.get(r.grupo_id) || alunosMap.get(r.grupo_id?.replace(/-/g, '')?.toLowerCase());
-    const turma = aluno ? turmasMap.get(aluno.turma_id) : turmasMap.get(r.grupo_id);
+    const turma = turmasMap.get(r.grupo_id);
+    const alunosDaTurma = r.grupo_id ? alunosPorTurma.get(r.grupo_id) : [];
 
-    const nivel = turma?.nivel || aluno?.nivel || 'Sem nivel';
+    const nivel = turma?.nivel || 'Sem nivel';
     if (!porNivelMap.has(nivel)) porNivelMap.set(nivel, { total: 0, presentes: 0 });
     const nv = porNivelMap.get(nivel)!;
     nv.total++;
@@ -469,24 +442,21 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
     pf.total++;
     if (r.status === 'presente') pf.presentes++;
 
-    if (aluno) {
-      if (!alunosFreq.has(aluno.id)) {
-        alunosFreq.set(aluno.id, { nome: aluno.nome, total: 0, presentes: 0, justificados: 0, faltas: 0 });
+    if (alunosDaTurma) {
+      for (const aluno of alunosDaTurma) {
+        if (!alunosFreq.has(aluno.id)) {
+          alunosFreq.set(aluno.id, { nome: aluno.nome, total: 0, presentes: 0, justificados: 0, faltas: 0 });
+        }
+        const entry = alunosFreq.get(aluno.id)!;
+        entry.total++;
+        if (r.status === 'presente') entry.presentes++;
+        if (r.status === 'justificado') entry.justificados++;
+        if (r.status === 'falta') entry.faltas++;
       }
-      const entry = alunosFreq.get(aluno.id)!;
-      entry.total++;
-      if (r.status === 'presente') entry.presentes++;
-      if (r.status === 'justificado') entry.justificados++;
-      if (r.status === 'falta') entry.faltas++;
     }
   });
 
-  console.log('[frequencia] porNivelMap size:', porNivelMap.size, 'porHorarioMap:', porHorarioMap.size, 'alunosFreq:', alunosFreq.size);
-  if (porNivelMap.size > 0) console.log('[frequencia] porNivel first key:', Array.from(porNivelMap.keys())[0]);
-  if (porNivelMap.size === 0 && (chamadas?.length || 0) > 0) {
-    console.warn('[frequencia] BREAKDOWN VAZIO — nenhum aluno encontrado nos logs. grupo_id samples:',
-      chamadas!.slice(0, 5).map((r: any) => r.grupo_id));
-  }
+  console.log('[frequencia] porNivelMap:', porNivelMap.size, 'alunosFreq:', alunosFreq.size, 'turma key sample:', chamadas?.[0]?.grupo_id);
 
   const totalAlunos = alunosResult.data?.length || 0;
   const ativos = alunosResult.data?.filter((a: any) => a.ativo !== false).length || 0;
@@ -701,12 +671,6 @@ export async function cancelamentos(tenantId: string, filters?: { mes?: number; 
   if (alunosResult.error) throw new AppError('Erro ao buscar alunos: ' + alunosResult.error.message, 500);
   if (turmasResult.error) throw new AppError('Erro ao buscar turmas: ' + turmasResult.error.message, 500);
 
-  const alunosMap = new Map<string, any>();
-  alunosResult.data?.forEach((a: any) => {
-    alunosMap.set(a.id, a);
-    alunosMap.set(a.id.replace(/-/g, '').toLowerCase(), a);
-  });
-
   const turmasMap = new Map<string, any>();
   turmasResult.data?.forEach((t: any) => turmasMap.set(t.grupo_id || t.id, t));
 
@@ -718,20 +682,18 @@ export async function cancelamentos(tenantId: string, filters?: { mes?: number; 
   const porMesMap = new Map<string, number>();
   const porPeriodoMap = new Map<string, number>();
 
-  console.log('[cancelamentos] chamadas count:', data?.length, 'alunosMap size:', alunosMap.size);
+  console.log('[cancelamentos] chamadas:', data?.length, 'turmasMap:', turmasMap.size);
 
   for (const r of data || []) {
     const motivo = r.motivo || 'Sem motivo';
     porMotivo.set(motivo, (porMotivo.get(motivo) || 0) + 1);
 
-    const aluno = alunosMap.get(r.grupo_id) || alunosMap.get(r.grupo_id?.replace(/-/g, '')?.toLowerCase());
-    const turma = aluno ? turmasMap.get(aluno.turma_id) : turmasMap.get(r.grupo_id);
-    const nivel = turma?.nivel || aluno?.nivel || 'Sem nivel';
+    const turma = turmasMap.get(r.grupo_id);
+    const nivel = turma?.nivel || 'Sem nivel';
     porNivelMap.set(nivel, (porNivelMap.get(nivel) || 0) + 1);
 
     r.horario = turma?.horario || '';
     r.nivel = nivel;
-    r.aluno_nome = aluno?.nome || '';
 
     const mesKey = r.data ? r.data.substring(0, 7) : 'desconhecido';
     porMesMap.set(mesKey, (porMesMap.get(mesKey) || 0) + 1);
@@ -740,10 +702,7 @@ export async function cancelamentos(tenantId: string, filters?: { mes?: number; 
     porPeriodoMap.set(periodo, (porPeriodoMap.get(periodo) || 0) + 1);
   }
 
-  console.log('[cancelamentos] porNivelMap size:', porNivelMap.size, 'first key:', porNivelMap.size > 0 ? Array.from(porNivelMap.keys())[0] : 'none');
-  if (porNivelMap.size <= 1 && (data?.length || 0) > 0) {
-    console.warn('[cancelamentos] BREAKDOWN NIVEL SUSPEITO — logs:', data!.length, 'primeiros grupo_id:', data!.slice(0, 5).map((r: any) => r.grupo_id));
-  }
+  console.log('[cancelamentos] porNivelMap:', porNivelMap.size, 'first:', porNivelMap.size > 0 ? Array.from(porNivelMap.keys())[0] : 'none');
 
   const total = data?.length || 0;
   const registros = data || [];
