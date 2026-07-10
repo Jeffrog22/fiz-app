@@ -95,57 +95,37 @@ async function calcularDiasPrevistosNoMes(tenantId: string, dataInicio: string, 
 }
 
 async function calcularMetricasCore(tenantId: string, dataInicio: string, dataFim: string): Promise<FrequencyMetrics> {
-  // Periodos letivos como fonte primaria, fallback auto-calculo por label
-  let diasPrevList = await getDiasPrevistosNoPeriodo(tenantId, dataInicio, dataFim);
-  if (diasPrevList.length === 0) {
-    const auto = await calcularDiasPrevistosNoMes(tenantId, dataInicio, dataFim);
-    diasPrevList = auto.dias;
-  }
-  const diasPrevistos = diasPrevList.length;
-
   const { data: logs } = await supabase
     .from('chamadas_log')
-    .select('data, grupo_id')
+    .select('data, grupo_id, status')
     .eq('tenant_id', tenantId)
     .neq('origem', 'calendario')
     .gte('data', dataInicio)
     .lte('data', dataFim);
 
-  const logsDias = new Set<string>((logs || []).map(l => l.data));
-  const diasConcluidos = [...new Set(diasPrevList.filter(d => logsDias.has(d)))].length;
-
-  // Buscar turmas para aulas
-  const { data: turmasData } = await supabase
-    .from('turmas')
-    .select('id, grupo_id, label, horario, professor_id')
-    .eq('tenant_id', tenantId);
-
-  const turmasPorGrupoId = new Map<string, any>();
-  (turmasData || []).forEach((t: any) => {
-    if (t.grupo_id) turmasPorGrupoId.set(t.grupo_id, t);
-  });
-
-  // aulasDadas = combinacoes unicas (data, grupo_id)
-  const aulasSet = new Set<string>();
-  (logs || []).forEach((log: any) => {
-    if (log.grupo_id && turmasPorGrupoId.has(log.grupo_id)) {
-      aulasSet.add(`${log.data}|${log.grupo_id}`);
-    }
-  });
-  const aulasDadas = aulasSet.size;
-
-  // aulasPrevistas = soma por turma de dias que caem nos dias da semana da turma
-  let aulasPrevistas = 0;
-  for (const turma of turmasData || []) {
-    if (!turma.grupo_id || !turma.label) continue;
-    const diasSemana = parseDiasFromLabel(turma.label);
-    if (diasSemana.length === 0) continue;
-    for (const dataStr of diasPrevList) {
-      if (diasSemana.includes(new Date(dataStr + 'T12:00:00').getDay())) {
-        aulasPrevistas++;
-      }
-    }
+  const logsList = logs || [];
+  if (logsList.length === 0) {
+    return { diasConcluidos: 0, diasPrevistos: 0, aulasDadas: 0, aulasPrevistas: 0 };
   }
+
+  // diasPrevistos = datas unicas com qualquer chamada (nao calendario)
+  const uniqueDates = [...new Set<string>(logsList.map(l => l.data))].sort();
+  const diasPrevistos = uniqueDates.length;
+
+  // diasConcluidos = datas onde pelo menos 1 aula nao foi cancelada
+  const diasComAula = uniqueDates.filter(d =>
+    logsList.some(l => l.data === d && l.status !== 'cancelado')
+  );
+  const diasConcluidos = diasComAula.length;
+
+  // aulasPrevistas = combinacoes unicas data|grupo_id
+  const todasAulas = new Set<string>(logsList.map(l => `${l.data}|${l.grupo_id}`));
+  const aulasPrevistas = todasAulas.size;
+
+  // aulasDadas = combinacoes unicas data|grupo_id com status != cancelado
+  const aulasDadas = new Set<string>(
+    logsList.filter(l => l.status !== 'cancelado').map(l => `${l.data}|${l.grupo_id}`)
+  ).size;
 
   return { diasConcluidos, diasPrevistos, aulasDadas, aulasPrevistas };
 }
@@ -174,22 +154,28 @@ export async function controleMensal(
   const { data: turmas } = await turmasQuery;
   if (!turmas || turmas.length === 0) return [];
 
-  // Dias previstos no mes (periodos_letivos - eventos calendario)
-  const diasPrevList = await getDiasPrevistosNoPeriodo(tenantId, dataInicio, dataFim);
-  if (diasPrevList.length === 0) return [];
-
-  // Logs do periodo (excluindo calendario)
+  // Logs do periodo (excluindo calendario) — inclui status para filtrar cancelados
   const { data: logs } = await supabase
     .from('chamadas_log')
-    .select('data, grupo_id')
+    .select('data, grupo_id, status')
     .eq('tenant_id', tenantId)
     .neq('origem', 'calendario')
     .gte('data', dataInicio)
     .lte('data', dataFim);
 
-  const logsSet = new Set<string>();
+  if (!logs || logs.length === 0) return [];
+
+  // Dias previstos = datas unicas dos logs
+  const diasPrevList = [...new Set<string>(logs.map(l => l.data))].sort();
+
+  // Set de todas as aulas (previstas) e set de aulas efetivamente dadas (nao canceladas)
+  const aulasPrevSet = new Set<string>();
+  const aulasDadasSet = new Set<string>();
   (logs || []).forEach((l: any) => {
-    if (l.grupo_id) logsSet.add(`${l.data}|${l.grupo_id}`);
+    if (l.grupo_id) {
+      aulasPrevSet.add(`${l.data}|${l.grupo_id}`);
+      if (l.status !== 'cancelado') aulasDadasSet.add(`${l.data}|${l.grupo_id}`);
+    }
   });
 
   // Buscar professores para nome
@@ -227,10 +213,11 @@ export async function controleMensal(
       if (!turma.horario) continue;
       if (!horarioMap.has(turma.horario)) horarioMap.set(turma.horario, { dadas: 0, previstas: 0 });
       const entry = horarioMap.get(turma.horario)!;
-      entry.previstas += diasEfetivos.length;
       for (const dia of diasEfetivos) {
-        if (logsSet.has(`${dia}|${turma.grupo_id}`)) {
-          entry.dadas++;
+        const key = `${dia}|${turma.grupo_id}`;
+        if (aulasPrevSet.has(key)) {
+          entry.previstas++;
+          if (aulasDadasSet.has(key)) entry.dadas++;
         }
       }
     }
