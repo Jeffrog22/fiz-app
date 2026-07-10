@@ -6,22 +6,10 @@ export class RelatoriosController {
   static async metricas(req: TenantRequest, res: Response, next: NextFunction) {
     try {
       const tenantId = req.tenantId!;
-      const { periodo } = req.query;
-      const validPeriodo = periodo === 'ano' ? periodo : 'mes';
-      const result = await relatoriosService.metricas(tenantId, { periodo: validPeriodo });
-      res.json(result);
-    } catch (e) { next(e); }
-  }
-
-  static async timeline(req: TenantRequest, res: Response, next: NextFunction) {
-    try {
-      const tenantId = req.tenantId!;
-      const { mes, ano, label, professor_id } = req.query;
-      const result = await relatoriosService.timeline(tenantId, {
-        mes: mes ? Number(mes) : undefined,
-        ano: ano ? Number(ano) : undefined,
-        label: label ? String(label) : undefined,
-        professor_id: professor_id ? String(professor_id) : undefined,
+      const { mes, ano } = req.query;
+      const result = await relatoriosService.metricas(tenantId, {
+        mes: mes ? Number(mes) : new Date().getMonth() + 1,
+        ano: ano ? Number(ano) : new Date().getFullYear(),
       });
       res.json(result);
     } catch (e) { next(e); }
@@ -30,12 +18,11 @@ export class RelatoriosController {
   static async frequencia(req: TenantRequest, res: Response, next: NextFunction) {
     try {
       const tenantId = req.tenantId!;
-      const { mes, ano, aluno_id, periodo } = req.query;
+      const { mes, ano, aluno_id } = req.query;
       const result = await relatoriosService.frequencia(tenantId, {
         mes: mes ? Number(mes) : undefined,
         ano: ano ? Number(ano) : undefined,
         aluno_id: aluno_id ? String(aluno_id) : undefined,
-        periodo: periodo === 'semana' || periodo === 'ano' ? String(periodo) : undefined,
       });
       res.json(result);
     } catch (e) { next(e); }

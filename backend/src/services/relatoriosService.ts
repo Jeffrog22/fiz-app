@@ -94,35 +94,40 @@ async function calcularDiasPrevistosNoMes(tenantId: string, dataInicio: string, 
   return { dias, diasSemanaUnicos: [...diasSemanaUnicos] };
 }
 
-async function calcularMetricasCore(tenantId: string, dataInicio: string, dataFim: string): Promise<FrequencyMetrics> {
+export async function metricas(
+  tenantId: string,
+  filters: { mes: number; ano: number }
+): Promise<FrequencyMetrics> {
+  const { mes, ano } = filters;
+  const mesStr = String(mes).padStart(2, '0');
+  const ultimoDia = String(new Date(ano, mes, 0).getDate()).padStart(2, '0');
+  const dataInicio = `${ano}-${mesStr}-01`;
+  const dataFim = `${ano}-${mesStr}-${ultimoDia}`;
+
+  const { dias } = await calcularDiasPrevistosNoMes(tenantId, dataInicio, dataFim);
+  const diasPrevistos = dias.length;
+
+  const { count: numTurmas } = await supabase
+    .from('turmas')
+    .select('*', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId);
+
+  const aulasPrevistas = diasPrevistos * (numTurmas || 0);
+
   const { data: logs } = await supabase
     .from('chamadas_log')
     .select('data, grupo_id, status')
     .eq('tenant_id', tenantId)
-    .neq('origem', 'calendario')
     .gte('data', dataInicio)
     .lte('data', dataFim);
 
   const logsList = logs || [];
-  if (logsList.length === 0) {
-    return { diasConcluidos: 0, diasPrevistos: 0, aulasDadas: 0, aulasPrevistas: 0 };
-  }
-
-  // diasPrevistos = datas unicas com qualquer chamada (nao calendario)
   const uniqueDates = [...new Set<string>(logsList.map(l => l.data))].sort();
-  const diasPrevistos = uniqueDates.length;
 
-  // diasConcluidos = datas onde pelo menos 1 aula nao foi cancelada
-  const diasComAula = uniqueDates.filter(d =>
+  const diasConcluidos = uniqueDates.filter(d =>
     logsList.some(l => l.data === d && l.status !== 'cancelado')
-  );
-  const diasConcluidos = diasComAula.length;
+  ).length;
 
-  // aulasPrevistas = combinacoes unicas data|grupo_id
-  const todasAulas = new Set<string>(logsList.map(l => `${l.data}|${l.grupo_id}`));
-  const aulasPrevistas = todasAulas.size;
-
-  // aulasDadas = combinacoes unicas data|grupo_id com status != cancelado
   const aulasDadas = new Set<string>(
     logsList.filter(l => l.status !== 'cancelado').map(l => `${l.data}|${l.grupo_id}`)
   ).size;
@@ -163,13 +168,10 @@ export async function controleMensal(
   const { data: turmas } = await turmasQuery;
   if (!turmas || turmas.length === 0) return [];
 
-  // Logs do periodo (excluindo calendario) — inclui status para filtrar cancelados
-  // Nota: chamadas_log.grupo_id armazena o grupo_id da turma (ex: jeftq01)
   const { data: logs } = await supabase
     .from('chamadas_log')
     .select('data, grupo_id, status')
     .eq('tenant_id', tenantId)
-    .neq('origem', 'calendario')
     .gte('data', dataInicio)
     .lte('data', dataFim);
 
@@ -188,8 +190,6 @@ export async function controleMensal(
       if (l.status !== 'cancelado') aulasDadasSet.add(`${l.data}|${l.grupo_id}`);
     }
   });
-  console.log('[controleMensal] logs:', logs.length, 'diasPrevList:', diasPrevList.length, 'aulasPrevSet:', aulasPrevSet.size);
-
   // Buscar professores para nome
   const { data: professores } = await supabase
     .from('professores')
@@ -250,156 +250,8 @@ export async function controleMensal(
   return result;
 }
 
-async function getDiasPrevistosNoPeriodo(tenantId: string, dataInicio: string, dataFim: string): Promise<string[]> {
-  try {
-    const { data: periodosData } = await supabase
-      .from('periodos_letivos')
-      .select('data')
-      .eq('tenant_id', tenantId)
-      .gte('data', dataInicio)
-      .lte('data', dataFim);
-
-    if (!periodosData || periodosData.length === 0) return [];
-
-    let dias = [...new Set<string>(periodosData.map(r => r.data))];
-
-    const { data: eventos } = await supabase
-      .from('calendario')
-      .select('data')
-      .eq('tenant_id', tenantId)
-      .gte('data', dataInicio)
-      .lte('data', dataFim);
-
-    if (eventos && eventos.length > 0) {
-      const diasEvento = new Set<string>(eventos.map(e => e.data));
-      dias = dias.filter(d => !diasEvento.has(d));
-    }
-
-    return dias;
-  } catch {
-    return [];
-  }
-}
-
-export async function metricas(tenantId: string, filters?: { periodo?: 'mes' | 'ano' }): Promise<FrequencyMetrics> {
-  const { periodo = 'mes' } = filters || {};
-  const agora = new Date();
-
-  if (periodo === 'ano') {
-    const dataInicio = `${agora.getFullYear()}-01-01`;
-    const dataFim = `${agora.getFullYear()}-12-31`;
-
-    // dadas/concluidos via chamadas_log
-    const metrics = await calcularMetricasCore(tenantId, dataInicio, dataFim);
-
-    // previstos via turmas labels + calendario
-    const { dias } = await calcularDiasPrevistosNoMes(tenantId, dataInicio, dataFim);
-    const { count: numTurmas } = await supabase
-      .from('turmas')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId);
-
-    metrics.diasPrevistos = dias.length;
-    metrics.aulasPrevistas = dias.length * (numTurmas || 0);
-
-    return metrics;
-  }
-
-  // mes
-  const dataInicio = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-01`;
-  const dataFim = agora.toISOString().split('T')[0];
-
-  return calcularMetricasCore(tenantId, dataInicio, dataFim);
-}
-
-export async function timeline(tenantId: string, filters?: { mes?: number; ano?: number; label?: string; professor_id?: string; periodo?: "mes" | "ano" }): Promise<TimelineData> {
-  const { mes, ano, label, professor_id, periodo = "mes" } = filters || {};
-
-  let dataInicio: string;
-  let dataFim: string;
-
-  if (periodo === "ano") {
-    const agora = new Date();
-    dataInicio = `${agora.getFullYear()}-01-01`;
-    dataFim = `${agora.getFullYear()}-12-31`;
-  } else { // mes
-    if (!mes || !ano) throw new AppError("Mês e ano são obrigatórios para o período mensal", 400);
-    const mesStr = String(mes).padStart(2, "0");
-    const ultimoDia = String(new Date(ano, mes, 0).getDate()).padStart(2, "0");
-    dataInicio = `${ano}-${mesStr}-01`;
-    dataFim = `${ano}-${mesStr}-${ultimoDia}`;
-  }
-
-  let turmasQuery = supabase
-    .from("turmas")
-    .select("*")
-    .eq("tenant_id", tenantId);
-
-  if (label) turmasQuery = turmasQuery.eq("label", label);
-  if (professor_id) turmasQuery = turmasQuery.eq("professor_id", professor_id);
-
-  const { data: turmas, error: turmasError } = await turmasQuery;
-  if (turmasError) throw new AppError("Erro ao buscar turmas", 500);
-
-  // Montar query de chamadas com filtro de período
-  let chamadasQuery = supabase
-    .from("chamadas_log")
-    .select("grupo_id, status")
-    .gte("data", dataInicio)
-    .lte("data", dataFim);
-
-  const { data: chamadas, error: chamadasError } = await chamadasQuery;
-  if (chamadasError) throw new AppError('Erro ao buscar chamadas', 500);
-
-  // Agrupar chamadas por grupo_id
-  const logsPorGrupo = new Map<string, { presentes: number; ausentes: number; justificados: number }>();
-  (chamadas || []).forEach((l: any) => {
-    if (!l.grupo_id) return;
-    if (!logsPorGrupo.has(l.grupo_id)) logsPorGrupo.set(l.grupo_id, { presentes: 0, ausentes: 0, justificados: 0 });
-    const entry = logsPorGrupo.get(l.grupo_id)!;
-    if (l.status === 'presente') entry.presentes++;
-    else if (l.status === 'falta') entry.ausentes++;
-    else if (l.status === 'justificado' || l.status === 'cancelado') entry.justificados++;
-  });
-
-  const slots: TimelineSlot[] = [];
-
-  for (const turma of turmas || []) {
-    const grupoId = turma.grupo_id;
-    if (!grupoId) continue;
-
-    const counts = logsPorGrupo.get(grupoId) || { presentes: 0, ausentes: 0, justificados: 0 };
-    const total = counts.presentes + counts.ausentes + counts.justificados;
-
-    slots.push({
-      horario: turma.horario,
-      presentes: counts.presentes,
-      ausentes: counts.ausentes,
-      justificados: counts.justificados,
-      total,
-    });
-  }
-
-  const labels = [...new Set<string>((turmas || []).map(t => t.label).filter(Boolean))];
-
-  let profsQuery = supabase
-    .from('professores')
-    .select('id, nome')
-    .eq('tenant_id', tenantId);
-
-  if (filters?.professor_id) profsQuery = profsQuery.eq('id', filters.professor_id);
-
-  const { data: professores } = await profsQuery;
-
-  return {
-    horarios: slots.map(s => s.horario),
-    slots,
-    labels,
-    professores: professores || [],
-  };
-}
-export async function frequencia(tenantId: string, filters?: { mes?: number; ano?: number; aluno_id?: string; periodo?: string }): Promise<FrequenciaData> {
-  const { mes, ano, aluno_id, periodo } = filters || {};
+export async function frequencia(tenantId: string, filters?: { mes?: number; ano?: number; aluno_id?: string }): Promise<FrequenciaData> {
+  const { mes, ano, aluno_id } = filters || {};
 
   const [alunosResult, turmasResult, professoresResult] = await Promise.all([
     supabase.from('alunos').select('id, nome, nivel, turma_id, ativo').eq('tenant_id', tenantId),
@@ -453,23 +305,6 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
 
   const { data: chamadas, error } = await query.order('data', { ascending: true }).range(0, 1000000);
   if (error) throw new AppError('Erro ao buscar frequencia', 500);
-
-  console.log('[frequencia] chamadas:', chamadas?.length, 'alunosPorTurma:', alunosPorTurma.size, 'turmasMap:', turmasMap.size);
-  if (chamadas && chamadas.length > 0) {
-    const amostra = chamadas.slice(0, 5).map(c => ({
-      grupo_id: c.grupo_id, status: c.status, indice: c.indice_aula, isUUID: typeof c.grupo_id === 'string' && c.grupo_id.includes('-')
-    }));
-    const statNull = chamadas.filter(c => !c.status).length;
-    const statPresente = chamadas.filter(c => c.status === 'presente').length;
-    const statFalta = chamadas.filter(c => c.status === 'falta').length;
-    const statJustif = chamadas.filter(c => c.status === 'justificado').length;
-    const statCancel = chamadas.filter(c => c.status === 'cancelado').length;
-    console.log('[frequencia] amostra:', JSON.stringify(amostra));
-    console.log('[frequencia] status dist: null=', statNull, 'presente=', statPresente, 'falta=', statFalta, 'justif=', statJustif, 'cancel=', statCancel);
-    const uuidCount = chamadas.filter(c => c.grupo_id && c.grupo_id.includes('-')).length;
-    const textCount = chamadas.filter(c => c.grupo_id && !c.grupo_id.includes('-')).length;
-    console.log('[frequencia] grupo_id: UUID=', uuidCount, 'TEXT=', textCount);
-  }
 
   const totalRegistros = chamadas?.length || 0;
   const logPresentes = chamadas?.filter((r: any) => r.status === 'presente').length || 0;
@@ -541,11 +376,6 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
       }
     }
   });
-
-  console.log('[frequencia] porNivelMap:', porNivelMap.size, JSON.stringify(Array.from(porNivelMap.entries()).slice(0, 3)));
-  console.log('[frequencia] porHorarioMap:', porHorarioMap.size, JSON.stringify(Array.from(porHorarioMap.entries()).slice(0, 3)));
-  console.log('[frequencia] porProfessorMap:', porProfessorMap.size, JSON.stringify(Array.from(porProfessorMap.entries()).slice(0, 3)));
-  console.log('[frequencia] alunosFreq (amostra 3):', alunosFreq.size, JSON.stringify(Array.from(alunosFreq.entries()).slice(0, 3)));
 
   const totalAlunos = alunosResult.data?.length || 0;
   const ativos = alunosResult.data?.filter((a: any) => a.ativo !== false).length || 0;
@@ -641,28 +471,14 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
     alunosResumo: { total: totalAlunos, ativos, inativos, retencaoMedia, frequenciaMedia },
   };
 
-  if (periodo) {
-    const agora = new Date();
-    let inicio: Date;
-    switch (periodo) {
-      case 'semana':
-        inicio = new Date(agora);
-        inicio.setDate(inicio.getDate() - 7);
-        break;
-      case 'ano':
-        inicio = new Date(agora.getFullYear(), 0, 1);
-        break;
-      default:
-        inicio = new Date(agora.getFullYear(), agora.getMonth(), 1);
-    }
-    const dataInicio = inicio.toISOString().split('T')[0];
-    const dataFim = agora.toISOString().split('T')[0];
-    result.metrics = await calcularMetricasCore(tenantId, dataInicio, dataFim);
-  } else if (mes && ano) {
-    const mesStr = String(mes).padStart(2, '0');
-    const ultimoDia = String(new Date(ano, mes, 0).getDate()).padStart(2, '0');
-    result.metrics = await calcularMetricasCore(tenantId, `${ano}-${mesStr}-01`, `${ano}-${mesStr}-${ultimoDia}`);
-  }
+  // metrics inline — sem .neq('origem', 'calendario')
+  const uniqueDates = [...new Set<string>((chamadas || []).map(l => l.data))].sort();
+  result.metrics = {
+    diasConcluidos: uniqueDates.filter(d => (chamadas || []).some(l => l.data === d && l.status !== 'cancelado')).length,
+    diasPrevistos: uniqueDates.length,
+    aulasDadas: new Set<string>((chamadas || []).filter(l => l.status !== 'cancelado').map(l => `${l.data}|${l.grupo_id}`)).size,
+    aulasPrevistas: new Set<string>((chamadas || []).map(l => `${l.data}|${l.grupo_id}`)).size,
+  };
 
   // Montar timeline a partir das chamadas já carregadas
   // Mapeia chamadas para turma.grupo_id: UUID → resolve aluno → turma_id, TEXT → usa direto
@@ -813,8 +629,6 @@ export async function cancelamentos(tenantId: string, filters?: { mes?: number; 
   const porMesMap = new Map<string, number>();
   const porPeriodoMap = new Map<string, number>();
 
-  console.log('[cancelamentos] chamadas:', data?.length, 'turmasMap:', turmasMap.size);
-
   for (const r of data || []) {
     const motivo = r.motivo || 'Sem motivo';
     porMotivo.set(motivo, (porMotivo.get(motivo) || 0) + 1);
@@ -832,8 +646,6 @@ export async function cancelamentos(tenantId: string, filters?: { mes?: number; 
     const periodo = (r.indice_aula ?? 0) < 6 ? 'manhã' : 'tarde';
     porPeriodoMap.set(periodo, (porPeriodoMap.get(periodo) || 0) + 1);
   }
-
-  console.log('[cancelamentos] porNivelMap:', porNivelMap.size, 'first:', porNivelMap.size > 0 ? Array.from(porNivelMap.keys())[0] : 'none');
 
   const total = data?.length || 0;
   const registros = data || [];

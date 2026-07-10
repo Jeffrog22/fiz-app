@@ -15,7 +15,6 @@ const Relatorios: React.FC = () => {
   const [tab, setTab] = useState<Tab>('frequencia');
   const [freqData, setFreqData] = useState<FrequenciaData | null>(null);
   const [cancelData, setCancelData] = useState<CancelamentoDashboardType | null>(null);
-  const [timelineData, setTimelineData] = useState<TimelineData | null>(null);
   const [metrics, setMetrics] = useState<FrequencyMetricsType | null>(null);
   const [mes, setMes] = useState(() => String(new Date().getMonth() + 1).padStart(2, '0'));
   const [ano, setAno] = useState(String(new Date().getFullYear()));
@@ -25,14 +24,12 @@ const Relatorios: React.FC = () => {
   const [alunoSelecionado, setAlunoSelecionado] = useState<any>(null);
   const [carregandoFreq, setCarregandoFreq] = useState(false);
   const [carregandoCancel, setCarregandoCancel] = useState(false);
-  const [carregandoTimeline, setCarregandoTimeline] = useState(false);
   const [carregandoHistorico, setCarregandoHistorico] = useState(false);
   const [erroFreq, setErroFreq] = useState<string | null>(null);
   const [erroCancel, setErroCancel] = useState<string | null>(null);
 
   const [labelSelecionada, setLabelSelecionada] = useState('');
   const [professorId, setProfessorId] = useState('');
-  const [periodo, setPeriodo] = useState<'mes' | 'ano'>('mes');
   const [incluirJustificados, setIncluirJustificados] = useState(false);
 
   const carregarFrequencia = useCallback(async () => {
@@ -41,19 +38,18 @@ const Relatorios: React.FC = () => {
     try {
       const [freqRes, metricsRes] = await Promise.all([
         api.get(`/relatorios/frequencia?mes=${mes}&ano=${ano}`),
-        api.get(`/relatorios/metricas?periodo=${periodo}`),
+        api.get(`/relatorios/metricas?mes=${mes}&ano=${ano}`),
       ]);
       const data = freqRes.data as FrequenciaData;
       const metricsData = metricsRes.data as FrequencyMetricsType;
       setFreqData(data);
       setMetrics(metricsData);
-      if (data.timeline) {
-        if (data.timeline.labels.length > 0 && !labelSelecionada) {
-          setLabelSelecionada(data.timeline.labels[0]);
-        }
-        if (data.timeline.professores.length > 0 && !professorId) {
-          setProfessorId(data.timeline.professores[0].id);
-        }
+      const tl = data.timeline;
+      if (tl && tl.labels.length > 0 && !labelSelecionada) {
+        setLabelSelecionada(tl.labels[0]);
+      }
+      if (tl && tl.professores.length > 0 && !professorId) {
+        setProfessorId(tl.professores[0].id);
       }
     } catch {
       setFreqData(null);
@@ -61,7 +57,7 @@ const Relatorios: React.FC = () => {
       setErroFreq('Erro ao carregar dados de frequência. Verifique sua conexão.');
     }
     setCarregandoFreq(false);
-  }, [mes, ano, periodo]);
+  }, [mes, ano]);
 
   const carregarCancelamentos = useCallback(async () => {
     setCarregandoCancel(true);
@@ -76,26 +72,11 @@ const Relatorios: React.FC = () => {
     setCarregandoCancel(false);
   }, [mes, ano, incluirJustificados]);
 
-  const carregarTimeline = useCallback(async () => {
-    if (!labelSelecionada || !professorId) return;
-    setCarregandoTimeline(true);
-    try {
-      const params = new URLSearchParams({ mes, ano, label: labelSelecionada, professor_id: professorId });
-      const res = await api.get(`/relatorios/timeline?${params.toString()}`);
-      setTimelineData(res.data);
-    } catch {
-      setTimelineData(null);
-    }
-    setCarregandoTimeline(false);
-  }, [mes, ano, labelSelecionada, professorId]);
-
-  useEffect(() => { if (tab === 'frequencia' || tab === 'historico') carregarFrequencia(); }, [tab, carregarFrequencia, periodo]); // Adiciona 'periodo' como dependência
-  useEffect(() => { if (tab === 'cancelamentos') carregarCancelamentos(); }, [tab, carregarCancelamentos, incluirJustificados]);
-  useEffect(() => { if (tab === 'frequencia' && labelSelecionada && professorId) carregarTimeline(); }, [tab, carregarTimeline, labelSelecionada, professorId]);
+  useEffect(() => { if (tab === 'frequencia' || tab === 'historico') carregarFrequencia(); }, [tab, carregarFrequencia]);
+  useEffect(() => { if (tab === 'cancelamentos') carregarCancelamentos(); }, [tab, carregarCancelamentos]);
 
   const exportCSV = () => {
     if (!cancelData) return;
-    const incluir = incluirJustificados ? 'com_justificadas' : 'so_cancelados';
     const headers = 'Data,Horario,Status,Motivo,Tipo\n';
     const rows = cancelData.registros.map((r: any) =>
       `${r.data || ''},${r.horario ? r.horario.substring(0, 5) : ''},${r.status || ''},${r.motivo || ''},${r.tipo_select || ''}`
@@ -104,10 +85,12 @@ const Relatorios: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `cancelamentos_${mes}_${ano}_${incluir}.csv`;
+    a.download = `cancelamentos_${mes}_${ano}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  const timelineData: TimelineData | null = useMemo(() => freqData?.timeline || null, [freqData]);
 
   const alunosFiltrados = useMemo(() => {
     const grid = freqData?.alunosGrid || [];
@@ -198,26 +181,9 @@ const Relatorios: React.FC = () => {
           <p className="text-sm text-red-500 text-center py-4">{erroFreq}</p>
         ) : freqData ? (
           <div className="space-y-4">
-            <FrequencyMetrics
-              metrics={metrics}
-              periodo={periodo}
-              onPeriodoChange={setPeriodo}
-            />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <FrequencyMetrics metrics={metrics} />
               <ControleMensalProfessor mes={mes} ano={ano} />
-              {carregandoTimeline ? (
-                <div className="flex justify-center items-center py-12 bg-white rounded-lg border border-gray-200">
-                  <div className="animate-spin h-6 w-6 border-4 border-primary-500 border-t-transparent rounded-full" />
-                </div>
-              ) : (
-                <ClassTimelineChart
-                  data={timelineData}
-                  labelSelecionada={labelSelecionada}
-                  onLabelChange={setLabelSelecionada}
-                  professorId={professorId}
-                  onProfessorChange={setProfessorId}
-                />
-              )}
             </div>
             <GridAnalitico
               porNivel={freqData.porNivel}
@@ -226,6 +192,13 @@ const Relatorios: React.FC = () => {
               porProfessor={freqData.porProfessor}
               topPresenca={freqData.topAlunos.topPresenca}
               topFaltas={freqData.topAlunos.topFaltas}
+            />
+            <ClassTimelineChart
+              data={timelineData}
+              labelSelecionada={labelSelecionada}
+              onLabelChange={setLabelSelecionada}
+              professorId={professorId}
+              onProfessorChange={setProfessorId}
             />
           </div>
         ) : (
