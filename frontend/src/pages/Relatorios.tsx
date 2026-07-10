@@ -203,20 +203,22 @@ const Relatorios: React.FC = () => {
               periodo={periodo}
               onPeriodoChange={setPeriodo}
             />
-            <ControleMensalProfessor mes={mes} ano={ano} />
-            {carregandoTimeline ? (
-              <div className="flex justify-center py-6">
-                <div className="animate-spin h-6 w-6 border-4 border-primary-500 border-t-transparent rounded-full" />
-              </div>
-            ) : (
-              <ClassTimelineChart
-                data={timelineData}
-                labelSelecionada={labelSelecionada}
-                onLabelChange={setLabelSelecionada}
-                professorId={professorId}
-                onProfessorChange={setProfessorId}
-              />
-            )}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <ControleMensalProfessor mes={mes} ano={ano} />
+              {carregandoTimeline ? (
+                <div className="flex justify-center items-center py-12 bg-white rounded-lg border border-gray-200">
+                  <div className="animate-spin h-6 w-6 border-4 border-primary-500 border-t-transparent rounded-full" />
+                </div>
+              ) : (
+                <ClassTimelineChart
+                  data={timelineData}
+                  labelSelecionada={labelSelecionada}
+                  onLabelChange={setLabelSelecionada}
+                  professorId={professorId}
+                  onProfessorChange={setProfessorId}
+                />
+              )}
+            </div>
             <GridAnalitico
               porNivel={freqData.porNivel}
               porHorario={freqData.porHorario}

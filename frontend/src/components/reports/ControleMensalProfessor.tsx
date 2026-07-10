@@ -50,7 +50,7 @@ const ControleMensalProfessor: React.FC<Props> = ({ mes, ano }) => {
   if (data.length === 0) return null;
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm space-y-3">
+    <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm space-y-3 w-full">
       <h3 className="text-sm font-semibold text-gray-700">Controle Mensal de Aulas</h3>
 
       <div className="flex gap-4 flex-wrap">
@@ -103,7 +103,7 @@ const ControleMensalProfessor: React.FC<Props> = ({ mes, ano }) => {
                 <tr className="text-gray-400 border-b">
                   <th className="text-left py-1 pr-4">Horário</th>
                   <th className="text-right py-1 pr-3">Aulas</th>
-                  <th className="w-28 py-1">Progresso</th>
+                  <th className="w-1/3 py-1">Progresso</th>
                 </tr>
               </thead>
               <tbody>
@@ -117,7 +117,7 @@ const ControleMensalProfessor: React.FC<Props> = ({ mes, ano }) => {
                         {h.dadas}
                         <span className="text-gray-400 font-normal">/{h.previstas}</span>
                       </td>
-                      <td className="py-1.5 w-28">
+                      <td className="py-1.5">
                         <BarraProgressoRelatorio valor={h.dadas} max={h.previstas} cor={cor} height="h-2" showPercent />
                       </td>
                     </tr>
@@ -133,7 +133,7 @@ const ControleMensalProfessor: React.FC<Props> = ({ mes, ano }) => {
                         {item.totalDadas}
                         <span className="text-gray-400 font-normal">/{item.totalPrevistas}</span>
                       </td>
-                      <td className="py-2 w-28">
+                      <td className="py-2">
                         <BarraProgressoRelatorio valor={item.totalDadas} max={item.totalPrevistas} cor={cor} height="h-2" showPercent />
                       </td>
                     </tr>
