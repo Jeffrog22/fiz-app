@@ -4,6 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import CardIndicadorRelatorio from './CardIndicadorRelatorio';
+import { formatTime } from '../../utils/formatters';
 import type { CancelamentoDashboard as CancelamentoDashboardType } from '../../types';
 
 interface Props {
@@ -190,7 +191,7 @@ const CancelamentoDashboard: React.FC<Props> = ({ data, carregando, incluirJusti
                 {data.registros.slice(0, 50).map((r: any, i: number) => (
                   <tr key={r.id || i} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-2 pr-3 text-gray-700">{r.data || '-'}</td>
-                    <td className="py-2 pr-3 text-gray-700">{r.indice_aula || '-'}</td>
+                    <td className="py-2 pr-3 text-gray-700">{formatTime(r.horario)}</td>
                     <td className="py-2 pr-3 text-gray-700">{r.nivel || '-'}</td>
                     <td className="py-2 pr-3 text-gray-700 capitalize">{r.motivo || '-'}</td>
                     <td className="py-2 text-gray-700">{r.tipo_select || '-'}</td>

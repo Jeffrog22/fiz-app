@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../utils/api';
 import BarraProgressoRelatorio from './BarraProgressoRelatorio';
+import { formatTime } from '../../utils/formatters';
 import type { ControleMensalLabel } from '../../types';
 
 interface Props {
@@ -114,7 +115,7 @@ const ControleMensalProfessor: React.FC<Props> = ({ mes, ano }) => {
                   const cor = pct >= 0.9 ? 'bg-green-400' : pct >= 0.7 ? 'bg-yellow-400' : 'bg-red-400';
                   return (
                     <tr key={h.horario} className="border-b border-gray-50">
-                      <td className="py-1.5 pr-4 text-gray-700">{h.horario}</td>
+                      <td className="py-1.5 pr-4 text-gray-700">{formatTime(h.horario)}</td>
                       <td className="py-1.5 pr-3 text-right font-medium text-gray-800">
                         {h.dadas}
                         <span className="text-gray-400 font-normal">/{h.previstas}</span>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatTime } from '../../utils/formatters';
 import type { TimelineData } from '../../types';
 
 interface Props {
@@ -69,7 +70,7 @@ const ClassTimelineChart: React.FC<Props> = ({
           return (
             <div key={horario} className="flex items-center gap-2">
               <span className="w-12 text-right text-xs text-gray-500 font-medium">
-                {horario}
+                {formatTime(horario)}
               </span>
               <div className="flex-1 flex h-6 bg-gray-100 rounded overflow-hidden">
                 {slot && total > 0 ? (

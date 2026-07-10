@@ -1,6 +1,7 @@
 import React from 'react';
 import CardIndicadorRelatorio from './CardIndicadorRelatorio';
 import BarraProgressoRelatorio from './BarraProgressoRelatorio';
+import { formatTime } from '../../utils/formatters';
 
 interface Props {
   porNivel: Array<{ nivel: string; percentual: number; total: number }>;
@@ -61,7 +62,7 @@ const GridAnalitico: React.FC<Props> = ({
             {porHorario.map((item, i) => (
               <BarraPercentual
                 key={i}
-                label={item.horario}
+                label={formatTime(item.horario)}
                 valor={item.percentual}
                 max={100}
                 cor={item.percentual < 60 ? 'bg-cyan-300' : 'bg-cyan-500'}

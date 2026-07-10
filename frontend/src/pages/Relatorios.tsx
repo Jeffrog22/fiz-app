@@ -75,7 +75,7 @@ const Relatorios: React.FC = () => {
     const incluir = incluirJustificados ? 'com_justificadas' : 'so_cancelados';
     const headers = 'Data,Horario,Status,Motivo,Tipo\n';
     const rows = cancelData.registros.map((r: any) =>
-      `${r.data || ''},${r.indice_aula || ''},${r.status || ''},${r.motivo || ''},${r.tipo_select || ''}`
+      `${r.data || ''},${r.horario ? r.horario.substring(0, 5) : ''},${r.status || ''},${r.motivo || ''},${r.tipo_select || ''}`
     ).join('\n');
     const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);

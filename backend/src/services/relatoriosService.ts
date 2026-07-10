@@ -154,6 +154,17 @@ export async function controleMensal(
   const { data: turmas } = await turmasQuery;
   if (!turmas || turmas.length === 0) return [];
 
+  // Buscar alunos para mapear aluno_id → turma.grupo_id
+  const { data: alunos } = await supabase
+    .from('alunos')
+    .select('id, turma_id')
+    .eq('tenant_id', tenantId);
+
+  const alunoTurmaMap = new Map<string, string>();
+  (alunos || []).forEach((a: any) => {
+    if (a.turma_id) alunoTurmaMap.set(a.id, a.turma_id);
+  });
+
   // Logs do periodo (excluindo calendario) — inclui status para filtrar cancelados
   const { data: logs } = await supabase
     .from('chamadas_log')
@@ -169,12 +180,14 @@ export async function controleMensal(
   const diasPrevList = [...new Set<string>(logs.map(l => l.data))].sort();
 
   // Set de todas as aulas (previstas) e set de aulas efetivamente dadas (nao canceladas)
+  // Nota: logs.grupo_id = aluno_id; converte para turma.grupo_id via alunoTurmaMap
   const aulasPrevSet = new Set<string>();
   const aulasDadasSet = new Set<string>();
   (logs || []).forEach((l: any) => {
-    if (l.grupo_id) {
-      aulasPrevSet.add(`${l.data}|${l.grupo_id}`);
-      if (l.status !== 'cancelado') aulasDadasSet.add(`${l.data}|${l.grupo_id}`);
+    const turmaId = l.grupo_id ? alunoTurmaMap.get(l.grupo_id) : undefined;
+    if (turmaId) {
+      aulasPrevSet.add(`${l.data}|${turmaId}`);
+      if (l.status !== 'cancelado') aulasDadasSet.add(`${l.data}|${turmaId}`);
     }
   });
 
@@ -362,14 +375,6 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
   const alunosMap = new Map<string, any>();
   alunosResult.data?.forEach((a: any) => alunosMap.set(a.id, a));
 
-  const alunosPorTurma = new Map<string, any[]>();
-  (alunosResult.data || []).forEach((a: any) => {
-    if (a.turma_id) {
-      if (!alunosPorTurma.has(a.turma_id)) alunosPorTurma.set(a.turma_id, []);
-      alunosPorTurma.get(a.turma_id)!.push(a);
-    }
-  });
-
   const turmasMap = new Map<string, any>();
   turmasResult.data?.forEach((t: any) => turmasMap.set(t.grupo_id || t.id, t));
 
@@ -414,10 +419,10 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
   const alunosFreq = new Map<string, { nome: string; total: number; presentes: number; justificados: number; faltas: number }>();
 
   (chamadas || []).forEach((r: any) => {
-    const turma = turmasMap.get(r.grupo_id);
-    const alunosDaTurma = r.grupo_id ? alunosPorTurma.get(r.grupo_id) : [];
+    const aluno = alunosMap.get(r.grupo_id);
+    const turma = aluno ? turmasMap.get(aluno.turma_id) : turmasMap.get(r.grupo_id);
 
-    const nivel = turma?.nivel || 'Sem nivel';
+    const nivel = turma?.nivel || aluno?.nivel || 'Sem nivel';
     if (!porNivelMap.has(nivel)) porNivelMap.set(nivel, { total: 0, presentes: 0 });
     const nv = porNivelMap.get(nivel)!;
     nv.total++;
@@ -442,17 +447,15 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
     pf.total++;
     if (r.status === 'presente') pf.presentes++;
 
-    if (alunosDaTurma) {
-      for (const aluno of alunosDaTurma) {
-        if (!alunosFreq.has(aluno.id)) {
-          alunosFreq.set(aluno.id, { nome: aluno.nome, total: 0, presentes: 0, justificados: 0, faltas: 0 });
-        }
-        const entry = alunosFreq.get(aluno.id)!;
-        entry.total++;
-        if (r.status === 'presente') entry.presentes++;
-        if (r.status === 'justificado') entry.justificados++;
-        if (r.status === 'falta') entry.faltas++;
+    if (aluno) {
+      if (!alunosFreq.has(aluno.id)) {
+        alunosFreq.set(aluno.id, { nome: aluno.nome, total: 0, presentes: 0, justificados: 0, faltas: 0 });
       }
+      const entry = alunosFreq.get(aluno.id)!;
+      entry.total++;
+      if (r.status === 'presente') entry.presentes++;
+      if (r.status === 'justificado') entry.justificados++;
+      if (r.status === 'falta') entry.faltas++;
     }
   });
 
@@ -604,7 +607,7 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
 
         return {
           nivel: turma?.nivel || 'Sem nivel',
-          turma_label: turma ? `${turma.nivel || ''} ${turma.horario || ''}`.trim() : 'Turma',
+          turma_label: turma ? `${turma.nivel || ''} ${(turma.horario || '').substring(0, 5)}`.trim() : 'Turma',
           data_inicio: p.data_inicio,
           data_fim: p.data_fim,
           permanenciaDias,
@@ -688,9 +691,14 @@ export async function cancelamentos(tenantId: string, filters?: { mes?: number; 
     const motivo = r.motivo || 'Sem motivo';
     porMotivo.set(motivo, (porMotivo.get(motivo) || 0) + 1);
 
-    const turma = turmasMap.get(r.grupo_id);
-    const nivel = turma?.nivel || 'Sem nivel';
+    const aluno = alunosMap.get(r.grupo_id);
+    const turma = aluno ? turmasMap.get(aluno.turma_id) : turmasMap.get(r.grupo_id);
+    const nivel = turma?.nivel || aluno?.nivel || 'Sem nivel';
     porNivelMap.set(nivel, (porNivelMap.get(nivel) || 0) + 1);
+
+    r.horario = turma?.horario || '';
+    r.nivel = nivel;
+    r.aluno_nome = aluno?.nome || '';
 
     const mesKey = r.data ? r.data.substring(0, 7) : 'desconhecido';
     porMesMap.set(mesKey, (porMesMap.get(mesKey) || 0) + 1);
