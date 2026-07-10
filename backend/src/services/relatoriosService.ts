@@ -413,10 +413,16 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
   }
 
   if (aluno_id) {
-    query = query.eq('grupo_id', aluno_id);
+    const aluno = alunosMap.get(aluno_id);
+    const turmaId = aluno?.turma_id;
+    if (turmaId) {
+      query = query.eq('grupo_id', turmaId);
+    } else {
+      query = query.eq('grupo_id', '__nonexistent__');
+    }
   }
 
-  const { data: chamadas, error } = await query.order('data', { ascending: true });
+  const { data: chamadas, error } = await query.order('data', { ascending: true }).range(0, 1000000);
   if (error) throw new AppError('Erro ao buscar frequencia', 500);
 
   console.log('[frequencia] chamadas:', chamadas?.length, 'alunosPorTurma:', alunosPorTurma.size, 'turmasMap:', turmasMap.size);
