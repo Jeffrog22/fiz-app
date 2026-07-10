@@ -95,7 +95,12 @@ async function calcularDiasPrevistosNoMes(tenantId: string, dataInicio: string, 
 }
 
 async function calcularMetricasCore(tenantId: string, dataInicio: string, dataFim: string): Promise<FrequencyMetrics> {
-  const { dias: diasPrevList } = await calcularDiasPrevistosNoMes(tenantId, dataInicio, dataFim);
+  // Periodos letivos como fonte primaria, fallback auto-calculo por label
+  let diasPrevList = await getDiasPrevistosNoPeriodo(tenantId, dataInicio, dataFim);
+  if (diasPrevList.length === 0) {
+    const auto = await calcularDiasPrevistosNoMes(tenantId, dataInicio, dataFim);
+    diasPrevList = auto.dias;
+  }
   const diasPrevistos = diasPrevList.length;
 
   const { data: logs } = await supabase
