@@ -459,11 +459,26 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
   if (error) throw new AppError('Erro ao buscar frequencia', 500);
 
   console.log('[frequencia] chamadas:', chamadas?.length, 'alunosPorTurma:', alunosPorTurma.size, 'turmasMap:', turmasMap.size);
+  if (chamadas && chamadas.length > 0) {
+    const amostra = chamadas.slice(0, 5).map(c => ({
+      grupo_id: c.grupo_id, status: c.status, indice: c.indice_aula, isUUID: typeof c.grupo_id === 'string' && c.grupo_id.includes('-')
+    }));
+    const statNull = chamadas.filter(c => !c.status).length;
+    const statPresente = chamadas.filter(c => c.status === 'presente').length;
+    const statFalta = chamadas.filter(c => c.status === 'falta').length;
+    const statJustif = chamadas.filter(c => c.status === 'justificado').length;
+    const statCancel = chamadas.filter(c => c.status === 'cancelado').length;
+    console.log('[frequencia] amostra:', JSON.stringify(amostra));
+    console.log('[frequencia] status dist: null=', statNull, 'presente=', statPresente, 'falta=', statFalta, 'justif=', statJustif, 'cancel=', statCancel);
+    const uuidCount = chamadas.filter(c => c.grupo_id && c.grupo_id.includes('-')).length;
+    const textCount = chamadas.filter(c => c.grupo_id && !c.grupo_id.includes('-')).length;
+    console.log('[frequencia] grupo_id: UUID=', uuidCount, 'TEXT=', textCount);
+  }
 
   const totalRegistros = chamadas?.length || 0;
-  const presentes = chamadas?.filter((r: any) => r.status === 'presente').length || 0;
-  const faltas = chamadas?.filter((r: any) => r.status === 'falta').length || 0;
-  const justificados = chamadas?.filter((r: any) => r.status === 'justificado').length || 0;
+  const logPresentes = chamadas?.filter((r: any) => r.status === 'presente').length || 0;
+  const logFaltas = chamadas?.filter((r: any) => r.status === 'falta').length || 0;
+  const logJustificados = chamadas?.filter((r: any) => r.status === 'justificado').length || 0;
 
   const porNivelMap = new Map<string, { total: number; presentes: number }>();
   const porHorarioMap = new Map<string, { total: number; presentes: number }>();
@@ -531,7 +546,10 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
     }
   });
 
-  console.log('[frequencia] porNivelMap:', porNivelMap.size, 'alunosFreq:', alunosFreq.size, 'turma key sample:', chamadas?.[0]?.grupo_id);
+  console.log('[frequencia] porNivelMap:', porNivelMap.size, JSON.stringify(Array.from(porNivelMap.entries()).slice(0, 3)));
+  console.log('[frequencia] porHorarioMap:', porHorarioMap.size, JSON.stringify(Array.from(porHorarioMap.entries()).slice(0, 3)));
+  console.log('[frequencia] porProfessorMap:', porProfessorMap.size, JSON.stringify(Array.from(porProfessorMap.entries()).slice(0, 3)));
+  console.log('[frequencia] alunosFreq (amostra 3):', alunosFreq.size, JSON.stringify(Array.from(alunosFreq.entries()).slice(0, 3)));
 
   const totalAlunos = alunosResult.data?.length || 0;
   const ativos = alunosResult.data?.filter((a: any) => a.ativo !== false).length || 0;
@@ -617,7 +635,7 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
 
   const result: FrequenciaData = {
     metrics: { diasConcluidos: 0, diasPrevistos: 0, aulasDadas: 0, aulasPrevistas: 0 },
-    resumo: { totalRegistros, presentes, faltas, justificados },
+    resumo: { totalRegistros, presentes: logPresentes, faltas: logFaltas, justificados: logJustificados },
     porNivel,
     porHorario,
     porPeriodo,
