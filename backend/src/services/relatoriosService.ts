@@ -489,30 +489,33 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
       alunosParaContar = r.grupo_id ? alunosPorTurma.get(r.grupo_id) || [] : [];
     }
 
+    // status null = aula ocorreu normalmente (presente)
+    const statusEfetivo = r.status || 'presente';
+
     const nivel = turma?.nivel || 'Sem nivel';
     if (!porNivelMap.has(nivel)) porNivelMap.set(nivel, { total: 0, presentes: 0 });
     const nv = porNivelMap.get(nivel)!;
     nv.total++;
-    if (r.status === 'presente') nv.presentes++;
+    if (statusEfetivo === 'presente') nv.presentes++;
 
     const horario = turma?.horario || 'Sem horario';
     if (!porHorarioMap.has(horario)) porHorarioMap.set(horario, { total: 0, presentes: 0 });
     const hr = porHorarioMap.get(horario)!;
     hr.total++;
-    if (r.status === 'presente') hr.presentes++;
+    if (statusEfetivo === 'presente') hr.presentes++;
 
     const periodoStr = (r.indice_aula ?? 0) < 6 ? 'manhã' : 'tarde';
     if (!porPeriodoMap.has(periodoStr)) porPeriodoMap.set(periodoStr, { total: 0, presentes: 0 });
     const pd = porPeriodoMap.get(periodoStr)!;
     pd.total++;
-    if (r.status === 'presente') pd.presentes++;
+    if (statusEfetivo === 'presente') pd.presentes++;
 
     const profKey = turma?.professor_id || 'Geral';
     const profNome = professorMap.get(profKey) || profKey;
     if (!porProfessorMap.has(profNome)) porProfessorMap.set(profNome, { total: 0, presentes: 0 });
     const pf = porProfessorMap.get(profNome)!;
     pf.total++;
-    if (r.status === 'presente') pf.presentes++;
+    if (statusEfetivo === 'presente') pf.presentes++;
 
     if (alunosParaContar.length > 0) {
       for (const aluno of alunosParaContar) {
@@ -521,9 +524,9 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
         }
         const entry = alunosFreq.get(aluno.id)!;
         entry.total++;
-        if (r.status === 'presente') entry.presentes++;
-        if (r.status === 'justificado') entry.justificados++;
-        if (r.status === 'falta') entry.faltas++;
+        if (statusEfetivo === 'presente') entry.presentes++;
+        if (statusEfetivo === 'justificado') entry.justificados++;
+        if (statusEfetivo === 'falta') entry.faltas++;
       }
     }
   });
@@ -658,9 +661,10 @@ export async function frequencia(tenantId: string, filters?: { mes?: number; ano
       : l.grupo_id;
     if (!timelinePorGrupo.has(chave)) timelinePorGrupo.set(chave, { presentes: 0, ausentes: 0, justificados: 0 });
     const entry = timelinePorGrupo.get(chave)!;
-    if (l.status === 'presente') entry.presentes++;
-    else if (l.status === 'falta') entry.ausentes++;
-    else if (l.status === 'justificado' || l.status === 'cancelado') entry.justificados++;
+    const s = l.status || 'presente';
+    if (s === 'presente') entry.presentes++;
+    else if (s === 'falta') entry.ausentes++;
+    else if (s === 'justificado' || s === 'cancelado') entry.justificados++;
   });
 
   const timelineSlots: TimelineSlot[] = [];
