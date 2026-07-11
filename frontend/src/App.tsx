@@ -20,6 +20,7 @@ import { useAuth } from './hooks/useAuth';
 
 const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
   const { enabled: devEnabled, addConsoleLine } = useDevLog();
   const origConsole = useRef<Record<string, (...args: unknown[]) => void>>({});
 
@@ -58,7 +59,7 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <TopBar />
       <div className="flex flex-1">
-        <Sidebar />
+        <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(v => !v)} />
         <main className="flex-1 p-6 overflow-auto">
           {children}
         </main>

@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-07 — Fix regra temperatura + iniciação bugada + v1.9.36 -->
+<!-- última-sessão: 2026-07-10 — Sidebar deslizante + remove Relatórios + v2.0.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -12,7 +12,7 @@
   `abc123 + v1.9.20 → origin/master`
   ```
 - **AGENTS.md é o único histórico**: SESSION.md não existe mais. Toda sessão registrada aqui.
-- **Commits**: só commitar quando o usuário pedir explicitamente, EXCETO quando ele disser "done" (ou "done + commit tag destino", "anote ai! done") — nesse caso executar automaticamente o ciclo completo: `git add → git commit → git push origin master && git push origin <tag>`. Sempre. Sem perguntar.
+- **Commits + Push**: ao receber "done" (ou "anote ai! done", "done + commit tag destino", etc), executar automaticamente o ciclo completo: `git add -A → git commit -m "..." → git push origin master && git push origin <tag>`. Sempre. Sem perguntar. **Nunca perguntar se deve push** — fazer sempre.
 
 ## Versionamento Semântico (SemVer 2.0.0)
 
@@ -34,7 +34,7 @@ Regras:
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v1.9.36
+- **Versão atual:** v2.0.0
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Build Cloudflare:** `git fetch --tags --unshallow` é necessário no build command para `git describe --tags` funcionar (clone shallow sem tags)
@@ -688,4 +688,97 @@ Regras:
 - Frontend: 0 erros
 - Backend: 0 erros
 - Testes: 41/41 frontend + 25/25 backend passam
+
+---
+
+## Sessão: 10/07/2026 — Fix metricas: diasPrevistos via labels + ControleMensalProfessor + Remove TimeFilterToggle
+
+### O que foi feito
+- **metricas()** reescrita: aceita `{ mes, ano }`, usa `calcularDiasPrevistosNoMes` para `diasPrevistos` e `aulasPrevistas` (calcula das labels das turmas), e `chamadas_log` apenas para `diasConcluidos`/`aulasDadas`
+- `calcularMetricasCore()`, `timeline()`, `getDiasPrevistosNoPeriodo()` removidos do service
+- `frequencia()` limpa: sem `periodo` block, sem console.logs
+- `controleMensal()`: sem `.neq('origem','calendario')`
+- Controller: `metricas()` extrai `mes`/`ano` da query; handler `timeline` removido
+- Routes: `/timeline` removido
+- `TimeFilterToggle.tsx` deletado
+- `FrequencyMetrics.tsx` simplificado (sem toggle, sem `periodo`/`onPeriodoChange`)
+- `ControleMensalProfessor.tsx` compactado (table-only, sem label/professor filters)
+- `Relatorios.tsx`: remove `periodo` state, `carregarTimeline`, `timelineData`; layout `FrequencyMetrics` + `ControleMensalProfessor` em `grid-cols-2`
+- Todos console.logs de diagnóstico removidos do backend
+
+### Decisões
+- `diasPrevistos` = dias com turma (baseado nas labels), não total de dias úteis do mês
+- Calendário subtrai feriados/pontes dos previstos
+
+### Arquivos
+- `backend/src/services/relatoriosService.ts` (reescrito)
+- `backend/src/controllers/relatoriosController.ts` (ajustado)
+- `backend/src/routes/relatoriosRoutes.ts` (sem `/timeline`)
+- `frontend/src/components/reports/TimeFilterToggle.tsx` (deletado)
+- `frontend/src/components/reports/FrequencyMetrics.tsx` (simplificado)
+- `frontend/src/components/reports/ControleMensalProfessor.tsx` (compactado)
+- `frontend/src/pages/Relatorios.tsx` (ajustado)
+
+### Typecheck
+- Frontend: 0 erros
+- Backend: 0 erros
+
+---
+
+## Sessão: 10/07/2026 — Remove Relatórios Page + v2.0.0
+
+### O que foi feito
+- Página `Relatorios.tsx` e 8 componentes em `components/reports/` deletados
+- Backend: controller, service, routes, script `gerar-template-cancelamentos.ts`, 4 templates `.xlsx` deletados
+- Tipos de relatório removidos de ambos `types/index.ts` (backend + frontend)
+- Rota `/relatorios` removida do `App.tsx`, link da `Sidebar.tsx`, menu da `Home.tsx`
+- Dependência `exceljs` removida do `package.json`
+- `PRD.md` restaurado (alteração não intencional)
+- Commit `feat!:` → major bump para v2.0.0
+
+### Decisões
+- BREAKING CHANGE: remove rota e página inteira
+- `cancelamento` em CardBO/CardAula mantido (fluxo de chamadas, não relatórios)
+
+### Arquivos
+- `frontend/src/pages/Relatorios.tsx` (deletado)
+- `frontend/src/components/reports/` (8 arquivos deletados)
+- `backend/src/routes/relatoriosRoutes.ts` (deletado)
+- `backend/src/controllers/relatoriosController.ts` (deletado)
+- `backend/src/services/relatoriosService.ts` (deletado)
+- `backend/scripts/gerar-template-cancelamentos.ts` (deletado)
+- `backend/src/templates/` (4 arquivos deletados)
+- `backend/src/index.ts` (remove import + mount)
+- `backend/src/types/index.ts` (remove tipos)
+- `frontend/src/App.tsx` (remove import + route)
+- `frontend/src/components/common/Sidebar.tsx` (remove link)
+- `frontend/src/pages/Home.tsx` (remove menu item)
+- `frontend/src/types/index.ts` (remove tipos)
+- `backend/package.json` (remove exceljs)
+
+### Typecheck
+- Frontend: 0 erros
+- Backend: 0 erros
+
+---
+
+## Sessão: 10/07/2026 — Sidebar Deslizante (Recolher/Aparecer)
+
+### O que foi feito
+- Sidebar reescrita com estado `collapsed`/`expanded`
+- Largura animada: `w-56` (expandido) ↔ `w-14` (recolhido, só ícones)
+- Botão toggle `◀`/`▶` no topo da sidebar
+- Ícones emoji nos links (mesmos da Home)
+- Texto some quando recolhido via `overflow-hidden` + `opacity-0`
+- Links centralizam o ícone quando recolhidos (`justify-center`)
+- Estados gerenciado no `ProtectedLayout` (persiste entre páginas)
+- Transição `transition-all duration-300 ease-in-out`
+- Regras de auto-commit atualizadas: nunca perguntar push — sempre fazer
+
+### Arquivos
+- `frontend/src/components/common/Sidebar.tsx` (reescrito)
+- `frontend/src/App.tsx` (+sidebarCollapsed state, +props)
+
+### Typecheck
+- Frontend: 0 erros
 
