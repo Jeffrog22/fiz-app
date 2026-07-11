@@ -15,7 +15,6 @@ const menuItems: MenuItem[] = [
   { label: 'Turmas', path: '/turmas', icon: '\uD83D\uDCDA', color: 'bg-purple-50 hover:bg-purple-100 border-purple-200', group: 'main' },
   { label: 'Calendário', path: '/calendario', icon: '\uD83D\uDCC5', color: 'bg-orange-50 hover:bg-orange-100 border-orange-200', group: 'more' },
   { label: 'Exclusões', path: '/exclusoes', icon: '\uD83D\uDDD1\uFE0F', color: 'bg-red-50 hover:bg-red-100 border-red-200', group: 'more' },
-  { label: 'Relatórios', path: '/relatorios', icon: '\uD83D\uDCCA', color: 'bg-teal-50 hover:bg-teal-100 border-teal-200', group: 'more' },
   { label: 'Vagas', path: '/vagas', icon: '\uD83D\uDCE6', color: 'bg-cyan-50 hover:bg-cyan-100 border-cyan-200', group: 'more' },
 ];
 

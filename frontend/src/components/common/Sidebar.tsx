@@ -11,7 +11,6 @@ const links: SidebarLink[] = [
   { to: '/chamadas', label: 'Chamadas' },
   { to: '/alunos', label: 'Alunos' },
   { to: '/turmas', label: 'Turmas' },
-  { to: '/relatorios', label: 'Relatórios' },
   { to: '/vagas', label: 'Vagas' },
   { to: '/exclusoes', label: 'Exclusões' },
   { to: '/calendario', label: 'Calendário' },
