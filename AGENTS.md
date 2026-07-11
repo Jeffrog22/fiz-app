@@ -782,3 +782,20 @@ Regras:
 ### Typecheck
 - Frontend: 0 erros
 
+---
+
+## Sessão: 10/07/2026 — Alocação: Filtro Professor + Turma cascata, só Pendentes
+
+### O que foi feito
+- Action bar de alocação reescrita com dois filtros em cascata: **Professor(a)** → **Turma + Horário**
+- Segundo dropdown só habilitado quando um professor é selecionado
+- Grid filtra **apenas alunos Pendentes** (`turma_id === null`) quando em modo alocação
+- `professorAlocar` state + `turmasPorProfessor` memo (filtra turmas pelo professor)
+- Reset de ambos os filtros ao sair do modo alocação; `turmaAlocar` limpa ao trocar professor
+
+### Arquivos
+- `frontend/src/pages/Alunos.tsx` (action bar + filtro pendentes)
+
+### Typecheck
+- Frontend: 0 erros
+

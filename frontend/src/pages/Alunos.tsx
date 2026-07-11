@@ -20,6 +20,7 @@ const Alunos: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<Aluno | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [professorAlocar, setProfessorAlocar] = useState('');
   const [turmaAlocar, setTurmaAlocar] = useState('');
   const [alocando, setAlocando] = useState(false);
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
@@ -29,6 +30,13 @@ const Alunos: React.FC = () => {
   const [resetCounter, setResetCounter] = useState(0);
 
   const professorMap = new Map(professores.map((p) => [p.id, p.nome]));
+
+  const turmasPorProfessor = useMemo(() =>
+    professorAlocar
+      ? turmas.filter((t: any) => t.professor_id === professorAlocar)
+      : [],
+    [turmas, professorAlocar]
+  );
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -78,6 +86,8 @@ const Alunos: React.FC = () => {
   const processed = useMemo(() => {
     let data = [...alunos];
 
+    if (modoAlocacao) data = data.filter((a: any) => !a.turma_id);
+
     if (filtro) {
       const q = normalizeSearch(filtro);
       data = data.filter((a) =>
@@ -117,7 +127,7 @@ const Alunos: React.FC = () => {
     }
 
     return data;
-  }, [alunos, filtro, columnFilters, sortRules, professorMap]);
+  }, [alunos, filtro, columnFilters, sortRules, professorMap, modoAlocacao]);
 
   const handleSave = async ({ data, acao }: SavePayload) => {
     try {
@@ -285,7 +295,7 @@ const Alunos: React.FC = () => {
           <button
             type="button"
             onClick={() => {
-              if (modoAlocacao) { setSelectedIds(new Set()); setTurmaAlocar(''); }
+              if (modoAlocacao) { setSelectedIds(new Set()); setTurmaAlocar(''); setProfessorAlocar(''); }
               setModoAlocacao(!modoAlocacao);
             }}
             className={`px-4 py-2 text-sm rounded-md transition-colors ${
@@ -316,38 +326,53 @@ const Alunos: React.FC = () => {
         <p className="text-sm text-red-500">{erro}</p>
       )}
 
-      {modoAlocacao && selectedIds.size > 0 && (
+      {modoAlocacao && (
         <div className="flex items-center gap-3 px-4 py-2 bg-primary-50 border border-primary-200 rounded-md">
-          <span className="text-sm font-medium text-primary-700 whitespace-nowrap">
-            {selectedIds.size} selecionado{selectedIds.size !== 1 ? 's' : ''}
-          </span>
+          <select
+            value={professorAlocar}
+            onChange={(e) => { setProfessorAlocar(e.target.value); setTurmaAlocar(''); }}
+            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 min-w-[140px]"
+          >
+            <option value="">Professor(a)</option>
+            {professores.map((p) => (
+              <option key={p.id} value={p.id}>{p.nome}</option>
+            ))}
+          </select>
           <select
             value={turmaAlocar}
             onChange={(e) => setTurmaAlocar(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 min-w-[180px]"
+            disabled={!professorAlocar}
           >
-            <option value="">Selecione a turma</option>
-            {turmas.map((t: any) => (
+            <option value="">Turma + Horário</option>
+            {turmasPorProfessor.map((t: any) => (
               <option key={t.grupo_id} value={t.grupo_id}>
                 {t.label} - {(t.horario || '').slice(0, 5)} ({t.nivel || 'sem nível'})
               </option>
             ))}
           </select>
-          <button
-            type="button"
-            onClick={handleAlocar}
-            disabled={!turmaAlocar || alocando}
-            className="px-4 py-1.5 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {alocando ? 'Alocando...' : 'Alocar'}
-          </button>
-          <button
-            type="button"
-            onClick={() => { setSelectedIds(new Set()); setTurmaAlocar(''); }}
-            className="px-4 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-          >
-            Limpar
-          </button>
+          {selectedIds.size > 0 && (
+            <>
+              <span className="text-sm font-medium text-primary-700 whitespace-nowrap">
+                {selectedIds.size} selecionado{selectedIds.size !== 1 ? 's' : ''}
+              </span>
+              <button
+                type="button"
+                onClick={handleAlocar}
+                disabled={!turmaAlocar || alocando}
+                className="px-4 py-1.5 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {alocando ? 'Alocando...' : 'Alocar'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setSelectedIds(new Set()); setTurmaAlocar(''); }}
+                className="px-4 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                Limpar
+              </button>
+            </>
+          )}
         </div>
       )}
 
