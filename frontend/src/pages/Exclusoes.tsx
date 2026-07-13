@@ -5,6 +5,11 @@ import RestoreModal from '../components/modals/RestoreModal';
 import type { Exclusao, Turma, Professor } from '../types';
 import { normalizeSearch, formatDateBR } from '../utils/formatters';
 
+interface SortRule {
+  column: string;
+  dir: 'asc' | 'desc';
+}
+
 const MOTIVOS = [
   { value: 'falta', label: 'Falta' },
   { value: 'desistencia', label: 'Desistência' },
@@ -65,6 +70,42 @@ const Exclusoes: React.FC = () => {
     [professores],
   );
 
+  const [sortRules, setSortRules] = useState<SortRule[]>([]);
+
+  const toggleSort = (column: string) => {
+    setSortRules((prev) => {
+      const idx = prev.findIndex((r) => r.column === column);
+      if (idx === 0) {
+        if (prev[0].dir === 'asc') return [{ column, dir: 'desc' }, ...prev.slice(1)];
+        return prev.slice(1);
+      }
+      return [{ column, dir: 'asc' }, ...prev.filter((r) => r.column !== column)];
+    });
+  };
+
+  const sortIcon = (column: string) => {
+    const idx = sortRules.findIndex((r) => r.column === column);
+    if (idx === -1) return null;
+    const dir = sortRules[idx].dir;
+    return (
+      <span className="ml-1 text-xs text-primary-600">
+        {idx > 0 && <sup className="text-[10px]">{idx + 1}</sup>}
+        {dir === 'asc' ? '\u25B2' : '\u25BC'}
+      </span>
+    );
+  };
+
+  const thSort = (column: string, label: string) => (
+    <button
+      type="button"
+      onClick={() => toggleSort(column)}
+      className="font-medium text-gray-500 hover:text-gray-700 text-left text-sm whitespace-nowrap"
+    >
+      {label}
+      {sortIcon(column)}
+    </button>
+  );
+
   const handleRestore = async (turmaId: string) => {
     if (!restoreTarget) return;
     try {
@@ -115,12 +156,42 @@ const Exclusoes: React.FC = () => {
   };
 
   const filtered = useMemo(() => {
-    if (!filtro.trim()) return exclusoes;
-    const q = normalizeSearch(filtro);
-    return exclusoes.filter((exc) =>
-      normalizeSearch(exc.alunos?.nome || '').includes(q),
-    );
-  }, [exclusoes, filtro]);
+    let data = exclusoes;
+    if (filtro.trim()) {
+      const q = normalizeSearch(filtro);
+      data = data.filter((exc) =>
+        normalizeSearch(exc.alunos?.nome || '').includes(q),
+      );
+    }
+
+    data = data.map((exc) => {
+      const turma = exc.alunos?.turma_id
+        ? turmaMap.get(exc.alunos.turma_id)
+        : undefined;
+      return { ...exc, _turma: turma };
+    });
+
+    for (let i = sortRules.length - 1; i >= 0; i--) {
+      const { column, dir } = sortRules[i];
+      data.sort((a: any, b: any) => {
+        let va: any, vb: any;
+        switch (column) {
+          case 'nome': va = (a.alunos?.nome || '').toLowerCase(); vb = (b.alunos?.nome || '').toLowerCase(); break;
+          case 'turma': va = a._turma?.label || ''; vb = b._turma?.label || ''; break;
+          case 'horario': va = a._turma?.horario || ''; vb = b._turma?.horario || ''; break;
+          case 'professor': va = a._turma?.professor_id ? professorMap.get(a._turma.professor_id) || '' : ''; vb = b._turma?.professor_id ? professorMap.get(b._turma.professor_id) || '' : ''; break;
+          case 'motivo': va = a.motivo || ''; vb = b.motivo || ''; break;
+          case 'data': va = a.data_exclusao || ''; vb = b.data_exclusao || ''; break;
+          default: return 0;
+        }
+        if (va < vb) return dir === 'asc' ? -1 : 1;
+        if (va > vb) return dir === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return data;
+  }, [exclusoes, filtro, sortRules, turmaMap, professorMap]);
 
   return (
     <div className="space-y-4">
@@ -155,20 +226,18 @@ const Exclusoes: React.FC = () => {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Nome</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Turma</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Horário</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Professor</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Motivo</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Data</th>
+                <th className="text-left px-4 py-3">{thSort('nome', 'Nome')}</th>
+                <th className="text-left px-4 py-3">{thSort('turma', 'Turma')}</th>
+                <th className="text-left px-4 py-3">{thSort('horario', 'Horário')}</th>
+                <th className="text-left px-4 py-3">{thSort('professor', 'Professor')}</th>
+                <th className="text-left px-4 py-3">{thSort('motivo', 'Motivo')}</th>
+                <th className="text-left px-4 py-3">{thSort('data', 'Data')}</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.map((exc) => {
-                const turma = exc.alunos?.turma_id
-                  ? turmaMap.get(exc.alunos.turma_id)
-                  : undefined;
+              {filtered.map((exc: any) => {
+                const turma = exc._turma;
                 return (
                   <tr key={exc.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium text-gray-800">

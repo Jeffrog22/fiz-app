@@ -6,6 +6,11 @@ import SearchInput from '../components/SearchInput';
 import { normalizeSearch } from '../utils/formatters';
 import type { Turma } from '../types';
 
+interface SortRule {
+  column: string;
+  dir: 'asc' | 'desc';
+}
+
 const Turmas: React.FC = () => {
   const navigate = useNavigate();
   const [turmas, setTurmas] = useState<Turma[]>([]);
@@ -77,7 +82,44 @@ const Turmas: React.FC = () => {
   const professorNome = (professorId?: string) =>
     professores.find((p) => p.id === professorId)?.nome || '-';
 
-  const filtered = useMemo(() => turmas.filter((t) => {
+  const [sortRules, setSortRules] = useState<SortRule[]>([]);
+
+  const toggleSort = (column: string) => {
+    setSortRules((prev) => {
+      const idx = prev.findIndex((r) => r.column === column);
+      if (idx === 0) {
+        if (prev[0].dir === 'asc') return [{ column, dir: 'desc' }, ...prev.slice(1)];
+        return prev.slice(1);
+      }
+      return [{ column, dir: 'asc' }, ...prev.filter((r) => r.column !== column)];
+    });
+  };
+
+  const sortIcon = (column: string) => {
+    const idx = sortRules.findIndex((r) => r.column === column);
+    if (idx === -1) return null;
+    const dir = sortRules[idx].dir;
+    return (
+      <span className="ml-1 text-xs text-primary-600">
+        {idx > 0 && <sup className="text-[10px]">{idx + 1}</sup>}
+        {dir === 'asc' ? '\u25B2' : '\u25BC'}
+      </span>
+    );
+  };
+
+  const thSort = (column: string, label: string) => (
+    <button
+      type="button"
+      onClick={() => toggleSort(column)}
+      className="font-medium text-gray-500 hover:text-gray-700 text-left text-sm whitespace-nowrap"
+    >
+      {label}
+      {sortIcon(column)}
+    </button>
+  );
+
+  const filtered = useMemo(() => {
+    let data = turmas.filter((t) => {
     if (!filtro) return true;
     const q = normalizeSearch(filtro);
     return (
@@ -87,7 +129,29 @@ const Turmas: React.FC = () => {
       normalizeSearch(t.nivel || '').includes(q) ||
       normalizeSearch(professorNome(t.professor_id)).includes(q)
     );
-  }), [turmas, filtro]);
+  });
+
+    for (let i = sortRules.length - 1; i >= 0; i--) {
+      const { column, dir } = sortRules[i];
+      data.sort((a, b) => {
+        let va: any, vb: any;
+        switch (column) {
+          case 'label': va = a.label.toLowerCase(); vb = b.label.toLowerCase(); break;
+          case 'horario': va = a.horario || ''; vb = b.horario || ''; break;
+          case 'nivel': va = a.nivel || ''; vb = b.nivel || ''; break;
+          case 'professor': va = professorNome(a.professor_id); vb = professorNome(b.professor_id); break;
+          case 'faixa_etaria': va = a.faixa_etaria || ''; vb = b.faixa_etaria || ''; break;
+          case 'lotacao': va = a.alunos_count ?? 0; vb = b.alunos_count ?? 0; break;
+          default: return 0;
+        }
+        if (va < vb) return dir === 'asc' ? -1 : 1;
+        if (va > vb) return dir === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return data;
+  }, [turmas, filtro, sortRules]);
 
   const lotacaoClass = (count: number, cap?: number) => {
     if (!cap) return '';
@@ -122,12 +186,12 @@ const Turmas: React.FC = () => {
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="text-left px-4 py-2 font-medium text-gray-500">Turma</th>
-                <th className="text-left px-4 py-2 font-medium text-gray-500">Horário</th>
-                <th className="text-left px-4 py-2 font-medium text-gray-500">Nível</th>
-                <th className="text-left px-4 py-2 font-medium text-gray-500">Professor</th>
-                <th className="text-left px-4 py-2 font-medium text-gray-500">Faixa Etária</th>
-                <th className="text-left px-4 py-2 font-medium text-gray-500">Lotação</th>
+                <th className="text-left px-4 py-2">{thSort('label', 'Turma')}</th>
+                <th className="text-left px-4 py-2">{thSort('horario', 'Horário')}</th>
+                <th className="text-left px-4 py-2">{thSort('nivel', 'Nível')}</th>
+                <th className="text-left px-4 py-2">{thSort('professor', 'Professor')}</th>
+                <th className="text-left px-4 py-2">{thSort('faixa_etaria', 'Faixa Etária')}</th>
+                <th className="text-left px-4 py-2">{thSort('lotacao', 'Lotação')}</th>
                 <th className="text-right px-4 py-2 font-medium text-gray-500">Ações</th>
               </tr>
             </thead>
