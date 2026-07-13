@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../utils/api';
 import CardStat from '../CardStat';
+import PeriodPicker from '../PeriodPicker';
 import type { FrequenciaAlunoItem } from '../../../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const TabFrequenciaAluno: React.FC<{ mes: number; ano: number }> = ({ mes, ano }) => {
+const hoje = new Date();
+const TabFrequenciaAluno: React.FC = () => {
+  const [mes, setMes] = useState(hoje.getMonth() + 1);
+  const [ano, setAno] = useState(hoje.getFullYear());
   const [data, setData] = useState<FrequenciaAlunoItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -32,6 +36,7 @@ const TabFrequenciaAluno: React.FC<{ mes: number; ano: number }> = ({ mes, ano }
 
   return (
     <div className="space-y-4">
+      <PeriodPicker mes={mes} ano={ano} onChange={(m, a) => { setMes(m); setAno(a); }} />
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <CardStat titulo="Média de Presença" valor={`${mediaPresenca}%`} cor="text-green-600" icon="📊" />
         <CardStat titulo="Maior Presença" valor={`${top.percentual_presenca}%`} cor="text-primary-600" icon="🏆" />

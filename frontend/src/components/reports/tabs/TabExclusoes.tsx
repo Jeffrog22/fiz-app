@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../utils/api';
 import CardStat from '../CardStat';
+import YearPicker from '../YearPicker';
 import type { ExclusaoStatsItem } from '../../../types';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -8,19 +9,20 @@ const CORES_MOTIVO: Record<string, string> = {
   falta: '#ef4444', desistencia: '#f59e0b', transferencia: '#3b82f6', documentacao: '#94a3b8',
 };
 
-const TabExclusoes: React.FC<{ mes: number; ano: number }> = ({ mes, ano }) => {
+const TabExclusoes: React.FC = () => {
+  const [ano, setAno] = useState(new Date().getFullYear());
   const [data, setData] = useState<{ porMotivo: ExclusaoStatsItem[]; total: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
-    api.get('/relatorios/exclusoes-stats', { params: { mes, ano } })
+    api.get('/relatorios/exclusoes-stats', { params: { mes: 12, ano } })
       .then((res) => { if (active) setData(res.data); })
       .catch(() => { if (active) setData(null); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [mes, ano]);
+  }, [ano]);
 
   if (loading) return <p className="text-sm text-gray-500">Carregando...</p>;
   if (!data || data.total === 0) return <p className="text-sm text-gray-400">Nenhuma exclusão encontrada.</p>;
@@ -29,6 +31,10 @@ const TabExclusoes: React.FC<{ mes: number; ano: number }> = ({ mes, ano }) => {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-gray-500">Ano:</span>
+        <YearPicker ano={ano} onChange={setAno} />
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <CardStat titulo="Total de Exclusões" valor={data.total} cor="text-red-600" icon="🗑️" />
       </div>

@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../utils/api';
 import CardStat from '../CardStat';
+import PeriodPicker from '../PeriodPicker';
 import type { PiscinaHistoricoData } from '../../../types';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend, ResponsiveContainer } from 'recharts';
 
-const TabPiscina: React.FC<{ mes: number; ano: number }> = ({ mes, ano }) => {
+const hoje = new Date();
+const TabPiscina: React.FC = () => {
+  const [mes, setMes] = useState(hoje.getMonth() + 1);
+  const [ano, setAno] = useState(hoje.getFullYear());
   const [data, setData] = useState<PiscinaHistoricoData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -30,6 +34,7 @@ const TabPiscina: React.FC<{ mes: number; ano: number }> = ({ mes, ano }) => {
 
   return (
     <div className="space-y-4">
+      <PeriodPicker mes={mes} ano={ano} onChange={(m, a) => { setMes(m); setAno(a); }} />
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
         <CardStat titulo="Média Temp. Piscina" valor={`${data.medias.temperatura_piscina}°C`} cor="text-blue-600" icon="🌡️" />
         <CardStat titulo="Média Temp. Externa" valor={`${data.medias.temperatura_externa}°C`} cor="text-orange-600" icon="☀️" />

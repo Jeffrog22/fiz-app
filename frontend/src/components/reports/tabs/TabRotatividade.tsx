@@ -1,22 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../utils/api';
 import CardStat from '../CardStat';
+import YearPicker from '../YearPicker';
 import type { RotatividadeItem } from '../../../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const TabRotatividade: React.FC<{ mes: number; ano: number }> = ({ mes, ano }) => {
+const TabRotatividade: React.FC = () => {
+  const [ano, setAno] = useState(new Date().getFullYear());
   const [data, setData] = useState<RotatividadeItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
-    api.get('/relatorios/rotatividade', { params: { mes, ano } })
+    api.get('/relatorios/rotatividade', { params: { mes: 0, ano } })
       .then((res) => { if (active) setData(res.data); })
       .catch(() => { if (active) setData([]); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [mes, ano]);
+  }, [ano]);
 
   if (loading) return <p className="text-sm text-gray-500">Carregando...</p>;
   if (data.length === 0) return <p className="text-sm text-gray-400">Nenhum dado encontrado.</p>;
@@ -29,6 +31,10 @@ const TabRotatividade: React.FC<{ mes: number; ano: number }> = ({ mes, ano }) =
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-gray-500">Ano:</span>
+        <YearPicker ano={ano} onChange={setAno} />
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <CardStat titulo="Novas Matrículas" valor={totalMatriculas} cor="text-green-600" icon="➕" />
         <CardStat titulo="Transferências" valor={totalTransferencias} cor="text-blue-600" icon="🔄" />

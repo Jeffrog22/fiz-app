@@ -1,5 +1,4 @@
-import React, { useState, useCallback } from 'react';
-import PeriodPicker from '../components/reports/PeriodPicker';
+import React, { useState } from 'react';
 import TabFrequenciaAluno from '../components/reports/tabs/TabFrequenciaAluno';
 import TabFrequenciaTurma from '../components/reports/tabs/TabFrequenciaTurma';
 import TabRotatividade from '../components/reports/tabs/TabRotatividade';
@@ -12,9 +11,7 @@ import TabOcupacao from '../components/reports/tabs/TabOcupacao';
 type TabId = 'frequencia-aluno' | 'frequencia-turma' | 'rotatividade' | 'exclusoes'
   | 'cancelamentos' | 'piscina' | 'demografico' | 'ocupacao';
 
-interface TabDef { id: TabId; label: string }
-
-const TABS: TabDef[] = [
+const TABS: { id: TabId; label: string }[] = [
   { id: 'frequencia-aluno', label: 'Frequência por Aluno' },
   { id: 'frequencia-turma', label: 'Frequência por Turma' },
   { id: 'rotatividade', label: 'Rotatividade' },
@@ -25,27 +22,12 @@ const TABS: TabDef[] = [
   { id: 'ocupacao', label: 'Ocupação' },
 ];
 
-const TABS_COM_PERIODO: TabId[] = ['frequencia-aluno', 'frequencia-turma', 'rotatividade', 'exclusoes', 'cancelamentos', 'piscina'];
-
-const hoje = new Date();
 const Relatorios: React.FC = () => {
   const [tab, setTab] = useState<TabId>('frequencia-aluno');
-  const [mes, setMes] = useState(hoje.getMonth() + 1);
-  const [ano, setAno] = useState(hoje.getFullYear());
-
-  const handlePeriodChange = useCallback((m: number, a: number) => {
-    setMes(m);
-    setAno(a);
-  }, []);
-
-  const mostrarPeriodo = TABS_COM_PERIODO.includes(tab);
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-2xl font-bold text-gray-800">Relatórios</h1>
-        {mostrarPeriodo && <PeriodPicker mes={mes} ano={ano} onChange={handlePeriodChange} />}
-      </div>
+      <h1 className="text-2xl font-bold text-gray-800">Relatórios</h1>
 
       <div className="flex gap-1 border-b border-gray-200 overflow-x-auto">
         {TABS.map((t) => (
@@ -63,12 +45,12 @@ const Relatorios: React.FC = () => {
         ))}
       </div>
 
-      {tab === 'frequencia-aluno' && <TabFrequenciaAluno mes={mes} ano={ano} />}
-      {tab === 'frequencia-turma' && <TabFrequenciaTurma mes={mes} ano={ano} />}
-      {tab === 'rotatividade' && <TabRotatividade mes={mes} ano={ano} />}
-      {tab === 'exclusoes' && <TabExclusoes mes={mes} ano={ano} />}
-      {tab === 'cancelamentos' && <TabCancelamentos mes={mes} ano={ano} />}
-      {tab === 'piscina' && <TabPiscina mes={mes} ano={ano} />}
+      {tab === 'frequencia-aluno' && <TabFrequenciaAluno />}
+      {tab === 'frequencia-turma' && <TabFrequenciaTurma />}
+      {tab === 'rotatividade' && <TabRotatividade />}
+      {tab === 'exclusoes' && <TabExclusoes />}
+      {tab === 'cancelamentos' && <TabCancelamentos />}
+      {tab === 'piscina' && <TabPiscina />}
       {tab === 'demografico' && <TabDemografico />}
       {tab === 'ocupacao' && <TabOcupacao />}
     </div>

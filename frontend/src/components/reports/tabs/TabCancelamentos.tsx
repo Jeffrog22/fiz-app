@@ -1,24 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../utils/api';
 import CardStat from '../CardStat';
+import YearPicker from '../YearPicker';
 import type { CancelamentoData } from '../../../types';
 import { PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 
 const CORES = ['#ef4444', '#f59e0b', '#3b82f6', '#94a3b8'];
 
-const TabCancelamentos: React.FC<{ mes: number; ano: number }> = ({ mes, ano }) => {
+const hoje = new Date();
+const TabCancelamentos: React.FC = () => {
+  const [ano, setAno] = useState(hoje.getFullYear());
   const [data, setData] = useState<CancelamentoData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
-    api.get('/relatorios/cancelamentos', { params: { mes, ano } })
+    api.get('/relatorios/cancelamentos', { params: { mes: 0, ano } })
       .then((res) => { if (active) setData(res.data); })
       .catch(() => { if (active) setData(null); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [mes, ano]);
+  }, [ano]);
 
   if (loading) return <p className="text-sm text-gray-500">Carregando...</p>;
   if (!data || data.total === 0) return <p className="text-sm text-gray-400">Nenhum cancelamento encontrado.</p>;
@@ -28,6 +31,10 @@ const TabCancelamentos: React.FC<{ mes: number; ano: number }> = ({ mes, ano }) 
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-gray-500">Ano:</span>
+        <YearPicker ano={ano} onChange={setAno} />
+      </div>
       <CardStat titulo="Total de Cancelamentos" valor={data.total} cor="text-orange-600" icon="🚫" />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white rounded-lg border border-gray-200 p-4">

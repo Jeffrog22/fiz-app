@@ -8,13 +8,22 @@ import type {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+function mesDateRange(mes: number, ano: number): { inicio: string; fim: string } {
+  if (mes === 0) {
+    return { inicio: `${ano}-01-01`, fim: `${ano}-12-31` };
+  }
+  return {
+    inicio: `${ano}-${String(mes).padStart(2, '0')}-01`,
+    fim: new Date(ano, mes, 0).toISOString().split('T')[0],
+  };
+}
+
 export async function frequenciaAluno(
   tenantId: string,
   mes: number,
   ano: number
 ): Promise<FrequenciaAlunoItem[]> {
-  const inicio = `${ano}-${String(mes).padStart(2, '0')}-01`;
-  const fim = new Date(ano, mes, 0).toISOString().split('T')[0];
+  const { inicio, fim } = mesDateRange(mes, ano);
 
   const { data: logs, error: logsError } = await supabase
     .from('chamadas_log')
@@ -97,8 +106,7 @@ export async function frequenciaTurma(
   mes: number,
   ano: number
 ): Promise<FrequenciaTurmaItem[]> {
-  const inicio = `${ano}-${String(mes).padStart(2, '0')}-01`;
-  const fim = new Date(ano, mes, 0).toISOString().split('T')[0];
+  const { inicio, fim } = mesDateRange(mes, ano);
 
   const { data: logs, error: logsError } = await supabase
     .from('chamadas_log')
@@ -231,8 +239,7 @@ export async function exclusoesStats(
   mes: number,
   ano: number
 ): Promise<{ porMotivo: ExclusaoStatsItem[]; total: number }> {
-  const inicio = `${ano}-${String(mes).padStart(2, '0')}-01`;
-  const fim = new Date(ano, mes, 0).toISOString().split('T')[0];
+  const { inicio, fim } = mesDateRange(mes, ano);
 
   const { data, error } = await supabase
     .from('exclusoes')
@@ -266,8 +273,7 @@ export async function cancelamentos(
   mes: number,
   ano: number
 ): Promise<CancelamentoData> {
-  const inicio = `${ano}-${String(mes).padStart(2, '0')}-01`;
-  const fim = new Date(ano, mes, 0).toISOString().split('T')[0];
+  const { inicio, fim } = mesDateRange(mes, ano);
 
   const { data, error } = await supabase
     .from('chamadas_log')
@@ -310,8 +316,7 @@ export async function piscinaHistorico(
   mes: number,
   ano: number
 ): Promise<PiscinaHistoricoData> {
-  const inicio = `${ano}-${String(mes).padStart(2, '0')}-01`;
-  const fim = new Date(ano, mes, 0).toISOString().split('T')[0];
+  const { inicio, fim } = mesDateRange(mes, ano);
 
   const { data, error } = await supabase
     .from('card_aula')
