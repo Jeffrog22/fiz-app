@@ -196,7 +196,12 @@ const Exclusoes: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">Exclusões</h1>
+        <h1 className="text-2xl font-bold text-gray-800">
+          Exclusões
+          <span className="ml-2 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-normal align-middle">
+            {exclusoes.length}
+          </span>
+        </h1>
         <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
           <input
             type="checkbox"
