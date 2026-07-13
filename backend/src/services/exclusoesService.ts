@@ -4,10 +4,7 @@ import { AppError } from '../middleware/errorHandler';
 export async function listar(tenantId: string, mostrarOcultos?: string): Promise<any[]> {
   let query = supabase
     .from('exclusoes')
-    .select(`
-      *,
-      alunos!inner(id, nome, turma_id, nivel, contato, ativo)
-    `)
+    .select('*')
     .eq('tenant_id', tenantId);
 
   if (mostrarOcultos !== 'true') {
@@ -16,7 +13,25 @@ export async function listar(tenantId: string, mostrarOcultos?: string): Promise
 
   const { data, error } = await query.order('data_exclusao', { ascending: false });
   if (error) throw new AppError('Erro ao buscar exclusoes', 500);
-  return data || [];
+
+  if (!data || data.length === 0) return [];
+
+  const alunoIds = data.map((e) => e.aluno_id).filter(Boolean);
+  const { data: alunos, error: alunosError } = await supabase
+    .from('alunos')
+    .select('id, nome, turma_id, nivel, contato, ativo')
+    .in('id', alunoIds);
+
+  if (alunosError) {
+    console.error('[exclusoes/listar] Erro ao buscar alunos:', alunosError);
+  }
+
+  const alunoMap = new Map((alunos || []).map((a) => [a.id, a]));
+
+  return data.map((e) => ({
+    ...e,
+    alunos: alunoMap.get(e.aluno_id) || null,
+  }));
 }
 
 export async function restaurar(id: string, tenantId: string, turma_id?: string): Promise<void> {

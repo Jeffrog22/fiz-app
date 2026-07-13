@@ -43,7 +43,7 @@ const Alunos: React.FC = () => {
     setErro(null);
     try {
       const [alunosRes, profsRes, turmasRes] = await Promise.all([
-        api.get('/alunos'),
+        api.get('/alunos?ativo=true'),
         api.get('/professores'),
         api.get('/turmas'),
       ]);

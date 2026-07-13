@@ -164,4 +164,16 @@ export async function removerAlunoService(id: string, tenantId: string): Promise
     .eq('tenant_id', tenantId);
 
   if (error) throw new AppError('Erro ao remover aluno', 500);
+
+  const { error: insertError } = await supabase
+    .from('exclusoes')
+    .insert({
+      tenant_id: tenantId,
+      aluno_id: id,
+      motivo: 'remocao',
+    });
+
+  if (insertError) {
+    console.error('[alunos/remover] Erro ao registrar exclusao:', insertError);
+  }
 }
