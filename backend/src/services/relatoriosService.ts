@@ -33,19 +33,24 @@ export async function frequenciaAluno(
     .lte('data', fim);
 
   if (logsError) throw new AppError('Erro ao buscar chamadas', 500);
-
   if (!logs || logs.length === 0) return [];
 
-  const alunoIds = [...new Set(logs.map((l: any) => l.grupo_id))].filter((id) => UUID_RE.test(id as string));
-
-  const { data: alunos, error: alunosError } = await supabase
+  const { data: alunosData, error: alunosError } = await supabase
     .from('alunos')
     .select('id, nome, turma_id')
-    .in('id', alunoIds);
+    .eq('tenant_id', tenantId);
 
   if (alunosError) throw new AppError('Erro ao buscar alunos', 500);
 
-  const alunoMap = new Map((alunos || []).map((a: any) => [a.id, a]));
+  const alunos = alunosData || [];
+  const alunoMap = new Map(alunos.map((a: any) => [a.id, a]));
+  const alunosPorTurma = new Map<string, any[]>();
+  for (const a of alunos) {
+    if (a.turma_id) {
+      if (!alunosPorTurma.has(a.turma_id)) alunosPorTurma.set(a.turma_id, []);
+      alunosPorTurma.get(a.turma_id)!.push(a);
+    }
+  }
 
   const { data: turmas, error: turmasError } = await supabase
     .from('turmas')
@@ -69,14 +74,25 @@ export async function frequenciaAluno(
 
   for (const log of logs) {
     const s = log.status;
-    if (!aggr.has(log.grupo_id)) {
-      aggr.set(log.grupo_id, { presente: 0, falta: 0, justificado: 0, cancelado: 0 });
+    const targets: string[] = [];
+
+    if (UUID_RE.test(log.grupo_id)) {
+      targets.push(log.grupo_id);
+    } else {
+      const daTurma = alunosPorTurma.get(log.grupo_id) || [];
+      for (const a of daTurma) targets.push(a.id);
     }
-    const entry = aggr.get(log.grupo_id)!;
-    if (s === 'presente') entry.presente++;
-    else if (s === 'falta') entry.falta++;
-    else if (s === 'justificado') entry.justificado++;
-    else if (s === 'cancelado') entry.cancelado++;
+
+    for (const alunoId of targets) {
+      if (!aggr.has(alunoId)) {
+        aggr.set(alunoId, { presente: 0, falta: 0, justificado: 0, cancelado: 0 });
+      }
+      const entry = aggr.get(alunoId)!;
+      if (s === 'presente') entry.presente++;
+      else if (s === 'falta') entry.falta++;
+      else if (s === 'justificado') entry.justificado++;
+      else if (s === 'cancelado') entry.cancelado++;
+    }
   }
 
   const result: FrequenciaAlunoItem[] = [];
@@ -116,19 +132,20 @@ export async function frequenciaTurma(
     .lte('data', fim);
 
   if (logsError) throw new AppError('Erro ao buscar chamadas', 500);
-
   if (!logs || logs.length === 0) return [];
 
-  const alunoIds = [...new Set(logs.map((l: any) => l.grupo_id))].filter((id) => UUID_RE.test(id as string));
+  const uuidIds = [...new Set(logs.filter((l: any) => UUID_RE.test(l.grupo_id)).map((l: any) => l.grupo_id))];
 
-  const { data: alunos, error: alunosError } = await supabase
-    .from('alunos')
-    .select('id, turma_id')
-    .in('id', alunoIds);
-
-  if (alunosError) throw new AppError('Erro ao buscar alunos', 500);
-
-  const turmaDeAluno = new Map((alunos || []).map((a: any) => [a.id, a.turma_id]));
+  const turmaFromAluno = new Map<string, string | null>();
+  if (uuidIds.length > 0) {
+    const { data: alunos } = await supabase
+      .from('alunos')
+      .select('id, turma_id')
+      .in('id', uuidIds);
+    for (const a of (alunos || [])) {
+      turmaFromAluno.set(a.id, a.turma_id);
+    }
+  }
 
   const { data: turmas, error: turmasError } = await supabase
     .from('turmas')
@@ -148,13 +165,18 @@ export async function frequenciaTurma(
 
   const profMap = new Map((professores || []).map((p: any) => [p.id, p.nome]));
 
-  const aggr = new Map<string, { presente: number; falta: number; justificado: number; cancelado: number; total_aulas: number; alunos_unicos: Set<string> }>();
+  const aggr = new Map<string, { presente: number; falta: number; justificado: number; cancelado: number }>();
 
   for (const log of logs) {
-    const turmaId = turmaDeAluno.get(log.grupo_id);
+    let turmaId: string | null | undefined;
+    if (UUID_RE.test(log.grupo_id)) {
+      turmaId = turmaFromAluno.get(log.grupo_id) || null;
+    } else {
+      turmaId = log.grupo_id;
+    }
     if (!turmaId) continue;
     if (!aggr.has(turmaId)) {
-      aggr.set(turmaId, { presente: 0, falta: 0, justificado: 0, cancelado: 0, total_aulas: 0, alunos_unicos: new Set() });
+      aggr.set(turmaId, { presente: 0, falta: 0, justificado: 0, cancelado: 0 });
     }
     const entry = aggr.get(turmaId)!;
     const s = log.status;
@@ -162,7 +184,6 @@ export async function frequenciaTurma(
     else if (s === 'falta') entry.falta++;
     else if (s === 'justificado') entry.justificado++;
     else if (s === 'cancelado') entry.cancelado++;
-    entry.alunos_unicos.add(log.grupo_id);
   }
 
   const result: FrequenciaTurmaItem[] = [];

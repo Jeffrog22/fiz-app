@@ -36,7 +36,7 @@ export class RelatoriosController {
   static async exclusoesStats(req: TenantRequest, res: Response, next: NextFunction) {
     try {
       const tenantId = req.tenantId!;
-      const mes = parseInt(req.query.mes as string) || new Date().getMonth() + 1;
+      const mes = parseInt(req.query.mes as string) || 0;
       const ano = parseInt(req.query.ano as string) || new Date().getFullYear();
       const result = await relatoriosService.exclusoesStats(tenantId, mes, ano);
       res.json(result);
@@ -46,7 +46,7 @@ export class RelatoriosController {
   static async cancelamentos(req: TenantRequest, res: Response, next: NextFunction) {
     try {
       const tenantId = req.tenantId!;
-      const mes = parseInt(req.query.mes as string) || new Date().getMonth() + 1;
+      const mes = parseInt(req.query.mes as string) || 0;
       const ano = parseInt(req.query.ano as string) || new Date().getFullYear();
       const result = await relatoriosService.cancelamentos(tenantId, mes, ano);
       res.json(result);
@@ -56,7 +56,7 @@ export class RelatoriosController {
   static async piscinaHistorico(req: TenantRequest, res: Response, next: NextFunction) {
     try {
       const tenantId = req.tenantId!;
-      const mes = parseInt(req.query.mes as string) || new Date().getMonth() + 1;
+      const mes = parseInt(req.query.mes as string) || 0;
       const ano = parseInt(req.query.ano as string) || new Date().getFullYear();
       const result = await relatoriosService.piscinaHistorico(tenantId, mes, ano);
       res.json(result);

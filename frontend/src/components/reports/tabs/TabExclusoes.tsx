@@ -17,7 +17,7 @@ const TabExclusoes: React.FC = () => {
   useEffect(() => {
     let active = true;
     setLoading(true);
-    api.get('/relatorios/exclusoes-stats', { params: { mes: 12, ano } })
+    api.get('/relatorios/exclusoes-stats', { params: { mes: 0, ano } })
       .then((res) => { if (active) setData(res.data); })
       .catch(() => { if (active) setData(null); })
       .finally(() => { if (active) setLoading(false); });
