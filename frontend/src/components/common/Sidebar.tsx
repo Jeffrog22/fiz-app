@@ -14,6 +14,7 @@ const links: SidebarLink[] = [
   { to: '/turmas', label: 'Turmas', icon: '\uD83D\uDCDA' },
   { to: '/vagas', label: 'Vagas', icon: '\uD83D\uDCE6' },
   { to: '/exclusoes', label: 'Exclusões', icon: '\uD83D\uDDD1\uFE0F' },
+  { to: '/relatorios', label: 'Relatórios', icon: '\uD83D\uDCCA' },
   { to: '/calendario', label: 'Calendário', icon: '\uD83D\uDCC5' },
 ];
 

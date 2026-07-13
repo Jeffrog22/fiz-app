@@ -131,3 +131,47 @@ export interface VagasResponse {
   };
   horarios: VagaHorario[];
 }
+
+// --- Reports ---
+
+export interface FrequenciaAlunoItem {
+  aluno_id: string;
+  nome: string;
+  turma_label?: string;
+  professor?: string;
+  presente: number;
+  falta: number;
+  justificado: number;
+  cancelado: number;
+  total_aulas: number;
+  percentual_presenca: number;
+}
+
+export interface FrequenciaTurmaItem {
+  grupo_id: string;
+  label: string;
+  horario: string;
+  professor: string;
+  professor_id: string;
+  nivel: string;
+  presente: number;
+  falta: number;
+  justificado: number;
+  cancelado: number;
+  total_aulas: number;
+  percentual_presenca: number;
+}
+
+export interface RotatividadeItem {
+  mes: number;
+  matricula_inicial: number;
+  correcao: number;
+  transferencia: number;
+  total: number;
+}
+
+export interface ExclusaoStatsItem {
+  motivo: string;
+  total: number;
+  percentual: number;
+}

@@ -13,6 +13,7 @@ import Chamadas from './pages/Chamadas';
 import Vagas from './pages/Vagas';
 import Exclusoes from './pages/Exclusoes';
 import Calendario from './pages/Calendario';
+import Relatorios from './pages/Relatorios';
 import TopBar from './components/common/TopBar';
 import Sidebar from './components/common/Sidebar';
 import DevPanel from './components/dev/DevPanel';
@@ -94,6 +95,7 @@ const AppContent: React.FC = () => {
       <Route path="/chamadas" element={<ProtectedLayout><Chamadas /></ProtectedLayout>} />
       <Route path="/vagas" element={<ProtectedLayout><Vagas /></ProtectedLayout>} />
       <Route path="/exclusoes" element={<ProtectedLayout><Exclusoes /></ProtectedLayout>} />
+      <Route path="/relatorios" element={<ProtectedLayout><Relatorios /></ProtectedLayout>} />
       <Route path="/calendario" element={<ProtectedLayout><Calendario /></ProtectedLayout>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
