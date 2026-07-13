@@ -5,6 +5,15 @@ import RestoreModal from '../components/modals/RestoreModal';
 import type { Exclusao, Turma, Professor } from '../types';
 import { normalizeSearch, formatDateBR } from '../utils/formatters';
 
+const MOTIVOS = [
+  { value: 'falta', label: 'Falta' },
+  { value: 'desistencia', label: 'Desistência' },
+  { value: 'transferencia', label: 'Transferência' },
+  { value: 'documentacao', label: 'Documentação' },
+];
+
+const MOTIVO_MAP = new Map(MOTIVOS.map((m) => [m.value, m.label]));
+
 const Exclusoes: React.FC = () => {
   const [exclusoes, setExclusoes] = useState<Exclusao[]>([]);
   const [turmas, setTurmas] = useState<Turma[]>([]);
@@ -14,6 +23,9 @@ const Exclusoes: React.FC = () => {
   const [mostrarOcultos, setMostrarOcultos] = useState(false);
   const [filtro, setFiltro] = useState('');
   const [restoreTarget, setRestoreTarget] = useState<{ id: string; alunoNome: string } | null>(null);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [editandoCampo, setEditandoCampo] = useState<'motivo' | 'data' | null>(null);
+  const [editandoValor, setEditandoValor] = useState('');
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -65,6 +77,31 @@ const Exclusoes: React.FC = () => {
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Erro ao restaurar');
     }
+  };
+
+  const handleSalvarEdicao = async (id: string) => {
+    try {
+      await api.put(`/exclusoes/${id}`, {
+        [editandoCampo!]: editandoValor,
+      });
+      setEditandoId(null);
+      setEditandoCampo(null);
+      carregar();
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Erro ao salvar');
+    }
+  };
+
+  const iniciarEdicao = (id: string, campo: 'motivo' | 'data', valorAtual: string) => {
+    setEditandoId(id);
+    setEditandoCampo(campo);
+    setEditandoValor(valorAtual);
+  };
+
+  const cancelarEdicao = () => {
+    setEditandoId(null);
+    setEditandoCampo(null);
+    setEditandoValor('');
   };
 
   const handleOcultar = async (id: string) => {
@@ -146,11 +183,48 @@ const Exclusoes: React.FC = () => {
                     <td className="px-4 py-3 text-gray-600">
                       {turma?.professor_id ? professorMap.get(turma.professor_id) || '-' : '-'}
                     </td>
-                    <td className="px-4 py-3 text-gray-600 capitalize">
-                      {exc.motivo || '---'}
+                    <td className="px-4 py-3">
+                      {editandoId === exc.id && editandoCampo === 'motivo' ? (
+                        <select
+                          value={editandoValor}
+                          onChange={(e) => setEditandoValor(e.target.value)}
+                          onBlur={() => handleSalvarEdicao(exc.id)}
+                          autoFocus
+                          className="w-full px-1 py-0.5 text-sm border border-primary-400 rounded bg-white"
+                        >
+                          {MOTIVOS.map((m) => (
+                            <option key={m.value} value={m.value}>{m.label}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span
+                          className="cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded block capitalize text-gray-600"
+                          onClick={() => iniciarEdicao(exc.id, 'motivo', exc.motivo || 'falta')}
+                          title="Clique para editar"
+                        >
+                          {MOTIVO_MAP.get(exc.motivo) || exc.motivo || '---'}
+                        </span>
+                      )}
                     </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">
-                      {formatDateBR(exc.data_exclusao)}
+                    <td className="px-4 py-3">
+                      {editandoId === exc.id && editandoCampo === 'data' ? (
+                        <input
+                          type="date"
+                          value={editandoValor}
+                          onChange={(e) => setEditandoValor(e.target.value)}
+                          onBlur={() => handleSalvarEdicao(exc.id)}
+                          autoFocus
+                          className="w-full px-1 py-0.5 text-sm border border-primary-400 rounded bg-white"
+                        />
+                      ) : (
+                        <span
+                          className="cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded block text-gray-500 text-xs"
+                          onClick={() => iniciarEdicao(exc.id, 'data', exc.data_exclusao?.split('T')[0] || '')}
+                          title="Clique para editar"
+                        >
+                          {formatDateBR(exc.data_exclusao)}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1">

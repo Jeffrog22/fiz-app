@@ -21,6 +21,16 @@ export class ExclusoesController {
     } catch (e) { next(e); }
   }
 
+  static async atualizar(req: TenantRequest, res: Response, next: NextFunction) {
+    try {
+      const tenantId = req.tenantId!;
+      const { id } = req.params;
+      const { motivo, data_exclusao } = req.body;
+      await exclusoesService.atualizar(id, tenantId, { motivo, data_exclusao });
+      res.json({ ok: true });
+    } catch (e) { next(e); }
+  }
+
   static async excluirDefinitivo(req: TenantRequest, res: Response, next: NextFunction) {
     try {
       const tenantId = req.tenantId!;

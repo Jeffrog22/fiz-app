@@ -170,7 +170,7 @@ export async function removerAlunoService(id: string, tenantId: string): Promise
     .insert({
       tenant_id: tenantId,
       aluno_id: id,
-      motivo: 'remocao',
+      motivo: 'falta',
     });
 
   if (insertError) {

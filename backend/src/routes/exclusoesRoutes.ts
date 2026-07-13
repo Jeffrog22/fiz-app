@@ -5,6 +5,7 @@ import tenantMiddleware from '../middleware/tenant';
 const router = Router();
 router.use(tenantMiddleware, authMiddleware);
 router.get('/', ExclusoesController.listar);
+router.put('/:id', ExclusoesController.atualizar);
 router.post('/restaurar', ExclusoesController.restaurar);
 router.delete('/:id', ExclusoesController.excluirDefinitivo);
 export default router;

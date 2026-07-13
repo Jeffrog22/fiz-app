@@ -66,6 +66,16 @@ export async function restaurar(id: string, tenantId: string, turma_id?: string)
   if (deleteError) throw new AppError('Erro ao remover exclusao', 500);
 }
 
+export async function atualizar(id: string, tenantId: string, data: { motivo?: string; data_exclusao?: string }): Promise<void> {
+  const { error } = await supabase
+    .from('exclusoes')
+    .update(data)
+    .eq('id', id)
+    .eq('tenant_id', tenantId);
+
+  if (error) throw new AppError('Erro ao atualizar exclusao', 500);
+}
+
 export async function excluirDefinitivo(id: string, tenantId: string): Promise<void> {
   const { error } = await supabase
     .from('exclusoes')
