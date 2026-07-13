@@ -175,3 +175,62 @@ export interface ExclusaoStatsItem {
   total: number;
   percentual: number;
 }
+
+export interface CancelamentoItem {
+  motivo: string;
+  total: number;
+  percentual: number;
+}
+
+export interface CancelamentoData {
+  total: number;
+  porMotivo: CancelamentoItem[];
+  porMes: { mes: number; total: number }[];
+}
+
+export interface PiscinaRegistro {
+  data: string;
+  temperatura_piscina?: number;
+  temperatura_externa?: number;
+  cloro_ppm?: number;
+  condicao_clima?: string;
+}
+
+export interface PiscinaHistoricoData {
+  registros: PiscinaRegistro[];
+  medias: {
+    temperatura_piscina: number;
+    temperatura_externa: number;
+    cloro_ppm: number;
+  };
+  dias_frios: number;
+}
+
+export interface DemograficoItem {
+  label: string;
+  total: number;
+  percentual: number;
+}
+
+export interface DemograficoData {
+  total: number;
+  media_idade: number;
+  porCategoria: DemograficoItem[];
+  porGenero: DemograficoItem[];
+}
+
+export interface OcupacaoTurmaItem {
+  grupo_id: string;
+  label: string;
+  horario: string;
+  professor: string;
+  capacidade: number;
+  ocupacao: number;
+  percentual: number;
+}
+
+export interface OcupacaoData {
+  turmas: OcupacaoTurmaItem[];
+  total_capacidade: number;
+  total_ativos: number;
+}

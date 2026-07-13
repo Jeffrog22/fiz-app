@@ -42,4 +42,40 @@ export class RelatoriosController {
       res.json(result);
     } catch (e) { next(e); }
   }
+
+  static async cancelamentos(req: TenantRequest, res: Response, next: NextFunction) {
+    try {
+      const tenantId = req.tenantId!;
+      const mes = parseInt(req.query.mes as string) || new Date().getMonth() + 1;
+      const ano = parseInt(req.query.ano as string) || new Date().getFullYear();
+      const result = await relatoriosService.cancelamentos(tenantId, mes, ano);
+      res.json(result);
+    } catch (e) { next(e); }
+  }
+
+  static async piscinaHistorico(req: TenantRequest, res: Response, next: NextFunction) {
+    try {
+      const tenantId = req.tenantId!;
+      const mes = parseInt(req.query.mes as string) || new Date().getMonth() + 1;
+      const ano = parseInt(req.query.ano as string) || new Date().getFullYear();
+      const result = await relatoriosService.piscinaHistorico(tenantId, mes, ano);
+      res.json(result);
+    } catch (e) { next(e); }
+  }
+
+  static async demografico(req: TenantRequest, res: Response, next: NextFunction) {
+    try {
+      const tenantId = req.tenantId!;
+      const result = await relatoriosService.demografico(tenantId);
+      res.json(result);
+    } catch (e) { next(e); }
+  }
+
+  static async ocupacao(req: TenantRequest, res: Response, next: NextFunction) {
+    try {
+      const tenantId = req.tenantId!;
+      const result = await relatoriosService.ocupacao(tenantId);
+      res.json(result);
+    } catch (e) { next(e); }
+  }
 }
