@@ -116,7 +116,7 @@ const DataGrid: React.FC<DataGridProps> = ({
       }
       // 3. Student-level manual: clique do usuário P/F/J
       const alunoLog = logs[alunoId]?.[data]?.[indiceAtual];
-      if (alunoLog?.origem === 'manual' && alunoLog?.status) {
+      if (alunoLog?.status) {
         return alunoLog.status as PresencaStatus;
       }
       return undefined;

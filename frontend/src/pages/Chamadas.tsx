@@ -375,7 +375,7 @@ const Chamadas: React.FC = () => {
           data, grupo_id: alunoId,
           indice_aula: indiceAtual,
           status: 'justificado', motivo,
-          origem: next[alunoId][data][indiceAtual]?.origem || 'manual',
+          origem: 'manual',
           criado_em: next[alunoId][data][indiceAtual]?.criado_em || new Date().toISOString(),
         } as ChamadaLog;
         return next;
