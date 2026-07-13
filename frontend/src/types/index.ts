@@ -92,6 +92,22 @@ export interface CalendarioEvento {
   descricao?: string;
 }
 
+export interface Exclusao {
+  id: string;
+  aluno_id: string;
+  motivo: string;
+  data_exclusao: string;
+  oculto: boolean;
+  alunos: {
+    id: string;
+    nome: string;
+    turma_id?: string;
+    nivel?: string;
+    contato?: string;
+    ativo: boolean;
+  };
+}
+
 export interface AuthState {
   isAuthenticated: boolean;
   professorId?: string;
