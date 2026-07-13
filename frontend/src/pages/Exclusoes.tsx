@@ -2,12 +2,13 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import api from '../utils/api';
 import SearchInput from '../components/SearchInput';
 import RestoreModal from '../components/modals/RestoreModal';
-import type { Exclusao, Turma } from '../types';
+import type { Exclusao, Turma, Professor } from '../types';
 import { normalizeSearch, formatDateBR } from '../utils/formatters';
 
 const Exclusoes: React.FC = () => {
   const [exclusoes, setExclusoes] = useState<Exclusao[]>([]);
   const [turmas, setTurmas] = useState<Turma[]>([]);
+  const [professores, setProfessores] = useState<Professor[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [mostrarOcultos, setMostrarOcultos] = useState(false);
@@ -18,12 +19,14 @@ const Exclusoes: React.FC = () => {
     setCarregando(true);
     setErro(null);
     try {
-      const [exclRes, turmasRes] = await Promise.all([
+      const [exclRes, turmasRes, profsRes] = await Promise.all([
         api.get(`/exclusoes?mostrarOcultos=${mostrarOcultos}`),
         api.get('/turmas'),
+        api.get('/professores'),
       ]);
       setExclusoes(exclRes.data);
       setTurmas(turmasRes.data);
+      setProfessores(profsRes.data);
     } catch (err: any) {
       setErro(err?.response?.data?.error || err.message || 'Erro ao carregar exclusões');
       setExclusoes([]);
@@ -43,6 +46,11 @@ const Exclusoes: React.FC = () => {
   const turmaMap = useMemo(
     () => new Map(turmas.map((t) => [t.grupo_id || t.id, t])),
     [turmas],
+  );
+
+  const professorMap = useMemo(
+    () => new Map(professores.map((p) => [p.id, p.nome])),
+    [professores],
   );
 
   const handleRestore = async (turmaId: string) => {
@@ -112,7 +120,8 @@ const Exclusoes: React.FC = () => {
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Nome</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Turma</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Nível</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Horário</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Professor</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Motivo</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Data</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Ações</th>
@@ -132,7 +141,10 @@ const Exclusoes: React.FC = () => {
                       {turma?.label || exc.alunos?.turma_id || '---'}
                     </td>
                     <td className="px-4 py-3 text-gray-600">
-                      {exc.alunos?.nivel || '---'}
+                      {(turma?.horario || '').slice(0, 5) || '---'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {turma?.professor_id ? professorMap.get(turma.professor_id) || '-' : '-'}
                     </td>
                     <td className="px-4 py-3 text-gray-600 capitalize">
                       {exc.motivo || '---'}
@@ -166,7 +178,7 @@ const Exclusoes: React.FC = () => {
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400 text-sm">
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400 text-sm">
                     Nenhuma exclusão encontrada.
                   </td>
                 </tr>
