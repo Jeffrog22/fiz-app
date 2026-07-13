@@ -251,7 +251,7 @@ const Vagas: React.FC = () => {
                             <span className="text-gray-500">{g.professor}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <BarraProgressoVaga ativos={g.alunos_ativos} capacidade={g.capacidade} cor={gCor} />
+                            {!vagasFilter && <BarraProgressoVaga ativos={g.alunos_ativos} capacidade={g.capacidade} cor={gCor} />}
                             <span className="text-gray-500 w-14 text-right">{g.alunos_ativos}/{g.capacidade}</span>
                             <span className={`px-1.5 py-0.5 rounded font-medium ${gBadge.className}`}>
                               {gBadge.text}
