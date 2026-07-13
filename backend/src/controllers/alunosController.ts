@@ -44,7 +44,8 @@ export class AlunosController {
     try {
       const tenantId = req.tenantId!;
       const { id } = req.params;
-      await removerAlunoService(id, tenantId);
+      const { motivo } = req.query;
+      await removerAlunoService(id, tenantId, (motivo as string) || 'falta');
       res.status(204).send();
     } catch (error) {
       next(error);

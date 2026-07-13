@@ -156,7 +156,7 @@ export async function buscarPorIdService(id: string, tenantId: string): Promise<
   return data;
 }
 
-export async function removerAlunoService(id: string, tenantId: string): Promise<void> {
+export async function removerAlunoService(id: string, tenantId: string, motivo = 'falta'): Promise<void> {
   const { error } = await supabase
     .from('alunos')
     .update({ ativo: false })
@@ -170,7 +170,7 @@ export async function removerAlunoService(id: string, tenantId: string): Promise
     .insert({
       tenant_id: tenantId,
       aluno_id: id,
-      motivo: 'falta',
+      motivo,
     });
 
   if (insertError) {

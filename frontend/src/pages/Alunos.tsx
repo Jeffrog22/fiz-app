@@ -171,10 +171,15 @@ const Alunos: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Remover este aluno?')) return;
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; nome: string } | null>(null);
+  const [deleteMotivo, setDeleteMotivo] = useState('falta');
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await api.delete(`/alunos/${id}`);
+      await api.delete(`/alunos/${deleteTarget.id}?motivo=${deleteMotivo}`);
+      setDeleteTarget(null);
+      setDeleteMotivo('falta');
       await carregar();
     } catch (err: any) {
       alert(err?.response?.data?.error || err.message || 'Erro ao remover aluno');
@@ -453,7 +458,7 @@ const Alunos: React.FC = () => {
                     <td className="px-3 py-2 text-right space-x-2 whitespace-nowrap">
                       <button onClick={() => { setEditando(a); setModalOpen(true); }}
                         className="text-xs text-primary-600 hover:text-primary-800">Editar</button>
-                      <button onClick={() => handleDelete(a.id)}
+                      <button onClick={() => { setDeleteTarget({ id: a.id, nome: a.nome }); setDeleteMotivo('falta'); }}
                         className="text-xs text-red-500 hover:text-red-700">Remover</button>
                     </td>
                   </tr>
@@ -468,6 +473,55 @@ const Alunos: React.FC = () => {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-40" onClick={() => setDeleteTarget(null)}>
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-800">Remover Aluno</h3>
+            <p className="text-sm text-gray-600">
+              Removendo: <strong>{deleteTarget.nome}</strong>
+            </p>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-2">Motivo da exclusão</label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: 'falta', label: 'Falta' },
+                  { value: 'desistencia', label: 'Desistência' },
+                  { value: 'transferencia', label: 'Transferência' },
+                  { value: 'documentacao', label: 'Documentação' },
+                ].map((m) => (
+                  <button
+                    key={m.value}
+                    type="button"
+                    onClick={() => setDeleteMotivo(m.value)}
+                    className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                      deleteMotivo === m.value
+                        ? 'bg-red-100 text-red-700 border-red-300'
+                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end pt-2">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="text-sm px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="text-sm px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
+              >
+                Confirmar Exclusão
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
