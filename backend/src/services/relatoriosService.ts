@@ -6,6 +6,8 @@ import type {
   DemograficoData, DemograficoItem, OcupacaoData, OcupacaoTurmaItem,
 } from '../types';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function frequenciaAluno(
   tenantId: string,
   mes: number,
@@ -25,7 +27,7 @@ export async function frequenciaAluno(
 
   if (!logs || logs.length === 0) return [];
 
-  const alunoIds = [...new Set(logs.map((l: any) => l.grupo_id))];
+  const alunoIds = [...new Set(logs.map((l: any) => l.grupo_id))].filter((id) => UUID_RE.test(id as string));
 
   const { data: alunos, error: alunosError } = await supabase
     .from('alunos')
@@ -109,7 +111,7 @@ export async function frequenciaTurma(
 
   if (!logs || logs.length === 0) return [];
 
-  const alunoIds = [...new Set(logs.map((l: any) => l.grupo_id))];
+  const alunoIds = [...new Set(logs.map((l: any) => l.grupo_id))].filter((id) => UUID_RE.test(id as string));
 
   const { data: alunos, error: alunosError } = await supabase
     .from('alunos')
