@@ -72,8 +72,10 @@ const TabCancelamentos: React.FC = () => {
   const sorted = useMemo(() => {
     if (!data?.registros) return [];
     let list = data.registros;
-    if (escopoFiltro !== 'todos') {
-      list = list.filter((r) => r.tipo_select === escopoFiltro);
+    if (escopoFiltro === 'pessoal') {
+      list = list.filter((r) => r.tipo_select === 'pessoal');
+    } else if (escopoFiltro === 'geral') {
+      list = list.filter((r) => r.tipo_select !== 'pessoal');
     }
     list = [...list];
     for (let i = sortRules.length - 1; i >= 0; i--) {
