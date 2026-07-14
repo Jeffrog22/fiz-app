@@ -77,7 +77,9 @@ const TabCancelamentos: React.FC = () => {
                   <tr>
                     <th className="text-left px-4 py-2 font-medium">Data</th>
                     <th className="text-left px-4 py-2 font-medium">Motivo</th>
-                    <th className="text-left px-4 py-2 font-medium">Tipo</th>
+                    <th className="text-left px-4 py-2 font-medium">Turma</th>
+                    <th className="text-left px-4 py-2 font-medium">Horário</th>
+                    <th className="text-left px-4 py-2 font-medium">Professor</th>
                     <th className="text-left px-4 py-2 font-medium">Grupo</th>
                   </tr>
                 </thead>
@@ -86,7 +88,9 @@ const TabCancelamentos: React.FC = () => {
                     <tr key={i} className="hover:bg-gray-50">
                       <td className="px-4 py-2 text-gray-700 whitespace-nowrap">{formatDateBR(r.data)}</td>
                       <td className="px-4 py-2 text-gray-700 capitalize">{r.motivo}</td>
-                      <td className="px-4 py-2 text-gray-500">{r.tipo_ocorrencia || '-'}</td>
+                      <td className="px-4 py-2 text-gray-700">{r.turma_label || '-'}</td>
+                      <td className="px-4 py-2 text-gray-700">{r.horario ? r.horario.substring(0, 5) : '-'}</td>
+                      <td className="px-4 py-2 text-gray-700">{r.professor || '-'}</td>
                       <td className="px-4 py-2 text-gray-500 font-mono text-xs">{r.grupo_id}</td>
                     </tr>
                   ))}

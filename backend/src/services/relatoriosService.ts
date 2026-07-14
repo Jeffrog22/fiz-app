@@ -313,6 +313,17 @@ export async function cancelamentos(
 
   if (error) throw new AppError('Erro ao buscar cancelamentos', 500);
 
+  const [turmasRes, profsRes] = await Promise.all([
+    supabase.from('turmas').select('grupo_id, label, horario, professor_id').eq('tenant_id', tenantId),
+    supabase.from('professores').select('id, nome').eq('tenant_id', tenantId),
+  ]);
+
+  if (turmasRes.error) throw new AppError('Erro ao buscar turmas', 500);
+  if (profsRes.error) throw new AppError('Erro ao buscar professores', 500);
+
+  const turmaMap = new Map((turmasRes.data || []).map((t: any) => [t.grupo_id, t]));
+  const profMap = new Map((profsRes.data || []).map((p: any) => [p.id, p.nome]));
+
   const total = (data || []).length;
   const porMotivoMap = new Map<string, number>();
   const porMesMap = new Map<number, number>();
@@ -323,7 +334,16 @@ export async function cancelamentos(
     porMotivoMap.set(motivo, (porMotivoMap.get(motivo) || 0) + 1);
     const m = new Date(item.data).getMonth() + 1;
     porMesMap.set(m, (porMesMap.get(m) || 0) + 1);
-    registros.push({ data: item.data, motivo: item.motivo || item.tipo_ocorrencia || 'outro', tipo_ocorrencia: item.tipo_ocorrencia || undefined, grupo_id: item.grupo_id || '' });
+
+    const turma = item.grupo_id ? turmaMap.get(item.grupo_id) : undefined;
+    registros.push({
+      data: item.data,
+      motivo,
+      grupo_id: item.grupo_id || '',
+      turma_label: turma?.label,
+      horario: turma?.horario,
+      professor: turma?.professor_id ? profMap.get(turma.professor_id) || '-' : '-',
+    });
   }
 
   const porMotivo: CancelamentoItem[] = Array.from(porMotivoMap.entries())
@@ -338,7 +358,11 @@ export async function cancelamentos(
     .map(([m, count]) => ({ mes: m, total: count }))
     .sort((a, b) => a.mes - b.mes);
 
-  registros.sort((a, b) => b.data.localeCompare(a.data));
+  registros.sort((a, b) => {
+    const h = (a.horario || '').localeCompare(b.horario || '');
+    if (h !== 0) return h;
+    return b.data.localeCompare(a.data);
+  });
 
   return { total, porMotivo, porMes, registros };
 }

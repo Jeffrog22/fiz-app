@@ -185,8 +185,10 @@ export interface CancelamentoItem {
 export interface CancelamentoRegistro {
   data: string;
   motivo: string;
-  tipo_ocorrencia?: string;
   grupo_id: string;
+  turma_label?: string;
+  horario?: string;
+  professor?: string;
 }
 
 export interface CancelamentoData {
