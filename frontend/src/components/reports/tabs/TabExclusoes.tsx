@@ -24,10 +24,8 @@ const TabExclusoes: React.FC = () => {
     return () => { active = false; };
   }, [ano]);
 
-  if (loading) return <p className="text-sm text-gray-500">Carregando...</p>;
-  if (!data || data.total === 0) return <p className="text-sm text-gray-400">Nenhuma exclusão encontrada.</p>;
-
-  const pieData = data.porMotivo.map((d) => ({ name: d.motivo.charAt(0).toUpperCase() + d.motivo.slice(1), value: d.total }));
+  const hasData = !!data && data.total > 0;
+  const pieData = hasData ? data.porMotivo.map((d) => ({ name: d.motivo.charAt(0).toUpperCase() + d.motivo.slice(1), value: d.total })) : [];
 
   return (
     <div className="space-y-4">
@@ -35,38 +33,46 @@ const TabExclusoes: React.FC = () => {
         <span className="text-sm text-gray-500">Ano:</span>
         <YearPicker ano={ano} onChange={setAno} />
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <CardStat titulo="Total de Exclusões" valor={data.total} cor="text-red-600" icon="🗑️" />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribuição por Motivo</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie data={pieData} cx="50%" cy="50%" outerRadius={80} dataKey="value"
-                label={({ name, percent }: { name?: string; percent?: number }) => `${name || ''} ${((percent || 0) * 100).toFixed(0)}%`}
-              >
-                {pieData.map((entry, idx) => (<Cell key={idx} fill={CORES_MOTIVO[entry.name.toLowerCase()] || '#94a3b8'} />))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="space-y-2">
-          {data.porMotivo.map((item) => (
-            <div key={item.motivo} className="bg-white rounded-lg border border-gray-200 p-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: CORES_MOTIVO[item.motivo] || '#94a3b8' }} />
-                <span className="text-sm font-medium text-gray-700 capitalize">{item.motivo}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-500">{item.percentual}%</span>
-                <span className="text-sm font-bold text-gray-800">{item.total}</span>
-              </div>
+      {loading ? (
+        <p className="text-sm text-gray-500">Carregando...</p>
+      ) : !hasData ? (
+        <p className="text-sm text-gray-400">Nenhuma exclusão encontrada.</p>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <CardStat titulo="Total de Exclusões" valor={data!.total} cor="text-red-600" icon="🗑️" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribuição por Motivo</h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie data={pieData} cx="50%" cy="50%" outerRadius={80} dataKey="value"
+                    label={({ name, percent }: { name?: string; percent?: number }) => `${name || ''} ${((percent || 0) * 100).toFixed(0)}%`}
+                  >
+                    {pieData.map((entry, idx) => (<Cell key={idx} fill={CORES_MOTIVO[entry.name.toLowerCase()] || '#94a3b8'} />))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-          ))}
-        </div>
-      </div>
+            <div className="space-y-2">
+              {data!.porMotivo.map((item) => (
+                <div key={item.motivo} className="bg-white rounded-lg border border-gray-200 p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: CORES_MOTIVO[item.motivo] || '#94a3b8' }} />
+                    <span className="text-sm font-medium text-gray-700 capitalize">{item.motivo}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-gray-500">{item.percentual}%</span>
+                    <span className="text-sm font-bold text-gray-800">{item.total}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
