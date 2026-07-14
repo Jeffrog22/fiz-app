@@ -115,14 +115,15 @@ export class ChamadasController {
               const grupoIds = (turmasLabel || []).map((t: any) => t.grupo_id);
               if (grupoIds.length > 0) {
                 const idx = indice_aula ?? 0;
-                await supabase
-                  .from('chamadas_log')
-                  .delete()
-                  .eq('tenant_id', tenantId)
-                  .eq('data', data)
-                  .eq('indice_aula', idx)
-                  .in('grupo_id', grupoIds)
-                  .eq('origem', 'extrapolado');
+                  await supabase
+                    .from('chamadas_log')
+                    .delete()
+                    .eq('tenant_id', tenantId)
+                    .eq('data', data)
+                    .eq('indice_aula', idx)
+                    .in('grupo_id', grupoIds)
+                    .eq('origem', 'extrapolado')
+                    .is('tipo_ocorrencia', null);
                 console.log('[salvarCardAula] Logs extrapolados limpos para label:', turmaOrigem.label, 'indice:', idx);
               }
             }

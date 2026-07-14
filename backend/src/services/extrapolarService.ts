@@ -80,7 +80,7 @@ async function extrapolarPorLabel(
     });
   }
 
-  const logsCriados: any[] = [];
+  let logsCriados: any[] = [];
 
   for (const [profId, turmas] of profGroups) {
     const maxIndices = turmas.length;
@@ -209,6 +209,22 @@ async function extrapolarPorLabel(
 
   if (logsCriados.length === 0) {
     return { message: 'Nenhum índice precisou de extrapolação', count: 0 };
+  }
+
+  const comBO = new Set<string>();
+  const { data: existentesBO } = await supabase
+    .from('chamadas_log')
+    .select('grupo_id, indice_aula')
+    .eq('tenant_id', tenantId)
+    .eq('data', data)
+    .not('tipo_ocorrencia', 'is', null);
+  for (const r of existentesBO || []) {
+    comBO.add(`${r.grupo_id}|${r.indice_aula}`);
+  }
+  logsCriados = logsCriados.filter((l) => !comBO.has(`${l.grupo_id}|${l.indice_aula}`));
+
+  if (logsCriados.length === 0) {
+    return { message: 'Registros já possuem CardBO — extrapolação ignorada', count: 0 };
   }
 
   const BATCH_SIZE = 100;
