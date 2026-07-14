@@ -11,7 +11,7 @@ interface HorarioAgrupado {
   turmas: OcupacaoTurmaItem[];
 }
 
-const corBarra = (pct: number) => pct >= 80 ? 'bg-red-500' : pct >= 50 ? 'bg-yellow-500' : 'bg-green-500';
+const corBarra = (ocup: number, cap: number) => ocup > cap ? 'bg-red-500' : ocup === cap ? 'bg-yellow-500' : 'bg-blue-500';
 const formatTime = (s: string) => s.length >= 5 ? s.substring(0, 5) : s;
 
 const TabOcupacao: React.FC = () => {
@@ -94,7 +94,7 @@ const TabOcupacao: React.FC = () => {
                     >
                       <span className="text-xs font-medium text-gray-500 w-10">{formatTime(h.horario)}</span>
                       <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full ${corBarra(h.percentual)}`} style={{ width: `${h.percentual}%` }} />
+                        <div className={`h-full rounded-full ${corBarra(h.totalOcupacao, h.totalCapacidade)}`} style={{ width: `${h.percentual}%` }} />
                       </div>
                       <span className="text-sm font-semibold text-gray-700 w-8 text-right">{h.totalOcupacao}</span>
                       <span className={`text-xs transition-transform ${isOpen ? 'rotate-180' : ''}`}>▼</span>
@@ -107,7 +107,7 @@ const TabOcupacao: React.FC = () => {
                               {t.nivel || 'Sem nível'} | {t.professor}
                             </span>
                             <div className="w-20 h-2.5 bg-gray-100 rounded-full overflow-hidden flex-shrink-0">
-                              <div className={`h-full rounded-full ${corBarra(t.percentual)}`} style={{ width: `${t.percentual}%` }} />
+                              <div className={`h-full rounded-full ${corBarra(t.ocupacao, t.capacidade)}`} style={{ width: `${t.percentual}%` }} />
                             </div>
                             <span className="text-gray-700 font-medium w-14 text-right flex-shrink-0">{t.ocupacao}/{t.capacidade}</span>
                           </div>
@@ -143,7 +143,7 @@ const TabOcupacao: React.FC = () => {
                 <td className="px-4 py-2 text-gray-600">{d.nivel || '-'}</td>
                 <td className="px-4 py-2 text-center font-medium text-gray-800">{d.ocupacao}/{d.capacidade}</td>
                 <td className="px-4 py-2 text-center">
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded ${d.percentual >= 80 ? 'bg-red-100 text-red-700' : d.percentual >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>{d.percentual}%</span>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded ${d.ocupacao > d.capacidade ? 'bg-red-100 text-red-700' : d.ocupacao === d.capacidade ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}`}>{d.percentual}%</span>
                 </td>
               </tr>
             ))}
