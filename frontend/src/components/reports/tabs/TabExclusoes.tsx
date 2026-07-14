@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../utils/api';
 import CardStat from '../CardStat';
+import PeriodPicker from '../PeriodPicker';
 import YearPicker from '../YearPicker';
 import type { ExclusaoStatsItem } from '../../../types';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
@@ -9,30 +10,62 @@ const CORES_MOTIVO: Record<string, string> = {
   falta: '#ef4444', desistencia: '#f59e0b', transferencia: '#3b82f6', documentacao: '#94a3b8',
 };
 
+type Modo = 'historico' | 'ano' | 'mes';
+
+const hoje = new Date();
 const TabExclusoes: React.FC = () => {
-  const [ano, setAno] = useState(new Date().getFullYear());
+  const [modo, setModo] = useState<Modo>('historico');
+  const [mes, setMes] = useState(hoje.getMonth() + 1);
+  const [ano, setAno] = useState(hoje.getFullYear());
   const [data, setData] = useState<{ porMotivo: ExclusaoStatsItem[]; total: number } | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const params = modo === 'historico' ? { mes: 0, ano: 0 }
+    : modo === 'ano' ? { mes: 0, ano }
+    : { mes, ano };
 
   useEffect(() => {
     let active = true;
     setLoading(true);
-    api.get('/relatorios/exclusoes-stats', { params: { mes: 0, ano } })
+    api.get('/relatorios/exclusoes-stats', { params })
       .then((res) => { if (active) setData(res.data); })
       .catch(() => { if (active) setData(null); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [ano]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.mes, params.ano]);
 
   const hasData = !!data && data.total > 0;
   const pieData = hasData ? data.porMotivo.map((d) => ({ name: d.motivo.charAt(0).toUpperCase() + d.motivo.slice(1), value: d.total })) : [];
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-500">Ano:</span>
-        <YearPicker ano={ano} onChange={setAno} />
+      <div className="flex gap-1 border-b border-gray-200">
+        {(['historico', 'ano', 'mes'] as Modo[]).map((m) => (
+          <button
+            key={m}
+            onClick={() => setModo(m)}
+            className={`px-4 py-1.5 text-sm font-medium border-b-2 transition-colors -mb-px capitalize ${
+              modo === m
+                ? 'border-primary-600 text-primary-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {m === 'historico' ? 'Histórico' : m === 'ano' ? 'Ano' : 'Mês'}
+          </button>
+        ))}
       </div>
+
+      {modo === 'ano' && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">Ano:</span>
+          <YearPicker ano={ano} onChange={setAno} />
+        </div>
+      )}
+      {modo === 'mes' && (
+        <PeriodPicker mes={mes} ano={ano} onChange={(m, a) => { setMes(m); setAno(a); }} />
+      )}
+
       {loading ? (
         <p className="text-sm text-gray-500">Carregando...</p>
       ) : !hasData ? (
