@@ -23,14 +23,17 @@ export async function frequenciaAluno(
   mes: number,
   ano: number
 ): Promise<FrequenciaAlunoItem[]> {
-  const { inicio, fim } = mesDateRange(mes, ano);
-
-  const { data: logs, error: logsError } = await supabase
+  let query = supabase
     .from('chamadas_log')
     .select('grupo_id, status')
-    .eq('tenant_id', tenantId)
-    .gte('data', inicio)
-    .lte('data', fim);
+    .eq('tenant_id', tenantId);
+
+  if (ano !== 0) {
+    const { inicio, fim } = mesDateRange(mes, ano);
+    query = query.gte('data', inicio).lte('data', fim);
+  }
+
+  const { data: logs, error: logsError } = await query;
 
   if (logsError) throw new AppError('Erro ao buscar chamadas', 500);
   if (!logs || logs.length === 0) return [];
@@ -122,14 +125,17 @@ export async function frequenciaTurma(
   mes: number,
   ano: number
 ): Promise<FrequenciaTurmaItem[]> {
-  const { inicio, fim } = mesDateRange(mes, ano);
-
-  const { data: logs, error: logsError } = await supabase
+  let query = supabase
     .from('chamadas_log')
     .select('grupo_id, status')
-    .eq('tenant_id', tenantId)
-    .gte('data', inicio)
-    .lte('data', fim);
+    .eq('tenant_id', tenantId);
+
+  if (ano !== 0) {
+    const { inicio, fim } = mesDateRange(mes, ano);
+    query = query.gte('data', inicio).lte('data', fim);
+  }
+
+  const { data: logs, error: logsError } = await query;
 
   if (logsError) throw new AppError('Erro ao buscar chamadas', 500);
   if (!logs || logs.length === 0) return [];
