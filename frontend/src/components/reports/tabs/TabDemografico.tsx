@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../../utils/api';
 import CardStat from '../CardStat';
 import type { DemograficoData } from '../../../types';
-import { PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LabelList } from 'recharts';
 
 const CORES_CAT = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 const CORES_GEN = ['#3b82f6', '#ec4899', '#94a3b8'];
@@ -24,7 +24,10 @@ const TabDemografico: React.FC = () => {
   if (loading) return <p className="text-sm text-gray-500">Carregando...</p>;
   if (!data || data.total === 0) return <p className="text-sm text-gray-400">Nenhum aluno ativo encontrado.</p>;
 
-  const catPie = data.porCategoria.map((d) => ({ name: d.label, value: d.percentual }));
+  const catPie = [...data.porCategoria]
+    .sort((a, b) => b.percentual - a.percentual)
+    .slice(0, 5)
+    .map((d) => ({ name: d.label, value: d.percentual }));
   const genPie = data.porGenero.map((d) => ({ name: d.label, value: d.total }));
 
   return (
@@ -42,7 +45,9 @@ const TabDemografico: React.FC = () => {
               <XAxis type="number" domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} />
               <YAxis type="category" dataKey="name" width={120} interval={0} tick={{ fontSize: 10 }} />
               <Tooltip formatter={(value: any) => `${Number(value) || 0}%`} />
-              <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={12} />
+              <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={12}>
+                <LabelList dataKey="value" position="right" formatter={(v: any) => `${v}%`} />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
