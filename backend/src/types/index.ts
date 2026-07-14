@@ -182,10 +182,17 @@ export interface CancelamentoItem {
   percentual: number;
 }
 
+export interface CancelamentoRegistro {
+  data: string;
+  motivo: string;
+  grupo_id: string;
+}
+
 export interface CancelamentoData {
   total: number;
   porMotivo: CancelamentoItem[];
   porMes: { mes: number; total: number }[];
+  registros?: CancelamentoRegistro[];
 }
 
 export interface PiscinaRegistro {

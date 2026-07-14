@@ -4,6 +4,7 @@ import CardStat from '../CardStat';
 import YearPicker from '../YearPicker';
 import type { CancelamentoData } from '../../../types';
 import { PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import { formatDateBR } from '../../../utils/formatters';
 
 const CORES = ['#ef4444', '#f59e0b', '#3b82f6', '#94a3b8'];
 
@@ -62,6 +63,33 @@ const TabCancelamentos: React.FC = () => {
                   <Bar dataKey="Cancelamentos" fill="#f97316" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden mt-6">
+            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-700">Ocorrências</h3>
+              <span className="text-xs text-gray-500">{data!.registros?.length || 0} registro(s)</span>
+            </div>
+            <div className="max-h-96 overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-gray-50 text-xs uppercase text-gray-500">
+                  <tr>
+                    <th className="text-left px-4 py-2 font-medium">Data</th>
+                    <th className="text-left px-4 py-2 font-medium">Motivo</th>
+                    <th className="text-left px-4 py-2 font-medium">Grupo</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {(data!.registros || []).map((r, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 text-gray-700 whitespace-nowrap">{formatDateBR(r.data)}</td>
+                      <td className="px-4 py-2 text-gray-700 capitalize">{r.motivo}</td>
+                      <td className="px-4 py-2 text-gray-500 font-mono text-xs">{r.grupo_id}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </>

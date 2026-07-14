@@ -1,8 +1,9 @@
 import { supabase } from './supabaseClient';
 import { AppError } from '../middleware/errorHandler';
+import { calcularCategoria } from './alunosService';
 import type {
   FrequenciaAlunoItem, FrequenciaTurmaItem, RotatividadeItem, ExclusaoStatsItem,
-  CancelamentoData, CancelamentoItem, PiscinaHistoricoData, PiscinaRegistro,
+  CancelamentoData, CancelamentoItem, CancelamentoRegistro, PiscinaHistoricoData, PiscinaRegistro,
   DemograficoData, DemograficoItem, OcupacaoData, OcupacaoTurmaItem,
 } from '../types';
 
@@ -304,7 +305,7 @@ export async function cancelamentos(
 
   const { data, error } = await supabase
     .from('chamadas_log')
-    .select('status, motivo, data')
+    .select('status, motivo, data, grupo_id')
     .eq('tenant_id', tenantId)
     .eq('status', 'cancelado')
     .gte('data', inicio)
@@ -315,12 +316,14 @@ export async function cancelamentos(
   const total = (data || []).length;
   const porMotivoMap = new Map<string, number>();
   const porMesMap = new Map<number, number>();
+  const registros: CancelamentoRegistro[] = [];
 
   for (const item of data || []) {
     const motivo = item.motivo || 'outro';
     porMotivoMap.set(motivo, (porMotivoMap.get(motivo) || 0) + 1);
     const m = new Date(item.data).getMonth() + 1;
     porMesMap.set(m, (porMesMap.get(m) || 0) + 1);
+    registros.push({ data: item.data, motivo: item.motivo || 'outro', grupo_id: item.grupo_id || '' });
   }
 
   const porMotivo: CancelamentoItem[] = Array.from(porMotivoMap.entries())
@@ -335,7 +338,9 @@ export async function cancelamentos(
     .map(([m, count]) => ({ mes: m, total: count }))
     .sort((a, b) => a.mes - b.mes);
 
-  return { total, porMotivo, porMes };
+  registros.sort((a, b) => b.data.localeCompare(a.data));
+
+  return { total, porMotivo, porMes, registros };
 }
 
 export async function piscinaHistorico(
@@ -399,7 +404,8 @@ export async function demografico(tenantId: string): Promise<DemograficoData> {
   let countIdade = 0;
 
   for (const a of alunos) {
-    if (a.categoria) porCategoriaMap.set(a.categoria, (porCategoriaMap.get(a.categoria) || 0) + 1);
+    const cat = a.categoria || (a.data_nascimento ? calcularCategoria(a.data_nascimento) : null);
+    if (cat) porCategoriaMap.set(cat, (porCategoriaMap.get(cat) || 0) + 1);
     if (a.genero) porGeneroMap.set(a.genero, (porGeneroMap.get(a.genero) || 0) + 1);
     if (a.data_nascimento) {
       const nasc = new Date(a.data_nascimento);
