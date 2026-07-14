@@ -494,6 +494,7 @@ export async function ocupacao(tenantId: string): Promise<OcupacaoData> {
       label: t.label || '',
       horario: t.horario || '',
       professor: t.professor_id ? profMap.get(t.professor_id) || '-' : '-',
+      nivel: t.nivel || undefined,
       capacidade: cap,
       ocupacao: ocup,
       percentual: cap > 0 ? Math.round((ocup / cap) * 100) : 0,

@@ -235,6 +235,7 @@ export interface OcupacaoTurmaItem {
   label: string;
   horario: string;
   professor: string;
+  nivel?: string;
   capacidade: number;
   ocupacao: number;
   percentual: number;
