@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../../utils/api';
 import CardStat from '../CardStat';
 import type { DemograficoData } from '../../../types';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 
 const CORES_CAT = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 const CORES_GEN = ['#3b82f6', '#ec4899', '#94a3b8'];
@@ -38,14 +38,12 @@ const TabDemografico: React.FC = () => {
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribuição por Categoria</h3>
           <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie data={catPie} cx="50%" cy="50%" outerRadius={80} dataKey="value"
-                label={({ name, percent }: { name?: string; percent?: number }) => `${name || ''} ${((percent || 0) * 100).toFixed(0)}%`}
-              >
-                {catPie.map((_, idx) => (<Cell key={idx} fill={CORES_CAT[idx % CORES_CAT.length]} />))}
-              </Pie>
+            <BarChart data={catPie} layout="vertical" margin={{ left: 90 }}>
+              <XAxis type="number" />
+              <YAxis type="category" dataKey="name" width={90} tick={{ fontSize: 12 }} />
               <Tooltip />
-            </PieChart>
+              <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+            </BarChart>
           </ResponsiveContainer>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-4">

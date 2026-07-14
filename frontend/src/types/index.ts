@@ -211,6 +211,7 @@ export interface CancelamentoItem {
 export interface CancelamentoRegistro {
   data: string;
   motivo: string;
+  tipo_ocorrencia?: string;
   grupo_id: string;
 }
 

@@ -305,7 +305,7 @@ export async function cancelamentos(
 
   const { data, error } = await supabase
     .from('chamadas_log')
-    .select('status, motivo, data, grupo_id')
+    .select('status, motivo, data, grupo_id, tipo_ocorrencia')
     .eq('tenant_id', tenantId)
     .eq('status', 'cancelado')
     .gte('data', inicio)
@@ -319,11 +319,11 @@ export async function cancelamentos(
   const registros: CancelamentoRegistro[] = [];
 
   for (const item of data || []) {
-    const motivo = item.motivo || 'outro';
+    const motivo = item.motivo || item.tipo_ocorrencia || 'outro';
     porMotivoMap.set(motivo, (porMotivoMap.get(motivo) || 0) + 1);
     const m = new Date(item.data).getMonth() + 1;
     porMesMap.set(m, (porMesMap.get(m) || 0) + 1);
-    registros.push({ data: item.data, motivo: item.motivo || 'outro', grupo_id: item.grupo_id || '' });
+    registros.push({ data: item.data, motivo: item.motivo || item.tipo_ocorrencia || 'outro', tipo_ocorrencia: item.tipo_ocorrencia || undefined, grupo_id: item.grupo_id || '' });
   }
 
   const porMotivo: CancelamentoItem[] = Array.from(porMotivoMap.entries())
