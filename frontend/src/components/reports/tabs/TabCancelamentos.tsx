@@ -7,6 +7,7 @@ import { PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, ResponsiveCo
 import { formatDateBR } from '../../../utils/formatters';
 
 const CORES = ['#ef4444', '#f59e0b', '#3b82f6', '#94a3b8'];
+const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
 interface SortRule {
   column: string;
@@ -67,7 +68,7 @@ const TabCancelamentos: React.FC = () => {
 
   const hasData = !!data && data.total > 0;
   const pieData = hasData ? data.porMotivo.map((d) => ({ name: d.motivo.charAt(0).toUpperCase() + d.motivo.slice(1), value: d.total })) : [];
-  const barData = hasData ? data.porMes.map((d) => ({ mes: String(d.mes).padStart(2, '0'), Cancelamentos: d.total })) : [];
+  const barData = hasData ? data.porMes.map((d) => ({ mes: MESES[d.mes - 1] || String(d.mes), Cancelamentos: d.total })) : [];
 
   const sorted = useMemo(() => {
     if (!data?.registros) return [];
