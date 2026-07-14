@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../../utils/api';
 import CardStat from '../CardStat';
 import YearPicker from '../YearPicker';
@@ -8,11 +8,17 @@ import { formatDateBR } from '../../../utils/formatters';
 
 const CORES = ['#ef4444', '#f59e0b', '#3b82f6', '#94a3b8'];
 
+interface SortRule {
+  column: string;
+  dir: 'asc' | 'desc';
+}
+
 const hoje = new Date();
 const TabCancelamentos: React.FC = () => {
   const [ano, setAno] = useState(hoje.getFullYear());
   const [data, setData] = useState<CancelamentoData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sortRules, setSortRules] = useState<SortRule[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -24,9 +30,67 @@ const TabCancelamentos: React.FC = () => {
     return () => { active = false; };
   }, [ano]);
 
+  const toggleSort = (column: string) => {
+    setSortRules((prev) => {
+      const idx = prev.findIndex((r) => r.column === column);
+      if (idx === 0) {
+        if (prev[0].dir === 'asc') return [{ column, dir: 'desc' }, ...prev.slice(1)];
+        return prev.slice(1);
+      }
+      return [{ column, dir: 'asc' }, ...prev.filter((r) => r.column !== column)];
+    });
+  };
+
+  const sortIcon = (column: string) => {
+    const idx = sortRules.findIndex((r) => r.column === column);
+    if (idx === -1) return null;
+    const dir = sortRules[idx].dir;
+    return (
+      <span className="ml-1 text-xs text-primary-600">
+        {idx > 0 && <sup className="text-[10px]">{idx + 1}</sup>}
+        {dir === 'asc' ? '\u25B2' : '\u25BC'}
+      </span>
+    );
+  };
+
+  const thSort = (column: string, label: string) => (
+    <button
+      type="button"
+      onClick={() => toggleSort(column)}
+      className="font-medium text-gray-500 hover:text-gray-700 text-left text-xs uppercase whitespace-nowrap"
+    >
+      {label}
+      {sortIcon(column)}
+    </button>
+  );
+
   const hasData = !!data && data.total > 0;
   const pieData = hasData ? data.porMotivo.map((d) => ({ name: d.motivo.charAt(0).toUpperCase() + d.motivo.slice(1), value: d.total })) : [];
   const barData = hasData ? data.porMes.map((d) => ({ mes: String(d.mes).padStart(2, '0'), Cancelamentos: d.total })) : [];
+
+  const sorted = useMemo(() => {
+    if (!data?.registros) return [];
+    const list = [...data.registros];
+    for (let i = sortRules.length - 1; i >= 0; i--) {
+      const { column, dir } = sortRules[i];
+      list.sort((a, b) => {
+        let va: string, vb: string;
+        switch (column) {
+          case 'data': va = a.data; vb = b.data; break;
+          case 'motivo': va = a.motivo; vb = b.motivo; break;
+          case 'turma_label': va = a.turma_label || ''; vb = b.turma_label || ''; break;
+          case 'horario': va = a.horario || ''; vb = b.horario || ''; break;
+          case 'professor': va = a.professor || ''; vb = b.professor || ''; break;
+          case 'grupo_id': va = a.grupo_id; vb = b.grupo_id; break;
+          default: return 0;
+        }
+        if (va < vb) return dir === 'asc' ? -1 : 1;
+        if (va > vb) return dir === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return list;
+  }, [data, sortRules]);
 
   return (
     <div className="space-y-4">
@@ -69,22 +133,22 @@ const TabCancelamentos: React.FC = () => {
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden mt-6">
             <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-gray-700">Ocorrências</h3>
-              <span className="text-xs text-gray-500">{data!.registros?.length || 0} registro(s)</span>
+              <span className="text-xs text-gray-500">{sorted.length} registro(s)</span>
             </div>
             <div className="max-h-96 overflow-y-auto">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-gray-50 text-xs uppercase text-gray-500">
                   <tr>
-                    <th className="text-left px-4 py-2 font-medium">Data</th>
-                    <th className="text-left px-4 py-2 font-medium">Motivo</th>
-                    <th className="text-left px-4 py-2 font-medium">Turma</th>
-                    <th className="text-left px-4 py-2 font-medium">Horário</th>
-                    <th className="text-left px-4 py-2 font-medium">Professor</th>
-                    <th className="text-left px-4 py-2 font-medium">Grupo</th>
+                    <th className="text-left px-4 py-2 font-medium">{thSort('data', 'Data')}</th>
+                    <th className="text-left px-4 py-2 font-medium">{thSort('motivo', 'Motivo')}</th>
+                    <th className="text-left px-4 py-2 font-medium">{thSort('turma_label', 'Turma')}</th>
+                    <th className="text-left px-4 py-2 font-medium">{thSort('horario', 'Horário')}</th>
+                    <th className="text-left px-4 py-2 font-medium">{thSort('professor', 'Professor')}</th>
+                    <th className="text-left px-4 py-2 font-medium">{thSort('grupo_id', 'Grupo')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {(data!.registros || []).map((r, i) => (
+                  {sorted.map((r, i) => (
                     <tr key={i} className="hover:bg-gray-50">
                       <td className="px-4 py-2 text-gray-700 whitespace-nowrap">{formatDateBR(r.data)}</td>
                       <td className="px-4 py-2 text-gray-700 capitalize">{r.motivo}</td>
