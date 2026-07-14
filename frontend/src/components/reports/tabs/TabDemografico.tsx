@@ -37,10 +37,10 @@ const TabDemografico: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribuição por Categoria</h3>
-          <ResponsiveContainer width="100%" height={250}>
+          <ResponsiveContainer width="100%" height={Math.max(250, catPie.length * 32)}>
             <BarChart data={catPie} layout="vertical" margin={{ left: 90 }}>
               <XAxis type="number" domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} />
-              <YAxis type="category" dataKey="name" width={90} tick={{ fontSize: 12 }} />
+              <YAxis type="category" dataKey="name" width={90} interval={0} tick={{ fontSize: 10 }} />
               <Tooltip formatter={(value: any) => `${Number(value) || 0}%`} />
               <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} />
             </BarChart>
