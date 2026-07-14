@@ -24,7 +24,7 @@ const TabDemografico: React.FC = () => {
   if (loading) return <p className="text-sm text-gray-500">Carregando...</p>;
   if (!data || data.total === 0) return <p className="text-sm text-gray-400">Nenhum aluno ativo encontrado.</p>;
 
-  const catPie = data.porCategoria.map((d) => ({ name: d.label, value: d.total }));
+  const catPie = data.porCategoria.map((d) => ({ name: d.label, value: d.percentual }));
   const genPie = data.porGenero.map((d) => ({ name: d.label, value: d.total }));
 
   return (
@@ -39,9 +39,9 @@ const TabDemografico: React.FC = () => {
           <h3 className="text-sm font-semibold text-gray-700 mb-3">Distribuição por Categoria</h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={catPie} layout="vertical" margin={{ left: 90 }}>
-              <XAxis type="number" />
+              <XAxis type="number" domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} />
               <YAxis type="category" dataKey="name" width={90} tick={{ fontSize: 12 }} />
-              <Tooltip />
+              <Tooltip formatter={(value: any) => `${Number(value) || 0}%`} />
               <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
