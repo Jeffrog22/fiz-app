@@ -19,6 +19,7 @@ const TabCancelamentos: React.FC = () => {
   const [data, setData] = useState<CancelamentoData | null>(null);
   const [loading, setLoading] = useState(true);
   const [sortRules, setSortRules] = useState<SortRule[]>([]);
+  const [escopoFiltro, setEscopoFiltro] = useState<'todos' | 'pessoal' | 'geral'>('todos');
 
   useEffect(() => {
     let active = true;
@@ -70,7 +71,11 @@ const TabCancelamentos: React.FC = () => {
 
   const sorted = useMemo(() => {
     if (!data?.registros) return [];
-    const list = [...data.registros];
+    let list = data.registros;
+    if (escopoFiltro !== 'todos') {
+      list = list.filter((r) => r.tipo_select === escopoFiltro);
+    }
+    list = [...list];
     for (let i = sortRules.length - 1; i >= 0; i--) {
       const { column, dir } = sortRules[i];
       list.sort((a, b) => {
@@ -90,7 +95,7 @@ const TabCancelamentos: React.FC = () => {
       });
     }
     return list;
-  }, [data, sortRules]);
+  }, [data, sortRules, escopoFiltro]);
 
   return (
     <div className="space-y-4">
@@ -131,8 +136,24 @@ const TabCancelamentos: React.FC = () => {
           </div>
 
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden mt-6">
-            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between gap-2">
               <h3 className="text-sm font-semibold text-gray-700">Ocorrências</h3>
+              <div className="flex items-center gap-1">
+                {(['todos', 'pessoal', 'geral'] as const).map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => setEscopoFiltro(opt)}
+                    className={`px-2 py-0.5 text-[11px] font-medium rounded-full border transition-colors ${
+                      escopoFiltro === opt
+                        ? 'bg-primary-600 text-white border-primary-600'
+                        : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-100'
+                    }`}
+                  >
+                    {opt === 'todos' ? 'Todos' : opt.charAt(0).toUpperCase() + opt.slice(1)}
+                  </button>
+                ))}
+              </div>
               <span className="text-xs text-gray-500">{sorted.length} registro(s)</span>
             </div>
             <div className="max-h-96 overflow-y-auto">

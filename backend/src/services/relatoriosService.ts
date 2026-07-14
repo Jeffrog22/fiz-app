@@ -305,7 +305,7 @@ export async function cancelamentos(
 
   const { data, error } = await supabase
     .from('chamadas_log')
-    .select('status, motivo, data, grupo_id, tipo_ocorrencia')
+    .select('status, motivo, data, grupo_id, tipo_ocorrencia, tipo_select')
     .eq('tenant_id', tenantId)
     .eq('status', 'cancelado')
     .gte('data', inicio)
@@ -342,6 +342,7 @@ export async function cancelamentos(
       grupo_id: item.grupo_id || '',
       turma_label: turma?.label,
       horario: turma?.horario,
+      tipo_select: item.tipo_select || undefined,
       professor: turma?.professor_id ? profMap.get(turma.professor_id) || '-' : '-',
     });
   }

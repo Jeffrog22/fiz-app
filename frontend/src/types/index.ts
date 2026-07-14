@@ -215,6 +215,7 @@ export interface CancelamentoRegistro {
   turma_label?: string;
   horario?: string;
   professor?: string;
+  tipo_select?: string;
 }
 
 export interface CancelamentoData {
