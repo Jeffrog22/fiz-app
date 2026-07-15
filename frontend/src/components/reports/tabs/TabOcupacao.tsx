@@ -11,6 +11,19 @@ interface HorarioAgrupado {
   turmas: OcupacaoTurmaItem[];
 }
 
+interface SortRule {
+  column: string;
+  dir: 'asc' | 'desc';
+}
+
+interface GroupedRow {
+  label: string;
+  horario: string;
+  ocupacao: number;
+  capacidade: number;
+  percentual: number;
+}
+
 const corBarra = (ocup: number, cap: number) => ocup > cap ? 'bg-red-500' : ocup === cap ? 'bg-yellow-500' : 'bg-blue-500';
 const formatTime = (s: string) => s.length >= 5 ? s.substring(0, 5) : s;
 
@@ -18,6 +31,41 @@ const TabOcupacao: React.FC = () => {
   const [data, setData] = useState<OcupacaoData | null>(null);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [sortRules, setSortRules] = useState<SortRule[]>([]);
+
+  const toggleSort = (column: string) => {
+    setSortRules((prev) => {
+      const idx = prev.findIndex((r) => r.column === column);
+      if (idx === 0) {
+        if (prev[0].dir === 'asc') return [{ column, dir: 'desc' }, ...prev.slice(1)];
+        return prev.slice(1);
+      }
+      return [{ column, dir: 'asc' }, ...prev.filter((r) => r.column !== column)];
+    });
+  };
+
+  const sortIcon = (column: string) => {
+    const idx = sortRules.findIndex((r) => r.column === column);
+    if (idx === -1) return null;
+    const dir = sortRules[idx].dir;
+    return (
+      <span className="ml-1 text-xs text-primary-600">
+        {idx > 0 && <sup className="text-[10px]">{idx + 1}</sup>}
+        {dir === 'asc' ? '\u25B2' : '\u25BC'}
+      </span>
+    );
+  };
+
+  const thSort = (column: string, label: string) => (
+    <button
+      type="button"
+      onClick={() => toggleSort(column)}
+      className="font-medium text-gray-500 hover:text-gray-700 text-left text-sm whitespace-nowrap"
+    >
+      {label}
+      {sortIcon(column)}
+    </button>
+  );
 
   useEffect(() => {
     let active = true;
@@ -53,6 +101,39 @@ const TabOcupacao: React.FC = () => {
       horarios: Array.from(horMap.values()).sort((a, b) => a.horario.localeCompare(b.horario)),
     }));
   }, [data]);
+
+  const groupedRows = useMemo(() => {
+    if (!data) return [];
+    const map = new Map<string, GroupedRow>();
+    for (const t of data.turmas) {
+      const key = `${t.label}|${t.horario}`;
+      if (!map.has(key)) {
+        map.set(key, { label: t.label, horario: t.horario, ocupacao: 0, capacidade: 0, percentual: 0 });
+      }
+      const row = map.get(key)!;
+      row.ocupacao += t.ocupacao;
+      row.capacidade += t.capacidade;
+    }
+    for (const row of map.values()) {
+      row.percentual = row.capacidade > 0 ? Math.round((row.ocupacao / row.capacidade) * 100) : 0;
+    }
+    let result = Array.from(map.values());
+    for (let i = sortRules.length - 1; i >= 0; i--) {
+      const { column, dir } = sortRules[i];
+      result.sort((a, b) => {
+        let va: any, vb: any;
+        switch (column) {
+          case 'label': va = a.label.toLowerCase(); vb = b.label.toLowerCase(); break;
+          case 'horario': va = a.horario; vb = b.horario; break;
+          default: return 0;
+        }
+        if (va < vb) return dir === 'asc' ? -1 : 1;
+        if (va > vb) return dir === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return result;
+  }, [data, sortRules]);
 
   const toggleExpand = (key: string) => {
     setExpanded((prev) => {
@@ -126,15 +207,15 @@ const TabOcupacao: React.FC = () => {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Turma</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Horário</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600">{thSort('label', 'Turma')}</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600">{thSort('horario', 'Horário')}</th>
               <th className="text-center px-4 py-3 font-medium text-gray-600">Ocupação</th>
               <th className="text-center px-4 py-3 font-medium text-gray-600">%</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {data.turmas.map((d) => (
-              <tr key={d.grupo_id} className="hover:bg-gray-50">
+            {groupedRows.map((d) => (
+              <tr key={`${d.label}|${d.horario}`} className="hover:bg-gray-50">
                 <td className="px-4 py-2 font-medium text-gray-800">{d.label}</td>
                 <td className="px-4 py-2 text-gray-600">{formatTime(d.horario)}</td>
                 <td className="px-4 py-2 text-center font-medium text-gray-800">{d.ocupacao}/{d.capacidade}</td>
