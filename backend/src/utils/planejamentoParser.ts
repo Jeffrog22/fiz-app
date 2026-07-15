@@ -27,33 +27,62 @@ export function parseRangeFromConteudo(conteudo: string, ano: number): { inicio:
 
   const primeira = linhas[0].toUpperCase();
   const isNovoFormato = !!MESES[primeira];
-  const mesNome = isNovoFormato ? primeira : '';
-  const mesNum = isNovoFormato ? MESES[mesNome] : null;
 
   const semanaIdx = isNovoFormato ? 1 : 0;
   if (semanaIdx >= linhas.length) return null;
   const weekMatch = linhas[semanaIdx].match(/\d+ª\s*semana:\s*(\d{1,2}(?:\/\d{1,2})?)\s*[àa]\s*(\d{1,2}(?:\/\d{1,2})?)/);
   if (!weekMatch) return null;
 
-  const mesFallback = mesNum || extrairMesDoRange(linhas[semanaIdx]);
-  if (!mesFallback) return null;
+  const rawStart = weekMatch[1];
+  const rawEnd = weekMatch[2];
 
-  const parseData = (raw: string, defaultMes: number): Date | null => {
+  const parseExpl = (raw: string): { dia: number; mes?: number } | null => {
     const parts = raw.split('/');
-    let dia: number, mes: number;
     if (parts.length === 2) {
-      dia = parseInt(parts[0], 10);
-      mes = parseInt(parts[1], 10);
-    } else {
-      dia = parseInt(parts[0], 10);
-      mes = defaultMes;
+      const d = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      if (isNaN(d) || isNaN(m)) return null;
+      return { dia: d, mes: m };
     }
-    if (isNaN(dia) || isNaN(mes)) return null;
-    return new Date(ano, mes - 1, dia);
+    const d = parseInt(parts[0], 10);
+    if (isNaN(d)) return null;
+    return { dia: d };
   };
-  let inicio = parseData(weekMatch[1], mesFallback);
-  let fim = parseData(weekMatch[2], mesFallback);
-  if (!inicio || !fim) return null;
+
+  const startInfo = parseExpl(rawStart);
+  const endInfo = parseExpl(rawEnd);
+  if (!startInfo || !endInfo) return null;
+
+  const mesNome = isNovoFormato ? primeira : '';
+  const mesLinha = isNovoFormato ? (MESES[mesNome] || null) : null;
+  const mesRange = extrairMesDoRange(linhas[semanaIdx]);
+  const mesFallback = mesLinha || mesRange;
+
+  let startMes: number;
+  let endMes: number;
+
+  if (startInfo.mes !== undefined && endInfo.mes !== undefined) {
+    startMes = startInfo.mes;
+    endMes = endInfo.mes;
+  } else if (startInfo.mes !== undefined && endInfo.mes === undefined) {
+    startMes = startInfo.mes;
+    endMes = startMes;
+  } else if (startInfo.mes === undefined && endInfo.mes !== undefined) {
+    endMes = endInfo.mes;
+    if (endInfo.dia < startInfo.dia) {
+      startMes = endMes - 1;
+      if (startMes < 1) startMes = 12;
+    } else {
+      startMes = endMes;
+    }
+  } else {
+    if (!mesFallback) return null;
+    startMes = mesFallback;
+    endMes = mesFallback;
+  }
+
+  let inicio = new Date(ano, startMes - 1, startInfo.dia);
+  let fim = new Date(ano, endMes - 1, endInfo.dia);
   if (fim < inicio) fim = new Date(ano + 1, fim.getMonth(), fim.getDate());
   return { inicio, fim };
 }
