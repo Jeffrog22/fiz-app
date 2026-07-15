@@ -9,13 +9,13 @@ interface ParsedFile {
 
 function parseFilename(nomeOriginal: string): { tipo: string; ano: number } {
   const base = path.parse(nomeOriginal).name;
-  const match = base.match(/^(.+)-(\d{4})$/);
+  const match = base.match(/^(.+)[^a-zA-Z](\d{4})$/);
   if (!match) {
     throw new Error(
-      `Nome de arquivo invalido: "${nomeOriginal}". Use o formato {tipo}-{ano}.{ext} (ex: infantil-2026.pdf)`,
+      `Nome de arquivo invalido: "${nomeOriginal}". Use o formato {tipo}-{ano}.{ext} ou {tipo} {ano}.{ext} (ex: infantil-2026.pdf, Planejamento Adulto 2026.pdf)`,
     );
   }
-  return { tipo: match[1].toLowerCase(), ano: parseInt(match[2], 10) };
+  return { tipo: match[1].toLowerCase().trim(), ano: parseInt(match[2], 10) };
 }
 
 function splitIntoBlocks(texto: string): string[] {
