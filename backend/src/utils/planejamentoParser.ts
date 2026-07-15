@@ -12,14 +12,32 @@ export const MESES: Record<string, number> = {
   JULHO: 7, AGOSTO: 8, SETEMBRO: 9, OUTUBRO: 10, NOVEMBRO: 11, DEZEMBRO: 12,
 };
 
+function extrairMesDoRange(weekLine: string): number | null {
+  const matches = [...weekLine.matchAll(/\/(\d{1,2})/g)];
+  if (matches.length > 0) {
+    const m = parseInt(matches[matches.length - 1][1], 10);
+    if (m >= 1 && m <= 12) return m;
+  }
+  return null;
+}
+
 export function parseRangeFromConteudo(conteudo: string, ano: number): { inicio: Date; fim: Date } | null {
   const linhas = conteudo.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
-  if (linhas.length < 2) return null;
-  const mesNome = linhas[0].toUpperCase();
-  const mesNum = MESES[mesNome];
-  if (!mesNum) return null;
-  const weekMatch = linhas[1].match(/\d+ª\s*semana:\s*(\d{1,2}(?:\/\d{1,2})?)\s*[àa]\s*(\d{1,2}(?:\/\d{1,2})?)/);
+  if (linhas.length === 0) return null;
+
+  const primeira = linhas[0].toUpperCase();
+  const isNovoFormato = !!MESES[primeira];
+  const mesNome = isNovoFormato ? primeira : '';
+  const mesNum = isNovoFormato ? MESES[mesNome] : null;
+
+  const semanaIdx = isNovoFormato ? 1 : 0;
+  if (semanaIdx >= linhas.length) return null;
+  const weekMatch = linhas[semanaIdx].match(/\d+ª\s*semana:\s*(\d{1,2}(?:\/\d{1,2})?)\s*[àa]\s*(\d{1,2}(?:\/\d{1,2})?)/);
   if (!weekMatch) return null;
+
+  const mesFallback = mesNum || extrairMesDoRange(linhas[semanaIdx]);
+  if (!mesFallback) return null;
+
   const parseData = (raw: string, defaultMes: number): Date | null => {
     const parts = raw.split('/');
     let dia: number, mes: number;
@@ -33,11 +51,23 @@ export function parseRangeFromConteudo(conteudo: string, ano: number): { inicio:
     if (isNaN(dia) || isNaN(mes)) return null;
     return new Date(ano, mes - 1, dia);
   };
-  let inicio = parseData(weekMatch[1], mesNum);
-  let fim = parseData(weekMatch[2], mesNum);
+  let inicio = parseData(weekMatch[1], mesFallback);
+  let fim = parseData(weekMatch[2], mesFallback);
   if (!inicio || !fim) return null;
   if (fim < inicio) fim = new Date(ano + 1, fim.getMonth(), fim.getDate());
   return { inicio, fim };
+}
+
+export function extrairMesDoConteudo(conteudo: string): number | null {
+  const linhas = conteudo.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+  if (linhas.length === 0) return null;
+  const primeira = linhas[0].toUpperCase();
+  if (MESES[primeira]) return MESES[primeira];
+  for (const linha of linhas) {
+    const m = extrairMesDoRange(linha);
+    if (m) return m;
+  }
+  return null;
 }
 
 function parseFilename(nomeOriginal: string): { tipo: string; ano: number } {
