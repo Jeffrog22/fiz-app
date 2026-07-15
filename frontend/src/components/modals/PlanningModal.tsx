@@ -7,11 +7,34 @@ interface Props {
   onClose: () => void;
 }
 
+function labelChip(tipo: string): string {
+  return tipo.replace(/^planejamento\s+/i, '');
+}
+
+function formatarConteudo(conteudo: string, tipo: string): { cabecalho: string; corpo: string } {
+  const linhas = conteudo.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+  let mes = '';
+  let restante = linhas;
+
+  if (linhas.length > 0 && /^[A-ZÀ-Ú]+$/.test(linhas[0])) {
+    mes = linhas[0];
+    restante = linhas.slice(1);
+  }
+
+  const semanaLine = restante.length > 0 ? restante[0] : '';
+  const corpo = restante.slice(1).join('\n');
+
+  const cabecalho = mes
+    ? `${mes} — ${semanaLine} (${labelChip(tipo)})`
+    : `${semanaLine} (${labelChip(tipo)})`;
+
+  return { cabecalho, corpo };
+}
+
 const PlanningModal: React.FC<Props> = ({ data, onClose }) => {
   const [tipos, setTipos] = useState<string[]>([]);
   const [tipoSelecionado, setTipoSelecionado] = useState<string | null>(null);
   const [bloco, setBloco] = useState<PlanejamentoBloco | null>(null);
-  const [indice, setIndice] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -30,14 +53,11 @@ const PlanningModal: React.FC<Props> = ({ data, onClose }) => {
     setTipoSelecionado(tipo);
     setLoading(true);
     setBloco(null);
-    setIndice(null);
     try {
       const res = await api.get('/planejamento/bloco', { params: { tipo, data } });
       setBloco(res.data?.bloco || null);
-      setIndice(res.data?.indice || null);
     } catch {
       setBloco(null);
-      setIndice(null);
     }
     setLoading(false);
   }, [data]);
@@ -66,7 +86,7 @@ const PlanningModal: React.FC<Props> = ({ data, onClose }) => {
                     : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
                 }`}
               >
-                {t.charAt(0).toUpperCase() + t.slice(1)}
+                {labelChip(t)}
               </button>
             ))}
           </div>
@@ -79,17 +99,17 @@ const PlanningModal: React.FC<Props> = ({ data, onClose }) => {
           {tipoSelecionado && loading && (
             <p className="text-sm text-gray-500">Carregando...</p>
           )}
-          {tipoSelecionado && !loading && bloco && (
+          {tipoSelecionado && !loading && bloco && bloco.conteudo && (
             <div className="space-y-2">
-              <p className="text-xs text-gray-500">
-                Bloco {indice || '?'} — {tipoSelecionado.charAt(0).toUpperCase() + tipoSelecionado.slice(1)}
+              <p className="text-xs font-semibold text-gray-700">
+                {formatarConteudo(bloco.conteudo, tipoSelecionado).cabecalho}
               </p>
               <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans bg-gray-50 p-3 rounded border border-gray-200 max-h-60 overflow-y-auto">
-                {bloco.conteudo}
+                {formatarConteudo(bloco.conteudo, tipoSelecionado).corpo}
               </pre>
             </div>
           )}
-          {tipoSelecionado && !loading && !bloco && (
+          {tipoSelecionado && !loading && (!bloco || !bloco.conteudo) && (
             <p className="text-sm text-gray-400">Nenhum bloco disponível para esta data.</p>
           )}
         </div>
