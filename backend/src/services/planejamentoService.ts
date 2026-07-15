@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { supabase } from './supabaseClient';
 import { AppError } from '../middleware/errorHandler';
-import { parseFile, parseRangeFromConteudo } from '../utils/planejamentoParser';
+import { parseFile, parseRangeFromConteudo, MESES } from '../utils/planejamentoParser';
 import type { Planejamento, PlanejamentoBloco } from '../types';
 
 const UPLOADS_DIR = path.resolve(__dirname, '../../uploads/planejamento');
@@ -151,6 +151,11 @@ export async function listarTipos(tenantId: string): Promise<string[]> {
   return tipos;
 }
 
+function extrairMesDoConteudo(conteudo: string): number | null {
+  const primeira = conteudo.split('\n')[0]?.trim().toUpperCase();
+  return primeira && MESES[primeira] ? MESES[primeira] : null;
+}
+
 export async function buscarBloco(
   tenantId: string,
   tipo: string,
@@ -172,9 +177,23 @@ export async function buscarBloco(
 
   if (!blocos || blocos.length === 0) return { bloco: null };
 
+  const { data: periodos } = await supabase
+    .from('periodos_letivos')
+    .select('inicio_aulas')
+    .eq('tenant_id', tenantId)
+    .limit(1)
+    .single();
+
+  const inicioAulas = periodos?.inicio_aulas ? new Date(periodos.inicio_aulas + 'T12:00:00') : null;
+  const anoBase = inicioAulas ? inicioAulas.getFullYear() : new Date().getFullYear();
+  const mesBase = inicioAulas ? inicioAulas.getMonth() + 1 : 1;
+
   for (const bloco of blocos) {
     if (!bloco.conteudo) continue;
-    const range = parseRangeFromConteudo(bloco.conteudo, bloco.ano);
+    const mesBloco = extrairMesDoConteudo(bloco.conteudo);
+    if (!mesBloco) continue;
+    const anoCorreto = mesBloco >= mesBase ? anoBase : anoBase + 1;
+    const range = parseRangeFromConteudo(bloco.conteudo, anoCorreto);
     if (!range) continue;
     if (dataDate >= range.inicio && dataDate <= range.fim) {
       return { bloco };
