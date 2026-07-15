@@ -2,8 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { supabase } from './supabaseClient';
 import { AppError } from '../middleware/errorHandler';
-import { parseFile } from '../utils/planejamentoParser';
-import * as calendarioService from './calendarioService';
+import { parseFile, parseRangeFromConteudo } from '../utils/planejamentoParser';
 import type { Planejamento, PlanejamentoBloco } from '../types';
 
 const UPLOADS_DIR = path.resolve(__dirname, '../../uploads/planejamento');
@@ -152,60 +151,35 @@ export async function listarTipos(tenantId: string): Promise<string[]> {
   return tipos;
 }
 
-function calcularSemanaRelativa(data: Date, inicio: Date, feriasInicio: Date | null, feriasFim: Date | null): number | null {
-  if (data < inicio) return null;
-
-  const diffMs = data.getTime() - inicio.getTime();
-  const semanaGlobal = Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1;
-
-  if (!feriasInicio || !feriasFim) return semanaGlobal;
-
-  const semanasAntesFerias = Math.max(0, Math.floor((feriasInicio.getTime() - inicio.getTime()) / (7 * 24 * 60 * 60 * 1000)));
-
-  if (data >= feriasInicio && data <= feriasFim) return null;
-
-  if (data > feriasFim) {
-    const duracaoFeriasSemanas = Math.ceil((feriasFim.getTime() - feriasInicio.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1;
-    return semanaGlobal - duracaoFeriasSemanas;
-  }
-
-  return semanaGlobal;
-}
-
 export async function buscarBloco(
   tenantId: string,
   tipo: string,
   data: string,
-): Promise<{ bloco: PlanejamentoBloco | null; indice: number | null }> {
+): Promise<{ bloco: PlanejamentoBloco | null }> {
   const dataDate = new Date(data + 'T12:00:00');
-
-  const periodo = await calendarioService.obterPeriodo(tenantId);
-  if (!periodo?.inicio_aulas) {
-    return { bloco: null, indice: null };
-  }
-
-  const inicio = new Date(periodo.inicio_aulas + 'T12:00:00');
-  const feriasInicio = periodo.ferias_inicio ? new Date(periodo.ferias_inicio + 'T12:00:00') : null;
-  const feriasFim = periodo.ferias_fim ? new Date(periodo.ferias_fim + 'T12:00:00') : null;
-
-  const indice = calcularSemanaRelativa(dataDate, inicio, feriasInicio, feriasFim);
-  if (!indice) {
-    return { bloco: null, indice: null };
-  }
 
   const { data: blocos, error } = await supabase
     .from('planejamento_blocos')
     .select('*')
     .eq('tenant_id', tenantId)
     .eq('tipo', tipo)
-    .eq('indice', indice)
-    .limit(1);
+    .order('indice', { ascending: true });
 
   if (error) {
     console.error('[planejamentoService.buscarBloco]', error);
     throw new AppError('Erro ao buscar bloco', 500);
   }
 
-  const bloco = (blocos && blocos.length > 0) ? blocos[0] : null;
-  return { bloco, indice };
+  if (!blocos || blocos.length === 0) return { bloco: null };
+
+  for (const bloco of blocos) {
+    if (!bloco.conteudo) continue;
+    const range = parseRangeFromConteudo(bloco.conteudo, bloco.ano);
+    if (!range) continue;
+    if (dataDate >= range.inicio && dataDate <= range.fim) {
+      return { bloco };
+    }
+  }
+
+  return { bloco: null };
 }

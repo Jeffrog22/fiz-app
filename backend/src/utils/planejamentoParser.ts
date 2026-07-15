@@ -7,6 +7,39 @@ interface ParsedFile {
   blocos: string[];
 }
 
+const MESES: Record<string, number> = {
+  JANEIRO: 1, FEVEREIRO: 2, MARÇO: 3, ABRIL: 4, MAIO: 5, JUNHO: 6,
+  JULHO: 7, AGOSTO: 8, SETEMBRO: 9, OUTUBRO: 10, NOVEMBRO: 11, DEZEMBRO: 12,
+};
+
+export function parseRangeFromConteudo(conteudo: string, ano: number): { inicio: Date; fim: Date } | null {
+  const linhas = conteudo.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+  if (linhas.length < 2) return null;
+  const mesNome = linhas[0].toUpperCase();
+  const mesNum = MESES[mesNome];
+  if (!mesNum) return null;
+  const weekMatch = linhas[1].match(/\d+ª\s*semana:\s*(\d{1,2}(?:\/\d{1,2})?)\s*[àa]\s*(\d{1,2}(?:\/\d{1,2})?)/);
+  if (!weekMatch) return null;
+  const parseData = (raw: string, defaultMes: number): Date | null => {
+    const parts = raw.split('/');
+    let dia: number, mes: number;
+    if (parts.length === 2) {
+      dia = parseInt(parts[0], 10);
+      mes = parseInt(parts[1], 10);
+    } else {
+      dia = parseInt(parts[0], 10);
+      mes = defaultMes;
+    }
+    if (isNaN(dia) || isNaN(mes)) return null;
+    return new Date(ano, mes - 1, dia);
+  };
+  let inicio = parseData(weekMatch[1], mesNum);
+  let fim = parseData(weekMatch[2], mesNum);
+  if (!inicio || !fim) return null;
+  if (fim < inicio) fim = new Date(ano + 1, fim.getMonth(), fim.getDate());
+  return { inicio, fim };
+}
+
 function parseFilename(nomeOriginal: string): { tipo: string; ano: number } {
   const base = path.parse(nomeOriginal).name;
   const match = base.match(/^(.+)[^a-zA-Z](\d{4})$/);
