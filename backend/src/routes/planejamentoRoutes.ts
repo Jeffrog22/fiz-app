@@ -22,8 +22,10 @@ router.use(tenantMiddleware, authMiddleware);
 
 router.get('/', PlanejamentoController.listar);
 router.post('/', upload.single('arquivo'), PlanejamentoController.upload);
-router.post('/multi', upload.array('arquivos', 4), PlanejamentoController.uploadMultiplo);
+router.post('/upload', upload.array('arquivos', 4), PlanejamentoController.uploadMultiplo);
 router.delete('/:id', PlanejamentoController.remover);
 router.get('/:id/download', PlanejamentoController.download);
+router.get('/tipos', PlanejamentoController.tipos);
+router.get('/bloco', PlanejamentoController.bloco);
 
 export default router;

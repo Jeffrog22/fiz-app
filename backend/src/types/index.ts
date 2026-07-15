@@ -246,3 +246,27 @@ export interface OcupacaoData {
   total_capacidade: number;
   total_ativos: number;
 }
+
+export interface Planejamento {
+  id: string;
+  tenant_id: string;
+  tipo: string;
+  ano: number;
+  total_blocos: number;
+  nome_original: string;
+  nome_arquivo: string;
+  tamanho: number;
+  tipo_mime: string;
+  criado_em: string;
+}
+
+export interface PlanejamentoBloco {
+  id: string;
+  planejamento_id: string;
+  tenant_id: string;
+  indice: number;
+  tipo: string;
+  ano: number;
+  conteudo?: string;
+  criado_em: string;
+}
