@@ -20,8 +20,9 @@ function parseFilename(nomeOriginal: string): { tipo: string; ano: number } {
 
 function splitIntoBlocks(texto: string): string[] {
   const normalizado = texto.replace(/\r\n/g, '\n');
-  const blocos = normalizado
-    .split(/\n\n+/)
+  const semMeses = normalizado.replace(/^mês:\n[A-ZÀ-Ú]+\n/gm, '');
+  const blocos = semMeses
+    .split(/\n(?=\d+ª\s*semana:)/)
     .map((b) => b.trim())
     .filter((b) => b.length > 0);
   return blocos.length > 0 ? blocos : [texto.trim()];
