@@ -128,8 +128,6 @@ const TabOcupacao: React.FC = () => {
             <tr>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Turma</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Horário</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Professor</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Nível</th>
               <th className="text-center px-4 py-3 font-medium text-gray-600">Ocupação</th>
               <th className="text-center px-4 py-3 font-medium text-gray-600">%</th>
             </tr>
@@ -139,8 +137,6 @@ const TabOcupacao: React.FC = () => {
               <tr key={d.grupo_id} className="hover:bg-gray-50">
                 <td className="px-4 py-2 font-medium text-gray-800">{d.label}</td>
                 <td className="px-4 py-2 text-gray-600">{formatTime(d.horario)}</td>
-                <td className="px-4 py-2 text-gray-600">{d.professor}</td>
-                <td className="px-4 py-2 text-gray-600">{d.nivel || '-'}</td>
                 <td className="px-4 py-2 text-center font-medium text-gray-800">{d.ocupacao}/{d.capacidade}</td>
                 <td className="px-4 py-2 text-center">
                   <span className={`text-xs font-semibold px-2 py-0.5 rounded ${d.ocupacao > d.capacidade ? 'bg-red-100 text-red-700' : d.ocupacao === d.capacidade ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}`}>{d.percentual}%</span>
