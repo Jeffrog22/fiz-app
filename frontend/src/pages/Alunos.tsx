@@ -4,7 +4,7 @@ import api from '../utils/api';
 import AlunoModal from '../components/modals/AlunoModal';
 import SearchInput from '../components/SearchInput';
 import type { Aluno, Professor, SavePayload } from '../types';
-import { calcIdade, calcCategoria, normalizeSearch } from '../utils/formatters';
+import { calcIdade, calcCategoria, normalizeSearch, sortTurmas } from '../utils/formatters';
 
 interface SortRule {
   column: string;
@@ -35,7 +35,7 @@ const Alunos: React.FC = () => {
 
   const turmasPorProfessor = useMemo(() =>
     professorAlocar
-      ? turmas.filter((t: any) => t.professor_id === professorAlocar)
+      ? sortTurmas(turmas.filter((t: any) => t.professor_id === professorAlocar))
       : [],
     [turmas, professorAlocar]
   );

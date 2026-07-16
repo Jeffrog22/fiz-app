@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../utils/api';
 import type { Aluno, Turma, Professor, SavePayload } from '../../types';
-import { mascaraTelefone, mascaraData, desmascarar, formatDateISO, formatDateBR } from '../../utils/formatters';
+import { mascaraTelefone, mascaraData, desmascarar, formatDateISO, formatDateBR, sortTurmas } from '../../utils/formatters';
 import { calcIdade, calcCategoria } from '../../utils/formatters';
 import { validarData, validarTelefone, sanitizarInput } from '../../utils/validators';
 
@@ -58,6 +58,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
     return turmas.filter((t) => t.professor_id === professorId);
   }, [turmas, professorId]);
   const turmaSelecionada = turmas.find((t) => t.grupo_id === turmaId);
+  const turmasOrdenadas = useMemo(() => sortTurmas(turmasFiltradas), [turmasFiltradas]);
 
   useEffect(() => {
     if (!open) return;
@@ -194,29 +195,48 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
         )}
 
         {acao === 'transferencia' && (
-          <div className="mx-6 mt-3 p-3 bg-purple-50 border border-purple-200 rounded-md">
-            <p className="text-xs font-medium text-purple-700 mb-2">
-              Transferir aluno para outra turma
-            </p>
-            <select
-              value={turmaId}
-              onChange={(e) => {
-                setTurmaId(e.target.value);
-                    const t = turmas.find((x) => x.grupo_id === e.target.value);
-                    if (t) setNivel(t.nivel || '');
-                  }}
-              className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="">Selecione a nova turma</option>
-              {turmas.map((t) => (
-                <option key={t.grupo_id} value={t.grupo_id}>
-                  {(() => {
-                  const pn = professores.find(p => p.id === t.professor_id)?.nome;
-                  return `${t.label} - ${t.horario} (${t.nivel || 'sem nível'})${pn ? ` - ${pn}` : ''}`;
-                })()}
-                </option>
-              ))}
-            </select>
+          <div className="mx-6 mt-3 p-3 bg-purple-50 border border-purple-200 rounded-md space-y-3">
+            <p className="text-xs font-medium text-purple-700">Transferir aluno para outra turma</p>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-gray-500">Professor(a)</label>
+              <select
+                value={professorId}
+                onChange={(e) => {
+                  setProfessorId(e.target.value);
+                  setTurmaId('');
+                  setNivel('');
+                }}
+                className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm"
+              >
+                <option value="">Selecione</option>
+                {professores.map((p) => (
+                  <option key={p.id} value={p.id}>{p.nome}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-gray-500">Turma + Horário</label>
+              <select
+                value={turmaId}
+                onChange={(e) => {
+                  setTurmaId(e.target.value);
+                  const t = turmas.find((x) => x.grupo_id === e.target.value);
+                  if (t) {
+                    setNivel(t.nivel || '');
+                    setProfessorId(t.professor_id || '');
+                  }
+                }}
+                className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm"
+                disabled={!professorId}
+              >
+                <option value="">Selecione a turma</option>
+                {turmasOrdenadas.map((t) => (
+                  <option key={t.grupo_id} value={t.grupo_id}>
+                    {t.label} - {(t.horario || '').slice(0, 5)} ({t.nivel || 'sem nível'})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         )}
 
@@ -339,12 +359,9 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
                   className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                   <option value="">Selecione uma turma</option>
-                  {turmasFiltradas.map((t) => (
+                  {turmasOrdenadas.map((t) => (
                     <option key={t.grupo_id} value={t.grupo_id}>
-                      {(() => {
-                    const pn = professores.find(p => p.id === t.professor_id)?.nome;
-                    return `${t.label} - ${t.horario} (${t.nivel || 'sem nível'})${pn ? ` - ${pn}` : ''}`;
-                  })()}
+                      {t.label} - {(t.horario || '').slice(0, 5)} ({t.nivel || 'sem nível'})
                     </option>
                   ))}
                 </select>

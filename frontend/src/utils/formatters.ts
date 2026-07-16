@@ -1,3 +1,5 @@
+import type { Turma } from '../types';
+
 export function formatarNomeMobile(nomeCompleto: string): string {
   const partes = nomeCompleto.trim().split(/\s+/);
   if (partes.length <= 2) return nomeCompleto.trim();
@@ -114,4 +116,17 @@ export function getWeatherIcon(code: number): string {
   if (code >= 85 && code <= 86) return '\u2744\uFE0F';
   if (code >= 95) return '\u26A1';
   return '\u2601\uFE0F';
+}
+
+const DAY_ORDER: Record<string, number> = {
+  Seg: 1, Ter: 2, Qua: 3, Qui: 4, Sex: 5, Sab: 6,
+};
+
+export function sortTurmas(turmas: Turma[]): Turma[] {
+  return [...turmas].sort((a, b) => {
+    const aDay = DAY_ORDER[a.label.split('/')[0]] ?? 99;
+    const bDay = DAY_ORDER[b.label.split('/')[0]] ?? 99;
+    if (aDay !== bDay) return aDay - bDay;
+    return a.horario.localeCompare(b.horario);
+  });
 }
