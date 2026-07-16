@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import api from '../utils/api';
 import PlanningUpload from '../components/planning/PlanningUpload';
 import PlanningModal from '../components/modals/PlanningModal';
+import WeatherWidget from '../components/widgets/WeatherWidget';
 import type { Planejamento } from '../types';
 
 interface CalendarioEvento {
@@ -60,6 +61,7 @@ const Calendario: React.FC = () => {
         for (let i = 0; i < daily.time.length; i++) {
           map[daily.time[i]] = {
             temp: daily.temperature_2m_max?.[i],
+            temp_min: daily.temperature_2m_min?.[i],
             code: daily.weather_code?.[i],
             precipitacao: daily.precipitation_probability_max?.[i] || 0,
           };
@@ -223,6 +225,11 @@ const Calendario: React.FC = () => {
           <span>Término: <strong>{periodo.termino_aulas || '---'}</strong></span>
         </div>
       )}
+
+      <WeatherWidget
+        data={hoje.toISOString().split('T')[0]}
+        clima={climaDados[hoje.toISOString().split('T')[0]] || null}
+      />
 
       <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
