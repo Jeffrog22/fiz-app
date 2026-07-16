@@ -29,6 +29,7 @@ const TIPOS_EVENTO = [
 
 const Calendario: React.FC = () => {
   const hoje = new Date();
+  const hojeLocal = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
   const [ano, setAno] = useState(hoje.getFullYear());
   const [mes, setMes] = useState(hoje.getMonth() + 1);
   const [eventos, setEventos] = useState<CalendarioEvento[]>([]);
@@ -60,7 +61,7 @@ const Calendario: React.FC = () => {
         const map: Record<string, any> = {};
         for (let i = 0; i < daily.time.length; i++) {
           map[daily.time[i]] = {
-            temp: daily.temperature_2m_max?.[i],
+            temp_max: daily.temperature_2m_max?.[i],
             temp_min: daily.temperature_2m_min?.[i],
             code: daily.weather_code?.[i],
             precipitacao: daily.precipitation_probability_max?.[i] || 0,
@@ -186,7 +187,7 @@ const Calendario: React.FC = () => {
         </span>
         {climaDia && (
           <span className="text-[9px] text-gray-500 mt-0.5">
-            {Math.round(climaDia.temp)}°C
+            {Math.round(climaDia.temp_max)}°C
             {temAlertaChuva && <span className="text-red-400 ml-0.5">🌧️</span>}
           </span>
         )}
@@ -227,8 +228,8 @@ const Calendario: React.FC = () => {
       )}
 
       <WeatherWidget
-        data={hoje.toISOString().split('T')[0]}
-        clima={climaDados[hoje.toISOString().split('T')[0]] || null}
+        data={hojeLocal}
+        clima={climaDados[hojeLocal] || climaDados[Object.keys(climaDados)[0]] || null}
       />
 
       <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
