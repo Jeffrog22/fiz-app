@@ -252,77 +252,81 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
             />
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-600">Data de Nascimento</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              placeholder="somente números"
-              value={dataNascimento}
-              onChange={(e) => {
-                setErroData(null);
-                setDataNascimento(mascaraData(sanitizarInput(e.target.value)));
-              }}
-              onPaste={(e) => {
-                e.preventDefault();
-                setDataNascimento(mascaraData(sanitizarInput(e.clipboardData.getData('text'))));
-              }}
-              maxLength={10}
-              disabled={!isEditMode}
-              className={`px-3 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 disabled:bg-gray-50 disabled:text-gray-500 ${
-                erroData ? 'border-red-500 animate-shake' : 'border-gray-300 focus:ring-primary-500'
-              }`}
-            />
-            {idade !== null && <span className="text-xs text-gray-400 mt-0.5">{idade} anos</span>}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+          {acao !== 'transferencia' && (
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-600">Gênero</label>
-              <select
-                value={genero}
-                onChange={(e) => setGenero(e.target.value)}
-                disabled={!isEditMode}
-                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-50 disabled:text-gray-500"
-              >
-                <option value="">Selecione</option>
-                <option value="masculino">Masculino</option>
-                <option value="feminino">Feminino</option>
-                <option value="nao-binario">Não binário</option>
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-600">Contato</label>
+              <label className="text-sm font-medium text-gray-600">Data de Nascimento</label>
               <input
-                value={contato}
+                type="text"
+                inputMode="numeric"
+                placeholder="somente números"
+                value={dataNascimento}
                 onChange={(e) => {
-                  setErroContato(null);
-                  setContato(mascaraTelefone(sanitizarInput(e.target.value)));
+                  setErroData(null);
+                  setDataNascimento(mascaraData(sanitizarInput(e.target.value)));
                 }}
                 onPaste={(e) => {
                   e.preventDefault();
-                  setContato(mascaraTelefone(sanitizarInput(e.clipboardData.getData('text'))));
+                  setDataNascimento(mascaraData(sanitizarInput(e.clipboardData.getData('text'))));
                 }}
-                placeholder="somente números"
-                maxLength={16}
+                maxLength={10}
                 disabled={!isEditMode}
                 className={`px-3 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 disabled:bg-gray-50 disabled:text-gray-500 ${
-                  erroContato ? 'border-red-500 animate-shake' : 'border-gray-300 focus:ring-primary-500'
+                  erroData ? 'border-red-500 animate-shake' : 'border-gray-300 focus:ring-primary-500'
                 }`}
               />
-              {contato && desmascarar(contato).length >= 10 && (
-                <a
-                  href={`https://wa.me/55${desmascarar(contato)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-green-600 hover:text-green-800 mt-0.5 inline-block"
-                >
-                  WhatsApp
-                </a>
-              )}
+              {idade !== null && <span className="text-xs text-gray-400 mt-0.5">{idade} anos</span>}
             </div>
-          </div>
+          )}
+
+          {acao !== 'transferencia' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-600">Gênero</label>
+                <select
+                  value={genero}
+                  onChange={(e) => setGenero(e.target.value)}
+                  disabled={!isEditMode}
+                  className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-50 disabled:text-gray-500"
+                >
+                  <option value="">Selecione</option>
+                  <option value="masculino">Masculino</option>
+                  <option value="feminino">Feminino</option>
+                  <option value="nao-binario">Não binário</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-600">Contato</label>
+                <input
+                  value={contato}
+                  onChange={(e) => {
+                    setErroContato(null);
+                    setContato(mascaraTelefone(sanitizarInput(e.target.value)));
+                  }}
+                  onPaste={(e) => {
+                    e.preventDefault();
+                    setContato(mascaraTelefone(sanitizarInput(e.clipboardData.getData('text'))));
+                  }}
+                  placeholder="somente números"
+                  maxLength={16}
+                  disabled={!isEditMode}
+                  className={`px-3 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 disabled:bg-gray-50 disabled:text-gray-500 ${
+                    erroContato ? 'border-red-500 animate-shake' : 'border-gray-300 focus:ring-primary-500'
+                  }`}
+                />
+                {contato && desmascarar(contato).length >= 10 && (
+                  <a
+                    href={`https://wa.me/55${desmascarar(contato)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-green-600 hover:text-green-800 mt-0.5 inline-block"
+                  >
+                    WhatsApp
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
 
           {isNew && (
             <>
@@ -376,69 +380,73 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
             </p>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-600">Categoria</label>
-            <input
-              disabled
-              value={categoria}
-              className="px-3 py-1.5 border border-gray-200 rounded-md text-sm bg-gray-50 text-gray-500"
-            />
-          </div>
+          {acao !== 'transferencia' && (
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-600">Categoria</label>
+              <input
+                disabled
+                value={categoria}
+                className="px-3 py-1.5 border border-gray-200 rounded-md text-sm bg-gray-50 text-gray-500"
+              />
+            </div>
+          )}
 
-          <div className="border-t border-gray-200 pt-4">
-            <div>
-              <label className="text-sm font-medium text-gray-600">ParQ - Apto para atividade física?</label>
-              <div className="flex gap-4 mt-1">
-                <label className="flex items-center gap-1.5 text-sm">
+          {acao !== 'transferencia' && (
+            <div className="border-t border-gray-200 pt-4">
+              <div>
+                <label className="text-sm font-medium text-gray-600">ParQ - Apto para atividade física?</label>
+                <div className="flex gap-4 mt-1">
+                  <label className="flex items-center gap-1.5 text-sm">
+                    <input
+                      type="radio"
+                      name="parQ"
+                      checked={parQ === 'sim'}
+                      onChange={() => setParQ('sim')}
+                      disabled={!isEditMode}
+                      className="text-primary-600"
+                    />{' '}
+                    Sim
+                  </label>
+                  <label className="flex items-center gap-1.5 text-sm">
+                    <input
+                      type="radio"
+                      name="parQ"
+                      checked={parQ === 'nao'}
+                      onChange={() => setParQ('nao')}
+                      disabled={!isEditMode}
+                      className="text-primary-600"
+                    />{' '}
+                    Não
+                  </label>
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <label className="flex items-center gap-2 text-sm">
                   <input
-                    type="radio"
-                    name="parQ"
-                    checked={parQ === 'sim'}
-                    onChange={() => setParQ('sim')}
+                    type="checkbox"
+                    checked={atestadoMedico}
+                    onChange={(e) => setAtestadoMedico(e.target.checked)}
                     disabled={!isEditMode}
-                    className="text-primary-600"
-                  />{' '}
-                  Sim
+                    className="rounded border-gray-300 text-primary-600"
+                  />
+                  <span className="font-medium text-gray-600">Possui Atestado Médico?</span>
                 </label>
-                <label className="flex items-center gap-1.5 text-sm">
-                  <input
-                    type="radio"
-                    name="parQ"
-                    checked={parQ === 'nao'}
-                    onChange={() => setParQ('nao')}
-                    disabled={!isEditMode}
-                    className="text-primary-600"
-                  />{' '}
-                  Não
-                </label>
+                {atestadoMedico && (
+                  <div className="mt-2">
+                    <label className="text-sm font-medium text-gray-600">Data do Atestado</label>
+                    <input
+                      type="date"
+                      value={dataAtestado}
+                      onChange={(e) => setDataAtestado(e.target.value)}
+                      disabled={!isEditMode}
+                      className="mt-1 px-3 py-1.5 border border-gray-300 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-50"
+                    />
+                  </div>
+                )}
               </div>
             </div>
-
-            <div className="mt-3">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={atestadoMedico}
-                  onChange={(e) => setAtestadoMedico(e.target.checked)}
-                  disabled={!isEditMode}
-                  className="rounded border-gray-300 text-primary-600"
-                />
-                <span className="font-medium text-gray-600">Possui Atestado Médico?</span>
-              </label>
-              {atestadoMedico && (
-                <div className="mt-2">
-                  <label className="text-sm font-medium text-gray-600">Data do Atestado</label>
-                  <input
-                    type="date"
-                    value={dataAtestado}
-                    onChange={(e) => setDataAtestado(e.target.value)}
-                    disabled={!isEditMode}
-                    className="mt-1 px-3 py-1.5 border border-gray-300 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-50"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
+          )}
 
           <div className="flex items-center gap-2 pt-2">
             <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
