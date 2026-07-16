@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import DataGrid from '../components/grid/DataGrid';
 import ChamadaFilters from '../components/grid/ChamadaFilters';
@@ -38,6 +39,7 @@ function getSessionNumber(key: string, fallback: number): number {
 }
 
 const Chamadas: React.FC = () => {
+  const navigate = useNavigate();
   const { mes: mesInicial, ano: anoInicial } = hojeMesAno();
 
   const [alunos, setAlunos] = useState<Aluno[]>([]);
@@ -385,6 +387,10 @@ const Chamadas: React.FC = () => {
     [indiceAtual, agendarSalvamento],
   );
 
+  const handleNomeDoubleClick = useCallback((aluno: Aluno) => {
+    navigate(`/alunos?search=${encodeURIComponent(aluno.nome)}`);
+  }, [navigate]);
+
   const handleDesfazer = useCallback(() => {
     const action = undoStack.current.pop();
     if (!action) return;
@@ -625,6 +631,7 @@ const Chamadas: React.FC = () => {
           alunosComAnotacao={alunosComAnotacao}
           onAnotacaoChange={handleAnotacaoChange}
           onSaveJustificativa={handleSaveJustificativa}
+          onNomeDoubleClick={handleNomeDoubleClick}
         />
       )}
 

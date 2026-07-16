@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
 import AlunoModal from '../components/modals/AlunoModal';
 import SearchInput from '../components/SearchInput';
@@ -11,12 +12,13 @@ interface SortRule {
 }
 
 const Alunos: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [alunos, setAlunos] = useState<any[]>([]);
   const [professores, setProfessores] = useState<Professor[]>([]);
   const [turmas, setTurmas] = useState<any[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-  const [filtro, setFiltro] = useState('');
+  const [filtro, setFiltro] = useState(searchParams.get('search') || '');
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<Aluno | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());

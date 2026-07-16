@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import type { ChamadaLog, Aluno, Turma, CalendarioEvento } from '../../types';
 import api from '../../utils/api';
 import { formatarNomeMobile } from '../../utils/formatters';
@@ -66,6 +66,7 @@ interface DataGridProps {
   alunosComAnotacao?: Set<string>;
   onAnotacaoChange?: (alunoId: string) => void;
   onSaveJustificativa?: (alunoId: string, data: string, motivo: string) => void;
+  onNomeDoubleClick?: (aluno: Aluno) => void;
 }
 
 const DataGrid: React.FC<DataGridProps> = ({
@@ -83,7 +84,23 @@ const DataGrid: React.FC<DataGridProps> = ({
   alunosComAnotacao,
   onAnotacaoChange,
   onSaveJustificativa,
+  onNomeDoubleClick,
 }) => {
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleNomeClickTimer = useCallback((aluno: Aluno) => {
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+      onNomeDoubleClick?.(aluno);
+      return;
+    }
+    clickTimerRef.current = setTimeout(() => {
+      clickTimerRef.current = null;
+      setAnotacoesModalAluno(aluno);
+    }, 250);
+  }, [onNomeDoubleClick]);
+
   const [editandoAnotacao, setEditandoAnotacao] = useState<{
     alunoId: string;
     data: string;
@@ -352,8 +369,8 @@ const DataGrid: React.FC<DataGridProps> = ({
                         ? 'text-blue-600 bg-blue-50'
                         : 'text-gray-800'
                     }`}
-                    onClick={() => handleNomeClick(aluno)}
-                    title="Clique para ver anotações"
+                    onClick={() => handleNomeClickTimer(aluno)}
+                    title="Clique para ver anotações, duplo clique para ir ao aluno"
                   >
                     {formatarNomeMobile(aluno.nome)}
                   </td>
