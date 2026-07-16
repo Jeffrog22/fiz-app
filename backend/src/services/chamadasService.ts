@@ -516,6 +516,7 @@ export async function obterClima(): Promise<any> {
 
   return {
     ok: true,
+    raw: data.raw,
     temperatura: tempMax ?? 26.0,
     temperaturaMin: tempMin ?? 18.0,
     weatherCode,
