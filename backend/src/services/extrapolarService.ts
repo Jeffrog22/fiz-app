@@ -227,6 +227,22 @@ async function extrapolarPorLabel(
     return { message: 'Registros já possuem CardBO — extrapolação ignorada', count: 0 };
   }
 
+  const manualKeys = new Set<string>();
+  const { data: existingManual } = await supabase
+    .from('chamadas_log')
+    .select('grupo_id, indice_aula')
+    .eq('tenant_id', tenantId)
+    .eq('data', data)
+    .eq('origem', 'manual');
+  for (const r of existingManual || []) {
+    manualKeys.add(`${r.grupo_id}|${r.indice_aula}`);
+  }
+  const antesFiltro = logsCriados.length;
+  logsCriados = logsCriados.filter((l) => !manualKeys.has(`${l.grupo_id}|${l.indice_aula}`));
+  if (logsCriados.length < antesFiltro) {
+    console.log(`[extrapolarPorLabel] Ignorados ${antesFiltro - logsCriados.length} logs que possuem origem manual`);
+  }
+
   const BATCH_SIZE = 100;
   for (let i = 0; i < logsCriados.length; i += BATCH_SIZE) {
     const batch = logsCriados.slice(i, i + BATCH_SIZE);

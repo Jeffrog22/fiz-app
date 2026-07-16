@@ -105,7 +105,7 @@ const Chamadas: React.FC = () => {
     setCarregando(true);
     try {
       const [resAlunos, resTurmas, resProfs, resEventos] = await Promise.all([
-        api.get('/alunos'),
+        api.get('/alunos?ativo=true'),
         api.get('/turmas'),
         api.get('/professores'),
         api.get(`/calendario?mes=${mes}&ano=${ano}`),
@@ -214,6 +214,12 @@ const Chamadas: React.FC = () => {
   useEffect(() => { carregarAnotacoes(); }, [carregarAnotacoes]);
   useEffect(() => { carregarCardAulaData(); }, [carregarCardAulaData]);
   useEffect(() => { carregarCardAulaData(); }, [indiceAtual]);
+
+  useEffect(() => {
+    const handler = () => { if (!document.hidden) { carregarDados(); carregarLogs(); } };
+    document.addEventListener('visibilitychange', handler);
+    return () => document.removeEventListener('visibilitychange', handler);
+  }, [carregarDados, carregarLogs]);
 
   useEffect(() => {
     try {
