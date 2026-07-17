@@ -3,6 +3,7 @@ import api from '../utils/api';
 import PlanningUpload from '../components/planning/PlanningUpload';
 import PlanningModal from '../components/modals/PlanningModal';
 import WeatherWidget from '../components/widgets/WeatherWidget';
+import { getWeatherEmoji, WMO_MAP } from '../utils/climateEngine';
 import type { Planejamento } from '../types';
 
 interface CalendarioEvento {
@@ -162,7 +163,7 @@ const Calendario: React.FC = () => {
   for (let dia = 1; dia <= diasNoMes; dia++) {
     const dataStr = `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
     const diaEventos = getEventosPorData(dataStr);
-    const isHoje = dataStr === hoje.toISOString().split('T')[0];
+    const isHoje = dataStr === hojeLocal;
     const isPeriodoInicio = periodo?.inicio_aulas === dataStr;
     const isPeriodoFim = periodo?.termino_aulas === dataStr;
     const isFerias = periodo && dataStr >= periodo.ferias_inicio && dataStr <= periodo.ferias_fim;
@@ -186,9 +187,10 @@ const Calendario: React.FC = () => {
           {dia}
         </span>
         {climaDia && (
-          <span className="text-[9px] text-gray-500 mt-0.5">
-            {Math.round(climaDia.temp_max)}°C
-            {temAlertaChuva && <span className="text-red-400 ml-0.5">🌧️</span>}
+          <span className="text-[10px] text-gray-500 mt-0.5 flex items-center gap-0.5">
+            <span title={WMO_MAP[climaDia.code] || ''}>{getWeatherEmoji(climaDia.code)}</span>
+            <span>{Math.round(climaDia.temp_max)}°</span>
+            {temAlertaChuva && <span className="text-blue-500 text-[9px]">💧</span>}
           </span>
         )}
         {diaEventos.length > 0 && (

@@ -41,6 +41,17 @@ export const WMO_MAP: Record<number, string> = {
   99: 'tempestade com granizo',
 };
 
+export function getWeatherEmoji(code: number | null): string {
+  if (code === null || code === undefined) return '☁️';
+  if (code <= 1) return '☀️';
+  if (code === 2) return '⛅';
+  if (code <= 44) return '☁️';
+  if (code <= 50) return '🌫️';
+  if (code <= 70) return '🌧️';
+  if (code <= 94) return '❄️';
+  return '⛈️';
+}
+
 export function getCondicaoFromWeatherCode(code: number | null): string {
   if (code === null || code === undefined || WMO_MAP[code] === undefined) {
     return 'parcialmente nublado';
