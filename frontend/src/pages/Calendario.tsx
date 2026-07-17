@@ -181,16 +181,16 @@ const Calendario: React.FC = () => {
         key={dia}
         onClick={() => handleDayClick(dataStr)}
         onDoubleClick={() => handleDayDoubleClick(dataStr)}
-        className={`p-1.5 text-sm text-center rounded relative min-h-[48px] flex flex-col items-center ${bgClass} transition-colors`}
+        className={`p-1.5 rounded relative min-h-[52px] flex flex-col ${bgClass} transition-colors`}
       >
-        <span className={`text-xs ${isPeriodoInicio || isPeriodoFim ? 'text-white bg-green-500 rounded-full w-5 h-5 flex items-center justify-center' : ''}`}>
+        <span className={`text-xs self-start ${isPeriodoInicio || isPeriodoFim ? 'text-white bg-green-500 rounded-full w-5 h-5 flex items-center justify-center' : ''}`}>
           {dia}
         </span>
         {climaDia && (
-          <span className="text-[10px] text-gray-500 mt-0.5 flex items-center gap-0.5">
-            <span title={WMO_MAP[climaDia.code] || ''}>{getWeatherEmoji(climaDia.code)}</span>
+          <span className="text-xs text-gray-500 mt-0.5 self-center flex items-center gap-0.5 font-medium">
+            <span className="text-sm" title={WMO_MAP[climaDia.code] || ''}>{getWeatherEmoji(climaDia.code)}</span>
             <span>{Math.round(climaDia.temp_max)}°</span>
-            {temAlertaChuva && <span className="text-blue-500 text-[9px]">💧</span>}
+            {temAlertaChuva && <span className="text-blue-500 text-[10px]">💧</span>}
           </span>
         )}
         {diaEventos.length > 0 && (
