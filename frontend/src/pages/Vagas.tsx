@@ -2,6 +2,11 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import api from '../utils/api';
 import type { VagasResponse, VagaHorario } from '../types';
 
+const NIVEL_GROUPS: Record<string, string> = {
+  'Adulto A': 'Adulto',
+  'Adulto B': 'Adulto',
+};
+
 function getCor(excedente: number, vagas: number): 'blue' | 'yellow' | 'red' {
   if (excedente > 0) return 'red';
   if (vagas === 0) return 'yellow';
@@ -56,7 +61,7 @@ const Vagas: React.FC = () => {
     const set = new Set<string>();
     for (const h of data.horarios) {
       for (const g of h.grupos) {
-        if (g.nivel) set.add(g.nivel);
+        if (g.nivel) set.add(NIVEL_GROUPS[g.nivel] ?? g.nivel);
       }
     }
     return Array.from(set).sort();
@@ -75,7 +80,12 @@ const Vagas: React.FC = () => {
     if (!data) return [];
     let list: VagaHorario[] = data.horarios;
 
-    if (nivel) list = list.filter((h) => h.grupos.some((g) => g.nivel === nivel));
+    if (nivel) {
+      const expandidos = [nivel];
+      for (const [orig, group] of Object.entries(NIVEL_GROUPS))
+        if (group === nivel) expandidos.push(orig);
+      list = list.filter((h) => h.grupos.some((g) => expandidos.includes(g.nivel)));
+    }
     if (turmaLabel) list = list.filter((h) => h.label === turmaLabel);
     if (periodo === 'manha') list = list.filter((h) => h.horario < '12:00');
     if (periodo === 'tarde') list = list.filter((h) => h.horario >= '12:00');
@@ -266,7 +276,7 @@ const Vagas: React.FC = () => {
                           <div className="flex items-center gap-2">
                             {!vagasFilter && <BarraProgressoVaga ativos={g.alunos_ativos} capacidade={g.capacidade} cor={gCor} />}
                             <span className="text-gray-500 w-14 text-right">{g.alunos_ativos}/{g.capacidade}</span>
-                            <span className={`px-1.5 py-0.5 rounded font-medium ${gBadge.className}`}>
+                            <span className={`font-medium ${gBadge.className.replace(/bg-\S+/g, '').trim()}`}>
                               {gBadge.text}
                             </span>
                           </div>
