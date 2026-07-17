@@ -183,7 +183,7 @@ const Calendario: React.FC = () => {
         onDoubleClick={() => handleDayDoubleClick(dataStr)}
         className={`p-1.5 rounded relative min-h-[52px] flex flex-col ${bgClass} transition-colors`}
       >
-        <span className={`text-xs self-start ${isPeriodoInicio || isPeriodoFim ? 'text-white bg-green-500 rounded-full w-5 h-5 flex items-center justify-center' : ''}`}>
+        <span className={`text-sm self-start ${isPeriodoInicio || isPeriodoFim ? 'text-white bg-green-500 rounded-full w-5 h-5 flex items-center justify-center' : ''}`}>
           {dia}
         </span>
         {climaDia && (
@@ -245,8 +245,8 @@ const Calendario: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-7 gap-px bg-gray-200">
-          {diasSemana.map((d) => (
-            <div key={d} className="bg-gray-50 p-2 text-xs font-medium text-gray-500 text-center">{d}</div>
+          {diasSemana.map((d, i) => (
+            <div key={d} className={`bg-gray-50 p-2 text-xs text-center ${i === 0 || i === 6 ? 'font-bold text-gray-600' : 'font-medium text-gray-500'}`}>{d}</div>
           ))}
           {diasCalendario}
         </div>
