@@ -2,10 +2,9 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import api from '../utils/api';
 import type { VagasResponse, VagaHorario } from '../types';
 
-const NIVEL_GROUPS: Record<string, string> = {
-  'Adulto A': 'Adulto',
-  'Adulto B': 'Adulto',
-};
+function nivelGroup(nivel: string): string {
+  return nivel.replace(/ [AB]$/, '');
+}
 
 function getCor(excedente: number, vagas: number): 'blue' | 'yellow' | 'red' {
   if (excedente > 0) return 'red';
@@ -61,7 +60,7 @@ const Vagas: React.FC = () => {
     const set = new Set<string>();
     for (const h of data.horarios) {
       for (const g of h.grupos) {
-        if (g.nivel) set.add(NIVEL_GROUPS[g.nivel] ?? g.nivel);
+        if (g.nivel) set.add(nivelGroup(g.nivel));
       }
     }
     return Array.from(set).sort();
@@ -81,9 +80,9 @@ const Vagas: React.FC = () => {
     let list: VagaHorario[] = data.horarios;
 
     if (nivel) {
-      const expandidos = [nivel];
-      for (const [orig, group] of Object.entries(NIVEL_GROUPS))
-        if (group === nivel) expandidos.push(orig);
+      const expandidos = data!.horarios
+        .flatMap(h => h.grupos.map(g => g.nivel))
+        .filter((n): n is string => !!n && nivelGroup(n) === nivel);
       list = list.filter((h) => h.grupos.some((g) => expandidos.includes(g.nivel)));
     }
     if (turmaLabel) list = list.filter((h) => h.label === turmaLabel);
