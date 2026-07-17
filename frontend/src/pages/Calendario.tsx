@@ -163,6 +163,7 @@ const Calendario: React.FC = () => {
   for (let dia = 1; dia <= diasNoMes; dia++) {
     const dataStr = `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
     const diaEventos = getEventosPorData(dataStr);
+    const diaSemana = new Date(ano, mes - 1, dia).getDay();
     const isHoje = dataStr === hojeLocal;
     const isPeriodoInicio = periodo?.inicio_aulas === dataStr;
     const isPeriodoFim = periodo?.termino_aulas === dataStr;
@@ -173,8 +174,8 @@ const Calendario: React.FC = () => {
 
     let bgClass = 'hover:bg-gray-100';
     if (isSelected) bgClass = 'bg-primary-100 ring-2 ring-primary-400';
-    else if (isHoje) bgClass = 'bg-blue-50 font-bold';
-    if (isFerias) bgClass = 'bg-yellow-50';
+    else if (isHoje) bgClass = 'bg-blue-50 font-bold ring-2 ring-blue-400';
+    else if (isFerias) bgClass = 'bg-yellow-50';
 
     diasCalendario.push(
       <button
@@ -183,7 +184,7 @@ const Calendario: React.FC = () => {
         onDoubleClick={() => handleDayDoubleClick(dataStr)}
         className={`p-1.5 rounded relative min-h-[52px] flex flex-col ${bgClass} transition-colors`}
       >
-        <span className={`text-sm self-start ${isPeriodoInicio || isPeriodoFim ? 'text-white bg-green-500 rounded-full w-5 h-5 flex items-center justify-center' : ''}`}>
+        <span className={`self-start ${diaSemana === 0 || diaSemana === 6 ? 'font-bold' : ''} ${isPeriodoInicio || isPeriodoFim ? 'text-white bg-green-500 rounded-full w-6 h-6 flex items-center justify-center text-sm' : 'text-base'}`}>
           {dia}
         </span>
         {climaDia && (
