@@ -84,6 +84,19 @@ const Vagas: React.FC = () => {
     return list;
   }, [data, nivel, turmaLabel, periodo, vagasFilter]);
 
+  const filteredTotais = useMemo(() => {
+    if (!data || filteredHorarios.length === 0) return data?.totais ?? { capacidade: 0, ativos: 0, vagas: 0, excedente: 0 };
+    return filteredHorarios.reduce(
+      (acc, h) => ({
+        capacidade: acc.capacidade + h.total_capacidade,
+        ativos: acc.ativos + h.total_ativos,
+        vagas: acc.vagas + h.total_vagas,
+        excedente: acc.excedente + h.total_excedente,
+      }),
+      { capacidade: 0, ativos: 0, vagas: 0, excedente: 0 }
+    );
+  }, [data, filteredHorarios]);
+
   const displayExpandedKeys = useMemo(() => {
     if (vagasFilter) {
       return new Set(filteredHorarios.map((h) => `${h.horario}|${h.label}`));
@@ -183,27 +196,27 @@ const Vagas: React.FC = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <CardIndicador
           titulo="Capacidade Total"
-          valor={data.totais.capacidade}
+          valor={filteredTotais.capacidade}
           corValor="text-blue-600"
           onClick={undefined}
         />
         <CardIndicador
           titulo="Ativos"
-          valor={data.totais.ativos}
+          valor={filteredTotais.ativos}
           corValor="text-green-600"
           onClick={undefined}
         />
         <CardIndicador
           titulo="Vagas Disponíveis"
-          valor={data.totais.vagas}
-          corValor={data.totais.vagas > 0 ? 'text-primary-600' : 'text-gray-400'}
+          valor={filteredTotais.vagas}
+          corValor={filteredTotais.vagas > 0 ? 'text-primary-600' : 'text-gray-400'}
           onClick={handleCardVagasClick}
           ativo={vagasFilter}
         />
         <CardIndicador
           titulo="Alunos Excedentes"
-          valor={data.totais.excedente}
-          corValor={data.totais.excedente > 0 ? 'text-red-600' : 'text-gray-400'}
+          valor={filteredTotais.excedente}
+          corValor={filteredTotais.excedente > 0 ? 'text-red-600' : 'text-gray-400'}
           onClick={undefined}
         />
       </div>
