@@ -18,11 +18,23 @@ export async function listarComposicaoHistorica(
   const firstDay = `${ano}-${String(mes).padStart(2, '0')}-01`;
   const lastDay = new Date(ano, mes, 0).toISOString().split('T')[0];
 
+  // Resolve o UUID da turma para match com registros antigos do enrollment_period
+  // (que ainda armazenam UUID em vez de grupo_id textual)
+  const { data: turma } = await supabase
+    .from('turmas')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('grupo_id', grupoId)
+    .maybeSingle();
+
+  const turmaFilters = [`turma_id.eq.${grupoId}`];
+  if (turma?.id) turmaFilters.push(`turma_id.eq.${turma.id}`);
+
   const { data: fromEnrollment, error: err1 } = await supabase
     .from('enrollment_period')
     .select('aluno_id')
     .eq('tenant_id', tenantId)
-    .eq('turma_id', grupoId)
+    .or(turmaFilters.join(','))
     .lte('data_inicio', lastDay)
     .or(`data_fim.gte.${firstDay},data_fim.is.null`);
 
@@ -33,38 +45,42 @@ export async function listarComposicaoHistorica(
 
   const enrollmentIds = new Set((fromEnrollment || []).map((e: any) => e.aluno_id));
 
-  const { data: alunosAtuais, error: err2 } = await supabase
+  // Alunos que tem enrollment_period (qualquer) — usamos pra saber quem NÃO é pré-feature
+  const { data: qualquerEnrollment, error: errAny } = await supabase
+    .from('enrollment_period')
+    .select('aluno_id')
+    .eq('tenant_id', tenantId);
+
+  if (errAny) {
+    console.error('[listarComposicaoHistorica] Erro qualquerEnrollment:', errAny);
+    throw new AppError('Erro ao buscar composicao historica', 500);
+  }
+
+  const qualquerEnrollmentIds = new Set((qualquerEnrollment || []).map((e: any) => e.aluno_id));
+
+  // Busca todos os alunos ativos
+  const { data: todosAlunos, error: err2 } = await supabase
     .from('alunos')
-    .select('id')
+    .select('*')
     .eq('tenant_id', tenantId)
-    .eq('ativo', true)
-    .eq('turma_id', grupoId);
+    .eq('ativo', true);
 
   if (err2) {
     console.error('[listarComposicaoHistorica] Erro alunos:', err2);
     throw new AppError('Erro ao buscar alunos', 500);
   }
 
-  const allIds = new Set<string>();
-  for (const id of enrollmentIds) allIds.add(id);
-  for (const a of (alunosAtuais || [])) {
-    if (!enrollmentIds.has(a.id)) allIds.add(a.id);
-  }
+  // Filtro final:
+  // 1. Matchou enrollment_period com a turma + período → inclui
+  // 2. NÃO tem enrollment_period nenhum + turma_id atual = grupoId → inclui (fallback pré-feature)
+  // 3. Tem enrollment_period mas nenhum bateu → exclui
+  const alunos = (todosAlunos || []).filter((a: any) => {
+    if (enrollmentIds.has(a.id)) return true;
+    if (!qualquerEnrollmentIds.has(a.id) && a.turma_id === grupoId) return true;
+    return false;
+  });
 
-  if (allIds.size === 0) return [];
-
-  const { data: alunos, error: err3 } = await supabase
-    .from('alunos')
-    .select('*')
-    .eq('tenant_id', tenantId)
-    .in('id', Array.from(allIds));
-
-  if (err3) {
-    console.error('[listarComposicaoHistorica] Erro fetch alunos:', err3);
-    throw new AppError('Erro ao buscar dados dos alunos', 500);
-  }
-
-  return alunos || [];
+  return alunos;
 }
 
 export async function listarPorData(data: string, tenantId: string): Promise<any[]> {
