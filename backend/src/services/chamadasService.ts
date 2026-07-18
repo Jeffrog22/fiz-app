@@ -5,6 +5,56 @@ import { fetchWeather } from '../utils/weather';
 import { registrarOperacao } from '../utils/logEngine';
 import * as extrapolarService from './extrapolarService';
 
+function parseDiasFromLabel(label: string): number[] {
+  if (!label) return [];
+  const ABREV_MAP: Record<string, number> = { 'Dom': 0, 'Seg': 1, 'Ter': 2, 'Qua': 3, 'Qui': 4, 'Sex': 5, 'Sab': 6 };
+  const dias: number[] = [];
+  for (const parte of label.split('/')) {
+    const idx = ABREV_MAP[parte.trim()];
+    if (idx !== undefined) dias.push(idx);
+  }
+  return [...new Set(dias)];
+}
+
+function gerarDiasDoMes(mes: number, ano: number, label: string): string[] {
+  const diasSemana = parseDiasFromLabel(label);
+  if (diasSemana.length === 0) return [];
+  const dates: string[] = [];
+  const ultimoDia = new Date(ano, mes, 0).getDate();
+  for (let d = 1; d <= ultimoDia; d++) {
+    const diaSemana = new Date(ano, mes - 1, d).getDay();
+    if (diasSemana.includes(diaSemana)) {
+      dates.push(`${ano}-${String(mes).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+    }
+  }
+  return dates;
+}
+
+async function resolveIndiceAula(grupoId: string, tenantId: string): Promise<number> {
+  const { data: turma } = await supabase
+    .from('turmas')
+    .select('label, professor_id, horario')
+    .eq('tenant_id', tenantId)
+    .eq('grupo_id', grupoId)
+    .maybeSingle();
+  if (!turma) throw new AppError('Turma nao encontrada', 404);
+
+  const { data: todasTurmas } = await supabase
+    .from('turmas')
+    .select('grupo_id, horario')
+    .eq('tenant_id', tenantId)
+    .eq('label', turma.label)
+    .eq('professor_id', turma.professor_id);
+
+  const turmasLabelProf = (todasTurmas || [])
+    .filter((t: any) => t.grupo_id && t.horario)
+    .sort((a: any, b: any) => a.horario.localeCompare(b.horario));
+
+  const idx = turmasLabelProf.findIndex((t: any) => t.grupo_id === grupoId);
+  if (idx < 0) throw new AppError('Indice de aula nao encontrado', 404);
+  return idx;
+}
+
 export async function listarPorData(data: string, tenantId: string): Promise<any[]> {
   const { data: logs, error } = await supabase
     .from('chamadas_log')
@@ -536,4 +586,134 @@ export async function obterLogsAcesso(tenantId: string, limit: number = 50): Pro
   if (error) throw new AppError('Erro ao buscar logs de acesso', 500);
 
   return logs || [];
+}
+
+/**
+ * Retorna a matriz fiel de presenca de uma turma em um periodo,
+ * reconstruida a partir do chamadas_log. Nao depende de enrollment_period
+ * nem do turma_id atual do aluno.
+ */
+export async function exportarRetrato(
+  grupoId: string,
+  mes: number,
+  ano: number,
+  tenantId: string,
+): Promise<{
+  grupo_id: string;
+  mes: number;
+  ano: number;
+  dias: string[];
+  alunos: Array<{
+    id: string;
+    nome: string;
+    presenca: Record<string, string | null>;
+  }>;
+}> {
+  const indiceAula = await resolveIndiceAula(grupoId, tenantId);
+
+  const { data: turma } = await supabase
+    .from('turmas')
+    .select('label')
+    .eq('tenant_id', tenantId)
+    .eq('grupo_id', grupoId)
+    .maybeSingle();
+
+  const dias = gerarDiasDoMes(mes, ano, turma?.label || '');
+  if (dias.length === 0) throw new AppError('Nenhum dia letivo para esta turma no periodo', 400);
+
+  const { data: logs, error } = await supabase
+    .from('chamadas_log')
+    .select('grupo_id, data, status, indice_aula')
+    .eq('tenant_id', tenantId)
+    .eq('indice_aula', indiceAula)
+    .in('data', dias)
+    .in('status', ['presente', 'falta', 'justificado'])
+    .range(0, 1000000);
+
+  if (error) throw new AppError('Erro ao buscar chamadas', 500);
+
+  // Agrupa por aluno UUID: { aluno_id: { data: status } }
+  const presencaMap: Record<string, Record<string, string>> = {};
+
+  for (const log of (logs || [])) {
+    const gId = log.grupo_id;
+    if (!gId || !gId.includes('-')) continue;
+    if (!presencaMap[gId]) presencaMap[gId] = {};
+    presencaMap[gId][log.data] = log.status;
+  }
+
+  const alunoIds = Object.keys(presencaMap);
+  if (alunoIds.length === 0) {
+    return { grupo_id: grupoId, mes, ano, dias, alunos: [] };
+  }
+
+  const { data: alunos } = await supabase
+    .from('alunos')
+    .select('id, nome')
+    .eq('tenant_id', tenantId)
+    .in('id', alunoIds);
+
+  const alunosComPresenca = (alunos || []).map((a: any) => ({
+    id: a.id,
+    nome: a.nome,
+    presenca: dias.reduce((acc: Record<string, string | null>, dia: string) => {
+      acc[dia] = presencaMap[a.id]?.[dia] || null;
+      return acc;
+    }, {}),
+  }));
+
+  return {
+    grupo_id: grupoId,
+    mes,
+    ano,
+    dias,
+    alunos: alunosComPresenca,
+  };
+}
+
+/**
+ * Para uma lista de aluno_ids, informa quais estavam originalmente na turma
+ * durante o periodo (tiveram P/F/J registrados no chamadas_log).
+ */
+export async function verificarOriginais(
+  grupoId: string,
+  mes: number,
+  ano: number,
+  alunoIds: string[],
+  tenantId: string,
+): Promise<Record<string, boolean>> {
+  if (alunoIds.length === 0) return {};
+
+  const indiceAula = await resolveIndiceAula(grupoId, tenantId);
+
+  const { data: turma } = await supabase
+    .from('turmas')
+    .select('label')
+    .eq('tenant_id', tenantId)
+    .eq('grupo_id', grupoId)
+    .maybeSingle();
+
+  const dias = gerarDiasDoMes(mes, ano, turma?.label || '');
+  if (dias.length === 0) {
+    return alunoIds.reduce((acc, id) => ({ ...acc, [id]: false }), {});
+  }
+
+  const { data: logs, error } = await supabase
+    .from('chamadas_log')
+    .select('grupo_id')
+    .eq('tenant_id', tenantId)
+    .eq('indice_aula', indiceAula)
+    .in('data', dias)
+    .in('status', ['presente', 'falta', 'justificado'])
+    .in('grupo_id', alunoIds)
+    .range(0, 1000000);
+
+  if (error) throw new AppError('Erro ao buscar chamadas', 500);
+
+  const originaisSet = new Set((logs || []).map((l: any) => l.grupo_id));
+
+  return alunoIds.reduce((acc, id) => {
+    acc[id] = originaisSet.has(id);
+    return acc;
+  }, {} as Record<string, boolean>);
 }

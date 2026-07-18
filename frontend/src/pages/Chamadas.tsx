@@ -64,6 +64,7 @@ const Chamadas: React.FC = () => {
   const [dateHeaderClickData, setDateHeaderClickData] = useState<string>('');
   const [alunosComAnotacao, setAlunosComAnotacao] = useState<Set<string>>(new Set());
   const [cardAulaData, setCardAulaData] = useState<Record<string, Record<number, any>>>({});
+  const [originaisMap, setOriginaisMap] = useState<Record<string, boolean>>({});
 
   const [limparConfirm, setLimparConfirm] = useState(false);
   const [undoCount, setUndoCount] = useState(0);
@@ -208,12 +209,31 @@ const Chamadas: React.FC = () => {
     setCardAulaData(map);
   }, [dias]);
 
+  const carregarOriginais = useCallback(async () => {
+    if (!grupoId || alunosDaTurma.length === 0) {
+      setOriginaisMap({});
+      return;
+    }
+    try {
+      const res = await api.post('/chamadas/verificar-originais', {
+        grupo_id: grupoId,
+        mes,
+        ano,
+        aluno_ids: alunosDaTurma.map((a) => a.id),
+      });
+      setOriginaisMap(res.data || {});
+    } catch {
+      setOriginaisMap({});
+    }
+  }, [grupoId, mes, ano, alunosDaTurma]);
+
   useEffect(() => { carregarDados(); }, [carregarDados, labelSelecionada, professorId]);
   useEffect(() => { carregarLogs(); }, [carregarLogs]);
   useEffect(() => { aplicarEventosCalendario(); }, [aplicarEventosCalendario]);
   useEffect(() => { carregarAnotacoes(); }, [carregarAnotacoes]);
   useEffect(() => { carregarCardAulaData(); }, [carregarCardAulaData]);
   useEffect(() => { carregarCardAulaData(); }, [indiceAtual]);
+  useEffect(() => { carregarOriginais(); }, [carregarOriginais]);
 
   useEffect(() => {
     const handler = () => { if (!document.hidden) { carregarDados(); carregarLogs(); } };
@@ -638,6 +658,7 @@ const Chamadas: React.FC = () => {
           onAnotacaoChange={handleAnotacaoChange}
           onSaveJustificativa={handleSaveJustificativa}
           onNomeDoubleClick={handleNomeDoubleClick}
+          originaisMap={originaisMap}
         />
       )}
 

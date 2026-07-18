@@ -67,6 +67,7 @@ interface DataGridProps {
   onAnotacaoChange?: (alunoId: string) => void;
   onSaveJustificativa?: (alunoId: string, data: string, motivo: string) => void;
   onNomeDoubleClick?: (aluno: Aluno) => void;
+  originaisMap?: Record<string, boolean>;
 }
 
 const DataGrid: React.FC<DataGridProps> = ({
@@ -85,6 +86,7 @@ const DataGrid: React.FC<DataGridProps> = ({
   onAnotacaoChange,
   onSaveJustificativa,
   onNomeDoubleClick,
+  originaisMap,
 }) => {
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -362,17 +364,20 @@ const DataGrid: React.FC<DataGridProps> = ({
             {alunos.map((aluno) => {
               const faltasMes = contarFaltasMes(aluno.id);
               return (
-                <tr key={aluno.id} className="hover:bg-gray-50">
+                <tr key={aluno.id} className={`hover:bg-gray-50 ${originaisMap && !originaisMap[aluno.id] ? 'opacity-40' : ''}`}>
                   <td
-                    className={`sticky left-0 bg-white px-4 py-2 font-medium whitespace-nowrap cursor-pointer z-10 ${
-                      temAnotacao(aluno.id) || (alunosComAnotacao?.has(aluno.id))
+                    className={`sticky left-0 px-4 py-2 font-medium whitespace-nowrap cursor-pointer z-10 ${
+                      originaisMap && !originaisMap[aluno.id]
+                        ? 'bg-gray-100 text-gray-400'
+                        : temAnotacao(aluno.id) || (alunosComAnotacao?.has(aluno.id))
                         ? 'text-blue-600 bg-blue-50'
-                        : 'text-gray-800'
+                        : 'bg-white text-gray-800'
                     }`}
                     onClick={() => handleNomeClickTimer(aluno)}
                     title="Clique para ver anotações, duplo clique para ir ao aluno"
                   >
                     {formatarNomeMobile(aluno.nome)}
+                    {originaisMap && !originaisMap[aluno.id] && <span className="ml-1 text-[10px] text-gray-400">(pós-transfer)</span>}
                   </td>
                   {dias.map((dia) => {
                     const status = getStatus(aluno.id, dia);

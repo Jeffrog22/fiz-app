@@ -207,6 +207,28 @@ export class ChamadasController {
       next(error);
     }
   }
+
+  static async exportarRetrato(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const tenantId = req.tenantId!;
+      const { grupo_id, mes, ano } = req.body;
+      const result = await chamadasService.exportarRetrato(grupo_id, mes, ano, tenantId);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async verificarOriginais(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const tenantId = req.tenantId!;
+      const { grupo_id, mes, ano, aluno_ids } = req.body;
+      const result = await chamadasService.verificarOriginais(grupo_id, mes, ano, aluno_ids, tenantId);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default ChamadasController;

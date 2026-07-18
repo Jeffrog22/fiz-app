@@ -20,5 +20,7 @@ router.post('/aplicar-evento', ChamadasController.aplicarEventoCalendario);
 router.post('/card-aula', ChamadasController.salvarCardAula);
 router.post('/card-bo', ChamadasController.salvarCardBO);
 router.post('/log-acesso', ChamadasController.registrarLogAcesso);
+router.post('/exportar-retrato', ChamadasController.exportarRetrato);
+router.post('/verificar-originais', ChamadasController.verificarOriginais);
 
 export default router;
