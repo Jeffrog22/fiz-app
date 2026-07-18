@@ -5,6 +5,68 @@ import { fetchWeather } from '../utils/weather';
 import { registrarOperacao } from '../utils/logEngine';
 import * as extrapolarService from './extrapolarService';
 
+export async function listarComposicaoHistorica(
+  grupoId: string,
+  mes: number,
+  ano: number,
+  tenantId: string,
+): Promise<any[]> {
+  if (!grupoId || !mes || !ano) {
+    throw new AppError('Parametros grupo_id, mes e ano sao obrigatorios', 400);
+  }
+
+  const firstDay = `${ano}-${String(mes).padStart(2, '0')}-01`;
+  const lastDay = new Date(ano, mes, 0).toISOString().split('T')[0];
+
+  const { data: fromEnrollment, error: err1 } = await supabase
+    .from('enrollment_period')
+    .select('aluno_id')
+    .eq('tenant_id', tenantId)
+    .eq('turma_id', grupoId)
+    .lte('data_inicio', lastDay)
+    .or(`data_fim.gte.${firstDay},data_fim.is.null`);
+
+  if (err1) {
+    console.error('[listarComposicaoHistorica] Erro enrollment:', err1);
+    throw new AppError('Erro ao buscar composicao historica', 500);
+  }
+
+  const enrollmentIds = new Set((fromEnrollment || []).map((e: any) => e.aluno_id));
+
+  const { data: alunosAtuais, error: err2 } = await supabase
+    .from('alunos')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('ativo', true)
+    .eq('turma_id', grupoId);
+
+  if (err2) {
+    console.error('[listarComposicaoHistorica] Erro alunos:', err2);
+    throw new AppError('Erro ao buscar alunos', 500);
+  }
+
+  const allIds = new Set<string>();
+  for (const id of enrollmentIds) allIds.add(id);
+  for (const a of (alunosAtuais || [])) {
+    if (!enrollmentIds.has(a.id)) allIds.add(a.id);
+  }
+
+  if (allIds.size === 0) return [];
+
+  const { data: alunos, error: err3 } = await supabase
+    .from('alunos')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .in('id', Array.from(allIds));
+
+  if (err3) {
+    console.error('[listarComposicaoHistorica] Erro fetch alunos:', err3);
+    throw new AppError('Erro ao buscar dados dos alunos', 500);
+  }
+
+  return alunos || [];
+}
+
 export async function listarPorData(data: string, tenantId: string): Promise<any[]> {
   const { data: logs, error } = await supabase
     .from('chamadas_log')

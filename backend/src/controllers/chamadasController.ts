@@ -6,6 +6,17 @@ import * as cardAulaService from '../services/cardAulaService';
 import * as extrapolarService from '../services/extrapolarService';
 
 export class ChamadasController {
+  static async composicaoHistorica(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const tenantId = req.tenantId!;
+      const { grupo_id, mes, ano } = req.body;
+      const result = await chamadasService.listarComposicaoHistorica(grupo_id, mes, ano, tenantId);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async listarPorData(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const tenantId = req.tenantId!;

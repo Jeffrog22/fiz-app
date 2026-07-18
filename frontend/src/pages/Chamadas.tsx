@@ -43,6 +43,7 @@ const Chamadas: React.FC = () => {
   const { mes: mesInicial, ano: anoInicial } = hojeMesAno();
 
   const [alunos, setAlunos] = useState<Aluno[]>([]);
+  const [alunosDaTurma, setAlunosDaTurma] = useState<Aluno[]>([]);
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [professores, setProfessores] = useState<Professor[]>([]);
   const [eventos, setEventos] = useState<CalendarioEvento[]>([]);
@@ -96,10 +97,23 @@ const Chamadas: React.FC = () => {
     [mes, ano, labelSelecionada],
   );
 
-  const alunosDaTurma = useMemo(() => {
-    if (!grupoId) return [];
-    return alunos.filter((a) => a.turma_id === grupoId);
-  }, [alunos, grupoId]);
+  const carregarComposicao = useCallback(async () => {
+    if (!grupoId) {
+      setAlunosDaTurma([]);
+      return;
+    }
+    try {
+      const res = await api.post('/chamadas/composicao-historica', {
+        grupo_id: grupoId,
+        mes,
+        ano,
+      });
+      setAlunosDaTurma(res.data || []);
+    } catch (err) {
+      console.error('[carregarComposicao] erro, fallback para filtro local', err);
+      setAlunosDaTurma(alunos.filter((a) => a.turma_id === grupoId));
+    }
+  }, [grupoId, mes, ano, alunos]);
 
   const carregarDados = useCallback(async () => {
     setCarregando(true);
@@ -209,6 +223,7 @@ const Chamadas: React.FC = () => {
   }, [dias]);
 
   useEffect(() => { carregarDados(); }, [carregarDados, labelSelecionada, professorId]);
+  useEffect(() => { carregarComposicao(); }, [carregarComposicao]);
   useEffect(() => { carregarLogs(); }, [carregarLogs]);
   useEffect(() => { aplicarEventosCalendario(); }, [aplicarEventosCalendario]);
   useEffect(() => { carregarAnotacoes(); }, [carregarAnotacoes]);
