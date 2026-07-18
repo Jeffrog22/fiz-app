@@ -36,10 +36,20 @@ export async function listarComposicaoHistorica(
     .eq('tenant_id', tenantId)
     .range(0, 1000000);
 
+  // --- DEBUG ---
+  console.log('[COMPDEBUG] grupoId:', grupoId, 'mes:', mes, 'ano:', ano);
+  console.log('[COMPDEBUG] firstDay:', firstDay, 'lastDay:', lastDay);
+  console.log('[COMPDEBUG] idsDestaTurma:', [...idsDestaTurma]);
   if (errEp) {
-    console.error('[listarComposicaoHistorica] Erro enrollment:', errEp);
+    console.error('[COMPDEBUG] Erro enrollment:', errEp);
     throw new AppError('Erro ao buscar composicao historica', 500);
   }
+  console.log('[COMPDEBUG] rawEnrollments.length:', rawEnrollments?.length);
+  if (rawEnrollments && rawEnrollments.length > 0) {
+    console.log('[COMPDEBUG] primeiro enrollment:', JSON.stringify(rawEnrollments[0]));
+    console.log('[COMPDEBUG] ultimo enrollment:', JSON.stringify(rawEnrollments[rawEnrollments.length - 1]));
+  }
+  // --- FIM DEBUG ---
 
   // 3. Filtro em JS: enrollment ativo durante o período
   const alunosNestaTurma = new Set<string>();
@@ -60,6 +70,14 @@ export async function listarComposicaoHistorica(
     }
   }
 
+  // --- DEBUG ---
+  console.log('[COMPDEBUG] alunosNestaTurma.size:', alunosNestaTurma.size);
+  console.log('[COMPDEBUG] alunosEmOutraTurma.size:', alunosEmOutraTurma.size);
+  if (alunosEmOutraTurma.size > 0) {
+    console.log('[COMPDEBUG] alunosEmOutraTurma IDs:', [...alunosEmOutraTurma]);
+  }
+  // --- FIM DEBUG ---
+
   // 4. Busca TODOS os alunos ativos
   const { data: todosAlunos, error: errAlunos } = await supabase
     .from('alunos')
@@ -68,7 +86,7 @@ export async function listarComposicaoHistorica(
     .eq('ativo', true);
 
   if (errAlunos) {
-    console.error('[listarComposicaoHistorica] Erro alunos:', errAlunos);
+    console.error('[COMPDEBUG] Erro alunos:', errAlunos);
     throw new AppError('Erro ao buscar alunos', 500);
   }
 
@@ -81,6 +99,12 @@ export async function listarComposicaoHistorica(
     if (alunosEmOutraTurma.has(a.id)) return false;
     return a.turma_id === grupoId;
   });
+
+  // --- DEBUG ---
+  console.log('[COMPDEBUG] todosAlunos.length:', todosAlunos?.length);
+  console.log('[COMPDEBUG] alunosFiltrados.length:', alunos.length);
+  console.log('[COMPDEBUG] alunosFiltrados nomes:', alunos.map((a: any) => a.nome));
+  // --- FIM DEBUG ---
 
   return alunos;
 }
