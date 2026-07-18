@@ -18,66 +18,69 @@ export async function listarComposicaoHistorica(
   const firstDay = `${ano}-${String(mes).padStart(2, '0')}-01`;
   const lastDay = new Date(ano, mes, 0).toISOString().split('T')[0];
 
-  // Resolve o UUID da turma para match com registros antigos do enrollment_period
-  // (que ainda armazenam UUID em vez de grupo_id textual)
-  const { data: turma } = await supabase
+  // 1. Busca TODOS os UUIDs de turmas que correspondem a este grupo_id
+  //    (pra resolver registros antigos do enrollment_period que armazenam UUID)
+  const { data: turmasDoGrupo } = await supabase
     .from('turmas')
     .select('id')
     .eq('tenant_id', tenantId)
-    .eq('grupo_id', grupoId)
-    .maybeSingle();
+    .eq('grupo_id', grupoId);
 
-  const turmaFilters = [`turma_id.eq.${grupoId}`];
-  if (turma?.id) turmaFilters.push(`turma_id.eq.${turma.id}`);
+  const idsDestaTurma = new Set<string>([grupoId]);
+  for (const t of (turmasDoGrupo || [])) idsDestaTurma.add(t.id);
 
-  const { data: fromEnrollment, error: err1 } = await supabase
+  // 2. Busca TODOS os enrollment_period ativos durante o período
+  const { data: enrollmentsNoPeriodo, error: errEp } = await supabase
     .from('enrollment_period')
-    .select('aluno_id')
+    .select('aluno_id, turma_id')
     .eq('tenant_id', tenantId)
-    .or(turmaFilters.join(','))
     .lte('data_inicio', lastDay)
     .or(`data_fim.gte.${firstDay},data_fim.is.null`);
 
-  if (err1) {
-    console.error('[listarComposicaoHistorica] Erro enrollment:', err1);
+  if (errEp) {
+    console.error('[listarComposicaoHistorica] Erro enrollment:', errEp);
     throw new AppError('Erro ao buscar composicao historica', 500);
   }
 
-  const enrollmentIds = new Set((fromEnrollment || []).map((e: any) => e.aluno_id));
+  // Mapa: aluno_id → conjunto de turma_ids ativos no período (já resolvendo UUIDs)
+  // Usamos os IDs da turma (grupo_id + UUIDs) pra identificar "mesma turma"
+  const alunosNestaTurma = new Set<string>();
+  const alunosEmOutraTurma = new Set<string>();
 
-  // Alunos que tem enrollment_period (qualquer) — usamos pra saber quem NÃO é pré-feature
-  const { data: qualquerEnrollment, error: errAny } = await supabase
-    .from('enrollment_period')
-    .select('aluno_id')
-    .eq('tenant_id', tenantId);
-
-  if (errAny) {
-    console.error('[listarComposicaoHistorica] Erro qualquerEnrollment:', errAny);
-    throw new AppError('Erro ao buscar composicao historica', 500);
+  for (const ep of (enrollmentsNoPeriodo || [])) {
+    const aId = ep.aluno_id;
+    if (idsDestaTurma.has(ep.turma_id)) {
+      alunosNestaTurma.add(aId);
+    } else {
+      alunosEmOutraTurma.add(aId);
+    }
   }
 
-  const qualquerEnrollmentIds = new Set((qualquerEnrollment || []).map((e: any) => e.aluno_id));
-
-  // Busca todos os alunos ativos
-  const { data: todosAlunos, error: err2 } = await supabase
+  // 3. Busca TODOS os alunos ativos
+  const { data: todosAlunos, error: errAlunos } = await supabase
     .from('alunos')
     .select('*')
     .eq('tenant_id', tenantId)
     .eq('ativo', true);
 
-  if (err2) {
-    console.error('[listarComposicaoHistorica] Erro alunos:', err2);
+  if (errAlunos) {
+    console.error('[listarComposicaoHistorica] Erro alunos:', errAlunos);
     throw new AppError('Erro ao buscar alunos', 500);
   }
 
-  // Filtro final:
-  // 1. Matchou enrollment_period com a turma + período → inclui
-  // 2. NÃO tem enrollment_period nenhum + turma_id atual = grupoId → inclui (fallback pré-feature)
-  // 3. Tem enrollment_period mas nenhum bateu → exclui
+  // 4. Filtro final:
+  //    - Include: current turma = grupoId AND (sem enrollment conflitante OU enrollment nesta turma)
+  //    - Include: alunosNestaTurma mesmo se current turma for diferente (transferidos de saída)
+  //    - Exclude: alunosEmOutraTurma (transferidos de entrada)
   const alunos = (todosAlunos || []).filter((a: any) => {
-    if (enrollmentIds.has(a.id)) return true;
-    if (!qualquerEnrollmentIds.has(a.id) && a.turma_id === grupoId) return true;
-    return false;
+    // Esteve nesta turma no período (via enrollment) → inclui sempre
+    if (alunosNestaTurma.has(a.id)) return true;
+
+    // Tem enrollment em OUTRA turma no período → exclui
+    if (alunosEmOutraTurma.has(a.id)) return false;
+
+    // Sem enrollment no período: inclui se turma_id atual = grupoId (fallback pré-feature)
+    return a.turma_id === grupoId;
   });
 
   return alunos;
