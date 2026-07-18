@@ -18,8 +18,7 @@ export async function listarComposicaoHistorica(
   const firstDay = `${ano}-${String(mes).padStart(2, '0')}-01`;
   const lastDay = new Date(ano, mes, 0).toISOString().split('T')[0];
 
-  // 1. Busca TODOS os UUIDs de turmas que correspondem a este grupo_id
-  //    (pra resolver registros antigos do enrollment_period que armazenam UUID)
+  // 1. Resolve UUIDs antigos: todos os turmas.id que correspondem a este grupo_id
   const { data: turmasDoGrupo } = await supabase
     .from('turmas')
     .select('id')
@@ -29,34 +28,39 @@ export async function listarComposicaoHistorica(
   const idsDestaTurma = new Set<string>([grupoId]);
   for (const t of (turmasDoGrupo || [])) idsDestaTurma.add(t.id);
 
-  // 2. Busca TODOS os enrollment_period ativos durante o período
-  const { data: enrollmentsNoPeriodo, error: errEp } = await supabase
+  // 2. Busca TODOS os enrollment_period do tenant (sem filtro Supabase)
+  //    Filtramos em JS pra evitar bugs com o query builder
+  const { data: rawEnrollments, error: errEp } = await supabase
     .from('enrollment_period')
-    .select('aluno_id, turma_id')
+    .select('aluno_id, turma_id, data_inicio, data_fim')
     .eq('tenant_id', tenantId)
-    .lte('data_inicio', lastDay)
-    .or(`data_fim.gte.${firstDay},data_fim.is.null`);
+    .range(0, 1000000);
 
   if (errEp) {
     console.error('[listarComposicaoHistorica] Erro enrollment:', errEp);
     throw new AppError('Erro ao buscar composicao historica', 500);
   }
 
-  // Mapa: aluno_id → conjunto de turma_ids ativos no período (já resolvendo UUIDs)
-  // Usamos os IDs da turma (grupo_id + UUIDs) pra identificar "mesma turma"
+  // 3. Filtro em JS: enrollment ativo durante o período
   const alunosNestaTurma = new Set<string>();
   const alunosEmOutraTurma = new Set<string>();
 
-  for (const ep of (enrollmentsNoPeriodo || [])) {
-    const aId = ep.aluno_id;
+  for (const ep of (rawEnrollments || [])) {
+    const inicio = ep.data_inicio as string;
+    const fim = ep.data_fim as string | null;
+
+    // Verifica se o enrollment estava ativo durante o período alvo
+    if (inicio > lastDay) continue;
+    if (fim !== null && fim < firstDay) continue;
+
     if (idsDestaTurma.has(ep.turma_id)) {
-      alunosNestaTurma.add(aId);
+      alunosNestaTurma.add(ep.aluno_id);
     } else {
-      alunosEmOutraTurma.add(aId);
+      alunosEmOutraTurma.add(ep.aluno_id);
     }
   }
 
-  // 3. Busca TODOS os alunos ativos
+  // 4. Busca TODOS os alunos ativos
   const { data: todosAlunos, error: errAlunos } = await supabase
     .from('alunos')
     .select('*')
@@ -68,18 +72,13 @@ export async function listarComposicaoHistorica(
     throw new AppError('Erro ao buscar alunos', 500);
   }
 
-  // 4. Filtro final:
-  //    - Include: current turma = grupoId AND (sem enrollment conflitante OU enrollment nesta turma)
-  //    - Include: alunosNestaTurma mesmo se current turma for diferente (transferidos de saída)
-  //    - Exclude: alunosEmOutraTurma (transferidos de entrada)
+  // 5. Filtro final inclusivo:
+  //    - Esteve nesta turma no período (enrollment match) → sempre inclui
+  //    - Esteve em OUTRA turma no período → exclui
+  //    - Sem enrollment no período → inclui se turma_id atual = grupoId (fallback pré-feature)
   const alunos = (todosAlunos || []).filter((a: any) => {
-    // Esteve nesta turma no período (via enrollment) → inclui sempre
     if (alunosNestaTurma.has(a.id)) return true;
-
-    // Tem enrollment em OUTRA turma no período → exclui
     if (alunosEmOutraTurma.has(a.id)) return false;
-
-    // Sem enrollment no período: inclui se turma_id atual = grupoId (fallback pré-feature)
     return a.turma_id === grupoId;
   });
 
