@@ -18,65 +18,67 @@ export async function listarComposicaoHistorica(
   const firstDay = `${ano}-${String(mes).padStart(2, '0')}-01`;
   const lastDay = new Date(ano, mes, 0).toISOString().split('T')[0];
 
-  // 1. Resolve UUIDs antigos: todos os turmas.id que correspondem a este grupo_id
-  const { data: turmasDoGrupo } = await supabase
+  // 1. Descobre o indice_aula desta turma
+  const { data: turma } = await supabase
     .from('turmas')
-    .select('id')
+    .select('label, professor_id, horario')
     .eq('tenant_id', tenantId)
-    .eq('grupo_id', grupoId);
+    .eq('grupo_id', grupoId)
+    .maybeSingle();
 
-  const idsDestaTurma = new Set<string>([grupoId]);
-  for (const t of (turmasDoGrupo || [])) idsDestaTurma.add(t.id);
+  if (!turma) {
+    throw new AppError('Turma nao encontrada', 404);
+  }
 
-  // 2. Busca TODOS os enrollment_period do tenant (sem filtro Supabase)
-  //    Filtramos em JS pra evitar bugs com o query builder
-  const { data: rawEnrollments, error: errEp } = await supabase
-    .from('enrollment_period')
-    .select('aluno_id, turma_id, data_inicio, data_fim')
+  const { data: todasTurmas } = await supabase
+    .from('turmas')
+    .select('grupo_id, horario')
     .eq('tenant_id', tenantId)
+    .eq('label', turma.label)
+    .eq('professor_id', turma.professor_id);
+
+  const turmasLabelProf = (todasTurmas || [])
+    .filter((t: any) => t.grupo_id && t.horario)
+    .sort((a: any, b: any) => a.horario.localeCompare(b.horario));
+
+  const indiceAula = turmasLabelProf.findIndex((t: any) => t.grupo_id === grupoId);
+
+  if (indiceAula < 0) {
+    throw new AppError('Indice de aula nao encontrado', 404);
+  }
+
+  // 2. Busca TODOS os chamadas_log do período (apenas status manuais de aluno)
+  const { data: logs, error: errLogs } = await supabase
+    .from('chamadas_log')
+    .select('grupo_id, indice_aula')
+    .eq('tenant_id', tenantId)
+    .gte('data', firstDay)
+    .lte('data', lastDay)
+    .in('status', ['presente', 'falta', 'justificado'])
     .range(0, 1000000);
 
-  // --- DEBUG ---
-  console.log('[COMPDEBUG] grupoId:', grupoId, 'mes:', mes, 'ano:', ano);
-  console.log('[COMPDEBUG] firstDay:', firstDay, 'lastDay:', lastDay);
-  console.log('[COMPDEBUG] idsDestaTurma:', [...idsDestaTurma]);
-  if (errEp) {
-    console.error('[COMPDEBUG] Erro enrollment:', errEp);
-    throw new AppError('Erro ao buscar composicao historica', 500);
+  if (errLogs) {
+    console.error('[listarComposicaoHistorica] Erro chamadas_log:', errLogs);
+    throw new AppError('Erro ao buscar chamadas', 500);
   }
-  console.log('[COMPDEBUG] rawEnrollments.length:', rawEnrollments?.length);
-  if (rawEnrollments && rawEnrollments.length > 0) {
-    console.log('[COMPDEBUG] primeiro enrollment:', JSON.stringify(rawEnrollments[0]));
-    console.log('[COMPDEBUG] ultimo enrollment:', JSON.stringify(rawEnrollments[rawEnrollments.length - 1]));
-  }
-  // --- FIM DEBUG ---
 
-  // 3. Filtro em JS: enrollment ativo durante o período
+  // 3. Para cada aluno (UUID), verifica em quais indices ele apareceu
   const alunosNestaTurma = new Set<string>();
   const alunosEmOutraTurma = new Set<string>();
 
-  for (const ep of (rawEnrollments || [])) {
-    const inicio = ep.data_inicio as string;
-    const fim = ep.data_fim as string | null;
+  for (const log of (logs || [])) {
+    const gId = log.grupo_id;
+    if (!gId || !gId.includes('-')) continue;
 
-    // Verifica se o enrollment estava ativo durante o período alvo
-    if (inicio > lastDay) continue;
-    if (fim !== null && fim < firstDay) continue;
-
-    if (idsDestaTurma.has(ep.turma_id)) {
-      alunosNestaTurma.add(ep.aluno_id);
+    if (log.indice_aula === indiceAula) {
+      alunosNestaTurma.add(gId);
     } else {
-      alunosEmOutraTurma.add(ep.aluno_id);
+      alunosEmOutraTurma.add(gId);
     }
   }
 
-  // --- DEBUG ---
-  console.log('[COMPDEBUG] alunosNestaTurma.size:', alunosNestaTurma.size);
-  console.log('[COMPDEBUG] alunosEmOutraTurma.size:', alunosEmOutraTurma.size);
-  if (alunosEmOutraTurma.size > 0) {
-    console.log('[COMPDEBUG] alunosEmOutraTurma IDs:', [...alunosEmOutraTurma]);
-  }
-  // --- FIM DEBUG ---
+  // Remove de alunosEmOutraTurma quem já está em alunosNestaTurma
+  for (const id of alunosNestaTurma) alunosEmOutraTurma.delete(id);
 
   // 4. Busca TODOS os alunos ativos
   const { data: todosAlunos, error: errAlunos } = await supabase
@@ -86,25 +88,19 @@ export async function listarComposicaoHistorica(
     .eq('ativo', true);
 
   if (errAlunos) {
-    console.error('[COMPDEBUG] Erro alunos:', errAlunos);
+    console.error('[listarComposicaoHistorica] Erro alunos:', errAlunos);
     throw new AppError('Erro ao buscar alunos', 500);
   }
 
-  // 5. Filtro final inclusivo:
-  //    - Esteve nesta turma no período (enrollment match) → sempre inclui
-  //    - Esteve em OUTRA turma no período → exclui
-  //    - Sem enrollment no período → inclui se turma_id atual = grupoId (fallback pré-feature)
+  // 5. Filtro:
+  //    - Teve presenca neste indice_aula → inclui sempre
+  //    - Teve presenca apenas em OUTRO indice → exclui (transferido de entrada)
+  //    - Sem chamada no período → inclui se turma_id atual = grupoId (novato sem historico)
   const alunos = (todosAlunos || []).filter((a: any) => {
     if (alunosNestaTurma.has(a.id)) return true;
     if (alunosEmOutraTurma.has(a.id)) return false;
     return a.turma_id === grupoId;
   });
-
-  // --- DEBUG ---
-  console.log('[COMPDEBUG] todosAlunos.length:', todosAlunos?.length);
-  console.log('[COMPDEBUG] alunosFiltrados.length:', alunos.length);
-  console.log('[COMPDEBUG] alunosFiltrados nomes:', alunos.map((a: any) => a.nome));
-  // --- FIM DEBUG ---
 
   return alunos;
 }
