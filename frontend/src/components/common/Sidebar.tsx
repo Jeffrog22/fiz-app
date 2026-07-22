@@ -18,6 +18,10 @@ const links: SidebarLink[] = [
   { to: '/calendario', label: 'Calendário', icon: '\uD83D\uDCC5' },
 ];
 
+const configLinks: SidebarLink[] = [
+  { to: '/configuracoes', label: 'Configurações', icon: '\u2699\uFE0F' },
+];
+
 interface Props {
   collapsed: boolean;
   onToggle: () => void;
@@ -43,8 +47,35 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle }) => {
         </button>
       </div>
 
-      <nav className="flex flex-col gap-1 px-2">
+      <nav className="flex flex-col gap-1 px-2 flex-1">
         {links.map((link) => (
+          <NavLink
+            key={link.to}
+            to={link.to}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors whitespace-nowrap ${
+                collapsed ? 'justify-center' : ''
+              } ${
+                isActive
+                  ? 'bg-primary-50 text-primary-700 font-medium'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`
+            }
+          >
+            <span className="text-lg flex-shrink-0">{link.icon}</span>
+            <span
+              className={`transition-all duration-300 ${
+                collapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'
+              }`}
+            >
+              {link.label}
+            </span>
+          </NavLink>
+        ))}
+      </nav>
+
+      <nav className="flex flex-col gap-1 px-2 pt-2 border-t border-gray-200 mt-2">
+        {configLinks.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}

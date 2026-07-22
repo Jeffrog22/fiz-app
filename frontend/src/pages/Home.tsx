@@ -17,6 +17,7 @@ const menuItems: MenuItem[] = [
   { label: 'Exclusões', path: '/exclusoes', icon: '\uD83D\uDDD1\uFE0F', color: 'bg-red-50 hover:bg-red-100 border-red-200', group: 'more' },
   { label: 'Vagas', path: '/vagas', icon: '\uD83D\uDCE6', color: 'bg-cyan-50 hover:bg-cyan-100 border-cyan-200', group: 'more' },
   { label: 'Relatórios', path: '/relatorios', icon: '\uD83D\uDCCA', color: 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200', group: 'more' },
+  { label: 'Configurações', path: '/configuracoes', icon: '\u2699\uFE0F', color: 'bg-gray-50 hover:bg-gray-100 border-gray-200', group: 'more' },
 ];
 
 const Home: React.FC = () => {

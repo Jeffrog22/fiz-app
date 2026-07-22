@@ -14,6 +14,7 @@ import Vagas from './pages/Vagas';
 import Exclusoes from './pages/Exclusoes';
 import Calendario from './pages/Calendario';
 import Relatorios from './pages/Relatorios';
+import Configuracoes from './pages/Configuracoes';
 import TopBar from './components/common/TopBar';
 import Sidebar from './components/common/Sidebar';
 import DevPanel from './components/dev/DevPanel';
@@ -97,6 +98,7 @@ const AppContent: React.FC = () => {
       <Route path="/exclusoes" element={<ProtectedLayout><Exclusoes /></ProtectedLayout>} />
       <Route path="/relatorios" element={<ProtectedLayout><Relatorios /></ProtectedLayout>} />
       <Route path="/calendario" element={<ProtectedLayout><Calendario /></ProtectedLayout>} />
+      <Route path="/configuracoes" element={<ProtectedLayout><Configuracoes /></ProtectedLayout>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
