@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { usePushNotifications } from '../hooks/usePushNotifications';
+import { useZoom } from '../hooks/useZoom';
 
 const Configuracoes: React.FC = () => {
   const { permission, subscribed, loading } = usePushNotifications();
+  const { zoom, aumentar, diminuir, resetar, ZOOM_MIN, ZOOM_MAX } = useZoom();
 
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     return localStorage.getItem('theme') === 'dark';
@@ -96,6 +98,40 @@ const Configuracoes: React.FC = () => {
               {darkMode ? 'Escuro' : 'Claro'}
             </span>
           </label>
+        </div>
+
+        {/* Acessibilidade */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-3xl">♿</span>
+            <h2 className="text-lg font-semibold text-gray-700">Acessibilidade</h2>
+          </div>
+          <p className="text-sm text-gray-500 mb-4">
+            Ajuste o zoom da interface para melhor visualização.
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={diminuir}
+              disabled={zoom <= ZOOM_MIN}
+              className="px-4 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+            >
+              A−
+            </button>
+            <button
+              onClick={resetar}
+              className="px-4 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition"
+            >
+              Padrão
+            </button>
+            <button
+              onClick={aumentar}
+              disabled={zoom >= ZOOM_MAX}
+              className="px-4 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+            >
+              A+
+            </button>
+            <span className="text-sm text-gray-500 ml-1 w-10 text-right">{zoom}%</span>
+          </div>
         </div>
       </div>
     </div>

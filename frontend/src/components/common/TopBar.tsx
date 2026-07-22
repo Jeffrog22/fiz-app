@@ -3,7 +3,6 @@ import { useAuth } from '../../hooks/useAuth';
 import { useTenant } from '../../hooks/useTenant';
 import { useDbStatus } from '../../hooks/useDbStatus';
 import WeatherWidget from './WeatherWidget';
-import AccessibilityToolbar from './AccessibilityToolbar';
 
 const TopBar: React.FC = () => {
   const { tenantNome } = useTenant();
@@ -19,7 +18,6 @@ const TopBar: React.FC = () => {
         <span className="text-sm text-gray-600">{tenantNome}</span>
       </div>
       <div className="flex items-center gap-4">
-        <AccessibilityToolbar />
         <WeatherWidget />
         {professorNome && (
           <span className="text-sm text-gray-600">{professorNome}</span>
