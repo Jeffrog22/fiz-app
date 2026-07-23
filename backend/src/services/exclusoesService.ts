@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { AppError } from '../middleware/errorHandler';
+import { iniciarPeriodoService } from './enrollmentService';
 
 export async function listar(tenantId: string, mostrarOcultos?: string): Promise<any[]> {
   let query = supabase
@@ -34,7 +35,7 @@ export async function listar(tenantId: string, mostrarOcultos?: string): Promise
   }));
 }
 
-export async function restaurar(id: string, tenantId: string, turma_id?: string): Promise<void> {
+export async function restaurar(id: string, tenantId: string, turma_id?: string, transferencia_externa?: boolean): Promise<void> {
   if (!id) throw new AppError('ID da exclusao e obrigatorio', 400);
 
   const { data: exclusao, error: fetchError } = await supabase
@@ -56,6 +57,22 @@ export async function restaurar(id: string, tenantId: string, turma_id?: string)
     .eq('tenant_id', tenantId);
 
   if (updateError) throw new AppError('Erro ao restaurar aluno', 500);
+
+  const motivo = transferencia_externa ? 'transferencia_externa' : 'reativacao';
+
+  const { data: aluno } = await supabase
+    .from('alunos')
+    .select('nivel')
+    .eq('id', exclusao.aluno_id)
+    .single();
+
+  await iniciarPeriodoService(
+    exclusao.aluno_id,
+    turma_id || null,
+    aluno?.nivel || null,
+    motivo,
+    tenantId,
+  );
 
   const { error: deleteError } = await supabase
     .from('exclusoes')

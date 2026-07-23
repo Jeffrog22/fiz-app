@@ -15,8 +15,8 @@ export class ExclusoesController {
   static async restaurar(req: TenantRequest, res: Response, next: NextFunction) {
     try {
       const tenantId = req.tenantId!;
-      const { id, turma_id } = req.body;
-      await exclusoesService.restaurar(id, tenantId, turma_id);
+      const { id, turma_id, transferencia_externa } = req.body;
+      await exclusoesService.restaurar(id, tenantId, turma_id, transferencia_externa);
       res.json({ ok: true });
     } catch (e) { next(e); }
   }

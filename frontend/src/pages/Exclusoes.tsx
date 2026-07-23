@@ -106,12 +106,13 @@ const Exclusoes: React.FC = () => {
     </button>
   );
 
-  const handleRestore = async (turmaId: string) => {
+  const handleRestore = async (turmaId: string, transferenciaExterna?: boolean) => {
     if (!restoreTarget) return;
     try {
       await api.post('/exclusoes/restaurar', {
         id: restoreTarget.id,
         turma_id: turmaId || undefined,
+        transferencia_externa: transferenciaExterna || undefined,
       });
       setRestoreTarget(null);
       carregar();
@@ -340,6 +341,7 @@ const Exclusoes: React.FC = () => {
         open={!!restoreTarget}
         alunoNome={restoreTarget?.alunoNome || ''}
         turmas={turmas}
+        professores={professores}
         onRestore={handleRestore}
         onClose={() => setRestoreTarget(null)}
       />
