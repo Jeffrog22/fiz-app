@@ -30,11 +30,12 @@ export class AlunosController {
       const aluno = await criarAlunoService(alunoData, tenantId);
 
       if (alunoData.turma_id) {
+        const motivo = alunoData.transferencia_externa ? 'transferencia_externa' : 'matricula_inicial';
         await iniciarPeriodoService(
           aluno.id,
           alunoData.turma_id,
           alunoData.nivel || null,
-          'matricula_inicial',
+          motivo,
           tenantId,
         );
       }
@@ -54,7 +55,8 @@ export class AlunosController {
       if (acao && acao !== 'correcao') {
         switch (acao) {
           case 'transferencia':
-            await iniciarPeriodoService(id, updateData.turma_id || null, updateData.nivel || null, 'transferencia', tenantId);
+          case 'matricula_inicial':
+            await iniciarPeriodoService(id, updateData.turma_id || null, updateData.nivel || null, acao, tenantId);
             break;
           case 'reativacao':
             await iniciarPeriodoService(id, updateData.turma_id || null, updateData.nivel || null, 'reativacao', tenantId);

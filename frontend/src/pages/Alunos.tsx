@@ -227,7 +227,7 @@ const Alunos: React.FC = () => {
         await api.put(`/alunos/${alunoId}`, {
           turma_id: turmaAlocar,
           nivel: turma?.nivel || null,
-          acao: 'matricula_inicial',
+          acao: 'reativacao',
         });
       }
       setSelectedIds(new Set());

@@ -48,6 +48,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [erroData, setErroData] = useState<string | null>(null);
   const [erroContato, setErroContato] = useState<string | null>(null);
+  const [transferenciaExterna, setTransferenciaExterna] = useState(false);
   const [toast, setToast] = useState<{ msg: string; tipo?: 'sucesso' | 'erro' } | null>(null);
 
   const isNew = !aluno;
@@ -93,6 +94,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
     }
     setEditMode(false);
     setAcao(null);
+    setTransferenciaExterna(false);
     setErroData(null);
     setErroContato(null);
     setToast(null);
@@ -140,6 +142,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
     } else if (isNew) {
       payload.turma_id = turmaId || undefined;
       payload.nivel = nivel || undefined;
+      (payload as any).transferencia_externa = transferenciaExterna || undefined;
     }
 
     onSave({ data: payload, acao: acao || undefined });
@@ -370,6 +373,18 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
                   ))}
                 </select>
               </div>
+
+              {turmaId && (
+                <label className="flex items-center gap-2 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={transferenciaExterna}
+                    onChange={(e) => setTransferenciaExterna(e.target.checked)}
+                    className="rounded border-gray-300 text-primary-600"
+                  />
+                  Veio de outra unidade
+                </label>
+              )}
             </>
           )}
 
