@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-10 — Sidebar deslizante + remove Relatórios + v2.0.0 -->
+<!-- última-sessão: 2026-07-23 — Centralização Enrollment + Restore com Período + v2.26.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -798,4 +798,44 @@ Regras:
 
 ### Typecheck
 - Frontend: 0 erros
+
+---
+
+## Sessão: 23/07/2026 — Centralização Enrollment + Restore com Período + v2.26.0
+
+### O que foi feito
+- Centraliza lógica de enrollment no backend (criação, PUT, exclusão, desalocação)
+- Remove 4 chamadas `POST /alunos/:id/enrollment` do frontend, envia `acao` nos PUTs
+- `fecharPeriodoAtivoService` em `enrollmentService.ts`
+- `PATCH /alunos/:id/desalocar` com botão "Desalocar" no grid de Alunos
+- Migration `023_backfill_enrollment_period.sql`
+- 9 motivos expandidos: `matricula_inicial`, `correcao`, `transferencia`, `desalocacao`, `exclusao`, `reativacao`, `progressao_nivel`, `correcao_turma`, `transferencia_externa`
+- Chips "Corrigir Turma" e "Progressão" removidos do AlunoModal (só Correção + Transferência)
+- Nível volta a `<p>` read-only no modal
+- Alocar no grid usa `acao: 'reativacao'` (fecha desalocação anterior)
+- +Novo Aluno: checkbox "Veio de outra piscina" → motivo `'transferencia_externa'`
+- Restore (exclusões): `iniciarPeriodoService` com `'reativacao'`/`'transferencia_externa'`
+- `RestoreModal.tsx` reescrito com cascata Professor(a) → Turma + Horário, checkbox "Veio de outra piscina"
+
+### Arquivos
+- `backend/src/controllers/alunosController.ts` (+enrollment em criar/atualizar/remover, +desalocar)
+- `backend/src/controllers/exclusoesController.ts` (+transferencia_externa)
+- `backend/src/routes/alunosRoutes.ts` (+PATCH desalocar)
+- `backend/src/services/enrollmentService.ts` (+fecharPeriodoAtivoService)
+- `backend/src/services/exclusoesService.ts` (+enrollment no restaurar)
+- `backend/src/types/index.ts` (motivos expandidos)
+- `backend/src/migrations/023_backfill_enrollment_period.sql` (novo)
+- `frontend/src/types/index.ts` (motivos + SavePayload expandidos)
+- `frontend/src/pages/Alunos.tsx` (remove POST enrollment, +acao, +desalocar)
+- `frontend/src/components/modals/AlunoModal.tsx` (chips simplificados, nivel read-only, checkbox transf. externa)
+- `frontend/src/components/modals/RestoreModal.tsx` (reescrito)
+- `frontend/src/pages/Exclusoes.tsx` (handleRestore aceita transferenciaExterna)
+
+### Typecheck
+- Frontend: 0 erros
+- Backend: 0 erros
+
+### Testes
+- Frontend: 41/41 passam
+- Backend: 25/25 passam
 
