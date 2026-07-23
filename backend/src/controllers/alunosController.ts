@@ -5,7 +5,6 @@ import {
   criarAlunoService,
   atualizarAlunoService,
   removerAlunoService,
-  buscarPorIdService,
 } from '../services/alunosService';
 import {
   iniciarPeriodoService,
@@ -53,15 +52,9 @@ export class AlunosController {
       const { acao, ...updateData } = req.body;
 
       if (acao && acao !== 'correcao') {
-        const alunoAtual = await buscarPorIdService(id, tenantId);
-
         switch (acao) {
           case 'transferencia':
-          case 'correcao_turma':
-            await iniciarPeriodoService(id, updateData.turma_id || null, updateData.nivel || null, acao, tenantId);
-            break;
-          case 'progressao_nivel':
-            await iniciarPeriodoService(id, alunoAtual.turma_id || null, updateData.nivel || null, 'progressao_nivel', tenantId);
+            await iniciarPeriodoService(id, updateData.turma_id || null, updateData.nivel || null, 'transferencia', tenantId);
             break;
           case 'reativacao':
             await iniciarPeriodoService(id, updateData.turma_id || null, updateData.nivel || null, 'reativacao', tenantId);

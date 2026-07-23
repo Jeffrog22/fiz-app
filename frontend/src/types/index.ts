@@ -72,7 +72,7 @@ export interface EnrollmentPeriod {
 
 export interface SavePayload {
   data: Partial<Aluno>;
-  acao?: 'correcao' | 'transferencia' | 'correcao_turma' | 'progressao_nivel' | 'desalocacao';
+  acao?: 'correcao' | 'transferencia';
 }
 
 export interface AnotacaoAluno {
