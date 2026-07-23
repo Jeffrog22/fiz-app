@@ -50,6 +50,30 @@ export async function buscarPeriodoAtivoService(
   return data;
 }
 
+export async function fecharPeriodoAtivoService(
+  alunoId: string,
+  tenantId: string,
+  motivo: string,
+): Promise<void> {
+  const periodoAtivo = await buscarPeriodoAtivoService(alunoId, tenantId);
+
+  if (periodoAtivo) {
+    const { error } = await supabase
+      .from('enrollment_period')
+      .update({
+        data_fim: new Date().toISOString().split('T')[0],
+        motivo,
+      })
+      .eq('id', periodoAtivo.id)
+      .eq('tenant_id', tenantId);
+
+    if (error) {
+      console.error('[enrollment/fecharPeriodoAtivo] Update error:', error);
+      throw new AppError('Erro ao encerrar período ativo', 500);
+    }
+  }
+}
+
 export async function iniciarPeriodoService(
   alunoId: string,
   turmaId: string | null,

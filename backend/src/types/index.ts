@@ -79,7 +79,7 @@ export interface EnrollmentPeriod {
   nivel?: string;
   data_inicio: string;
   data_fim?: string;
-  motivo: 'matricula_inicial' | 'correcao' | 'transferencia';
+  motivo: 'matricula_inicial' | 'correcao' | 'transferencia' | 'desalocacao' | 'exclusao' | 'reativacao' | 'progressao_nivel' | 'correcao_turma' | 'transferencia_externa';
   criado_em: string;
 }
 

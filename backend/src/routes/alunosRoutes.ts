@@ -11,6 +11,7 @@ router.use(tenantMiddleware, authMiddleware);
 router.get('/', AlunosController.listar);
 router.post('/', AlunosController.criar);
 router.put('/:id', AlunosController.atualizar);
+router.patch('/:id/desalocar', AlunosController.desalocar);
 router.delete('/:id', AlunosController.remover);
 
 export default router;

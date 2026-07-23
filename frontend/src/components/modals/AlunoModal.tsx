@@ -32,7 +32,7 @@ function normalizarGenero(valor: string): string {
 
 const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], onSave, onClose, lastSession, resetCounter }) => {
   const [editMode, setEditMode] = useState(false);
-  const [acao, setAcao] = useState<'correcao' | 'transferencia' | null>(null);
+  const [acao, setAcao] = useState<'correcao' | 'transferencia' | 'correcao_turma' | 'progressao_nivel' | null>(null);
 
   const [nome, setNome] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
@@ -59,6 +59,11 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
   }, [turmas, professorId]);
   const turmaSelecionada = turmas.find((t) => t.grupo_id === turmaId);
   const turmasOrdenadas = useMemo(() => sortTurmas(turmasFiltradas), [turmasFiltradas]);
+  const niveisDisponiveis = useMemo(() => {
+    const set = new Set<string>();
+    turmas.forEach((t) => { if (t.nivel) set.add(t.nivel); });
+    return Array.from(set).sort();
+  }, [turmas]);
 
   useEffect(() => {
     if (!open) return;
@@ -133,8 +138,10 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
       data_atestado: dataAtestado ? formatDateISO(dataAtestado) : undefined,
     };
 
-    if (acao === 'transferencia') {
+    if (acao === 'transferencia' || acao === 'correcao_turma') {
       payload.turma_id = turmaId || undefined;
+      payload.nivel = nivel || undefined;
+    } else if (acao === 'progressao_nivel') {
       payload.nivel = nivel || undefined;
     } else if (acao === 'correcao') {
     } else if (isNew) {
@@ -168,7 +175,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
         </div>
 
         {isEditMode && !isNew && (
-          <div className="px-6 pt-3 flex gap-2">
+          <div className="px-6 pt-3 flex gap-2 flex-wrap">
             <button
               type="button"
               onClick={() => setAcao(acao === 'correcao' ? null : 'correcao')}
@@ -191,12 +198,36 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
             >
               Transferência
             </button>
+            <button
+              type="button"
+              onClick={() => setAcao(acao === 'correcao_turma' ? null : 'correcao_turma')}
+              className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
+                acao === 'correcao_turma'
+                  ? 'bg-indigo-100 border-indigo-300 text-indigo-700'
+                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              Corrigir Turma
+            </button>
+            <button
+              type="button"
+              onClick={() => setAcao(acao === 'progressao_nivel' ? null : 'progressao_nivel')}
+              className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
+                acao === 'progressao_nivel'
+                  ? 'bg-green-100 border-green-300 text-green-700'
+                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              Progressão
+            </button>
           </div>
         )}
 
-        {acao === 'transferencia' && (
-          <div className="mx-6 mt-3 p-3 bg-purple-50 border border-purple-200 rounded-md space-y-3">
-            <p className="text-xs font-medium text-purple-700">Transferir aluno para outra turma</p>
+        {(acao === 'transferencia' || acao === 'correcao_turma') && (
+          <div className={`mx-6 mt-3 p-3 rounded-md space-y-3 ${acao === 'transferencia' ? 'bg-purple-50 border border-purple-200' : 'bg-indigo-50 border border-indigo-200'}`}>
+            <p className={`text-xs font-medium ${acao === 'transferencia' ? 'text-purple-700' : 'text-indigo-700'}`}>
+              {acao === 'transferencia' ? 'Transferir aluno para outra turma' : 'Corrigir turma do aluno'}
+            </p>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-gray-500">Professor(a)</label>
               <select
@@ -375,9 +406,22 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
 
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-600">Nível</label>
-            <p className="px-3 py-1.5 border border-gray-200 rounded-md text-sm bg-gray-50 text-gray-700">
-              {nivel || '-'}
-            </p>
+            {isEditMode ? (
+              <select
+                value={nivel}
+                onChange={(e) => setNivel(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="">Selecione</option>
+                {niveisDisponiveis.map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            ) : (
+              <p className="px-3 py-1.5 border border-gray-200 rounded-md text-sm bg-gray-50 text-gray-700">
+                {nivel || '-'}
+              </p>
+            )}
           </div>
 
           {acao !== 'transferencia' && (

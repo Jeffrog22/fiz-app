@@ -150,23 +150,7 @@ const Alunos: React.FC = () => {
   const handleSave = async ({ data, acao }: SavePayload) => {
     try {
       if (editando) {
-        await api.put(`/alunos/${editando.id}`, data);
-
-        if (acao === 'transferencia') {
-          const turmaId = data.turma_id || null;
-          const nivel = (editando as any)?.turma?.nivel || data.nivel || null;
-          await api.post(`/alunos/${editando.id}/enrollment`, {
-            turma_id: turmaId,
-            nivel,
-            motivo: 'transferencia',
-          });
-        } else if (acao === 'correcao') {
-          await api.post(`/alunos/${editando.id}/enrollment`, {
-            turma_id: editando.turma_id || null,
-            nivel: editando.nivel || null,
-            motivo: 'correcao',
-          });
-        }
+        await api.put(`/alunos/${editando.id}`, { ...data, acao });
       } else {
         await api.post('/alunos', data);
       }
@@ -189,8 +173,21 @@ const Alunos: React.FC = () => {
     }
   };
 
+  const [desalocarTarget, setDesalocarTarget] = useState<{ id: string; nome: string } | null>(null);
+
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; nome: string } | null>(null);
   const [deleteMotivo, setDeleteMotivo] = useState('falta');
+
+  const handleConfirmDesalocar = async () => {
+    if (!desalocarTarget) return;
+    try {
+      await api.patch(`/alunos/${desalocarTarget.id}/desalocar`);
+      setDesalocarTarget(null);
+      await carregar();
+    } catch (err: any) {
+      alert(err?.response?.data?.error || err.message || 'Erro ao desalocar aluno');
+    }
+  };
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
@@ -230,11 +227,7 @@ const Alunos: React.FC = () => {
         await api.put(`/alunos/${alunoId}`, {
           turma_id: turmaAlocar,
           nivel: turma?.nivel || null,
-        });
-        await api.post(`/alunos/${alunoId}/enrollment`, {
-          turma_id: turmaAlocar,
-          nivel: turma?.nivel || null,
-          motivo: 'matricula_inicial',
+          acao: 'matricula_inicial',
         });
       }
       setSelectedIds(new Set());
@@ -256,11 +249,7 @@ const Alunos: React.FC = () => {
         await api.put(`/alunos/${alunoId}`, {
           turma_id: turmaTransferir,
           nivel: turma?.nivel || null,
-        });
-        await api.post(`/alunos/${alunoId}/enrollment`, {
-          turma_id: turmaTransferir,
-          nivel: turma?.nivel || null,
-          motivo: 'transferencia',
+          acao: 'transferencia',
         });
       }
       setSelectedIds(new Set());
@@ -585,6 +574,10 @@ const Alunos: React.FC = () => {
                     <td className="px-3 py-2 text-right space-x-2 whitespace-nowrap">
                       <button onClick={() => { setEditando(a); setModalOpen(true); }}
                         className="text-xs text-primary-600 hover:text-primary-800">Editar</button>
+                      {a.turma_id && (
+                        <button onClick={() => setDesalocarTarget({ id: a.id, nome: a.nome })}
+                          className="text-xs text-amber-600 hover:text-amber-800">Desalocar</button>
+                      )}
                       <button onClick={() => { setDeleteTarget({ id: a.id, nome: a.nome }); setDeleteMotivo('falta'); }}
                         className="text-xs text-red-500 hover:text-red-700">Remover</button>
                     </td>
@@ -600,6 +593,35 @@ const Alunos: React.FC = () => {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {desalocarTarget && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-40" onClick={() => setDesalocarTarget(null)}>
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-800">Desalocar Aluno</h3>
+            <p className="text-sm text-gray-600">
+              Desalocando: <strong>{desalocarTarget.nome}</strong>
+            </p>
+            <p className="text-xs text-gray-500">
+              O aluno será removido da turma atual e ficará como <strong>Pendente</strong>.
+              O período de matrícula será encerrado.
+            </p>
+            <div className="flex gap-2 justify-end pt-2">
+              <button
+                onClick={() => setDesalocarTarget(null)}
+                className="text-sm px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmDesalocar}
+                className="text-sm px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 transition"
+              >
+                Confirmar Desalocação
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
