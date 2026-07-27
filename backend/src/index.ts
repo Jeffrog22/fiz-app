@@ -70,6 +70,25 @@ app.get('/health', (_req, res) => {
   });
 });
 
+app.get('/api/debug/routes', (req, res) => {
+  const list: { method: string; path: string }[] = [];
+  const print = (stack: any[], prefix = '') => {
+    (stack || []).forEach((layer: any) => {
+      if (layer.route) {
+        Object.keys(layer.route.methods).forEach((m: string) =>
+          list.push({ method: m.toUpperCase(), path: prefix + layer.route.path })
+        );
+      } else if (layer.handle?.stack) {
+        const mount = layer.regexp?.source?.replace('\\/?(?=\\/|$)', '') || '';
+        print(layer.handle.stack, prefix + mount);
+      }
+    });
+  };
+  print(app._router.stack);
+  list.sort((a, b) => a.path.localeCompare(b.path));
+  res.json({ routes: list });
+});
+
 app.use(errorHandler);
 
 app.listen(PORT, () => {
