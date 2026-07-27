@@ -54,9 +54,16 @@ export async function gerarFrequenciaXLSX(
   workbook.creator = 'Fiz! App';
   workbook.created = new Date();
 
+  const { data: professores, error: profError } = await supabase
+    .from('professores')
+    .select('id, nome')
+    .eq('tenant_id', tenantId);
+  if (profError) throw new AppError('Erro ao buscar professores', 500);
+  const profMap = new Map((professores || []).map((p: any) => [p.id, p.nome]));
+
   const { data: turmas, error: turmasError } = await supabase
     .from('turmas')
-    .select('*, professores!inner(id, nome)')
+    .select('*')
     .eq('tenant_id', tenantId)
     .eq('label', label)
     .eq('professor_id', professorId)
@@ -65,7 +72,7 @@ export async function gerarFrequenciaXLSX(
   if (turmasError) throw new AppError('Erro ao buscar turmas', 500);
   if (!turmas || turmas.length === 0) throw new AppError('Nenhuma turma encontrada', 404);
 
-  const professorNome = turmas[0].professores?.nome || '---';
+  const professorNome = profMap.get(professorId) || '---';
 
   const { data: alunos, error: alunosError } = await supabase
     .from('alunos')
@@ -98,7 +105,7 @@ export async function gerarFrequenciaXLSX(
     const alunosTurma = (alunos || []).filter((a: Aluno) => a.turma_id === grupoId && a.ativo);
     if (alunosTurma.length === 0) continue;
 
-    const sheetName = turma.horario.replace(':', '-');
+    const sheetName = `${turma.horario.replace(':', '-')}-${(turma.nivel || 'sem-nivel').replace(/\s+/g, '_')}`.slice(0, 31);
     const sheet = workbook.addWorksheet(sheetName, {
       pageSetup: { orientation: 'portrait', paperSize: 9, margins: { left: 0.5, right: 0.5, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 } },
     });
@@ -237,9 +244,16 @@ export async function gerarVagasXLSX(tenantId: string): Promise<ExcelJS.Buffer> 
     views: [{ state: 'normal', zoomScale: 90 }],
   });
 
+  const { data: professores, error: profError } = await supabase
+    .from('professores')
+    .select('id, nome')
+    .eq('tenant_id', tenantId);
+  if (profError) throw new AppError('Erro ao buscar professores', 500);
+  const profMap = new Map((professores || []).map((p: any) => [p.id, p.nome]));
+
   const { data: turmas, error: turmasError } = await supabase
     .from('turmas')
-    .select('*, professores!inner(id, nome)')
+    .select('*')
     .eq('tenant_id', tenantId)
     .order('horario', { ascending: true });
 
@@ -258,11 +272,13 @@ export async function gerarVagasXLSX(tenantId: string): Promise<ExcelJS.Buffer> 
     if (a.turma_id) ocupacao[a.turma_id] = (ocupacao[a.turma_id] || 0) + 1;
   });
 
-  const gruposPorLabel: Record<string, any[]> = {};
+  const gruposPorLabelHorario: Record<string, Record<string, any[]>> = {};
   for (const t of turmas || []) {
-    const key = t.label || 'sem-label';
-    if (!gruposPorLabel[key]) gruposPorLabel[key] = [];
-    gruposPorLabel[key].push(t);
+    const labelKey = t.label || 'sem-label';
+    if (!gruposPorLabelHorario[labelKey]) gruposPorLabelHorario[labelKey] = {};
+    const horKey = t.horario || '00:00';
+    if (!gruposPorLabelHorario[labelKey][horKey]) gruposPorLabelHorario[labelKey][horKey] = [];
+    gruposPorLabelHorario[labelKey][horKey].push(t);
   }
 
   const agora = new Date();
@@ -292,11 +308,15 @@ export async function gerarVagasXLSX(tenantId: string): Promise<ExcelJS.Buffer> 
   currentRow++;
 
   let totalCap = 0, totalAtivos = 0;
-  Object.values(gruposPorLabel).flat().forEach((t: any) => {
-    const cap = t.capacidade || 0;
-    const ocup = ocupacao[t.grupo_id || t.id] || 0;
-    totalCap += cap;
-    totalAtivos += ocup;
+  Object.values(gruposPorLabelHorario).forEach((horMap: any) => {
+    Object.values(horMap).forEach((turmasArr: any) => {
+      turmasArr.forEach((t: any) => {
+        const cap = t.capacidade || 0;
+        const ocup = ocupacao[t.grupo_id || t.id] || 0;
+        totalCap += cap;
+        totalAtivos += ocup;
+      });
+    });
   });
   const totalVagas = Math.max(0, totalCap - totalAtivos);
   const totalExcesso = Math.max(0, totalAtivos - totalCap);
@@ -305,105 +325,74 @@ export async function gerarVagasXLSX(tenantId: string): Promise<ExcelJS.Buffer> 
   currentRow++;
   currentRow++;
 
-  const labels = Object.keys(gruposPorLabel).sort();
+  const labels = Object.keys(gruposPorLabelHorario).sort();
   for (const label of labels) {
-    const turmasLabel = gruposPorLabel[label].sort((a: any, b: any) => a.horario.localeCompare(b.horario));
+    const horarios = Object.keys(gruposPorLabelHorario[label]).sort();
+    const horariosComTurmas = horarios.map((h) => ({ horario: h, turmas: gruposPorLabelHorario[label][h] }));
 
-    for (let bloco = 0; bloco < turmasLabel.length; bloco += 3) {
-      const chunk = turmasLabel.slice(bloco, bloco + 3);
+    for (let bloco = 0; bloco < horariosComTurmas.length; bloco += 3) {
+      const chunk = horariosComTurmas.slice(bloco, bloco + 3);
 
-      chunk.forEach((t: any, ci: number) => {
+      chunk.forEach((item: any, ci: number) => {
         const colBase = ci * 5;
-        const c = (idx: number) => colKeys[colBase + idx] || '';
-
-        const cap = t.capacidade || 0;
-        const ocup = ocupacao[t.grupo_id || t.id] || 0;
-        const vagas = Math.max(0, cap - ocup);
-        const excesso = Math.max(0, ocup - cap);
-        const profNome = t.professores?.nome || '---';
-
-        sheet.getCell(`${c(0)}${currentRow}`).value = t.horario;
-        sheet.getCell(`${c(0)}${currentRow}`).style = labelStyle;
-        sheet.getCell(`${c(1)}${currentRow}`).value = t.label;
-        sheet.getCell(`${c(1)}${currentRow}`).style = labelStyle;
+        const cFn = (idx: number) => colKeys[colBase + idx] || '';
+        sheet.getCell(`${cFn(0)}${currentRow}`).value = item.horario;
+        sheet.getCell(`${cFn(0)}${currentRow}`).style = labelStyle;
+        sheet.getCell(`${cFn(1)}${currentRow}`).value = label;
+        sheet.getCell(`${cFn(1)}${currentRow}`).style = labelStyle;
       });
       currentRow++;
 
-      const maxNiveis = Math.max(...chunk.map((t: any) => {
-        const grupoId = t.grupo_id || t.id;
-        const alunosTurma = (alunos || []).filter((a: any) => a.turma_id === grupoId);
-        const niveis = new Set(alunosTurma.map((a: any) => a.nivel || 'Sem nível'));
-        if (t.nivel) niveis.add(t.nivel);
-        return niveis.size;
-      }));
+      const maxRows = Math.max(...chunk.map((item: any) => item.turmas.length));
 
-      const linhasNivel: { nivel: string; alunos: number; cap: number; professor: string }[][] = chunk.map((t: any) => {
-        const grupoId = t.grupo_id || t.id;
-        const alunosTurma = (alunos || []).filter((a: any) => a.turma_id === grupoId);
-        const nivelCounts: Record<string, number> = {};
-        alunosTurma.forEach((a: any) => {
-          const n = a.nivel || 'Sem nível';
-          nivelCounts[n] = (nivelCounts[n] || 0) + 1;
-        });
-        if (Object.keys(nivelCounts).length === 0) {
-          nivelCounts[t.nivel || 'Sem nível'] = 0;
-        }
-        return Object.entries(nivelCounts).map(([nivel, qtd]) => ({
-          nivel, alunos: qtd,
-          cap: t.capacidade || 0,
-          professor: t.professores?.nome || '---',
-        }));
-      });
-
-      const maxLinhas = Math.max(...linhasNivel.map((l: any) => l.length), 1);
-
-      for (let li = 0; li < maxLinhas; li++) {
-        chunk.forEach((t: any, ci: number) => {
+      for (let ri = 0; ri < maxRows; ri++) {
+        chunk.forEach((item: any, ci: number) => {
           const colBase = ci * 5;
           const cFn = (idx: number) => colKeys[colBase + idx] || '';
-          if (linhasNivel[ci] && linhasNivel[ci][li]) {
-            const item = linhasNivel[ci][li];
-            sheet.getCell(`${cFn(0)}${currentRow}`).value = `${item.nivel}:`;
+          const t = item.turmas[ri];
+          if (t) {
+            const cap = t.capacidade || 0;
+            const ocup = ocupacao[t.grupo_id || t.id] || 0;
+            const profNome = profMap.get(t.professor_id) || '---';
+            sheet.getCell(`${cFn(0)}${currentRow}`).value = `${t.nivel || '---'}:`;
             sheet.getCell(`${cFn(0)}${currentRow}`).style = dataStyle;
-            sheet.getCell(`${cFn(1)}${currentRow}`).value = `${item.alunos}/${item.cap}`;
+            sheet.getCell(`${cFn(1)}${currentRow}`).value = `${ocup}/${cap}`;
             sheet.getCell(`${cFn(1)}${currentRow}`).style = numberStyle;
-            sheet.getCell(`${cFn(2)}${currentRow}`).value = item.professor === '---' ? '' : item.professor;
+            sheet.getCell(`${cFn(2)}${currentRow}`).value = profNome;
             sheet.getCell(`${cFn(2)}${currentRow}`).style = { font: { size: 9, color: { argb: 'FF666666' } } };
           }
         });
         currentRow++;
       }
 
-      chunk.forEach((t: any, ci: number) => {
+      chunk.forEach((item: any, ci: number) => {
         const colBase = ci * 5;
         const cFn = (idx: number) => colKeys[colBase + idx] || '';
-        const cap = t.capacidade || 0;
-        const ocup = ocupacao[t.grupo_id || t.id] || 0;
-        const vagas = Math.max(0, cap - ocup);
-        const excesso = Math.max(0, ocup - cap);
+        const capTotal = item.turmas.reduce((s: number, t: any) => s + (t.capacidade || 0), 0);
+        const ocupTotal = item.turmas.reduce((s: number, t: any) => s + (ocupacao[t.grupo_id || t.id] || 0), 0);
 
         sheet.getCell(`${cFn(0)}${currentRow}`).value = 'Lotação:';
         sheet.getCell(`${cFn(0)}${currentRow}`).style = { font: { bold: true, size: 10, color: { argb: 'FF1F4E79' } } };
-        sheet.getCell(`${cFn(1)}${currentRow}`).value = `${ocup}/${cap}`;
+        sheet.getCell(`${cFn(1)}${currentRow}`).value = `${ocupTotal}/${capTotal}`;
         sheet.getCell(`${cFn(1)}${currentRow}`).style = numberStyle;
       });
       currentRow++;
 
-      chunk.forEach((t: any, ci: number) => {
+      chunk.forEach((item: any, ci: number) => {
         const colBase = ci * 5;
         const cFn = (idx: number) => colKeys[colBase + idx] || '';
-        const cap = t.capacidade || 0;
-        const ocup = ocupacao[t.grupo_id || t.id] || 0;
-        const vagas = Math.max(0, cap - ocup);
-        const excesso = Math.max(0, ocup - cap);
+        const capTotal = item.turmas.reduce((s: number, t: any) => s + (t.capacidade || 0), 0);
+        const ocupTotal = item.turmas.reduce((s: number, t: any) => s + (ocupacao[t.grupo_id || t.id] || 0), 0);
+        const vagasTotal = Math.max(0, capTotal - ocupTotal);
+        const excessoTotal = Math.max(0, ocupTotal - capTotal);
 
         sheet.getCell(`${cFn(0)}${currentRow}`).value = 'Vagas:';
         sheet.getCell(`${cFn(0)}${currentRow}`).style = { font: { size: 10, color: { argb: 'FF006600' } } };
-        sheet.getCell(`${cFn(1)}${currentRow}`).value = vagas;
+        sheet.getCell(`${cFn(1)}${currentRow}`).value = vagasTotal;
         sheet.getCell(`${cFn(1)}${currentRow}`).style = vagasStyle;
         sheet.getCell(`${cFn(2)}${currentRow}`).value = 'Excesso:';
         sheet.getCell(`${cFn(2)}${currentRow}`).style = { font: { size: 10, color: { argb: 'FFCC0000' } } };
-        sheet.getCell(`${cFn(3)}${currentRow}`).value = excesso;
+        sheet.getCell(`${cFn(3)}${currentRow}`).value = excessoTotal;
         sheet.getCell(`${cFn(3)}${currentRow}`).style = excessoStyle;
       });
       currentRow++;
