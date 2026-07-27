@@ -125,6 +125,15 @@ export async function gerarFrequenciaXLSX(
 
   if (anotacoesError) throw new AppError('Erro ao buscar anotações', 500);
 
+  const { data: eventos, error: eventosError } = await supabase
+    .from('calendario')
+    .select('data, tipo')
+    .eq('tenant_id', tenantId)
+    .gte('data', dataInicio)
+    .lte('data', dataFim);
+
+  if (eventosError) throw new AppError('Erro ao buscar eventos', 500);
+
   const labelExtenso: Record<string, string> = {
     'Seg/Ter': 'Segunda e Terça', 'Seg/Qua': 'Segunda e Quarta', 'Seg/Qui': 'Segunda e Quinta',
     'Seg/Sex': 'Segunda e Sexta', 'Ter/Qua': 'Terça e Quarta', 'Ter/Qui': 'Terça e Quinta',
@@ -245,34 +254,40 @@ export async function gerarFrequenciaXLSX(
 
         diasLetivos.forEach((dataStr, di) => {
           const col = 5 + di;
-          const logsArr = logs || [];
-          let log = logsArr.find((l: ChamadaLog) =>
-            l.data === dataStr && l.grupo_id === aluno.id
-          );
-          if (!log) {
-            log = logsArr.find((l: ChamadaLog) =>
-              l.data === dataStr && l.grupo_id === aluno.turma_id
-            );
-          }
           const cell = sheet.getCell(rowNum, col);
-          if (log && log.status) {
-            cell.value = STATUS_MAP[log.status] || '';
-            if (cell.value === 'C') {
-              cell.style = { font: { size: 9, color: { argb: 'FFFF0000' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
-            } else if (cell.value === 'p') {
-              cell.style = { font: { size: 9, color: { argb: 'FF008000' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
-            } else if (cell.value === 'j') {
-              cell.style = { font: { size: 9, color: { argb: 'FFFF8C00' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
-            } else if (cell.value === 'f') {
-              cell.style = { font: { size: 9, color: { argb: 'FF808080' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
-            } else if (cell.value === '*') {
-              cell.style = { font: { size: 9, color: { argb: 'FF999999' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
+          const evento = (eventos || []).find((e: any) => e.data === dataStr);
+          if (evento) {
+            cell.value = '*';
+            cell.style = { font: { size: 9, color: { argb: 'FF999999' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
+          } else {
+            const logsArr = logs || [];
+            let log = logsArr.find((l: ChamadaLog) =>
+              l.data === dataStr && l.grupo_id === aluno.id
+            );
+            if (!log) {
+              log = logsArr.find((l: ChamadaLog) =>
+                l.data === dataStr && l.grupo_id === aluno.turma_id
+              );
+            }
+            if (log && log.status) {
+              cell.value = STATUS_MAP[log.status] || '';
+              if (cell.value === 'C') {
+                cell.style = { font: { size: 9, color: { argb: 'FFFF0000' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
+              } else if (cell.value === 'p') {
+                cell.style = { font: { size: 9, color: { argb: 'FF008000' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
+              } else if (cell.value === 'j') {
+                cell.style = { font: { size: 9, color: { argb: 'FFFF8C00' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
+              } else if (cell.value === 'f') {
+                cell.style = { font: { size: 9, color: { argb: 'FF808080' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
+              } else if (cell.value === '*') {
+                cell.style = { font: { size: 9, color: { argb: 'FF999999' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
+              } else {
+                cell.style = { font: { size: 9 }, alignment: { horizontal: 'center', vertical: 'middle' } };
+              }
             } else {
+              cell.value = '';
               cell.style = { font: { size: 9 }, alignment: { horizontal: 'center', vertical: 'middle' } };
             }
-          } else {
-            cell.value = '';
-            cell.style = { font: { size: 9 }, alignment: { horizontal: 'center', vertical: 'middle' } };
           }
         });
 
