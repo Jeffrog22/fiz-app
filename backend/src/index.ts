@@ -46,6 +46,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+app.use((req, _res, next) => { if (req.url.includes('exportar')) console.log('[REQ] ' + req.method + ' ' + req.url); next(); });
+
 app.use('/api', tenantMiddleware);
 
 app.use('/api/auth', authRoutes);
@@ -61,7 +63,7 @@ app.use('/api', enrollmentRoutes);
 app.use('/api/anotacoes', anotacoesRoutes);
 app.use('/api/planejamento', planejamentoRoutes);
 app.use('/api/relatorios', relatoriosRoutes);
-app.post('/api/exportar/frequencia', tenantMiddleware, authMiddleware, ExportacaoController.exportarFrequencia);
+app.post('/api/exportar/frequencia', (req, _res, next) => { console.log('[EXPORT] POST frequencia chamado url=' + req.url + ' ct=' + req.headers['content-type']); next(); }, tenantMiddleware, authMiddleware, ExportacaoController.exportarFrequencia);
 app.post('/api/exportar/vagas', tenantMiddleware, authMiddleware, ExportacaoController.exportarVagas);
 
 app.get('/health', (_req, res) => {
