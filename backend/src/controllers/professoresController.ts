@@ -10,7 +10,7 @@ export class ProfessoresController {
 
       const { data, error } = await supabase
         .from('professores')
-        .select('id, nome')
+        .select('id, nome, hash')
         .eq('tenant_id', tenantId)
         .order('nome', { ascending: true });
 

@@ -276,7 +276,7 @@ export async function gerarVagasXLSX(tenantId: string): Promise<ExcelJS.Buffer> 
   for (const t of turmas || []) {
     const labelKey = t.label || 'sem-label';
     if (!gruposPorLabelHorario[labelKey]) gruposPorLabelHorario[labelKey] = {};
-    const horKey = t.horario || '00:00';
+    const horKey = (t.horario || '00:00').slice(0, 5);
     if (!gruposPorLabelHorario[labelKey][horKey]) gruposPorLabelHorario[labelKey][horKey] = [];
     gruposPorLabelHorario[labelKey][horKey].push(t);
   }
@@ -336,7 +336,7 @@ export async function gerarVagasXLSX(tenantId: string): Promise<ExcelJS.Buffer> 
       chunk.forEach((item: any, ci: number) => {
         const colBase = ci * 5;
         const cFn = (idx: number) => colKeys[colBase + idx] || '';
-        sheet.getCell(`${cFn(0)}${currentRow}`).value = item.horario;
+        sheet.getCell(`${cFn(0)}${currentRow}`).value = item.horario.slice(0, 5);
         sheet.getCell(`${cFn(0)}${currentRow}`).style = labelStyle;
         sheet.getCell(`${cFn(1)}${currentRow}`).value = label;
         sheet.getCell(`${cFn(1)}${currentRow}`).style = labelStyle;

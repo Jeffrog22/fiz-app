@@ -29,7 +29,7 @@ const Configuracoes: React.FC = () => {
   const [exportando, setExportando] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
 
-  const [professores, setProfessores] = useState<{ id: string; nome: string }[]>([]);
+  const [professores, setProfessores] = useState<{ id: string; nome: string; hash: string }[]>([]);
   const [professorId, setProfessorId] = useState('');
   const [labels, setLabels] = useState<string[]>([]);
   const [label, setLabel] = useState('');
@@ -170,7 +170,7 @@ const Configuracoes: React.FC = () => {
                   >
                     <option value="">Selecione...</option>
                     {professores.map((p) => (
-                      <option key={p.id} value={p.id}>{p.nome}</option>
+                      <option key={p.id} value={p.hash}>{p.nome}</option>
                     ))}
                   </select>
                 </div>
