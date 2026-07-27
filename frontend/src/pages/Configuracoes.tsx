@@ -183,7 +183,7 @@ const Configuracoes: React.FC = () => {
                   >
                     <option value="">Selecione...</option>
                     {professores.map((p) => (
-                      <option key={p.id} value={p.hash}>{p.nome}</option>
+                      <option key={p.id} value={p.id}>{p.nome}</option>
                     ))}
                   </select>
                 </div>
