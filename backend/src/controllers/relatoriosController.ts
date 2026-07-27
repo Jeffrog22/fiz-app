@@ -78,4 +78,13 @@ export class RelatoriosController {
       res.json(result);
     } catch (e) { next(e); }
   }
+
+  static async historicoAluno(req: TenantRequest, res: Response, next: NextFunction) {
+    try {
+      const tenantId = req.tenantId!;
+      const alunoId = req.params.alunoId;
+      const result = await relatoriosService.historicoAluno(tenantId, alunoId);
+      res.json(result);
+    } catch (e) { next(e); }
+  }
 }

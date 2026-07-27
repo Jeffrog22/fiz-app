@@ -137,6 +137,7 @@ export interface VagasResponse {
 export interface FrequenciaAlunoItem {
   aluno_id: string;
   nome: string;
+  ativo: boolean;
   turma_label?: string;
   professor?: string;
   presente: number;
@@ -245,6 +246,47 @@ export interface OcupacaoData {
   turmas: OcupacaoTurmaItem[];
   total_capacidade: number;
   total_ativos: number;
+}
+
+export interface EnrollmentPeriodHistorico {
+  nivel: string;
+  turma_label: string;
+  turma_horario: string;
+  data_inicio: string;
+  data_fim?: string;
+  permanenciaDias: number;
+  total: number;
+  presentes: number;
+  faltas: number;
+  justificados: number;
+  assiduidade: number;
+}
+
+export interface RetencaoAluno {
+  totalDias: number;
+  diasDesdeInicio: number;
+  percentual: number;
+}
+
+export interface AlunoResumo {
+  total: number;
+  ativos: number;
+  inativos: number;
+  retencaoMedia: number;
+  frequenciaMedia: number;
+}
+
+export interface HistoricoAlunoResponse {
+  aluno: {
+    id: string;
+    nome: string;
+    ativo: boolean;
+    turma_id?: string;
+    nivel?: string;
+    turma_label?: string;
+  };
+  enrollmentPeriods: EnrollmentPeriodHistorico[];
+  retencao: RetencaoAluno;
 }
 
 export interface Planejamento {

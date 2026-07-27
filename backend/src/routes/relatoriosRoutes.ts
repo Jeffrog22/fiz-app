@@ -14,5 +14,6 @@ router.get('/cancelamentos', RelatoriosController.cancelamentos);
 router.get('/piscina-historico', RelatoriosController.piscinaHistorico);
 router.get('/demografico', RelatoriosController.demografico);
 router.get('/ocupacao', RelatoriosController.ocupacao);
+router.get('/historico-aluno/:alunoId', RelatoriosController.historicoAluno);
 
 export default router;

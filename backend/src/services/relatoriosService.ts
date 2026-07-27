@@ -5,6 +5,7 @@ import type {
   FrequenciaAlunoItem, FrequenciaTurmaItem, RotatividadeItem, ExclusaoStatsItem,
   CancelamentoData, CancelamentoItem, CancelamentoRegistro, PiscinaHistoricoData, PiscinaRegistro,
   DemograficoData, DemograficoItem, OcupacaoData, OcupacaoTurmaItem,
+  HistoricoAlunoResponse, EnrollmentPeriodHistorico, RetencaoAluno,
 } from '../types';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -41,7 +42,7 @@ export async function frequenciaAluno(
 
   const { data: alunosData, error: alunosError } = await supabase
     .from('alunos')
-    .select('id, nome, turma_id')
+    .select('id, nome, turma_id, ativo')
     .eq('tenant_id', tenantId);
 
   if (alunosError) throw new AppError('Erro ao buscar alunos', 500);
@@ -101,14 +102,14 @@ export async function frequenciaAluno(
 
   const result: FrequenciaAlunoItem[] = [];
 
-  for (const [alunoId, counts] of aggr) {
-    const aluno = alunoMap.get(alunoId);
-    if (!aluno) continue;
+  for (const aluno of alunos) {
+    const counts = aggr.get(aluno.id) || { presente: 0, falta: 0, justificado: 0, cancelado: 0 };
     const total = counts.presente + counts.falta + counts.justificado;
     const turma = aluno.turma_id ? turmaMap.get(aluno.turma_id) : undefined;
     result.push({
-      aluno_id: alunoId,
+      aluno_id: aluno.id,
       nome: aluno.nome || '---',
+      ativo: aluno.ativo ?? true,
       turma_label: turma?.label,
       professor: turma?.professor_id ? profMap.get(turma.professor_id) || '-' : '-',
       ...counts,
@@ -505,4 +506,104 @@ export async function ocupacao(tenantId: string): Promise<OcupacaoData> {
   const total_ativos = items.reduce((s, i) => s + i.ocupacao, 0);
 
   return { turmas: items, total_capacidade, total_ativos };
+}
+
+export async function historicoAluno(
+  tenantId: string,
+  alunoId: string
+): Promise<HistoricoAlunoResponse> {
+  const [alunoRes, periodsRes, turmasRes, profsRes] = await Promise.all([
+    supabase.from('alunos').select('id, nome, ativo, turma_id, nivel').eq('id', alunoId).eq('tenant_id', tenantId).single(),
+    supabase.from('enrollment_period').select('*').eq('aluno_id', alunoId).eq('tenant_id', tenantId).order('data_inicio', { ascending: true }),
+    supabase.from('turmas').select('grupo_id, label, horario, nivel').eq('tenant_id', tenantId),
+    supabase.from('professores').select('id, nome').eq('tenant_id', tenantId),
+  ]);
+
+  if (alunoRes.error) throw new AppError('Aluno não encontrado', 404);
+  const aluno = alunoRes.data!;
+  const periods = periodsRes.data || [];
+  const turmas = turmasRes.data || [];
+  const professores = profsRes.data || [];
+
+  const turmaMap = new Map<string, any>();
+  for (const t of turmas) {
+    if (t.grupo_id) turmaMap.set(t.grupo_id, t);
+  }
+
+  const profMap = new Map<string, string>();
+  for (const p of professores) {
+    profMap.set(p.id, p.nome);
+  }
+
+  const turmaAtual = aluno.turma_id ? turmaMap.get(aluno.turma_id) : undefined;
+
+  const enrollmentPeriods: EnrollmentPeriodHistorico[] = [];
+
+  for (const period of periods) {
+    const turma = turmaMap.get(period.turma_id) || turmaAtual;
+    const label = turma ? `${turma.label} ${turma.horario ? turma.horario.slice(0, 5) : ''}`.trim() : '';
+    const nivel = turma?.nivel || period.nivel || '';
+
+    const dataInicio = period.data_inicio;
+    const dataFim = period.data_fim || '2099-12-31';
+
+    const { data: logs } = await supabase
+      .from('chamadas_log')
+      .select('status')
+      .eq('tenant_id', tenantId)
+      .eq('grupo_id', alunoId)
+      .gte('data', dataInicio)
+      .lte('data', dataFim);
+
+    const periodLogs = logs || [];
+    const presentes = periodLogs.filter((l: any) => l.status === 'presente').length;
+    const faltas = periodLogs.filter((l: any) => l.status === 'falta').length;
+    const justificados = periodLogs.filter((l: any) => l.status === 'justificado').length;
+    const total = presentes + faltas + justificados;
+
+    const inicio = new Date(dataInicio);
+    const fim = dataFim === '2099-12-31' ? new Date() : new Date(dataFim);
+    const permanenciaDias = Math.max(0, Math.ceil((fim.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)));
+
+    enrollmentPeriods.push({
+      nivel: nivel || 'Sem nível',
+      turma_label: label,
+      turma_horario: turma?.horario?.slice(0, 5) || '',
+      data_inicio: dataInicio,
+      data_fim: period.data_fim || undefined,
+      permanenciaDias,
+      total,
+      presentes,
+      faltas,
+      justificados,
+      assiduidade: total > 0 ? Math.round((presentes / total) * 100) : 0,
+    });
+  }
+
+  const totalDias = enrollmentPeriods.reduce((acc, p) => acc + p.permanenciaDias, 0);
+  const primeiraData = enrollmentPeriods.length > 0 ? enrollmentPeriods[enrollmentPeriods.length - 1].data_inicio : null;
+  const diasDesdeInicio = primeiraData
+    ? Math.max(1, Math.ceil((Date.now() - new Date(primeiraData).getTime()) / (1000 * 60 * 60 * 24)))
+    : 1;
+
+  const retencao: RetencaoAluno = {
+    totalDias,
+    diasDesdeInicio,
+    percentual: Math.min(100, Math.round((totalDias / diasDesdeInicio) * 100)),
+  };
+
+  const turmaProf = turmaAtual?.professor_id ? profMap.get(turmaAtual.professor_id) : undefined;
+
+  return {
+    aluno: {
+      id: aluno.id,
+      nome: aluno.nome || '---',
+      ativo: aluno.ativo ?? true,
+      turma_id: aluno.turma_id || undefined,
+      nivel: aluno.nivel || undefined,
+      turma_label: turmaAtual ? `${turmaAtual.label} ${turmaProf ? `(${turmaProf})` : ''}${turmaAtual.horario ? ' ' + turmaAtual.horario.slice(0, 5) : ''}` : undefined,
+    },
+    enrollmentPeriods: enrollmentPeriods.reverse(),
+    retencao,
+  };
 }
