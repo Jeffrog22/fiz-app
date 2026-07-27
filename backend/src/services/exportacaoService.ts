@@ -146,7 +146,7 @@ export async function gerarFrequenciaXLSX(
       const alunosTurma = (alunos || []).filter((a: Aluno) => a.turma_id === grupoId && a.ativo);
       if (alunosTurma.length === 0) continue;
 
-      const sheetName = `${label}-${turma.horario.replace(':', '-')}-${(turma.nivel || 'sem-nivel').replace(/\s+/g, '_')}`.slice(0, 31);
+      const sheetName = `${label}-${turma.horario.slice(0, 5)}-${(turma.nivel || 'sem-nivel').replace(/\s+/g, '_')}`.replace(/[/\\?*\[\]:]/g, '-').slice(0, 31);
       const sheet = workbook.addWorksheet(sheetName, {
         pageSetup: { orientation: 'portrait', paperSize: 9, margins: { left: 0.5, right: 0.5, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 } },
       });
