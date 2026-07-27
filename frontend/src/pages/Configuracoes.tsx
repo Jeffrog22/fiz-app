@@ -229,7 +229,7 @@ const Configuracoes: React.FC = () => {
               </div>
               <button
                 onClick={exportar}
-                disabled={exportando || !professorId || !label}
+                disabled={exportando || !professorId}
                 className="px-5 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
               >
                 {exportando ? 'Exportando...' : 'Exportar Frequência'}

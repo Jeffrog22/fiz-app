@@ -362,7 +362,7 @@ export async function gerarVagasXLSX(tenantId: string): Promise<ExcelJS.Buffer> 
   currentRow++;
   currentRow++;
 
-  const labels = Object.keys(gruposPorLabelHorario).sort();
+  const labels = sortLabels(Object.keys(gruposPorLabelHorario));
   for (const label of labels) {
     const horarios = Object.keys(gruposPorLabelHorario[label]).sort();
     const horariosComTurmas = horarios.map((h) => ({ horario: h, turmas: gruposPorLabelHorario[label][h] }));
