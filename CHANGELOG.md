@@ -1,5 +1,32 @@
 # Changelog - Fiz! App
 
+## [v2.29.8] - 2026-07-27
+### Fix
+- Fonte export: `C` bold, `j` italic, `*` cinza, `p`/`f` preto padrão
+- `cell.font`/`cell.alignment` separados (compatibilidade exceljs)
+
+## [v2.29.7] - 2026-07-27
+### Fix
+- Export considera eventos do calendário (feriado/ponte/reuniao/evento → `*`)
+- Prioridade: calendário > chamada_log em cada célula
+
+## [v2.29.6] - 2026-07-27
+### Fix
+- Log lookup no export: 1º `aluno.id` (UUID), fallback `aluno.turma_id` (grupo_id)
+
+## [v2.29.5] - 2026-07-27
+### Fix
+- `@types/*` movidos para dependencies (Render com NODE_ENV=production ignorava devDependencies)
+- Build passa no Render
+
+## [v2.29.2] - 2026-07-27
+### Fix
+- Export: horário HH:MM, STATUS_MAP corrigido, `cancelado` → `C`
+
+## [v2.29.0] - 2026-07-27
+### Feat
+- Seletor de unidade no login + PIN por unidade no primeiro acesso
+
 ## [v2.28.8] - 2026-07-27
 ### Fix
 - Sheet name do Frequência XLSX continha caracteres ilegais para o exceljs (`/`, `:`, `[`, `]`), causando 500. Sanitizado com regex `/[/\\?*\[\]:]/g`

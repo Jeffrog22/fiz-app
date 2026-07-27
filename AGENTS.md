@@ -887,3 +887,50 @@ Regras:
 - Frontend: 41/41 passam
 - Backend: 25/25 passam
 
+---
+
+## Sessão: 27/07/2026 — Exportação Frequência Estável + PIN + Build Fix → v2.29.8
+
+### O que foi feito
+- **Seletor de unidade**: login com dropdown das 4 unidades (Bela Vista, São Matheus, Vila, Parque). Trocar unidade faz logout automático + sessão isolada via localStorage
+- **PIN por unidade**: `primeiroAcesso` agora exige `pin`, validado contra env var `PIN_{TENANT_ID}` no backend. Sem a env var, PIN é opcional (dev)
+- **Export Frequência — horário**: truncado para HH:MM (`.slice(0, 5)`)
+- **Export Frequência — STATUS_MAP**: `cancelado` → `C`, `feriado/ponte/reuniao/evento` → `*`
+- **Export Frequência — lookup**: 2 passos — 1º tenta `l.grupo_id === aluno.id` (UUID), fallback `l.grupo_id === aluno.turma_id` (grupo_id). Cobre registros normais e extrapolados
+- **Export Frequência — calendário**: busca eventos do calendário no período. Se celula tem evento, exibe `*` com prioridade sobre chamada_log
+- **Export Frequência — cores**: `C` bold, `j` italic, `*` cinza (`FF999999`), `p`/`f` preto padrão. Usa `cell.font` + `cell.alignment` separados (compatibilidade exceljs)
+- **Build fix — Render**: `@types/*` movidos de devDependencies para dependencies (`@types/node`, `@types/express`, etc.). Render com `NODE_ENV=production` pula devDeps
+- **Build fix — Cloudflare**: `@types/node` adicionado ao frontend + `"types": ["node"]` no `tsconfig.node.json`
+
+### Versões
+- `v2.29.0`: feat seletor de unidade + PIN
+- `v2.29.1`: fix @types/node frontend
+- `v2.29.2`: fix export horario HH:MM, STATUS_MAP
+- `v2.29.3`: fix @types/node em dependencies + lookup duplo
+- `v2.29.4`: fix move @types/* para dependencies
+- `v2.29.5`: fix lookup prioriza aluno.id, cores
+- `v2.29.6`: fix export considera eventos do calendario
+- `v2.29.7`: fix cell.font / cell.alignment separados
+- `v2.29.8`: fix fonte preta padrao, C bold, j italic, * cinza
+
+### Arquivos alterados
+- `frontend/src/utils/tenant.ts` (override, getAvailableTenants)
+- `frontend/src/context/TenantContext.tsx` (setTenant reativo)
+- `frontend/src/context/AuthContext.tsx` (pin no primeiroAcesso)
+- `frontend/src/pages/Login.tsx` (dropdown unidade + campo PIN)
+- `backend/src/controllers/authController.ts` (extrai pin)
+- `backend/src/services/authService.ts` (valida PIN via env var)
+- `backend/src/services/exportacaoService.ts` (lookup, STATUS_MAP, horario, calendario, cell.font)
+- `backend/package.json` (@types/* em dependencies)
+- `backend/.env.example` (PIN_* vars)
+- `frontend/package.json` (@types/node)
+- `frontend/tsconfig.node.json` (types: [node])
+
+### Typecheck
+- Frontend: 0 erros
+- Backend: 0 erros
+
+### Testes
+- Frontend: 41/41 passam
+- Backend: 25/25 passam
+
