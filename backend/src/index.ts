@@ -18,6 +18,7 @@ import enrollmentRoutes from './routes/enrollmentRoutes';
 import anotacoesRoutes from './routes/anotacoesRoutes';
 import planejamentoRoutes from './routes/planejamentoRoutes';
 import relatoriosRoutes from './routes/relatoriosRoutes';
+import exportacaoRoutes from './routes/exportacaoRoutes';
 
 dotenv.config();
 
@@ -59,6 +60,7 @@ app.use('/api', enrollmentRoutes);
 app.use('/api/anotacoes', anotacoesRoutes);
 app.use('/api/planejamento', planejamentoRoutes);
 app.use('/api/relatorios', relatoriosRoutes);
+app.use('/api/exportar', exportacaoRoutes);
 
 app.get('/health', (_req, res) => {
   res.json({
