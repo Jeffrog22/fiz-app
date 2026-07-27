@@ -255,10 +255,12 @@ export async function gerarFrequenciaXLSX(
         diasLetivos.forEach((dataStr, di) => {
           const col = 5 + di;
           const cell = sheet.getCell(rowNum, col);
+          cell.font = { size: 9 };
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
           const evento = (eventos || []).find((e: any) => e.data === dataStr);
           if (evento) {
             cell.value = '*';
-            cell.style = { font: { size: 9, color: { argb: 'FF999999' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
+            cell.font = { size: 9, color: { argb: 'FF999999' } };
           } else {
             const logsArr = logs || [];
             let log = logsArr.find((l: ChamadaLog) =>
@@ -272,21 +274,20 @@ export async function gerarFrequenciaXLSX(
             if (log && log.status) {
               cell.value = STATUS_MAP[log.status] || '';
               if (cell.value === 'C') {
-                cell.style = { font: { size: 9, color: { argb: 'FFFF0000' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
+                cell.font = { size: 9, color: { argb: 'FFFF0000' } };
               } else if (cell.value === 'p') {
-                cell.style = { font: { size: 9, color: { argb: 'FF008000' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
+                cell.font = { size: 9, color: { argb: 'FF008000' } };
               } else if (cell.value === 'j') {
-                cell.style = { font: { size: 9, color: { argb: 'FFFF8C00' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
+                cell.font = { size: 9, color: { argb: 'FFFF8C00' } };
               } else if (cell.value === 'f') {
-                cell.style = { font: { size: 9, color: { argb: 'FF808080' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
+                cell.font = { size: 9, color: { argb: 'FF808080' } };
               } else if (cell.value === '*') {
-                cell.style = { font: { size: 9, color: { argb: 'FF999999' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
+                cell.font = { size: 9, color: { argb: 'FF999999' } };
               } else {
-                cell.style = { font: { size: 9 }, alignment: { horizontal: 'center', vertical: 'middle' } };
+                cell.font = { size: 9 };
               }
             } else {
               cell.value = '';
-              cell.style = { font: { size: 9 }, alignment: { horizontal: 'center', vertical: 'middle' } };
             }
           }
         });
