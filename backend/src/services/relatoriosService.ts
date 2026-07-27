@@ -537,6 +537,33 @@ export async function historicoAluno(
 
   const turmaAtual = aluno.turma_id ? turmaMap.get(aluno.turma_id) : undefined;
 
+  // Collect all unique grupo_ids for logs query (student UUID + all turmas the student passed through)
+  const grupoIds = new Set<string>();
+  grupoIds.add(alunoId);
+  for (const period of periods) {
+    if (period.turma_id) grupoIds.add(period.turma_id);
+  }
+
+  // Full date range from earliest enrollment to today
+  const dataMin = periods.length > 0 ? periods[0].data_inicio : '2000-01-01';
+  const hoje = new Date().toISOString().split('T')[0];
+
+  // Query ALL chamadas_log at once for all relevant grupo_ids
+  const { data: allLogs } = await supabase
+    .from('chamadas_log')
+    .select('status, data, grupo_id')
+    .eq('tenant_id', tenantId)
+    .in('grupo_id', [...grupoIds])
+    .gte('data', dataMin)
+    .lte('data', hoje);
+
+  // Index logs by (grupo_id, data) — student-level overrides turma-level
+  const logsByDate = new Map<string, string>();
+  for (const log of allLogs || []) {
+    const key = `${log.grupo_id}|${log.data}`;
+    logsByDate.set(key, log.status);
+  }
+
   const enrollmentPeriods: EnrollmentPeriodHistorico[] = [];
 
   for (const period of periods) {
@@ -545,25 +572,30 @@ export async function historicoAluno(
     const nivel = turma?.nivel || period.nivel || '';
 
     const dataInicio = period.data_inicio;
-    const dataFim = period.data_fim || '2099-12-31';
+    const dataFim = period.data_fim || hoje;
 
-    const { data: logs } = await supabase
-      .from('chamadas_log')
-      .select('status')
-      .eq('tenant_id', tenantId)
-      .eq('grupo_id', alunoId)
-      .gte('data', dataInicio)
-      .lte('data', dataFim);
+    // Count status from student-level logs, fallback to turma-level
+    let presentes = 0;
+    let faltas = 0;
+    let justificados = 0;
 
-    const periodLogs = logs || [];
-    const presentes = periodLogs.filter((l: any) => l.status === 'presente').length;
-    const faltas = periodLogs.filter((l: any) => l.status === 'falta').length;
-    const justificados = periodLogs.filter((l: any) => l.status === 'justificado').length;
+    // Walk dates in range
+    const start = new Date(dataInicio + 'T00:00:00');
+    const end = new Date(dataFim + 'T00:00:00');
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split('T')[0];
+      // Try student-level first
+      const studentKey = `${alunoId}|${dateStr}`;
+      const turmaKey = period.turma_id ? `${period.turma_id}|${dateStr}` : '';
+      const status = logsByDate.get(studentKey) || logsByDate.get(turmaKey) || '';
+      if (status === 'presente') presentes++;
+      else if (status === 'falta') faltas++;
+      else if (status === 'justificado') justificados++;
+    }
+
     const total = presentes + faltas + justificados;
 
-    const inicio = new Date(dataInicio);
-    const fim = dataFim === '2099-12-31' ? new Date() : new Date(dataFim);
-    const permanenciaDias = Math.max(0, Math.ceil((fim.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)));
+    const permanenciaDias = Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
 
     enrollmentPeriods.push({
       nivel: nivel || 'Sem nível',
@@ -581,7 +613,7 @@ export async function historicoAluno(
   }
 
   const totalDias = enrollmentPeriods.reduce((acc, p) => acc + p.permanenciaDias, 0);
-  const primeiraData = enrollmentPeriods.length > 0 ? enrollmentPeriods[enrollmentPeriods.length - 1].data_inicio : null;
+  const primeiraData = enrollmentPeriods.length > 0 ? enrollmentPeriods[0].data_inicio : null;
   const diasDesdeInicio = primeiraData
     ? Math.max(1, Math.ceil((Date.now() - new Date(primeiraData).getTime()) / (1000 * 60 * 60 * 24)))
     : 1;
