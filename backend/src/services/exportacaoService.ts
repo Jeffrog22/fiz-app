@@ -76,6 +76,8 @@ export async function gerarFrequenciaXLSX(
   if (profError) throw new AppError('Erro ao buscar professores', 500);
   const profMap = new Map((professores || []).map((p: any) => [p.id, p.nome]));
 
+  console.log('[EXPORT] professorId=' + JSON.stringify(professorId) + ' tenantId=' + tenantId + ' label=' + label);
+
   let query = supabase
     .from('turmas')
     .select('*')
@@ -85,6 +87,8 @@ export async function gerarFrequenciaXLSX(
   if (label) query = query.eq('label', label);
 
   const { data: turmas, error: turmasError } = await query.order('horario', { ascending: true });
+
+  console.log('[EXPORT] turmas encontradas=' + (turmas ? turmas.length : 0));
 
   if (turmasError) throw new AppError('Erro ao buscar turmas', 500);
   if (!turmas || turmas.length === 0) throw new AppError('Nenhuma turma encontrada', 404);
