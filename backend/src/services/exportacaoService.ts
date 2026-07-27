@@ -246,7 +246,7 @@ export async function gerarFrequenciaXLSX(
         diasLetivos.forEach((dataStr, di) => {
           const col = 5 + di;
           const log = (logs || []).find((l: ChamadaLog) =>
-            l.data === dataStr && l.grupo_id === aluno.turma_id
+            l.data === dataStr && (l.grupo_id === aluno.id || l.grupo_id === aluno.turma_id)
           );
           const cell = sheet.getCell(rowNum, col);
           if (log && log.status) {
