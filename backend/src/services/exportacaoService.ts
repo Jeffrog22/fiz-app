@@ -34,8 +34,8 @@ function gerarDiasLetivos(mes: number, ano: number, label: string): string[] {
 
 const STATUS_MAP: Record<string, string> = {
   presente: 'p', falta: 'f', justificado: 'j',
-  cancelado: 'c', feriado: 'f', ponte: 'f',
-  reuniao: 'f', evento: 'f',
+  cancelado: 'C', feriado: '*', ponte: '*',
+  reuniao: '*', evento: '*',
 };
 
 function formatMesAno(mes: number, ano: number): string {
@@ -198,7 +198,7 @@ export async function gerarFrequenciaXLSX(
       sheet.getRow(5).height = 15;
       sheet.getCell('A5').value = 'Horário:';
       sheet.getCell('A5').style = headerStyle;
-      sheet.getCell('B5').value = turma.horario;
+      sheet.getCell('B5').value = turma.horario.slice(0, 5);
       sheet.getCell('B5').style = dataStyle;
       sheet.getCell('D5').value = 'Mês:';
       sheet.getCell('D5').style = headerStyle;
@@ -246,12 +246,12 @@ export async function gerarFrequenciaXLSX(
         diasLetivos.forEach((dataStr, di) => {
           const col = 5 + di;
           const log = (logs || []).find((l: ChamadaLog) =>
-            l.data === dataStr && l.grupo_id === aluno.id
+            l.data === dataStr && l.grupo_id === aluno.turma_id
           );
           const cell = sheet.getCell(rowNum, col);
           if (log && log.status) {
             cell.value = STATUS_MAP[log.status] || '';
-            if (cell.value === 'c') {
+            if (cell.value === 'C') {
               cell.style = { font: { size: 9, color: { argb: 'FFFF0000' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
             } else if (cell.value === 'j') {
               cell.style = { font: { size: 9, color: { argb: 'FFFF8C00' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
