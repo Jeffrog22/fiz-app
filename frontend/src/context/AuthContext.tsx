@@ -5,7 +5,7 @@ import api from '../utils/api';
 
 export interface AuthContextType extends AuthState {
   login: (professorNome: string) => Promise<void>;
-  primeiroAcesso: (professorNome: string, csvFile?: File) => Promise<void>;
+  primeiroAcesso: (professorNome: string, pin: string, csvFile?: File) => Promise<void>;
   logout: () => void;
 }
 
@@ -70,11 +70,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const primeiroAcesso = useCallback(async (professorNome: string, csvFile?: File) => {
+  const primeiroAcesso = useCallback(async (professorNome: string, pin: string, csvFile?: File) => {
     setState(prev => ({ ...prev, loading: true }));
     try {
       const formData = new FormData();
       formData.append('nome', professorNome);
+      formData.append('pin', pin);
       if (csvFile) {
         formData.append('csv', csvFile);
       }

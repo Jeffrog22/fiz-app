@@ -33,11 +33,11 @@ export class AuthController {
 
   static async primeiroAcesso(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { nome } = req.body;
+      const { nome, pin } = req.body;
       const csvFile = req.file;
       const tenantId = req.tenantId!;
 
-      const { professor, hash, token } = await primeiroAcessoService(nome, tenantId, csvFile?.buffer);
+      const { professor, hash, token } = await primeiroAcessoService(nome, pin, tenantId, csvFile?.buffer);
 
       res.cookie('token', token, {
         httpOnly: true,

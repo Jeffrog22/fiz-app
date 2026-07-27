@@ -1,14 +1,16 @@
-import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { getTenantId, getTenantNome } from '../utils/tenant';
+import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { getTenantId, getTenantNome, setTenantOverride } from '../utils/tenant';
 
 export interface TenantContextType {
   tenantId: string;
   tenantNome: string;
+  setTenant: (tenantId: string) => void;
 }
 
 export const TenantContext = createContext<TenantContextType>({
   tenantId: 'bela-vista',
   tenantNome: 'Bela Vista',
+  setTenant: () => {},
 });
 
 interface TenantProviderProps {
@@ -16,15 +18,25 @@ interface TenantProviderProps {
 }
 
 export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
-  const [tenantId] = useState<string>(getTenantId());
-  const [tenantNome] = useState<string>(getTenantNome(tenantId));
+  const [tenantId, setTenantId] = useState<string>(getTenantId());
+  const [tenantNome, setTenantNome] = useState<string>(getTenantNome(tenantId));
+
+  const setTenant = useCallback((newTenantId: string) => {
+    setTenantOverride(newTenantId);
+    setTenantId(newTenantId);
+    setTenantNome(getTenantNome(newTenantId));
+  }, []);
 
   useEffect(() => {
-    // Prefixa chaves do localStorage com o tenant para isolamento
-  }, [tenantId, tenantNome]);
+    const stored = localStorage.getItem('tenant_override');
+    if (stored && stored !== tenantId) {
+      setTenantId(stored);
+      setTenantNome(getTenantNome(stored));
+    }
+  }, []);
 
   return (
-    <TenantContext.Provider value={{ tenantId, tenantNome }}>
+    <TenantContext.Provider value={{ tenantId, tenantNome, setTenant }}>
       {children}
     </TenantContext.Provider>
   );

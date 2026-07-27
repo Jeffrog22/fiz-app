@@ -4,13 +4,14 @@ import { useAuth } from '../hooks/useAuth';
 import { useTenant } from '../hooks/useTenant';
 import { useDevLog } from '../hooks/useDevLog';
 import { useDbStatus } from '../hooks/useDbStatus';
-import { getTenantId } from '../utils/tenant';
+import { getTenantId, getAvailableTenants } from '../utils/tenant';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { login, primeiroAcesso, loading, isAuthenticated } = useAuth();
-  const { tenantNome } = useTenant();
+  const { login, primeiroAcesso, loading, isAuthenticated, logout } = useAuth();
+  const { tenantId, tenantNome, setTenant } = useTenant();
   const [professorNome, setProfessorNome] = useState('');
+  const [pin, setPin] = useState('');
   const [primeiroAcessoAtivo, setPrimeiroAcessoAtivo] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -19,7 +20,7 @@ const Login: React.FC = () => {
   const [limpando, setLimpando] = useState(false);
   const { enabled: devEnabled, toggle: toggleDev } = useDevLog();
   const dbStatus = useDbStatus();
-  const tenantId = getTenantId();
+  const unidades = getAvailableTenants();
 
   useEffect(() => {
     const stored = localStorage.getItem(`${tenantId}_acesso_rapido`);
@@ -56,7 +57,11 @@ const Login: React.FC = () => {
     }
     try {
       if (primeiroAcessoAtivo) {
-        await primeiroAcesso(nome, csvFile || undefined);
+        if (!pin.trim()) {
+          setErro('Digite o PIN da unidade');
+          return;
+        }
+        await primeiroAcesso(nome, pin.trim(), csvFile || undefined);
       } else {
         await login(nome);
       }
@@ -78,9 +83,30 @@ const Login: React.FC = () => {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800">Fiz! App</h1>
           <p className="text-sm text-gray-500">Sistema de Lista de Chamada</p>
-          <p className="text-xs text-gray-400 mt-1">
-            Unidade: <span className="font-medium">{tenantNome}</span>
-          </p>
+          <div className="flex items-center justify-center gap-2 mt-1">
+            <label htmlFor="unidade-select" className="text-xs text-gray-500">Unidade:</label>
+            <select
+              id="unidade-select"
+              value={tenantId}
+              onChange={(e) => {
+                const novaUnidade = e.target.value;
+                if (novaUnidade !== tenantId) {
+                  logout();
+                  setProfessorNome('');
+                  setPin('');
+                  setAcessoRapido([]);
+                  setTenant(novaUnidade);
+                  localStorage.removeItem(`${novaUnidade}_acesso_rapido`);
+                  localStorage.removeItem(`${tenantId}_acesso_rapido`);
+                }
+              }}
+              className="text-xs px-2 py-1 border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              {unidades.map((u) => (
+                <option key={u.id} value={u.id}>{u.nome}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {acessoRapido.length > 0 && !primeiroAcessoAtivo && (
@@ -144,6 +170,19 @@ const Login: React.FC = () => {
           </div>
 
           {primeiroAcessoAtivo && (
+            <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                PIN da unidade
+              </label>
+              <input
+                type="password"
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                placeholder="Digite o PIN"
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 CSV de alunos/turmas (opcional)
@@ -155,6 +194,7 @@ const Login: React.FC = () => {
                 className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:border file:border-gray-300 file:rounded file:text-sm file:bg-gray-50 hover:file:bg-gray-100"
               />
             </div>
+            </>
           )}
 
           {erro && <p className="text-sm text-red-600">{erro}</p>}

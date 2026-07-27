@@ -1,6 +1,5 @@
-/**
- * Mapeamento de domínios para identificadores de tenant no frontend.
- */
+const TENANT_OVERRIDE_KEY = 'tenant_override';
+
 const DOMAIN_TENANT_MAP: Record<string, string> = {
   'chamadabelavista.pages.dev': 'bela-vista',
   'chamadasaomatheus.pages.dev': 'sao-matheus',
@@ -10,20 +9,22 @@ const DOMAIN_TENANT_MAP: Record<string, string> = {
   '127.0.0.1': 'bela-vista',
 };
 
-/**
- * Extrai o identificador do tenant a partir do hostname da janela.
- * Utilizado para identificar qual unidade está acessando o sistema.
- * 
- * @returns {string} Identificador do tenant (ex: 'bela-vista', 'sao-matheus')
- */
+const TENANTS = [
+  { id: 'bela-vista', nome: 'Bela Vista' },
+  { id: 'sao-matheus', nome: 'São Matheus' },
+  { id: 'vila', nome: 'Vila' },
+  { id: 'parque', nome: 'Parque' },
+] as const;
+
 export function getTenantId(): string {
+  const override = localStorage.getItem(TENANT_OVERRIDE_KEY);
+  if (override && TENANTS.some((t) => t.id === override)) {
+    return override;
+  }
   const host = window.location.hostname;
   return DOMAIN_TENANT_MAP[host] || 'bela-vista';
 }
 
-/**
- * Retorna o nome amigável da unidade baseado no tenant ID.
- */
 export function getTenantNome(tenantId: string): string {
   const nomes: Record<string, string> = {
     'bela-vista': 'Bela Vista',
@@ -32,6 +33,18 @@ export function getTenantNome(tenantId: string): string {
     'parque': 'Parque',
   };
   return nomes[tenantId] || tenantId;
+}
+
+export function getAvailableTenants(): readonly { readonly id: string; readonly nome: string }[] {
+  return TENANTS;
+}
+
+export function setTenantOverride(tenantId: string): void {
+  localStorage.setItem(TENANT_OVERRIDE_KEY, tenantId);
+}
+
+export function clearTenantOverride(): void {
+  localStorage.removeItem(TENANT_OVERRIDE_KEY);
 }
 
 export default getTenantId;

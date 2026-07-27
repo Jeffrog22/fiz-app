@@ -103,11 +103,22 @@ export async function loginService(
 
 export async function primeiroAcessoService(
   nome: string,
+  pin: string,
   tenantId: string,
   csvBuffer?: Buffer,
 ): Promise<{ professor: Professor; hash: string; token: string }> {
   if (!nome || typeof nome !== 'string' || !nome.trim()) {
     throw new AppError('Preencha o nome do professor', 400);
+  }
+
+  const envPinKey = `PIN_${tenantId.toUpperCase().replace(/-/g, '_')}`;
+  const expectedPin = process.env[envPinKey];
+  if (expectedPin) {
+    if (!pin || pin.trim() !== expectedPin) {
+      throw new AppError('PIN da unidade inválido. Verifique com o administrador.', 401);
+    }
+  } else {
+    console.warn(`[auth] PIN não configurado para ${tenantId} — acesso liberado sem PIN`);
   }
 
   const professorNome = nome.trim();
