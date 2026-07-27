@@ -42,11 +42,23 @@ const Configuracoes: React.FC = () => {
     }).catch(() => {});
   }, []);
 
+  const LABEL_ORDER: Record<string, number> = {
+    'Seg': 1, 'Seg/Ter': 2, 'Seg/Qua': 3, 'Seg/Qui': 4, 'Seg/Sex': 5,
+    'Ter': 6, 'Ter/Qua': 7, 'Ter/Qui': 8, 'Ter/Sex': 9,
+    'Qua': 10, 'Qua/Qui': 11, 'Qua/Sex': 12,
+    'Qui': 13, 'Qui/Sex': 14,
+    'Sex': 15, 'Sab': 16,
+    'Seg/Ter/Qua': 20, 'Seg/Ter/Qui': 21, 'Seg/Qua/Sex': 22,
+    'Ter/Qua/Qui': 23, 'Ter/Qua/Sex': 24, 'Qua/Qui/Sex': 25,
+    'Seg/Ter/Qua/Qui': 30, 'Seg a Sex': 31,
+  };
+
   useEffect(() => {
     if (!professorId) { setLabels([]); setLabel(''); return; }
     api.get('/turmas', { params: { professor_id: professorId } }).then((res) => {
       const turmas = res.data || [];
       const uniqueLabels = [...new Set(turmas.map((t: any) => t.label).filter(Boolean))] as string[];
+      uniqueLabels.sort((a, b) => (LABEL_ORDER[a] || 99) - (LABEL_ORDER[b] || 99));
       setLabels(uniqueLabels);
       setLabel(uniqueLabels[0] || '');
     }).catch(() => {});
@@ -60,15 +72,16 @@ const Configuracoes: React.FC = () => {
         const res = await api.post('/exportar/vagas', {}, { responseType: 'blob' });
         downloadBlob(res.data, `fiz_relatorio_vagas_${new Date().toISOString().slice(0,10)}.xlsx`);
       } else {
-        if (!professorId || !label) {
-          setExportMsg('Selecione professor(a) e turma.');
+        if (!professorId) {
+          setExportMsg('Selecione professor(a).');
           setExportando(false);
           return;
         }
-        const res = await api.post('/exportar/frequencia', {
-          professor_id: professorId, label, mes, ano,
-        }, { responseType: 'blob' });
-        downloadBlob(res.data, `fiz_frequencia_${professorId}_${label}_${mes}_${ano}.xlsx`);
+        const body: any = { professor_id: professorId, mes, ano };
+        if (label) body.label = label;
+        const res = await api.post('/exportar/frequencia', body, { responseType: 'blob' });
+        const labelPart = label ? `_${label}` : '';
+        downloadBlob(res.data, `fiz_frequencia_${professorId}${labelPart}_${mes}_${ano}.xlsx`);
       }
       setExportMsg('Download concluído!');
     } catch (err: any) {
@@ -183,6 +196,7 @@ const Configuracoes: React.FC = () => {
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 disabled:opacity-40"
                   >
                     {!professorId && <option value="">Primeiro selecione professor</option>}
+                    <option value="">Todas as turmas</option>
                     {labels.map((l) => (
                       <option key={l} value={l}>{labelExtenso[l] || l}</option>
                     ))}
