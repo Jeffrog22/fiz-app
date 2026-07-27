@@ -867,6 +867,8 @@ Regras:
 - `v2.28.4`: chore request logger
 - `v2.28.5`: chore professorId log
 - `v2.28.6`: fix professor_id (hash → id)
+- `v2.28.7`: docs registra sessao
+- `v2.28.8`: fix sanitize sheet name (remove / : [ ]) no Frequencia XLSX
 
 ### Arquivos alterados
 - `frontend/src/pages/Configuracoes.tsx` (reescrito — duas abas export, +LABEL_ORDER, +label opcional, +fix value=p.id)

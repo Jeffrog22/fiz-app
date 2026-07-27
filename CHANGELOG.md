@@ -1,5 +1,13 @@
 # Changelog - Fiz! App
 
+## [v2.28.8] - 2026-07-27
+### Fix
+- Sheet name do Frequência XLSX continha caracteres ilegais para o exceljs (`/`, `:`, `[`, `]`), causando 500. Sanitizado com regex `/[/\\?*\[\]:]/g`
+
+## [v2.28.7] - 2026-07-27
+### Docs
+- Registra sessão 27/07/2026 na AGENTS.md e CHANGELOG.md
+
 ## [v2.28.6] - 2026-07-27
 ### Fix
 - Exportação de Vagas e Frequência: `Configuracoes.tsx` usava `value={p.hash}` (SHA-256) em vez de `value={p.id}` (código de 3 letras), causando "Nenhuma turma encontrada"
