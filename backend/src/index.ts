@@ -3,6 +3,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import { tenantMiddleware } from './middleware/tenant';
+import authMiddleware from './middleware/auth';
 import { errorHandler } from './middleware/errorHandler';
 import { startNotificationScheduler } from './services/notificationScheduler';
 import authRoutes from './routes/authRoutes';
@@ -18,7 +19,7 @@ import enrollmentRoutes from './routes/enrollmentRoutes';
 import anotacoesRoutes from './routes/anotacoesRoutes';
 import planejamentoRoutes from './routes/planejamentoRoutes';
 import relatoriosRoutes from './routes/relatoriosRoutes';
-import exportacaoRoutes from './routes/exportacaoRoutes';
+import { ExportacaoController } from './controllers/exportacaoController';
 
 dotenv.config();
 
@@ -60,7 +61,8 @@ app.use('/api', enrollmentRoutes);
 app.use('/api/anotacoes', anotacoesRoutes);
 app.use('/api/planejamento', planejamentoRoutes);
 app.use('/api/relatorios', relatoriosRoutes);
-app.use('/api/exportar', exportacaoRoutes);
+app.post('/api/exportar/frequencia', tenantMiddleware, authMiddleware, ExportacaoController.exportarFrequencia);
+app.post('/api/exportar/vagas', tenantMiddleware, authMiddleware, ExportacaoController.exportarVagas);
 
 app.get('/health', (_req, res) => {
   res.json({
