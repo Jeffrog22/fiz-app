@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-23 — Centralização Enrollment + Restore com Período + v2.26.0 -->
+<!-- última-sessão: 2026-07-27 — Exportação XLSX + Debug Rotas + Fix professor_id → v2.28.6 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -830,6 +830,52 @@ Regras:
 - `frontend/src/components/modals/AlunoModal.tsx` (chips simplificados, nivel read-only, checkbox transf. externa)
 - `frontend/src/components/modals/RestoreModal.tsx` (reescrito)
 - `frontend/src/pages/Exclusoes.tsx` (handleRestore aceita transferenciaExterna)
+
+### Typecheck
+- Frontend: 0 erros
+- Backend: 0 erros
+
+### Testes
+- Frontend: 41/41 passam
+- Backend: 25/25 passam
+
+---
+
+## Sessão: 27/07/2026 — Exportação XLSX (Vagas + Frequência) + Debug Rotas + Fix professor_id → v2.28.6
+
+### O que foi feito
+- **Exportação Vagas + Frequência**: nova aba em Configuracoes.tsx com dois modos (Vagas e Frequência), cada um com download .xlsx via blob
+- **Backend**: `exportacaoService.ts`, `exportacaoController.ts`, `exportacaoRoutes.ts` — geração de planilhas com `exceljs`
+- **Labels ordenadas**: `LABEL_ORDER` adicionado em ambos frontend e backend para ordenar Ter/Qui antes de Qua/Sex etc.
+- **Label opcional na Frequência**: se não selecionada, exporta todas as labels do professor ordenadas por prioridade
+- **Debug de rotas**: `GET /api/debug/routes` lista todas as rotas Express registradas
+- **Rotas inline**: handlers de exportação movidos de router separado para `app.post()` direto no `index.ts` (elimina possível falha de montagem de router)
+- **Request logger**: `[REQ]` loga requests com "/exportar" na URL; `[EXPORT]` loga professorId e turmas encontradas
+
+### Bugs corrigidos
+- **professor_id errado no export**: `Configuracoes.tsx` usava `value={p.hash}` (SHA-256, 64 chars hex) mas `turmas.professor_id` armazena código de 3 letras (`professores.id`). Trocado para `value={p.id}` — esse era o **motivo real** do 404 "Nenhuma turma encontrada"
+- **Botão Frequência desabilitado**: `!label` no `disabled` impedia clique quando "Todas as turmas" (label vazio) selecionado. Removido
+
+### Versões
+- `v2.27.0`: feat exportacao XLSX Vagas + Frequencia
+- `v2.27.1`: fix horario HH:MM e professor_id por hash
+- `v2.27.2`: fix layout Vagas (colunas por horario)
+- `v2.28.0`: feat label opcional + ordenacao
+- `v2.28.1`: fix Vagas sortLabels + botao Frequencia
+- `v2.28.2`: chore debug routes endpoint
+- `v2.28.3`: fix rotas inline no app
+- `v2.28.4`: chore request logger
+- `v2.28.5`: chore professorId log
+- `v2.28.6`: fix professor_id (hash → id)
+
+### Arquivos alterados
+- `frontend/src/pages/Configuracoes.tsx` (reescrito — duas abas export, +LABEL_ORDER, +label opcional, +fix value=p.id)
+- `backend/src/services/exportacaoService.ts` (novo — gerarFrequenciaXLSX, gerarVagasXLSX)
+- `backend/src/controllers/exportacaoController.ts` (novo)
+- `backend/src/routes/exportacaoRoutes.ts` (novo)
+- `backend/src/controllers/professoresController.ts` (+hash no select)
+- `backend/src/index.ts` (+rotas inline export, +debug routes, +request logger)
+- `backend/package.json` (+exceljs)
 
 ### Typecheck
 - Frontend: 0 erros

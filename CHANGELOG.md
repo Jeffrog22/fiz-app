@@ -1,5 +1,24 @@
 # Changelog - Fiz! App
 
+## [v2.28.6] - 2026-07-27
+### Fix
+- Exportação de Vagas e Frequência: `Configuracoes.tsx` usava `value={p.hash}` (SHA-256) em vez de `value={p.id}` (código de 3 letras), causando "Nenhuma turma encontrada"
+- Botão Exportar Frequência desabilitado quando "Todas as turmas" selecionado (removido `!label` do `disabled`)
+
+### Adicionado
+- Exportação XLSX de Vagas e Frequência via `POST /api/exportar/vagas` e `POST /api/exportar/frequencia`
+- `LABEL_ORDER` para ordenar labels (Ter/Qui antes de Qua/Sex) no frontend e backend
+- Label opcional na Frequência — se omitida, exporta todas as labels do professor
+- `GET /api/debug/routes` para diagnóstico de rotas Express
+- Request logger (`[REQ]`) e log de exportação (`[EXPORT]`) para debug
+
+### Alterado
+- Rotas de exportação movidas de router separado para inline no `index.ts`
+
+## [v2.0.0] - 2026-07-10
+### Removido
+- Página e API de Relatórios (BREAKING CHANGE)
+
 ## [v1.10.0] - 2026-07-08
 ### Adicionado
 - **Frequência**: página Relatórios reescrita em 8 componentes modulares com FrequencyMetrics (diasDeAula/aulasDadas + TimeFilterToggle Semana/Mês/Ano), ClassTimelineChart (barras empilhadas horizontais por horário), GridAnalítico (4 quadrantes + 2 rankings) e CancelamentoDashboard (4 KPIs + 4 gráficos recharts)
