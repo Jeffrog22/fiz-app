@@ -135,7 +135,6 @@ const Alunos: React.FC = () => {
           case 'idade': va = calcIdade(a.data_nascimento) ?? -1; vb = calcIdade(b.data_nascimento) ?? -1; break;
           case 'categoria': va = calcCategoria(calcIdade(a.data_nascimento)) || ''; vb = calcCategoria(calcIdade(b.data_nascimento)) || ''; break;
           case 'genero': va = a.genero || ''; vb = b.genero || ''; break;
-          case 'status': va = a.turma_id ? 1 : 0; vb = b.turma_id ? 1 : 0; break;
           default: return 0;
         }
         if (va < vb) return dir === 'asc' ? -1 : 1;
@@ -524,7 +523,6 @@ const Alunos: React.FC = () => {
                 <th className="text-left px-3 py-2">{thSort('idade', 'Idade')}</th>
                 {thFilter('categoria', 'Categoria')}
                 <th className="text-left px-3 py-2">{thSort('genero', 'Gênero')}</th>
-                <th className="text-left px-3 py-2">{thSort('status', 'Status')}</th>
                 <th className="text-right px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Ações</th>
               </tr>
             </thead>
@@ -532,7 +530,6 @@ const Alunos: React.FC = () => {
               {processed.map((a: any) => {
                 const idade = calcIdade(a.data_nascimento);
                 const categoria = calcCategoria(idade);
-                const status = a.turma_id ? '' : 'Pendente';
                 const profNome = a.turma?.professor_id ? professorMap.get(a.turma.professor_id) : null;
                 return (
                   <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
@@ -557,38 +554,29 @@ const Alunos: React.FC = () => {
                     <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{a.turma?.label || '-'}</td>
                     <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{(a.turma?.horario || '-').substring(0, 5)}</td>
                     <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{profNome || '-'}</td>
-                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{idade !== null ? idade + ' anos' : '-'}</td>
+                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{idade !== null ? idade : '-'}</td>
                     <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{categoria || '-'}</td>
                     <td className="px-3 py-2 text-gray-600 dark:text-gray-400">
                       {a.genero
                         ? a.genero.charAt(0).toUpperCase() + a.genero.slice(1).replace('-', ' ')
                         : '-'}
                     </td>
-                    <td className="px-3 py-2">
-                      {status === 'Pendente' ? (
-                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
-                          Pendente
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400 dark:text-gray-500">-</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-right space-x-2 whitespace-nowrap">
+                    <td className="px-3 py-2 text-right whitespace-nowrap">
                       <button onClick={() => { setEditando(a); setModalOpen(true); }}
-                        className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200">Editar</button>
+                        className="text-base text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 ml-1" title="Editar">✏️</button>
                       {a.turma_id && (
                         <button onClick={() => setDesalocarTarget({ id: a.id, nome: a.nome })}
-                          className="text-xs text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200">Desalocar</button>
+                          className="text-base text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 ml-1" title="Desalocar">↔️</button>
                       )}
                       <button onClick={() => { setDeleteTarget({ id: a.id, nome: a.nome }); setDeleteMotivo('falta'); }}
-                        className="text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">Remover</button>
+                        className="text-base text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 ml-1" title="Remover">🗑️</button>
                     </td>
                   </tr>
                 );
               })}
               {processed.length === 0 && !carregando && (
                 <tr>
-                  <td colSpan={modoAlocacao || modoTransferencia ? 11 : 10} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
+                  <td colSpan={modoAlocacao || modoTransferencia ? 10 : 9} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
                     Nenhum aluno encontrado
                   </td>
                 </tr>
