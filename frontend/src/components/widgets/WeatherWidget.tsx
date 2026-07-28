@@ -19,16 +19,16 @@ const WeatherWidget: React.FC<Props> = ({ data, clima }) => {
   const condicao = WMO_MAP[clima.code] || 'Desconhecido';
 
   return (
-    <div className="flex items-center gap-3 bg-white rounded-lg border border-gray-200 px-4 py-2.5 shadow-sm">
+    <div className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2.5 shadow-sm dark:shadow-black/20">
       <WeatherIcon weatherCode={clima.code} />
       <div className="text-sm">
-        <span className="font-semibold text-gray-800">
+        <span className="font-semibold text-gray-800 dark:text-gray-100">
           {Math.round(clima.temp_min)}° / {Math.round(clima.temp_max)}°
         </span>
-        <span className="text-gray-400 mx-1.5">•</span>
-        <span className="text-gray-500 capitalize">{condicao}</span>
+        <span className="text-gray-400 dark:text-gray-500 mx-1.5">•</span>
+        <span className="text-gray-500 dark:text-gray-400 capitalize">{condicao}</span>
       </div>
-      <span className="text-[10px] text-gray-400 ml-auto">
+      <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-auto">
         {new Date(data + 'T12:00:00').toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}
       </span>
     </div>

@@ -70,13 +70,13 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId })
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+    <div className="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md shadow-xl dark:shadow-black/20">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-bold text-gray-800">Ocorrência / BO</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+          <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">Ocorrência / BO</h2>
+          <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-xl">&times;</button>
         </div>
-        <p className="text-xs text-gray-500 mb-4">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
           {new Date(data + 'T12:00').toLocaleDateString('pt-BR')} - Aula {indiceAula + 1}
         </p>
         <div className="space-y-4">
@@ -84,37 +84,37 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId })
           <div className="flex items-center gap-2">
             <input type="checkbox" id="pessoalCheck" checked={isPessoal}
               onChange={(e) => handleTogglePessoal(e.target.checked)}
-              className="w-4 h-4 text-primary-600 border-gray-300 rounded" />
-            <label htmlFor="pessoalCheck" className="text-sm font-medium text-gray-700">
+              className="w-4 h-4 text-primary-600 border-gray-300 dark:border-gray-600 rounded" />
+            <label htmlFor="pessoalCheck" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Pessoal / Professor
             </label>
-            <span className="text-[10px] text-gray-400 ml-auto">
+            <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-auto">
               {via === 'via_2' ? 'Exclusivo do professor' : 'Afeta todos os professores'}
             </span>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Escopo</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Escopo</label>
             <div className="flex gap-4">
-              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                 <input type="radio" name="compromete" checked={!comprometeDia}
                   onChange={() => setComprometeDia(false)}
-                  className="w-4 h-4 text-primary-600 border-gray-300" />
+                  className="w-4 h-4 text-primary-600 border-gray-300 dark:border-gray-600" />
                 Compromete a aula
               </label>
-              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                 <input type="radio" name="compromete" checked={comprometeDia}
                   onChange={() => setComprometeDia(true)}
-                  className="w-4 h-4 text-primary-600 border-gray-300" />
+                  className="w-4 h-4 text-primary-600 border-gray-300 dark:border-gray-600" />
                 Compromete o dia
               </label>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Tipo</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo</label>
             <select value={tipo} onChange={(e) => setTipo(e.target.value)}
-              className="w-full border border-gray-300 rounded p-2 mt-1 text-sm">
+              className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded p-2 mt-1 text-sm">
               {tipos.map((t) => (
                 <option key={t} value={t}>{t}</option>
               ))}
@@ -122,10 +122,10 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId })
           </div>
 
           {isCancelamento && (
-            <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600 space-y-1">
+            <div className="p-2 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded text-xs text-red-600 dark:text-red-400 space-y-1">
               <p>Este tipo de ocorrência irá <strong>cancelar a aula</strong> na matriz de chamada.</p>
               {comprometeDia && <p>O cancelamento será aplicado em todas as aulas do dia.</p>}
-              <p className="text-red-500">
+              <p className="text-red-500 dark:text-red-400">
                 {via === 'via_2'
                   ? 'Apenas as turmas deste professor serão afetadas (via_2).'
                   : 'Todas as turmas de todos os professores serão afetadas (via_1).'}
@@ -134,16 +134,16 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId })
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Descrição</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Descrição</label>
             <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)}
-              rows={3} className="w-full border border-gray-300 rounded p-2 mt-1 text-sm resize-none" />
+              rows={3} className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded p-2 mt-1 text-sm resize-none" />
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-6">
           <button onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancelar</button>
+            className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancelar</button>
           <button onClick={handleSalvar} disabled={salvando}
-            className="px-4 py-2 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 disabled:bg-gray-400">
+            className="px-4 py-2 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 disabled:bg-gray-400 dark:disabled:bg-gray-600">
             {salvando ? 'Salvando...' : 'Salvar'}</button>
         </div>
       </div>

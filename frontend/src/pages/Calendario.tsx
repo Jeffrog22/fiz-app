@@ -23,10 +23,10 @@ interface PeriodoLetivo {
 }
 
 const TIPOS_EVENTO = [
-  { value: 'feriado', label: 'Feriado', color: 'bg-red-100 text-red-700 border-red-200' },
-  { value: 'ponte', label: 'Ponte', color: 'bg-orange-100 text-orange-700 border-orange-200' },
-  { value: 'reuniao', label: 'Reunião', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  { value: 'evento', label: 'Evento', color: 'bg-purple-100 text-purple-700 border-purple-200' },
+  { value: 'feriado', label: 'Feriado', color: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800' },
+  { value: 'ponte', label: 'Ponte', color: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800' },
+  { value: 'reuniao', label: 'Reunião', color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800' },
+  { value: 'evento', label: 'Evento', color: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800' },
 ] as const;
 
 const Calendario: React.FC = () => {
@@ -158,7 +158,7 @@ const Calendario: React.FC = () => {
   for (let i = 0; i < primeiroDiaSemana; i++) {
     const dia = diasAnterior - primeiroDiaSemana + i + 1;
     diasCalendario.push(
-      <div key={`prev-${i}`} className="p-1.5 text-xs text-gray-300 text-center">{dia}</div>
+      <div key={`prev-${i}`} className="p-1.5 text-xs text-gray-300 dark:text-gray-600 text-center">{dia}</div>
     );
   }
   for (let dia = 1; dia <= diasNoMes; dia++) {
@@ -173,10 +173,10 @@ const Calendario: React.FC = () => {
     const climaDia = climaDados[dataStr];
     const temAlertaChuva = climaDia?.precipitacao > 60;
 
-    let bgClass = 'hover:bg-gray-100';
-    if (isSelected) bgClass = 'bg-primary-100 ring-2 ring-primary-400';
-    else if (isHoje) bgClass = 'bg-blue-50 font-bold ring-2 ring-blue-400';
-    else if (isFerias) bgClass = 'bg-yellow-50';
+    let bgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700';
+    if (isSelected) bgClass = 'bg-primary-100 ring-2 ring-primary-400 dark:bg-primary-900/40 dark:ring-primary-500';
+    else if (isHoje) bgClass = 'bg-blue-50 font-bold ring-2 ring-blue-400 dark:bg-blue-950/30 dark:ring-blue-500';
+    else if (isFerias) bgClass = 'bg-yellow-50 dark:bg-yellow-950/30';
 
     diasCalendario.push(
       <button
@@ -189,7 +189,7 @@ const Calendario: React.FC = () => {
           {dia}
         </span>
         {climaDia && (
-          <span className="text-xs text-gray-500 mt-0.5 self-center flex items-center gap-0.5 font-medium">
+          <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 self-center flex items-center gap-0.5 font-medium">
             <span className="text-sm" title={WMO_MAP[climaDia.code] || ''}>{getWeatherEmoji(climaDia.code)}</span>
             <span>{Math.round(climaDia.temp_max)}°</span>
             {temAlertaChuva && <span className="text-blue-500 text-[10px]">💧</span>}
@@ -204,7 +204,7 @@ const Calendario: React.FC = () => {
                 ev.tipo === 'reuniao' ? 'bg-blue-400' : 'bg-purple-400'
               }`} />
             ))}
-            {diaEventos.length > 2 && <span className="text-[8px] text-gray-400">+{diaEventos.length - 2}</span>}
+            {diaEventos.length > 2 && <span className="text-[8px] text-gray-400 dark:text-gray-500">+{diaEventos.length - 2}</span>}
           </div>
         )}
       </button>
@@ -214,17 +214,17 @@ const Calendario: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">Calendário</h1>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Calendário</h1>
         <button
           onClick={() => setShowPeriodoModal(true)}
-          className="text-sm px-3 py-1.5 bg-primary-50 text-primary-700 rounded border border-primary-200 hover:bg-primary-100 transition"
+          className="text-sm px-3 py-1.5 bg-primary-50 text-primary-700 rounded border border-primary-200 hover:bg-primary-100 transition dark:bg-primary-900/30 dark:text-primary-300 dark:border-primary-800 dark:hover:bg-primary-900/40"
         >
           Período Letivo
         </button>
       </div>
 
       {periodo && (
-        <div className="flex gap-4 text-xs text-gray-500 bg-gray-50 p-3 rounded border border-gray-200">
+        <div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 p-3 rounded border border-gray-200 dark:border-gray-700">
           <span>Início: <strong>{formatDateBR(periodo.inicio_aulas) || '---'}</strong></span>
           <span>Férias: <strong>{formatDateBR(periodo.ferias_inicio) || '---'} a {formatDateBR(periodo.ferias_fim) || '---'}</strong></span>
           <span>Término: <strong>{formatDateBR(periodo.termino_aulas) || '---'}</strong></span>
@@ -236,27 +236,27 @@ const Calendario: React.FC = () => {
         clima={climaDados[hojeLocal] || climaDados[Object.keys(climaDados)[0]] || null}
       />
 
-      <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
-          <button onClick={mesAnterior} className="text-gray-500 hover:text-gray-700 px-2">&lt;</button>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-black/20 border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+          <button onClick={mesAnterior} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-2">&lt;</button>
           <div className="flex items-center gap-3">
-            <span className="font-semibold text-gray-800">{new Date(ano, mes - 1).toLocaleString('pt-BR', { month: 'long' })} {ano}</span>
-            <button onClick={hojeClick} className="text-xs text-primary-600 hover:text-primary-800 px-2 py-0.5 rounded border border-primary-200 hover:bg-primary-50">Hoje</button>
+            <span className="font-semibold text-gray-800 dark:text-gray-100">{new Date(ano, mes - 1).toLocaleString('pt-BR', { month: 'long' })} {ano}</span>
+            <button onClick={hojeClick} className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 px-2 py-0.5 rounded border border-primary-200 dark:border-primary-800 hover:bg-primary-50 dark:hover:bg-primary-900/30">Hoje</button>
           </div>
-          <button onClick={mesSeguinte} className="text-gray-500 hover:text-gray-700 px-2">&gt;</button>
+          <button onClick={mesSeguinte} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-2">&gt;</button>
         </div>
 
-        <div className="grid grid-cols-7 gap-px bg-gray-200">
+        <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700">
           {diasSemana.map((d, i) => (
-            <div key={d} className={`bg-gray-50 p-2 text-xs text-center ${i === 0 || i === 6 ? 'font-bold text-gray-600' : 'font-medium text-gray-500'}`}>{d}</div>
+            <div key={d} className={`bg-gray-50 dark:bg-gray-900 p-2 text-xs text-center ${i === 0 || i === 6 ? 'font-bold text-gray-600 dark:text-gray-300' : 'font-medium text-gray-500 dark:text-gray-400'}`}>{d}</div>
           ))}
           {diasCalendario}
         </div>
       </div>
 
       {selectedDay && (
-        <div className="bg-white rounded-lg shadow border border-gray-200 p-4 space-y-3">
-          <h3 className="text-sm font-semibold text-gray-700">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-black/20 border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
             Eventos em {new Date(selectedDay + 'T12:00:00').toLocaleDateString('pt-BR')}
           </h3>
 
@@ -264,21 +264,21 @@ const Calendario: React.FC = () => {
             {selectedDayEventos.map((ev) => {
               const tipoInfo = TIPOS_EVENTO.find(t => t.value === ev.tipo);
               return (
-                <span key={ev.id} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border ${tipoInfo?.color || 'bg-gray-100'}`}>
+                <span key={ev.id} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border ${tipoInfo?.color || 'bg-gray-100 dark:bg-gray-700'}`}>
                   {tipoInfo?.label || ev.tipo}
-                  {ev.descricao && <span className="text-gray-500">- {ev.descricao}</span>}
-                  <button onClick={() => handleRemoverEvento(ev.id)} className="ml-1 text-gray-400 hover:text-red-500">&times;</button>
+                  {ev.descricao && <span className="text-gray-500 dark:text-gray-400">- {ev.descricao}</span>}
+                  <button onClick={() => handleRemoverEvento(ev.id)} className="ml-1 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400">&times;</button>
                 </span>
               );
             })}
-            {selectedDayEventos.length === 0 && <span className="text-xs text-gray-400">Nenhum evento neste dia.</span>}
+            {selectedDayEventos.length === 0 && <span className="text-xs text-gray-400 dark:text-gray-500">Nenhum evento neste dia.</span>}
           </div>
 
           <div className="flex gap-2 items-end flex-wrap">
             <select
               value={novoEventoTipo}
               onChange={(e) => setNovoEventoTipo(e.target.value)}
-              className="text-xs px-2 py-1.5 border border-gray-300 rounded"
+              className="text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded"
             >
               {TIPOS_EVENTO.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
@@ -287,24 +287,24 @@ const Calendario: React.FC = () => {
               value={novoEventoDesc}
               onChange={(e) => setNovoEventoDesc(e.target.value)}
               placeholder="Descrição (opcional)"
-              className="text-xs px-2 py-1.5 border border-gray-300 rounded flex-1 min-w-[120px]"
+              className="text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded flex-1 min-w-[120px]"
             />
-            <button onClick={handleAdicionarEvento} className="text-xs px-3 py-1.5 bg-primary-600 text-white rounded hover:bg-primary-700 transition">
+            <button onClick={handleAdicionarEvento} className="text-xs px-3 py-1.5 bg-primary-600 dark:bg-primary-500 text-white rounded hover:bg-primary-700 dark:hover:bg-primary-600 transition">
               Adicionar
             </button>
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow border border-gray-200 p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-gray-700">Planejamento</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-black/20 border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Planejamento</h3>
         <PlanningUpload arquivos={planningFiles} onArquivosChange={carregarArquivos} />
       </div>
 
       {showPeriodoModal && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-40" onClick={() => setShowPeriodoModal(false)}>
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md space-y-4" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-gray-800">Período Letivo</h3>
+        <div className="fixed inset-0 bg-black/30 dark:bg-black/60 flex items-center justify-center z-40" onClick={() => setShowPeriodoModal(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-black/20 p-6 w-full max-w-md space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Período Letivo</h3>
             <div className="space-y-3">
               {([
                 { key: 'inicio_aulas', label: 'Início das aulas' },
@@ -313,19 +313,19 @@ const Calendario: React.FC = () => {
                 { key: 'termino_aulas', label: 'Término das aulas' },
               ] as const).map(({ key, label }) => (
                 <div key={key}>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{label}</label>
                   <input
                     type="date"
                     value={formPeriodo[key]}
                     onChange={(e) => setFormPeriodo(prev => ({ ...prev, [key]: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm"
                   />
                 </div>
               ))}
             </div>
             <div className="flex gap-2 justify-end pt-2">
-              <button onClick={() => setShowPeriodoModal(false)} className="text-sm px-4 py-2 text-gray-600 hover:text-gray-800">Cancelar</button>
-              <button onClick={handleSalvarPeriodo} className="text-sm px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition">Salvar</button>
+              <button onClick={() => setShowPeriodoModal(false)} className="text-sm px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancelar</button>
+              <button onClick={handleSalvarPeriodo} className="text-sm px-4 py-2 bg-primary-600 dark:bg-primary-500 text-white rounded hover:bg-primary-700 dark:hover:bg-primary-600 transition">Salvar</button>
             </div>
           </div>
         </div>

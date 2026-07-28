@@ -30,17 +30,17 @@ interface Props {
 const Sidebar: React.FC<Props> = ({ collapsed, onToggle }) => {
   return (
     <aside
-      className={`bg-white border-r border-gray-200 min-h-[calc(100vh-57px)] flex flex-col py-4 transition-all duration-300 ease-in-out overflow-hidden ${
+      className={`bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-r dark:border-gray-800 min-h-[calc(100vh-57px)] flex flex-col py-4 transition-all duration-300 ease-in-out overflow-hidden ${
         collapsed ? 'w-14' : 'w-56'
       }`}
     >
       <div className={`flex items-center mb-4 px-3 ${collapsed ? 'justify-center' : 'justify-between'}`}>
         {!collapsed && (
-          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Menu</span>
+          <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Menu</span>
         )}
         <button
           onClick={onToggle}
-          className="text-gray-400 hover:text-gray-600 transition-colors text-sm p-1 rounded hover:bg-gray-100"
+          className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors text-sm p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
           title={collapsed ? 'Expandir menu' : 'Recolher menu'}
         >
           {collapsed ? '\u25B6' : '\u25C0'}
@@ -57,8 +57,8 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle }) => {
                 collapsed ? 'justify-center' : ''
               } ${
                 isActive
-                  ? 'bg-primary-50 text-primary-700 font-medium'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'
               }`
             }
           >
@@ -74,7 +74,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle }) => {
         ))}
       </nav>
 
-      <nav className="flex flex-col gap-1 px-2 pt-2 border-t border-gray-200 mt-2">
+      <nav className="flex flex-col gap-1 px-2 pt-2 border-t border-gray-200 dark:border-t dark:border-gray-800 mt-2">
         {configLinks.map((link) => (
           <NavLink
             key={link.to}
@@ -84,8 +84,8 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle }) => {
                 collapsed ? 'justify-center' : ''
               } ${
                 isActive
-                  ? 'bg-primary-50 text-primary-700 font-medium'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'
               }`
             }
           >

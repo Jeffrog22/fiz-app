@@ -280,7 +280,7 @@ const Alunos: React.FC = () => {
     if (idx === -1) return null;
     const dir = sortRules[idx].dir;
     return (
-      <span className="ml-1 text-xs text-primary-600">
+      <span className="ml-1 text-xs text-primary-600 dark:text-primary-400">
         {idx > 0 && <sup className="text-[10px]">{idx + 1}</sup>}
         {dir === 'asc' ? '▲' : '▼'}
       </span>
@@ -291,7 +291,7 @@ const Alunos: React.FC = () => {
     <button
       type="button"
       onClick={() => toggleSort(column)}
-      className="font-medium text-gray-500 hover:text-gray-700 text-left text-sm whitespace-nowrap"
+      className="font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-left text-sm whitespace-nowrap"
     >
       {label}
       {sortIcon(column)}
@@ -314,8 +314,8 @@ const Alunos: React.FC = () => {
           }
           className={`text-xs border rounded px-1 py-0.5 max-w-[110px] ${
             columnFilters[col]
-              ? 'bg-primary-50 border-primary-300 text-primary-700'
-              : 'border-gray-200 text-gray-500'
+              ? 'bg-primary-50 dark:bg-primary-900/30 border-primary-300 text-primary-700 dark:text-primary-300'
+              : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400'
           }`}
         >
           <option value="">{label}</option>
@@ -330,7 +330,7 @@ const Alunos: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">Alunos</h1>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Alunos</h1>
         <div className="flex gap-2">
           <button
             type="button"
@@ -341,8 +341,8 @@ const Alunos: React.FC = () => {
             }}
             className={`px-4 py-2 text-sm rounded-md transition-colors ${
               modoAlocacao
-                ? 'bg-primary-100 text-primary-700 border border-primary-300'
-                : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-primary-300'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
             }`}
           >
             {modoAlocacao ? 'Sair da Alocação' : 'Alocar'}
@@ -356,8 +356,8 @@ const Alunos: React.FC = () => {
             }}
             className={`px-4 py-2 text-sm rounded-md transition-colors ${
               modoTransferencia
-                ? 'bg-purple-100 text-purple-700 border border-purple-300'
-                : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-300'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
             }`}
           >
             {modoTransferencia ? 'Sair da Transferência' : 'Transferir'}
@@ -379,15 +379,15 @@ const Alunos: React.FC = () => {
       />
 
       {erro && !carregando && alunos.length === 0 && (
-        <p className="text-sm text-red-500">{erro}</p>
+        <p className="text-sm text-red-500 dark:text-red-400">{erro}</p>
       )}
 
       {modoAlocacao && (
-        <div className="flex items-center gap-3 px-4 py-2 bg-primary-50 border border-primary-200 rounded-md">
+        <div className="flex items-center gap-3 px-4 py-2 bg-primary-50 dark:bg-primary-900/30 border border-primary-200 rounded-md">
           <select
             value={professorAlocar}
             onChange={(e) => { setProfessorAlocar(e.target.value); setTurmaAlocar(''); }}
-            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 min-w-[140px]"
+            className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:dark:ring-primary-400 min-w-[140px]"
           >
             <option value="">Professor(a)</option>
             {professores.map((p) => (
@@ -397,7 +397,7 @@ const Alunos: React.FC = () => {
           <select
             value={turmaAlocar}
             onChange={(e) => setTurmaAlocar(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 min-w-[180px]"
+            className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:dark:ring-primary-400 min-w-[180px]"
             disabled={!professorAlocar}
           >
             <option value="">Turma + Horário</option>
@@ -409,7 +409,7 @@ const Alunos: React.FC = () => {
           </select>
           {selectedIds.size > 0 && (
             <>
-              <span className="text-sm font-medium text-primary-700 whitespace-nowrap">
+              <span className="text-sm font-medium text-primary-700 dark:text-primary-300 whitespace-nowrap">
                 {selectedIds.size} selecionado{selectedIds.size !== 1 ? 's' : ''}
               </span>
               <button
@@ -423,7 +423,7 @@ const Alunos: React.FC = () => {
               <button
                 type="button"
                 onClick={() => { setSelectedIds(new Set()); setTurmaAlocar(''); }}
-                className="px-4 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                className="px-4 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 Limpar
               </button>
@@ -433,11 +433,11 @@ const Alunos: React.FC = () => {
       )}
 
       {modoTransferencia && (
-        <div className="flex items-center gap-3 px-4 py-2 bg-purple-50 border border-purple-200 rounded-md flex-wrap">
+        <div className="flex items-center gap-3 px-4 py-2 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 rounded-md flex-wrap">
           <select
             value={turmaOrigemFiltro}
             onChange={(e) => { setTurmaOrigemFiltro(e.target.value); setSelectedIds(new Set()); }}
-            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 min-w-[160px]"
+            className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:dark:ring-purple-400 min-w-[160px]"
           >
             <option value="">Turma atual (filtro)</option>
             {turmasOrdenadas.map((t: any) => (
@@ -447,12 +447,12 @@ const Alunos: React.FC = () => {
             ))}
           </select>
 
-          <span className="text-xs text-gray-400">→</span>
+          <span className="text-xs text-gray-400 dark:text-gray-500">→</span>
 
           <select
             value={professorTransferir}
             onChange={(e) => { setProfessorTransferir(e.target.value); setTurmaTransferir(''); }}
-            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 min-w-[140px]"
+            className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:dark:ring-purple-400 min-w-[140px]"
           >
             <option value="">Professor(a)</option>
             {professores.map((p) => (
@@ -462,7 +462,7 @@ const Alunos: React.FC = () => {
           <select
             value={turmaTransferir}
             onChange={(e) => setTurmaTransferir(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 min-w-[180px]"
+            className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:dark:ring-purple-400 min-w-[180px]"
             disabled={!professorTransferir}
           >
             <option value="">Nova turma</option>
@@ -474,7 +474,7 @@ const Alunos: React.FC = () => {
           </select>
           {selectedIds.size > 0 && (
             <>
-              <span className="text-sm font-medium text-purple-700 whitespace-nowrap">
+              <span className="text-sm font-medium text-purple-700 dark:text-purple-300 whitespace-nowrap">
                 {selectedIds.size} selecionado{selectedIds.size !== 1 ? 's' : ''}
               </span>
               <button
@@ -488,7 +488,7 @@ const Alunos: React.FC = () => {
               <button
                 type="button"
                 onClick={() => { setSelectedIds(new Set()); setTurmaTransferir(''); }}
-                className="px-4 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                className="px-4 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 Limpar
               </button>
@@ -498,11 +498,11 @@ const Alunos: React.FC = () => {
       )}
 
       {carregando ? (
-        <p className="text-sm text-gray-500">Carregando...</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Carregando...</p>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
                 {(modoAlocacao || modoTransferencia) && (
                   <th className="w-8 px-2 py-2">
@@ -510,7 +510,7 @@ const Alunos: React.FC = () => {
                       type="checkbox"
                       checked={processed.length > 0 && selectedIds.size === processed.length}
                       onChange={toggleSelecionarTodos}
-                      className="rounded border-gray-300 text-primary-600"
+                      className="rounded border-gray-300 dark:border-gray-600 text-primary-600 dark:text-primary-400"
                     />
                   </th>
                 )}
@@ -523,70 +523,70 @@ const Alunos: React.FC = () => {
                 {thFilter('categoria', 'Categoria')}
                 <th className="text-left px-3 py-2">{thSort('genero', 'Gênero')}</th>
                 <th className="text-left px-3 py-2">{thSort('status', 'Status')}</th>
-                <th className="text-right px-3 py-2 font-medium text-gray-500">Ações</th>
+                <th className="text-right px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {processed.map((a: any) => {
                 const idade = calcIdade(a.data_nascimento);
                 const categoria = calcCategoria(idade);
                 const status = a.turma_id ? '' : 'Pendente';
                 const profNome = a.turma?.professor_id ? professorMap.get(a.turma.professor_id) : null;
                 return (
-                  <tr key={a.id} className="hover:bg-gray-50">
+                  <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     {(modoAlocacao || modoTransferencia) && (
                       <td className="px-2 py-2">
                         <input
                           type="checkbox"
                           checked={selectedIds.has(a.id)}
                           onChange={() => toggleSelecao(a.id)}
-                          className="rounded border-gray-300 text-primary-600"
+                          className="rounded border-gray-300 dark:border-gray-600 text-primary-600 dark:text-primary-400"
                         />
                       </td>
                     )}
                     <td
-                      className="px-3 py-2 font-medium text-primary-600 cursor-pointer hover:text-primary-800"
+                      className="px-3 py-2 font-medium text-primary-600 dark:text-primary-400 cursor-pointer hover:text-primary-800 dark:hover:text-primary-200"
                       title="clique para editar"
                       onClick={() => { setEditando(a); setModalOpen(true); }}
                     >
                       {a.nome}
                     </td>
-                    <td className="px-3 py-2 text-gray-600">{a.turma?.nivel || a.nivel || '-'}</td>
-                    <td className="px-3 py-2 text-gray-600">{a.turma?.label || '-'}</td>
-                    <td className="px-3 py-2 text-gray-600">{(a.turma?.horario || '-').substring(0, 5)}</td>
-                    <td className="px-3 py-2 text-gray-600">{profNome || '-'}</td>
-                    <td className="px-3 py-2 text-gray-600">{idade !== null ? idade + ' anos' : '-'}</td>
-                    <td className="px-3 py-2 text-gray-600">{categoria || '-'}</td>
-                    <td className="px-3 py-2 text-gray-600">
+                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{a.turma?.nivel || a.nivel || '-'}</td>
+                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{a.turma?.label || '-'}</td>
+                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{(a.turma?.horario || '-').substring(0, 5)}</td>
+                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{profNome || '-'}</td>
+                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{idade !== null ? idade + ' anos' : '-'}</td>
+                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{categoria || '-'}</td>
+                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400">
                       {a.genero
                         ? a.genero.charAt(0).toUpperCase() + a.genero.slice(1).replace('-', ' ')
                         : '-'}
                     </td>
                     <td className="px-3 py-2">
                       {status === 'Pendente' ? (
-                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
                           Pendente
                         </span>
                       ) : (
-                        <span className="text-xs text-gray-400">-</span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500">-</span>
                       )}
                     </td>
                     <td className="px-3 py-2 text-right space-x-2 whitespace-nowrap">
                       <button onClick={() => { setEditando(a); setModalOpen(true); }}
-                        className="text-xs text-primary-600 hover:text-primary-800">Editar</button>
+                        className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200">Editar</button>
                       {a.turma_id && (
                         <button onClick={() => setDesalocarTarget({ id: a.id, nome: a.nome })}
-                          className="text-xs text-amber-600 hover:text-amber-800">Desalocar</button>
+                          className="text-xs text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200">Desalocar</button>
                       )}
                       <button onClick={() => { setDeleteTarget({ id: a.id, nome: a.nome }); setDeleteMotivo('falta'); }}
-                        className="text-xs text-red-500 hover:text-red-700">Remover</button>
+                        className="text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">Remover</button>
                     </td>
                   </tr>
                 );
               })}
               {processed.length === 0 && !carregando && (
                 <tr>
-                  <td colSpan={modoAlocacao || modoTransferencia ? 11 : 10} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={modoAlocacao || modoTransferencia ? 11 : 10} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
                     Nenhum aluno encontrado
                   </td>
                 </tr>
@@ -597,20 +597,20 @@ const Alunos: React.FC = () => {
       )}
 
       {desalocarTarget && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-40" onClick={() => setDesalocarTarget(null)}>
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm space-y-4" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-gray-800">Desalocar Aluno</h3>
-            <p className="text-sm text-gray-600">
+        <div className="fixed inset-0 bg-black/30 dark:bg-black/60 flex items-center justify-center z-40" onClick={() => setDesalocarTarget(null)}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-black/20 border dark:border-gray-700 p-6 w-full max-w-sm space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Desalocar Aluno</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Desalocando: <strong>{desalocarTarget.nome}</strong>
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               O aluno será removido da turma atual e ficará como <strong>Pendente</strong>.
               O período de matrícula será encerrado.
             </p>
             <div className="flex gap-2 justify-end pt-2">
               <button
                 onClick={() => setDesalocarTarget(null)}
-                className="text-sm px-4 py-2 text-gray-600 hover:text-gray-800"
+                className="text-sm px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100"
               >
                 Cancelar
               </button>
@@ -626,14 +626,14 @@ const Alunos: React.FC = () => {
       )}
 
       {deleteTarget && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-40" onClick={() => setDeleteTarget(null)}>
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm space-y-4" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-gray-800">Remover Aluno</h3>
-            <p className="text-sm text-gray-600">
+        <div className="fixed inset-0 bg-black/30 dark:bg-black/60 flex items-center justify-center z-40" onClick={() => setDeleteTarget(null)}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-black/20 border dark:border-gray-700 p-6 w-full max-w-sm space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Remover Aluno</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Removendo: <strong>{deleteTarget.nome}</strong>
             </p>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-2">Motivo da exclusão</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Motivo da exclusão</label>
               <div className="flex flex-wrap gap-2">
                 {[
                   { value: 'falta', label: 'Falta' },
@@ -647,8 +647,8 @@ const Alunos: React.FC = () => {
                     onClick={() => setDeleteMotivo(m.value)}
                     className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
                       deleteMotivo === m.value
-                        ? 'bg-red-100 text-red-700 border-red-300'
-                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                        ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300'
+                        : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'
                     }`}
                   >
                     {m.label}
@@ -659,7 +659,7 @@ const Alunos: React.FC = () => {
             <div className="flex gap-2 justify-end pt-2">
               <button
                 onClick={() => setDeleteTarget(null)}
-                className="text-sm px-4 py-2 text-gray-600 hover:text-gray-800"
+                className="text-sm px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100"
               >
                 Cancelar
               </button>

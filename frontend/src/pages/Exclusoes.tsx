@@ -88,7 +88,7 @@ const Exclusoes: React.FC = () => {
     if (idx === -1) return null;
     const dir = sortRules[idx].dir;
     return (
-      <span className="ml-1 text-xs text-primary-600">
+      <span className="ml-1 text-xs text-primary-600 dark:text-primary-400">
         {idx > 0 && <sup className="text-[10px]">{idx + 1}</sup>}
         {dir === 'asc' ? '\u25B2' : '\u25BC'}
       </span>
@@ -99,7 +99,7 @@ const Exclusoes: React.FC = () => {
     <button
       type="button"
       onClick={() => toggleSort(column)}
-      className="font-medium text-gray-500 hover:text-gray-700 text-left text-sm whitespace-nowrap"
+      className="font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-left text-sm whitespace-nowrap"
     >
       {label}
       {sortIcon(column)}
@@ -197,18 +197,18 @@ const Exclusoes: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
           Exclusões
-          <span className="ml-2 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-normal align-middle">
+          <span className="ml-2 text-xs bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 px-2 py-0.5 rounded-full font-normal align-middle">
             {exclusoes.length}
           </span>
         </h1>
-        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+        <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
           <input
             type="checkbox"
             checked={mostrarOcultos}
             onChange={(e) => setMostrarOcultos(e.target.checked)}
-            className="h-4 w-4 text-primary-600 border-gray-300 rounded"
+            className="h-4 w-4 text-primary-600 border-gray-300 dark:border-gray-600 rounded"
           />
           Mostrar alunos ocultos
         </label>
@@ -222,15 +222,15 @@ const Exclusoes: React.FC = () => {
       />
 
       {erro && !carregando && (
-        <p className="text-sm text-red-500">{erro}</p>
+        <p className="text-sm text-red-500 dark:text-red-400">{erro}</p>
       )}
 
       {carregando ? (
-        <p className="text-sm text-gray-500">Carregando...</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Carregando...</p>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
               <tr>
                 <th className="text-left px-4 py-3">{thSort('nome', 'Nome')}</th>
                 <th className="text-left px-4 py-3">{thSort('turma', 'Turma')}</th>
@@ -238,24 +238,24 @@ const Exclusoes: React.FC = () => {
                 <th className="text-left px-4 py-3">{thSort('professor', 'Professor')}</th>
                 <th className="text-left px-4 py-3">{thSort('motivo', 'Motivo')}</th>
                 <th className="text-left px-4 py-3">{thSort('data', 'Data')}</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Ações</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {filtered.map((exc: any) => {
                 const turma = exc._turma;
                 return (
-                  <tr key={exc.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-800">
+                  <tr key={exc.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">
                       {exc.alunos?.nome || '---'}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
                       {turma?.label || exc.alunos?.turma_id || '---'}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
                       {(turma?.horario || '').slice(0, 5) || '---'}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
                       {turma?.professor_id ? professorMap.get(turma.professor_id) || '-' : '-'}
                     </td>
                     <td className="px-4 py-3">
@@ -265,7 +265,7 @@ const Exclusoes: React.FC = () => {
                           onChange={(e) => setEditandoValor(e.target.value)}
                           onBlur={() => handleSalvarEdicao(exc.id)}
                           autoFocus
-                          className="w-full px-1 py-0.5 text-sm border border-primary-400 rounded bg-white"
+                          className="w-full px-1 py-0.5 text-sm border border-primary-400 rounded bg-white dark:bg-gray-700"
                         >
                           {MOTIVOS.map((m) => (
                             <option key={m.value} value={m.value}>{m.label}</option>
@@ -273,7 +273,7 @@ const Exclusoes: React.FC = () => {
                         </select>
                       ) : (
                         <span
-                          className="cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded block capitalize text-gray-600"
+                          className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 px-1 py-0.5 rounded block capitalize text-gray-600 dark:text-gray-400"
                           onClick={() => iniciarEdicao(exc.id, 'motivo', exc.motivo || 'falta')}
                           title="Clique para editar"
                         >
@@ -289,11 +289,11 @@ const Exclusoes: React.FC = () => {
                           onChange={(e) => setEditandoValor(e.target.value)}
                           onBlur={() => handleSalvarEdicao(exc.id)}
                           autoFocus
-                          className="w-full px-1 py-0.5 text-sm border border-primary-400 rounded bg-white"
+                          className="w-full px-1 py-0.5 text-sm border border-primary-400 rounded bg-white dark:bg-gray-700"
                         />
                       ) : (
                         <span
-                          className="cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded block text-gray-500 text-xs"
+                          className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 px-1 py-0.5 rounded block text-gray-500 dark:text-gray-400 text-xs"
                           onClick={() => iniciarEdicao(exc.id, 'data', exc.data_exclusao?.split('T')[0] || '')}
                           title="Clique para editar"
                         >
@@ -310,13 +310,13 @@ const Exclusoes: React.FC = () => {
                               alunoNome: exc.alunos?.nome || 'Aluno',
                             })
                           }
-                          className="text-xs px-2 py-1 bg-green-50 text-green-700 rounded border border-green-200 hover:bg-green-100 transition"
+                          className="text-xs px-2 py-1 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-800 transition"
                         >
                           Restaurar
                         </button>
                         <button
                           onClick={() => handleOcultar(exc.id)}
-                          className="text-xs px-2 py-1 bg-red-50 text-red-700 rounded border border-red-200 hover:bg-red-100 transition"
+                          className="text-xs px-2 py-1 bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 rounded border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-800 transition"
                         >
                           Ocultar
                         </button>
@@ -327,7 +327,7 @@ const Exclusoes: React.FC = () => {
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400 text-sm">
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500 text-sm">
                     Nenhuma exclusão encontrada.
                   </td>
                 </tr>

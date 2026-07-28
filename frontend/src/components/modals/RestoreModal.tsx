@@ -42,22 +42,22 @@ const RestoreModal: React.FC<RestoreModalProps> = ({ open, alunoNome, turmas, pr
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-40" onClick={onClose}>
-      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm space-y-4" onClick={e => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold text-gray-800">Restaurar Aluno</h3>
-        <p className="text-sm text-gray-600">
+    <div className="fixed inset-0 bg-black/30 dark:bg-black/60 flex items-center justify-center z-40" onClick={onClose}>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-black/20 p-6 w-full max-w-sm space-y-4" onClick={e => e.stopPropagation()}>
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Restaurar Aluno</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400">
           Restaurando: <strong>{alunoNome}</strong>
         </p>
 
-        <div className="space-y-3 p-3 bg-green-50 border border-green-200 rounded-md">
-          <p className="text-xs font-medium text-green-700">Turma de destino</p>
+        <div className="space-y-3 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-md">
+          <p className="text-xs font-medium text-green-700 dark:text-green-300">Turma de destino</p>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500">Professor(a)</label>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Professor(a)</label>
             <select
               value={professorId}
               onChange={(e) => { setProfessorId(e.target.value); setTurmaId(''); }}
-              className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm"
+              className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md text-sm"
             >
               <option value="">Turma original</option>
               {professores.map((p) => (
@@ -67,11 +67,11 @@ const RestoreModal: React.FC<RestoreModalProps> = ({ open, alunoNome, turmas, pr
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500">Turma + Horário</label>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Turma + Horário</label>
             <select
               value={turmaId}
               onChange={(e) => setTurmaId(e.target.value)}
-              className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm"
+              className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md text-sm"
               disabled={!professorId}
             >
               <option value="">Selecione a turma</option>
@@ -83,17 +83,17 @@ const RestoreModal: React.FC<RestoreModalProps> = ({ open, alunoNome, turmas, pr
             </select>
           </div>
 
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             Nível: <strong>{turmaSelecionada?.nivel || '-'}</strong>
           </p>
 
           {turmaId && (
-            <label className="flex items-center gap-2 text-sm text-gray-600">
+            <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
               <input
                 type="checkbox"
                 checked={transferenciaExterna}
                 onChange={(e) => setTransferenciaExterna(e.target.checked)}
-                className="rounded border-gray-300 text-primary-600"
+                className="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400"
               />
               Veio de outra piscina
             </label>
@@ -103,7 +103,7 @@ const RestoreModal: React.FC<RestoreModalProps> = ({ open, alunoNome, turmas, pr
         <div className="flex gap-2 justify-end pt-2">
           <button
             onClick={onClose}
-            className="text-sm px-4 py-2 text-gray-600 hover:text-gray-800"
+            className="text-sm px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100"
           >
             Cancelar
           </button>

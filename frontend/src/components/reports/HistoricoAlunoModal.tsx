@@ -36,19 +36,19 @@ const HistoricoAlunoModal: React.FC<Props> = ({ alunoData, onClose }) => {
   const assiduidadeTotal = alunoData.percentual_presenca;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60" onClick={onClose}>
       <div
-        className="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-xl dark:shadow-black/20 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-xl z-10">
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between rounded-t-xl z-10">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-gray-800">{alunoData.nome}</h2>
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{alunoData.nome}</h2>
             {alunoData.turma_label && (
-              <span className="text-xs text-gray-400 ml-1">{alunoData.turma_label} {alunoData.professor ? `(${alunoData.professor})` : ''}</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">{alunoData.turma_label} {alunoData.professor ? `(${alunoData.professor})` : ''}</span>
             )}
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+          <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 text-xl leading-none">&times;</button>
         </div>
 
         {loading && !data ? (
@@ -59,27 +59,27 @@ const HistoricoAlunoModal: React.FC<Props> = ({ alunoData, onClose }) => {
           <div className="p-6 space-y-6">
             {/* 4 cards indicadores — direto do grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <MiniCard titulo="Total Aulas" valor={totalAulas} cor="text-blue-600" />
-              <MiniCard titulo="Presenças" valor={presentes} cor="text-green-600" />
-              <MiniCard titulo="Faltas" valor={faltas} cor="text-red-600" />
-              <MiniCard titulo="Justificativas" valor={justificados} cor="text-yellow-600" />
+              <MiniCard titulo="Total Aulas" valor={totalAulas} cor="text-blue-600 dark:text-blue-400" />
+              <MiniCard titulo="Presenças" valor={presentes} cor="text-green-600 dark:text-green-400" />
+              <MiniCard titulo="Faltas" valor={faltas} cor="text-red-600 dark:text-red-400" />
+              <MiniCard titulo="Justificativas" valor={justificados} cor="text-yellow-600 dark:text-yellow-400" />
             </div>
 
             {/* Taxa de Assiduidade */}
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <p className="text-sm font-medium text-gray-700 mb-2">Taxa de Assiduidade</p>
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Taxa de Assiduidade</p>
               <div className="flex items-center gap-3">
-                <div className="flex-1 bg-gray-200 rounded-full h-4 overflow-hidden">
+                <div className="flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-4 overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all duration-500 ${totalAulas > 0 ? 'bg-blue-500' : 'bg-gray-300'}`}
+                    className={`h-full rounded-full transition-all duration-500 ${totalAulas > 0 ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}
                     style={{ width: `${totalAulas > 0 ? assiduidadeTotal : 0}%` }}
                   />
                 </div>
-                <span className={`text-lg font-bold min-w-[4rem] text-right ${totalAulas > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
+                <span className={`text-lg font-bold min-w-[4rem] text-right ${totalAulas > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>
                   {totalAulas > 0 ? `${assiduidadeTotal}%` : '-'}
                 </span>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 {totalAulas > 0
                   ? `${presentes} presenças em ${totalAulas} aulas`
                   : 'Sem registros de chamada'}
@@ -91,7 +91,7 @@ const HistoricoAlunoModal: React.FC<Props> = ({ alunoData, onClose }) => {
 
             {/* Nó de Progressão — Linha do Tempo */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-1">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-1">
                 <span>📈</span> Nó de Progressão — Linha do Tempo
               </h3>
               {!data ? (
@@ -99,7 +99,7 @@ const HistoricoAlunoModal: React.FC<Props> = ({ alunoData, onClose }) => {
                   <div className="animate-spin h-6 w-6 border-4 border-primary-500 border-t-transparent rounded-full" />
                 </div>
               ) : data.enrollmentPeriods.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-4">Nenhum período de matrícula encontrado.</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">Nenhum período de matrícula encontrado.</p>
               ) : (
                 <div className="space-y-0">
                   {data.enrollmentPeriods.map((p, i) => (
@@ -117,8 +117,8 @@ const HistoricoAlunoModal: React.FC<Props> = ({ alunoData, onClose }) => {
 
 function MiniCard({ titulo, valor, cor }: { titulo: string; valor: number; cor: string }) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-3 text-center">
-      <p className="text-xs text-gray-500 mb-1">{titulo}</p>
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-center">
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{titulo}</p>
       <p className={`text-2xl font-bold ${cor}`}>{valor}</p>
     </div>
   );
@@ -126,20 +126,20 @@ function MiniCard({ titulo, valor, cor }: { titulo: string; valor: number; cor: 
 
 function RetencaoCard({ retencao }: { retencao: RetencaoAluno }) {
   return (
-    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
-      <p className="text-sm font-semibold text-gray-700 mb-2">Índice de Retenção Total do Aluno</p>
+    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Índice de Retenção Total do Aluno</p>
       <div className="flex items-center gap-3">
-        <div className="flex-1 bg-blue-200 rounded-full h-5 overflow-hidden">
+        <div className="flex-1 bg-blue-200 dark:bg-blue-900/30 rounded-full h-5 overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all duration-500 ${retencao.totalDias > 0 ? 'bg-blue-600' : 'bg-gray-300'}`}
+            className={`h-full rounded-full transition-all duration-500 ${retencao.totalDias > 0 ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}
             style={{ width: `${retencao.percentual}%` }}
           />
         </div>
-        <span className={`text-xl font-bold min-w-[4rem] text-right ${retencao.totalDias > 0 ? 'text-blue-700' : 'text-gray-400'}`}>
+        <span className={`text-xl font-bold min-w-[4rem] text-right ${retencao.totalDias > 0 ? 'text-blue-700 dark:text-blue-300' : 'text-gray-400 dark:text-gray-500'}`}>
           {retencao.totalDias > 0 ? `${retencao.percentual}%` : '-'}
         </span>
       </div>
-      <p className="text-xs text-blue-600 mt-1">
+      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
         {retencao.totalDias > 0
           ? `${retencao.totalDias} dias de permanência em ${retencao.diasDesdeInicio} dias desde a primeira matrícula`
           : 'Sem dados de matrícula para calcular retenção'}
@@ -157,27 +157,27 @@ function TimelineNode({ period, isLast }: { period: EnrollmentPeriodHistorico; i
   return (
     <div className="flex gap-3">
       <div className="flex flex-col items-center">
-        <div className={`w-3.5 h-3.5 rounded-full flex-shrink-0 mt-1 ${period.data_fim ? 'bg-gray-400' : 'bg-primary-500 ring-2 ring-primary-200'}`} />
-        {!isLast && <div className="w-0.5 flex-1 bg-gray-300 min-h-[32px]" />}
+        <div className={`w-3.5 h-3.5 rounded-full flex-shrink-0 mt-1 ${period.data_fim ? 'bg-gray-400 dark:bg-gray-500' : 'bg-primary-500 ring-2 ring-primary-200 dark:ring-primary-700'}`} />
+        {!isLast && <div className="w-0.5 flex-1 bg-gray-300 dark:bg-gray-600 min-h-[32px]" />}
       </div>
       <div className="flex-1 pb-4">
         <div className="flex items-baseline gap-1 flex-wrap">
-          {period.turma_label && <span className="text-sm font-medium text-gray-800">{period.turma_label}</span>}
-          {period.turma_label && period.nivel && <span className="text-xs text-gray-500"> - </span>}
-          {period.nivel && <span className="text-xs text-gray-500">{period.nivel}</span>}
-          {period.professor && period.professor !== '-' && <span className="text-xs text-gray-400"> ({period.professor})</span>}
+          {period.turma_label && <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{period.turma_label}</span>}
+          {period.turma_label && period.nivel && <span className="text-xs text-gray-500 dark:text-gray-400"> - </span>}
+          {period.nivel && <span className="text-xs text-gray-500 dark:text-gray-400">{period.nivel}</span>}
+          {period.professor && period.professor !== '-' && <span className="text-xs text-gray-400 dark:text-gray-500"> ({period.professor})</span>}
         </div>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-500 dark:text-gray-400">
           De {dataInicio} até {dataFim}
         </p>
         <div className="flex flex-wrap gap-3 mt-1">
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-gray-500 dark:text-gray-400">
             <strong>Permanência:</strong> {period.permanenciaDias} dias
           </span>
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-gray-500 dark:text-gray-400">
             <strong>Assiduidade:</strong> {period.total > 0 ? `${period.assiduidade}%` : '-'}
           </span>
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-gray-400 dark:text-gray-500">
             {period.total > 0 ? `(${period.presentes}P / ${period.faltas}F / ${period.justificados}J)` : '(sem registros)'}
           </span>
         </div>

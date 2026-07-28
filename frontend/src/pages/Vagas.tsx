@@ -24,7 +24,7 @@ function BarraProgressoVaga({ ativos, capacidade, cor }: { ativos: number; capac
   const pct = capacidade > 0 ? Math.min(100, (ativos / capacidade) * 100) : 0;
   const barClass = cor === 'red' ? 'bg-red-400' : cor === 'yellow' ? 'bg-yellow-400' : 'bg-blue-400';
   return (
-    <div className="w-20 bg-gray-100 rounded-full h-2 overflow-hidden">
+    <div className="w-20 bg-gray-100 dark:bg-gray-600 rounded-full h-2 overflow-hidden">
       <div className={`h-full rounded-full ${barClass} transition-all`} style={{ width: `${pct}%` }} />
     </div>
   );
@@ -152,21 +152,21 @@ const Vagas: React.FC = () => {
   if (!data) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold text-gray-800">Vagas</h1>
-        <p className="text-sm text-gray-500">Carregando...</p>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Vagas</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Carregando...</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-gray-800">Vagas</h1>
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Vagas</h1>
 
       <div className="flex gap-2 flex-wrap items-center">
         <select
           value={nivel}
           onChange={handleNivelChange}
-          className="text-sm px-3 py-1.5 border border-gray-300 rounded bg-white"
+          className="text-sm px-3 py-1.5 border border-gray-300 rounded bg-white dark:border-gray-600 dark:bg-gray-700"
         >
           <option value="">Nível (todos)</option>
           {niveis.map((n) => (
@@ -177,7 +177,7 @@ const Vagas: React.FC = () => {
         <select
           value={turmaLabel}
           onChange={handleTurmaChange}
-          className="text-sm px-3 py-1.5 border border-gray-300 rounded bg-white"
+          className="text-sm px-3 py-1.5 border border-gray-300 rounded bg-white dark:border-gray-600 dark:bg-gray-700"
         >
           <option value="">Turma (todas)</option>
           {labels.map((l) => (
@@ -193,7 +193,7 @@ const Vagas: React.FC = () => {
               className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                 periodo === p
                   ? 'bg-primary-600 text-white border-primary-600'
-                  : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                  : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600'
               }`}
             >
               {p === 'todos' ? 'Todos' : p === 'manha' ? 'Manhã' : 'Tarde'}
@@ -230,8 +230,8 @@ const Vagas: React.FC = () => {
         />
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-        <div className="divide-y divide-gray-100">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-black/20 overflow-hidden">
+        <div className="divide-y divide-gray-100 dark:divide-gray-800">
           {filteredHorarios.map((h) => {
             const key = `${h.horario}|${h.label}`;
             const isExpanded = displayExpandedKeys.has(key);
@@ -242,17 +242,17 @@ const Vagas: React.FC = () => {
               <div key={key}>
                 <button
                   onClick={() => toggleExpand(key)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition text-left"
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-left"
                 >
                   <div className="flex items-center gap-3 flex-wrap">
-                    <span className="text-sm font-medium text-gray-800">{h.horario.substring(0, 5)}</span>
-                    <span className="text-sm text-gray-600">{h.label}</span>
-                    <span className="text-xs text-gray-400">-- {badge.text}</span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{h.horario.substring(0, 5)}</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">{h.label}</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">-- {badge.text}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1 text-xs">
                       <BarraProgressoVaga ativos={h.total_ativos} capacidade={h.total_capacidade} cor={cor} />
-                      <span className="text-gray-500 w-14 text-right">{h.total_ativos}/{h.total_capacidade}</span>
+                      <span className="text-gray-500 dark:text-gray-400 w-14 text-right">{h.total_ativos}/{h.total_capacidade}</span>
                     </div>
                     <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${badge.className}`}>
                       {badge.text}
@@ -261,20 +261,20 @@ const Vagas: React.FC = () => {
                 </button>
 
                 {isExpanded && (
-                  <div className="px-6 pb-3 pt-1 bg-gray-50 border-t border-gray-100 space-y-1">
+                  <div className="px-6 pb-3 pt-1 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-t dark:border-gray-800 space-y-1">
                     {h.grupos.map((g) => {
                       const gCor = getCor(g.excedente, g.vagas);
                       const gBadge = getBadge(g.excedente, g.vagas);
                       return (
-                        <div key={g.grupo_id} className="flex items-center justify-between py-1 text-xs text-gray-600">
+                        <div key={g.grupo_id} className="flex items-center justify-between py-1 text-xs text-gray-600 dark:text-gray-400">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-gray-700">{g.nivel}</span>
-                            <span className="text-gray-300">|</span>
-                            <span className="text-gray-500">{g.professor}</span>
+                            <span className="font-medium text-gray-700 dark:text-gray-300">{g.nivel}</span>
+                            <span className="text-gray-300 dark:text-gray-600">|</span>
+                            <span className="text-gray-500 dark:text-gray-400">{g.professor}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             {!vagasFilter && <BarraProgressoVaga ativos={g.alunos_ativos} capacidade={g.capacidade} cor={gCor} />}
-                            <span className="text-gray-500 w-14 text-right">{g.alunos_ativos}/{g.capacidade}</span>
+                            <span className="text-gray-500 dark:text-gray-400 w-14 text-right">{g.alunos_ativos}/{g.capacidade}</span>
                             <span className={`font-medium ${gBadge.className.replace(/bg-\S+/g, '').trim()}`}>
                               {gBadge.text}
                             </span>
@@ -288,7 +288,7 @@ const Vagas: React.FC = () => {
             );
           })}
           {filteredHorarios.length === 0 && (
-            <div className="px-4 py-8 text-center text-gray-400 text-sm">Nenhum horário encontrado.</div>
+            <div className="px-4 py-8 text-center text-gray-400 dark:text-gray-500 text-sm">Nenhum horário encontrado.</div>
           )}
         </div>
       </div>
@@ -312,13 +312,13 @@ function CardIndicador({
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-lg border p-4 shadow-sm transition ${
-        onClick ? 'cursor-pointer hover:shadow-md' : ''
-      } ${ativo ? 'border-primary-400 ring-1 ring-primary-200' : 'border-gray-200'}`}
+      className={`bg-white dark:bg-gray-800 rounded-lg border p-4 shadow-sm dark:shadow-black/20 transition ${
+        onClick ? 'cursor-pointer hover:shadow-md dark:hover:shadow-black/30' : ''
+      } ${ativo ? 'border-primary-400 ring-1 ring-primary-200 dark:ring-primary-700' : 'border-gray-200 dark:border-gray-700'}`}
     >
-      <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">{titulo}</p>
+      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">{titulo}</p>
       <p className={`text-2xl font-bold mt-1 ${corValor}`}>{valor}</p>
-      <p className="text-[10px] text-gray-400 mt-2">Dados referentes às turmas filtradas</p>
+      <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2">Dados referentes às turmas filtradas</p>
     </div>
   );
 }

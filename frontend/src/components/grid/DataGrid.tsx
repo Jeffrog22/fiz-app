@@ -16,14 +16,14 @@ const STATUS_CYCLE: (PresencaStatus)[] = [
 ];
 
 const STATUS_COLORS: Record<string, string> = {
-  presente: 'bg-green-100 hover:bg-green-200 text-green-800',
-  falta: 'bg-red-100 hover:bg-red-200 text-red-800',
-  justificado: 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800',
-  cancelado: 'bg-gray-200 text-gray-600',
-  feriado: 'bg-red-200 text-red-800',
-  ponte: 'bg-orange-200 text-orange-800',
-  reuniao: 'bg-blue-200 text-blue-800',
-  evento: 'bg-purple-200 text-purple-800',
+  presente: 'bg-green-100 hover:bg-green-200 text-green-800 dark:bg-green-900/30 dark:hover:bg-green-800/50 dark:text-green-400',
+  falta: 'bg-red-100 hover:bg-red-200 text-red-800 dark:bg-red-900/30 dark:hover:bg-red-800/50 dark:text-red-400',
+  justificado: 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800 dark:bg-yellow-900/30 dark:hover:bg-yellow-800/50 dark:text-yellow-400',
+  cancelado: 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+  feriado: 'bg-red-200 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  ponte: 'bg-orange-200 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+  reuniao: 'bg-blue-200 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  evento: 'bg-purple-200 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
 };
 
 const STATUS_SYMBOLS: Record<string, string> = {
@@ -38,10 +38,10 @@ const STATUS_SYMBOLS: Record<string, string> = {
 };
 
 const TIPO_EVENTO_CORES: Record<string, string> = {
-  feriado: 'bg-red-100 border-red-300 text-red-700',
-  ponte: 'bg-orange-100 border-orange-300 text-orange-700',
-  reuniao: 'bg-blue-100 border-blue-300 text-blue-700',
-  evento: 'bg-purple-100 border-purple-300 text-purple-700',
+  feriado: 'bg-red-100 border-red-300 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400',
+  ponte: 'bg-orange-100 border-orange-300 text-orange-700 dark:bg-orange-900/30 dark:border-orange-800 dark:text-orange-400',
+  reuniao: 'bg-blue-100 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400',
+  evento: 'bg-purple-100 border-purple-300 text-purple-700 dark:bg-purple-900/30 dark:border-purple-800 dark:text-purple-400',
 };
 
 interface CardAulaRecord {
@@ -310,11 +310,11 @@ const DataGrid: React.FC<DataGridProps> = ({
 
   return (
     <>
-      <div className="overflow-x-auto bg-white rounded-lg border border-gray-200">
-        <table className="min-w-full divide-y divide-gray-200 text-sm">
-          <thead className="bg-gray-50">
+      <div className="overflow-x-auto bg-white rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+        <table className="min-w-full divide-y divide-gray-200 text-sm dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
-              <th className="sticky left-0 bg-gray-50 px-4 py-2 text-left font-medium text-gray-500 min-w-[160px] z-10">
+              <th className="sticky left-0 bg-gray-50 px-4 py-2 text-left font-medium text-gray-500 min-w-[160px] z-10 dark:bg-gray-900 dark:text-gray-400">
                 Aluno
               </th>
               {dias.map((dia) => {
@@ -326,7 +326,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                   <th
                     key={dia}
                     className={`px-2 py-1 text-center font-medium min-w-[40px] ${
-                      futura ? 'text-gray-300' : 'text-gray-500'
+                      futura ? 'text-gray-300 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400'
                     }`}
                   >
                     <button
@@ -335,7 +335,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                       disabled={futura}
                       className={`block w-full text-center ${
                         !futura
-                          ? 'cursor-pointer hover:text-primary-600'
+                          ? 'cursor-pointer hover:text-primary-600 dark:hover:text-primary-400'
                           : 'cursor-default'
                       }`}
                       title={
@@ -353,21 +353,21 @@ const DataGrid: React.FC<DataGridProps> = ({
                   </th>
                 );
               })}
-              <th className="sticky right-0 bg-gray-50 px-2 py-2 text-center font-medium text-gray-500 min-w-[90px] z-10">
+              <th className="sticky right-0 bg-gray-50 px-2 py-2 text-center font-medium text-gray-500 min-w-[90px] z-10 dark:bg-gray-900 dark:text-gray-400">
                 Ações
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {alunos.map((aluno) => {
               const faltasMes = contarFaltasMes(aluno.id);
               return (
-                <tr key={aluno.id} className="hover:bg-gray-50">
+                <tr key={aluno.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                   <td
-                    className={`sticky left-0 bg-white px-4 py-2 font-medium whitespace-nowrap cursor-pointer z-10 ${
+                    className={`sticky left-0 bg-white px-4 py-2 font-medium whitespace-nowrap cursor-pointer z-10 dark:bg-gray-800 ${
                       temAnotacao(aluno.id) || (alunosComAnotacao?.has(aluno.id))
-                        ? 'text-blue-600 bg-blue-50'
-                        : 'text-gray-800'
+                        ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30'
+                        : 'text-gray-800 dark:text-gray-100'
                     }`}
                     onClick={() => handleNomeClickTimer(aluno)}
                     title="Clique para ver anotações, duplo clique para ir ao aluno"
@@ -379,7 +379,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                     const futura = isDataFutura(dia);
                     const isCalendario = status === 'feriado' || status === 'ponte' || status === 'reuniao' || status === 'evento' || status === 'cancelado';
                     return (
-                      <td key={dia} className="px-2 py-1 text-center border-r border-gray-100">
+                      <td key={dia} className="px-2 py-1 text-center border-r border-gray-100 dark:border-gray-800">
                         <div className="flex flex-col items-center gap-0.5">
                           <button
                             onClick={() => handleCellClick(aluno.id, dia)}
@@ -387,12 +387,12 @@ const DataGrid: React.FC<DataGridProps> = ({
                             title={getTooltipText(aluno.id, dia)}
                             className={`w-7 h-7 rounded-md text-xs font-bold transition-all ${
                               futura
-                                ? 'bg-gray-50 text-gray-200 cursor-not-allowed'
+                                ? 'bg-gray-50 text-gray-200 cursor-not-allowed dark:bg-gray-700 dark:text-gray-600'
                                 : isCalendario
                                 ? `${STATUS_COLORS[status || '']} cursor-default`
                                 : status
                                 ? `${STATUS_COLORS[status]} cursor-pointer ${getOrigem(aluno.id, dia) === 'extrapolado' ? 'border border-dashed border-amber-400' : ''}`
-                                : 'bg-gray-100 hover:bg-gray-200 text-gray-400 cursor-pointer'
+                                : 'bg-gray-100 hover:bg-gray-200 text-gray-400 cursor-pointer dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-500'
                             }`}
                           >
                             {futura ? '-' : statusToSymbol(status)}
@@ -401,21 +401,21 @@ const DataGrid: React.FC<DataGridProps> = ({
                       </td>
                     );
                   })}
-                  <td className="sticky right-0 bg-white px-2 py-1 text-center z-10">
+                  <td className="sticky right-0 bg-white px-2 py-1 text-center z-10 dark:bg-gray-800">
                     <div className="flex gap-1 justify-center">
                       <button
                         onClick={() => {
                           const dia = primeiroDiaJustificado(aluno.id);
                           if (dia) setJustificativaModal({ aluno, data: dia, motivo: getAnotacao(aluno.id, dia) ?? undefined });
                         }}
-                        className="px-1.5 py-0.5 text-[10px] bg-yellow-50 text-yellow-700 rounded hover:bg-yellow-100"
+                        className="px-1.5 py-0.5 text-[10px] bg-yellow-50 text-yellow-700 rounded hover:bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-400 dark:hover:bg-yellow-900/50"
                         title="Justificativa"
                       >
                         Just
                       </button>
                       <button
                         onClick={() => setHistoricoAberto(aluno)}
-                        className="px-1.5 py-0.5 text-[10px] bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
+                        className="px-1.5 py-0.5 text-[10px] bg-blue-50 text-blue-600 rounded hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
                         title="Histórico de presença"
                       >
                         Hist
@@ -423,7 +423,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                       {faltasMes >= 3 && (
                         <button
                           onClick={() => setExclusaoModal({ aluno, faltasMes })}
-                          className="px-1.5 py-0.5 text-[10px] bg-red-50 text-red-600 rounded hover:bg-red-100"
+                          className="px-1.5 py-0.5 text-[10px] bg-red-50 text-red-600 rounded hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
                           title="Excluir (3+ faltas no mês)"
                         >
                           Del
@@ -439,12 +439,12 @@ const DataGrid: React.FC<DataGridProps> = ({
       </div>
 
       {alunos.length > 0 && (
-        <div className="text-xs bg-gray-50 px-4 py-3 rounded border border-gray-200 space-y-1">
-          <div className="flex justify-between text-gray-500">
+        <div className="text-xs bg-gray-50 px-4 py-3 rounded border border-gray-200 space-y-1 dark:bg-gray-900 dark:border-gray-700">
+          <div className="flex justify-between text-gray-500 dark:text-gray-400">
             <span>Lotação</span>
             <span className="font-medium">{lotacao}/{capacity}</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2.5">
+          <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
             <div
               className={`h-2.5 rounded-full transition-all ${
                 lotacao > capacity
@@ -456,7 +456,7 @@ const DataGrid: React.FC<DataGridProps> = ({
               style={{ width: `${Math.min((lotacao / (capacity || 1)) * 100, 100)}%` }}
             />
           </div>
-          <div className="flex justify-between text-[10px] text-gray-400">
+          <div className="flex justify-between text-[10px] text-gray-400 dark:text-gray-500">
             <span>
               {lotacao > capacity
                 ? `${lotacao - capacity} excedente(s)`
@@ -469,24 +469,24 @@ const DataGrid: React.FC<DataGridProps> = ({
       )}
 
       {historicoAberto && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setHistoricoAberto(null)}>
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-xl m-4" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 dark:bg-black/60" onClick={() => setHistoricoAberto(null)}>
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-xl m-4 dark:bg-gray-800 dark:shadow-black/20" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-gray-800">Histórico: {formatarNomeMobile(historicoAberto.nome)}</h3>
-              <button onClick={() => setHistoricoAberto(null)} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+              <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Histórico: {formatarNomeMobile(historicoAberto.nome)}</h3>
+              <button onClick={() => setHistoricoAberto(null)} className="text-gray-400 hover:text-gray-600 text-xl dark:text-gray-500 dark:hover:text-gray-400">&times;</button>
             </div>
             <div className="space-y-3 text-sm">
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-gray-50 p-3 rounded">
-                  <p className="text-xs text-gray-500">Total de Aulas</p>
-                  <p className="text-lg font-bold text-gray-800">{dias.length}</p>
+                <div className="bg-gray-50 p-3 rounded dark:bg-gray-900">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Total de Aulas</p>
+                  <p className="text-lg font-bold text-gray-800 dark:text-gray-100">{dias.length}</p>
                 </div>
-                <div className="bg-gray-50 p-3 rounded">
-                  <p className="text-xs text-gray-500">Faltas no Mês</p>
-                  <p className="text-lg font-bold text-red-600">{contarFaltasMes(historicoAberto.id)}</p>
+                <div className="bg-gray-50 p-3 rounded dark:bg-gray-900">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Faltas no Mês</p>
+                  <p className="text-lg font-bold text-red-600 dark:text-red-400">{contarFaltasMes(historicoAberto.id)}</p>
                 </div>
               </div>
-              <p className="text-xs text-gray-400 italic">Dados do período atual de {dias.length} dias.</p>
+              <p className="text-xs text-gray-400 italic dark:text-gray-500">Dados do período atual de {dias.length} dias.</p>
             </div>
           </div>
         </div>
@@ -513,18 +513,18 @@ const DataGrid: React.FC<DataGridProps> = ({
       />
 
       {exclusaoModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setExclusaoModal(null)}>
-          <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl m-4" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-gray-800 mb-2">Excluir Aluno</h3>
-            <p className="text-sm text-gray-600 mb-4">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 dark:bg-black/60" onClick={() => setExclusaoModal(null)}>
+          <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl m-4 dark:bg-gray-800 dark:shadow-black/20" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-gray-800 mb-2 dark:text-gray-100">Excluir Aluno</h3>
+            <p className="text-sm text-gray-600 mb-4 dark:text-gray-400">
               <strong>{formatarNomeMobile(exclusaoModal.aluno.nome)}</strong> possui <strong>{exclusaoModal.faltasMes} faltas</strong> neste mês.
               Deseja enviar para a lista de exclusões?
             </p>
             <div className="flex justify-end gap-2">
               <button onClick={() => setExclusaoModal(null)}
-                className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">Cancelar</button>
+                className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">Cancelar</button>
               <button onClick={() => handleExcluir(exclusaoModal.aluno)}
-                className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700">Excluir</button>
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800">Excluir</button>
             </div>
           </div>
         </div>

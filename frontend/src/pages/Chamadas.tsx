@@ -531,11 +531,11 @@ const Chamadas: React.FC = () => {
   const indicadorSave = () => {
     switch (statusSave) {
       case 'saving':
-        return <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" />Salvando...</span>;
+        return <span className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400"><span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse dark:bg-gray-500" />Salvando...</span>;
       case 'saved':
-        return <span className="flex items-center gap-1.5 text-xs text-green-600"><span className="w-2 h-2 bg-green-500 rounded-full" />Salvo</span>;
+        return <span className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400"><span className="w-2 h-2 bg-green-500 rounded-full dark:bg-green-400" />Salvo</span>;
       case 'error':
-        return <span className="flex items-center gap-1.5 text-xs text-red-500"><span className="w-2 h-2 bg-red-500 rounded-full" />Erro ao salvar</span>;
+        return <span className="flex items-center gap-1.5 text-xs text-red-500 dark:text-red-400"><span className="w-2 h-2 bg-red-500 rounded-full dark:bg-red-400" />Erro ao salvar</span>;
       default:
         return null;
     }
@@ -544,7 +544,7 @@ const Chamadas: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">Chamadas</h1>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Chamadas</h1>
         <div className="flex items-center gap-2 min-w-[120px] justify-end">
           {indicadorSave()}
         </div>
@@ -583,42 +583,42 @@ const Chamadas: React.FC = () => {
 
         <div className="flex gap-1 ml-auto">
           <button onClick={handleDesfazer} disabled={!podeDesfazer}
-            className="px-3 py-1.5 text-xs bg-gray-50 text-gray-600 rounded hover:bg-gray-100 border border-gray-200 transition disabled:opacity-30 disabled:cursor-not-allowed">
+            className="px-3 py-1.5 text-xs bg-gray-50 text-gray-600 rounded hover:bg-gray-100 border border-gray-200 transition disabled:opacity-30 disabled:cursor-not-allowed dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:border-gray-700">
             Desfazer
           </button>
           {alunosDaTurma.length > 0 && (
             <button onClick={() => setLimparConfirm(true)}
-              className="px-3 py-1.5 text-xs bg-red-50 text-red-700 rounded hover:bg-red-100 border border-red-200 transition">
+              className="px-3 py-1.5 text-xs bg-red-50 text-red-700 rounded hover:bg-red-100 border border-red-200 transition dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 dark:border-red-800">
               Limpar
             </button>
           )}
           <button onClick={() => { if (!dateHeaderClickData) setDateHeaderClickData(dias[0] || ''); setCardAulaAberto(true); }} disabled={!grupoId}
-            className="px-3 py-1.5 text-xs bg-cyan-50 text-cyan-700 rounded hover:bg-cyan-100 border border-cyan-200 transition disabled:opacity-30 disabled:cursor-not-allowed">
+            className="px-3 py-1.5 text-xs bg-cyan-50 text-cyan-700 rounded hover:bg-cyan-100 border border-cyan-200 transition disabled:opacity-30 disabled:cursor-not-allowed dark:bg-cyan-900/30 dark:text-cyan-400 dark:hover:bg-cyan-900/50 dark:border-cyan-800">
             Card Aula
           </button>
           <button onClick={() => { if (!dateHeaderClickData) setDateHeaderClickData(dias[0] || ''); setCardBOAberto(true); }} disabled={!grupoId}
-            className="px-3 py-1.5 text-xs bg-orange-50 text-orange-700 rounded hover:bg-orange-100 border border-orange-200 transition disabled:opacity-30 disabled:cursor-not-allowed">
+            className="px-3 py-1.5 text-xs bg-orange-50 text-orange-700 rounded hover:bg-orange-100 border border-orange-200 transition disabled:opacity-30 disabled:cursor-not-allowed dark:bg-orange-900/30 dark:text-orange-400 dark:hover:bg-orange-900/50 dark:border-orange-800">
             Card BO
           </button>
         </div>
       </div>
 
       {carregando ? (
-        <p className="text-sm text-gray-500">Carregando...</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Carregando...</p>
       ) : !labelSelecionada ? (
-        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-400 text-sm">
+        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-400 text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-500">
           Selecione uma turma para visualizar a chamada
         </div>
       ) : !professorId ? (
-        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-400 text-sm">
+        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-400 text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-500">
           Selecione um professor
         </div>
       ) : totalIndices === 0 ? (
-        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-400 text-sm">
+        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-400 text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-500">
           Nenhuma turma encontrada para esta combinação
         </div>
       ) : dias.length === 0 ? (
-        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-400 text-sm">
+        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-400 text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-500">
           Nenhum dia letivo encontrado para esta turma no período selecionado
         </div>
       ) : (
@@ -642,19 +642,19 @@ const Chamadas: React.FC = () => {
       )}
 
       {limparConfirm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 dark:bg-black/60"
           onClick={() => setLimparConfirm(false)}>
-          <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl m-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-gray-800 mb-2">Limpar Chamada</h3>
-            <p className="text-sm text-gray-600 mb-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl m-4 dark:bg-gray-800 dark:shadow-black/20" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-gray-800 mb-2 dark:text-gray-100">Limpar Chamada</h3>
+            <p className="text-sm text-gray-600 mb-4 dark:text-gray-400">
               Deseja limpar todas as presenças de <strong>{alunosDaTurma.length} alunos</strong>
               {' '}no índice de aula <strong>{indiceAtual + 1}</strong>?
             </p>
             <div className="flex justify-end gap-2">
               <button onClick={() => setLimparConfirm(false)}
-                className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">Cancelar</button>
+                className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">Cancelar</button>
               <button onClick={handleLimpar}
-                className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700">Limpar</button>
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800">Limpar</button>
             </div>
           </div>
         </div>

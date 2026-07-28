@@ -102,7 +102,7 @@ const PlanningUpload: React.FC<Props> = ({ arquivos, onArquivosChange }) => {
         onDragLeave={handleDragLeave}
         onClick={() => inputRef.current?.click()}
         className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-          dragOver ? 'border-primary-400 bg-primary-50' : 'border-gray-300 hover:border-gray-400 bg-gray-50'
+          dragOver ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/30' : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 bg-gray-50 dark:bg-gray-900'
         }`}
       >
         <input
@@ -113,34 +113,34 @@ const PlanningUpload: React.FC<Props> = ({ arquivos, onArquivosChange }) => {
           onChange={handleInput}
           className="hidden"
         />
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           {uploading ? 'Enviando...' : 'Arraste arquivos ou clique para selecionar'}
         </p>
-        <p className="text-xs text-gray-400 mt-1">PDF, TXT, CSV, XLS, XLSX (1 a 4 arquivos, até 10MB cada)</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">PDF, TXT, CSV, XLS, XLSX (1 a 4 arquivos, até 10MB cada)</p>
       </div>
 
       {arquivos.length > 0 && (
-        <ul className="text-xs text-gray-600 space-y-2">
+        <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-2">
           {arquivos.map((f) => (
-            <li key={f.id} className="flex justify-between items-center py-1.5 px-2 rounded hover:bg-gray-50 border border-gray-100">
+            <li key={f.id} className="flex justify-between items-center py-1.5 px-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 border border-gray-100 dark:border-gray-800">
               <div className="flex items-center gap-1.5 min-w-0">
                 <span>{iconeMime(f.tipo_mime || '')}</span>
-                <span className="font-medium text-gray-700 truncate max-w-[160px]" title={f.nome_original}>
+                <span className="font-medium text-gray-700 dark:text-gray-300 truncate max-w-[160px]" title={f.nome_original}>
                   {labelFromFilename(f.nome_original)}
                 </span>
-                <span className="text-gray-400 shrink-0">{f.total_blocos} blocos</span>
-                <span className="text-gray-400 shrink-0">({formatarTamanho(f.tamanho)})</span>
+                <span className="text-gray-400 dark:text-gray-500 shrink-0">{f.total_blocos} blocos</span>
+                <span className="text-gray-400 dark:text-gray-500 shrink-0">({formatarTamanho(f.tamanho)})</span>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                <button onClick={() => handleDownload(f)} className="text-primary-500 hover:text-primary-700 px-1" title="Download">⬇</button>
-                <button onClick={() => handleRemover(f.id)} className="text-red-400 hover:text-red-600 px-1" title="Remover">&times;</button>
+                <button onClick={() => handleDownload(f)} className="text-primary-500 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 px-1" title="Download">⬇</button>
+                <button onClick={() => handleRemover(f.id)} className="text-red-400 hover:text-red-600 dark:text-red-500 dark:hover:text-red-400 px-1" title="Remover">&times;</button>
               </div>
             </li>
           ))}
         </ul>
       )}
       {arquivos.length === 0 && !uploading && (
-        <p className="text-xs text-gray-400 text-center py-2">Nenhum arquivo de planejamento enviado.</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">Nenhum arquivo de planejamento enviado.</p>
       )}
     </div>
   );

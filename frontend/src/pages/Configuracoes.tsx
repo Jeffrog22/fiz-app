@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useZoom } from '../hooks/useZoom';
+import { useTheme } from '../context/ThemeContext';
 import api from '../utils/api';
 import { sortLabels } from '../utils/chamadaUtils';
 
@@ -10,20 +11,7 @@ const Configuracoes: React.FC = () => {
   const { permission, subscribed, loading } = usePushNotifications();
   const { zoom, aumentar, diminuir, resetar, ZOOM_MIN, ZOOM_MAX } = useZoom();
 
-  const [darkMode, setDarkMode] = useState<boolean>(() => {
-    return localStorage.getItem('theme') === 'dark';
-  });
-
-  useEffect(() => {
-    const root = document.documentElement;
-    if (darkMode) {
-      root.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      root.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [darkMode]);
+  const { darkMode, toggleDarkMode } = useTheme();
 
   const [abaExport, setAbaExport] = useState<AbaExport>('vagas');
 
@@ -111,14 +99,14 @@ const Configuracoes: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-gray-800">Configurações</h1>
+      <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Configurações</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Exportar */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 md:col-span-2">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-black/20 p-6 md:col-span-2">
           <div className="flex items-center gap-3 mb-4">
             <span className="text-3xl">📤</span>
-            <h2 className="text-lg font-semibold text-gray-700">Exportar</h2>
+            <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Exportar</h2>
           </div>
 
           <div className="flex gap-2 mb-5">
@@ -127,7 +115,7 @@ const Configuracoes: React.FC = () => {
               className={`px-4 py-2 text-sm rounded-lg transition ${
                 abaExport === 'vagas'
                   ? 'bg-primary-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
               }`}
             >
               Vagas
@@ -137,7 +125,7 @@ const Configuracoes: React.FC = () => {
               className={`px-4 py-2 text-sm rounded-lg transition ${
                 abaExport === 'frequencia'
                   ? 'bg-primary-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
               }`}
             >
               Frequência
@@ -146,7 +134,7 @@ const Configuracoes: React.FC = () => {
 
           {abaExport === 'vagas' ? (
             <div>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                 Exporta relatório completo de vagas com lotação por horário, professor e nível.
               </p>
               <button
@@ -159,16 +147,16 @@ const Configuracoes: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Exporta planilha de frequência por turma, com presença dia a dia.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Professor(a)</label>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Professor(a)</label>
                   <select
                     value={professorId}
                     onChange={(e) => setProfessorId(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                    className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
                   >
                     <option value="">Selecione...</option>
                     {professores.map((p) => (
@@ -177,12 +165,12 @@ const Configuracoes: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Turma (dias)</label>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Turma (dias)</label>
                   <select
                     value={label}
                     onChange={(e) => setLabel(e.target.value)}
                     disabled={!professorId}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 disabled:opacity-40"
+                    className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 disabled:opacity-40"
                   >
                     {!professorId && <option value="">Primeiro selecione professor</option>}
                     <option value="">Todas as turmas</option>
@@ -192,11 +180,11 @@ const Configuracoes: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Mês</label>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Mês</label>
                   <select
                     value={mes}
                     onChange={(e) => setMes(Number(e.target.value))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                    className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
                   >
                     {meses.map((nome, i) => (
                       <option key={i + 1} value={i + 1}>{nome}</option>
@@ -204,11 +192,11 @@ const Configuracoes: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Ano</label>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Ano</label>
                   <select
                     value={ano}
                     onChange={(e) => setAno(Number(e.target.value))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                    className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
                   >
                     {[ano - 1, ano, ano + 1].map((a) => (
                       <option key={a} value={a}>{a}</option>
@@ -227,23 +215,23 @@ const Configuracoes: React.FC = () => {
           )}
 
           {exportMsg && (
-            <p className={`mt-3 text-sm ${exportMsg.includes('concluído') ? 'text-green-600' : 'text-red-500'}`}>
+            <p className={`mt-3 text-sm ${exportMsg.includes('concluído') ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
               {exportMsg}
             </p>
           )}
         </div>
 
         {/* Notificações */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-black/20 p-6">
           <div className="flex items-center gap-3 mb-4">
             <span className="text-3xl">🔔</span>
-            <h2 className="text-lg font-semibold text-gray-700">Notificações</h2>
+            <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Notificações</h2>
           </div>
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             Gerencie as notificações push do navegador.
           </p>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
               Status:{' '}
               {loading
                 ? 'Verificando...'
@@ -268,59 +256,59 @@ const Configuracoes: React.FC = () => {
         </div>
 
         {/* Tema */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-black/20 p-6">
           <div className="flex items-center gap-3 mb-4">
             <span className="text-3xl">🎨</span>
-            <h2 className="text-lg font-semibold text-gray-700">Tema</h2>
+            <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Tema</h2>
           </div>
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             Alterne entre o tema claro e escuro.
           </p>
           <label className="relative inline-flex items-center cursor-pointer">
             <input
               type="checkbox"
               checked={darkMode}
-              onChange={(e) => setDarkMode(e.target.checked)}
+              onChange={toggleDarkMode}
               className="sr-only peer"
             />
-            <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-primary-600 peer-focus:ring-2 peer-focus:ring-primary-300 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
-            <span className="ml-3 text-sm text-gray-600">
+            <div className="w-11 h-6 bg-gray-200 dark:bg-gray-600 rounded-full peer peer-checked:bg-primary-600 peer-focus:ring-2 peer-focus:ring-primary-300 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
+            <span className="ml-3 text-sm text-gray-600 dark:text-gray-400">
               {darkMode ? 'Escuro' : 'Claro'}
             </span>
           </label>
         </div>
 
         {/* Acessibilidade */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-black/20 p-6">
           <div className="flex items-center gap-3 mb-4">
             <span className="text-3xl">♿</span>
-            <h2 className="text-lg font-semibold text-gray-700">Acessibilidade</h2>
+            <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Acessibilidade</h2>
           </div>
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             Ajuste o zoom da interface para melhor visualização.
           </p>
           <div className="flex items-center gap-2">
             <button
               onClick={diminuir}
               disabled={zoom <= ZOOM_MIN}
-              className="px-4 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              className="px-4 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
             >
               A−
             </button>
             <button
               onClick={resetar}
-              className="px-4 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition"
+              className="px-4 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
             >
               Padrão
             </button>
             <button
               onClick={aumentar}
               disabled={zoom >= ZOOM_MAX}
-              className="px-4 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              className="px-4 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
             >
               A+
             </button>
-            <span className="text-sm text-gray-500 ml-1 w-10 text-right">{zoom}%</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400 ml-1 w-10 text-right">{zoom}%</span>
           </div>
         </div>
       </div>

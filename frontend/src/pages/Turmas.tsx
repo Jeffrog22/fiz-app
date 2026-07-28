@@ -100,7 +100,7 @@ const Turmas: React.FC = () => {
     if (idx === -1) return null;
     const dir = sortRules[idx].dir;
     return (
-      <span className="ml-1 text-xs text-primary-600">
+      <span className="ml-1 text-xs text-primary-600 dark:text-primary-400">
         {idx > 0 && <sup className="text-[10px]">{idx + 1}</sup>}
         {dir === 'asc' ? '\u25B2' : '\u25BC'}
       </span>
@@ -111,7 +111,7 @@ const Turmas: React.FC = () => {
     <button
       type="button"
       onClick={() => toggleSort(column)}
-      className="font-medium text-gray-500 hover:text-gray-700 text-left text-sm whitespace-nowrap"
+      className="font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-left text-sm whitespace-nowrap"
     >
       {label}
       {sortIcon(column)}
@@ -155,15 +155,15 @@ const Turmas: React.FC = () => {
 
   const lotacaoClass = (count: number, cap?: number) => {
     if (!cap) return '';
-    if (count > cap) return 'bg-red-100 text-red-700';
-    if (count === cap) return 'bg-yellow-100 text-yellow-700';
+    if (count > cap) return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300';
+    if (count === cap) return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300';
     return '';
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">Turmas</h1>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Turmas</h1>
         <button
           onClick={() => { setEditando(null); setModalOpen(true); }}
           className="px-4 py-2 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
@@ -180,11 +180,11 @@ const Turmas: React.FC = () => {
       />
 
       {carregando ? (
-        <p className="text-sm text-gray-500">Carregando...</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Carregando...</p>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700 overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
                 <th className="text-left px-4 py-2">{thSort('label', 'Turma')}</th>
                 <th className="text-left px-4 py-2">{thSort('horario', 'Horário')}</th>
@@ -192,24 +192,24 @@ const Turmas: React.FC = () => {
                 <th className="text-left px-4 py-2">{thSort('professor', 'Professor')}</th>
                 <th className="text-left px-4 py-2">{thSort('faixa_etaria', 'Faixa Etária')}</th>
                 <th className="text-left px-4 py-2">{thSort('lotacao', 'Lotação')}</th>
-                <th className="text-right px-4 py-2 font-medium text-gray-500">Ações</th>
+                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {filtered.map((t) => {
                 const alunosCount = t.alunos_count ?? 0;
                 return (
-                  <tr key={t.id} className="hover:bg-gray-50">
+                  <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td
-                      className="px-4 py-2 font-medium text-gray-800"
+                      className="px-4 py-2 font-medium text-gray-800 dark:text-gray-100"
                       title={t.grupo_id || t.label}
                     >
                       {t.label}
                     </td>
-                    <td className="px-4 py-2 text-gray-600">{(t.horario || '').slice(0, 5)}</td>
-                    <td className="px-4 py-2 text-gray-600">{t.nivel || '-'}</td>
-                    <td className="px-4 py-2 text-gray-600">{professorNome(t.professor_id)}</td>
-                    <td className="px-4 py-2 text-gray-600">{t.faixa_etaria || '-'}</td>
+                    <td className="px-4 py-2 text-gray-600 dark:text-gray-400">{(t.horario || '').slice(0, 5)}</td>
+                    <td className="px-4 py-2 text-gray-600 dark:text-gray-400">{t.nivel || '-'}</td>
+                    <td className="px-4 py-2 text-gray-600 dark:text-gray-400">{professorNome(t.professor_id)}</td>
+                    <td className="px-4 py-2 text-gray-600 dark:text-gray-400">{t.faixa_etaria || '-'}</td>
                     <td className="px-4 py-2">
                       <span
                         className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${lotacaoClass(alunosCount, t.capacidade)}`}
@@ -220,7 +220,7 @@ const Turmas: React.FC = () => {
                     <td className="px-4 py-2 text-right space-x-2">
                       <button
                         onClick={() => { setEditando(t); setModalOpen(true); }}
-                        className="text-xs text-primary-600 hover:text-primary-800"
+                        className="text-xs text-primary-600 hover:text-primary-800 dark:text-primary-400"
                       >
                         Editar
                       </button>
@@ -236,7 +236,7 @@ const Turmas: React.FC = () => {
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
                     Nenhuma turma encontrada
                   </td>
                 </tr>

@@ -68,16 +68,16 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
   const anos = [hoje.ano - 1, hoje.ano, hoje.ano + 1];
 
   return (
-    <div className="bg-white p-4 rounded-lg border border-gray-200 space-y-3">
+    <div className="bg-white p-4 rounded-lg border border-gray-200 space-y-3 dark:bg-gray-800 dark:border-gray-700">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500 font-medium">Período</label>
+            <label className="text-xs text-gray-500 font-medium dark:text-gray-400">Período</label>
             <div className="flex gap-1">
               <select
                 value={mes}
                 onChange={(e) => onMesChange(Number(e.target.value))}
-                className="px-2 py-1.5 border border-gray-300 rounded-md text-sm"
+                className="px-2 py-1.5 border border-gray-300 rounded-md text-sm dark:border-gray-600 dark:bg-gray-700"
               >
                 {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                   <option key={m} value={m}>{formatMesAno(m, ano)}</option>
@@ -86,7 +86,7 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
               <select
                 value={ano}
                 onChange={(e) => onAnoChange(Number(e.target.value))}
-                className="px-2 py-1.5 border border-gray-300 rounded-md text-sm"
+                className="px-2 py-1.5 border border-gray-300 rounded-md text-sm dark:border-gray-600 dark:bg-gray-700"
               >
                 {anos.map((a) => (
                   <option key={a} value={a}>{a}</option>
@@ -95,12 +95,12 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
             </div>
           </div>
 
-          <label className="flex items-center gap-1.5 mt-5 text-sm text-gray-600">
+          <label className="flex items-center gap-1.5 mt-5 text-sm text-gray-600 dark:text-gray-400">
             <input
               type="checkbox"
               checked={retroativo}
               onChange={(e) => onRetroativoChange(e.target.checked)}
-              className="rounded border-gray-300 text-primary-600"
+              className="rounded border-gray-300 text-primary-600 dark:border-gray-600 dark:bg-gray-700 dark:text-primary-400"
             />
             Permitir lançamento retroativo
           </label>
@@ -109,7 +109,7 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
         {temFiltro && (
           <button
             onClick={onLimpar}
-            className="px-2 py-1 text-xs bg-red-50 text-red-600 rounded border border-red-200 hover:bg-red-100"
+            className="px-2 py-1 text-xs bg-red-50 text-red-600 rounded border border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/50"
           >
             Limpar filtros
           </button>
@@ -118,11 +118,11 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
 
       <div className="grid grid-cols-4 gap-3">
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-500 font-medium">Professor(a)</label>
+          <label className="text-xs text-gray-500 font-medium dark:text-gray-400">Professor(a)</label>
           <select
             value={professorId}
             onChange={(e) => { onProfessorChange(e.target.value); }}
-            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700"
           >
             <option value="">Selecione</option>
             {professoresDisponiveis.map((p) => (
@@ -132,13 +132,13 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-500 font-medium">Turma</label>
+          <label className="text-xs text-gray-500 font-medium dark:text-gray-400">Turma</label>
           <select
             value={label}
             onChange={(e) => { onLabelChange(e.target.value); }}
             disabled={!professorId}
             className={`px-3 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-              !professorId ? 'bg-gray-50 text-gray-500 border-gray-200' : 'border-gray-300'
+              !professorId ? 'bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-700' : 'border-gray-300 dark:border-gray-600 dark:bg-gray-700'
             }`}
           >
             <option value="">{professorId ? 'Selecione' : 'Selecione um professor'}</option>
@@ -149,13 +149,13 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-500 font-medium">Horário</label>
+          <label className="text-xs text-gray-500 font-medium dark:text-gray-400">Horário</label>
           <select
             value={horario}
             onChange={(e) => onHorarioChange(e.target.value)}
             disabled={!label || !professorId}
             className={`px-3 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-              !label || !professorId ? 'bg-gray-50 text-gray-500 border-gray-200' : 'border-gray-300'
+              !label || !professorId ? 'bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-700' : 'border-gray-300 dark:border-gray-600 dark:bg-gray-700'
             }`}
           >
             <option value="">{label && professorId ? 'Selecione' : 'Selecione a turma'}</option>
@@ -166,11 +166,11 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-500 font-medium">Nível</label>
+          <label className="text-xs text-gray-500 font-medium dark:text-gray-400">Nível</label>
           <input
             disabled
             value={nivel || '-'}
-            className="px-3 py-1.5 border border-gray-200 rounded-md text-sm bg-gray-50 text-gray-500"
+            className="px-3 py-1.5 border border-gray-200 rounded-md text-sm bg-gray-50 text-gray-500 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-400"
           />
         </div>
       </div>

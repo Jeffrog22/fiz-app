@@ -135,10 +135,10 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-800">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-black/20 w-full max-w-md mx-4">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
             {isNew ? 'Nova Turma' : turma!.label}
           </h2>
           <div className="flex items-center gap-2">
@@ -146,13 +146,13 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
               <button
                 type="button"
                 onClick={onNavigateToAlunos}
-                className="px-3 py-1 text-xs font-medium border border-primary-300 text-primary-700 rounded-md hover:bg-primary-50 transition-colors"
+                className="px-3 py-1 text-xs font-medium border border-primary-300 dark:border-primary-700 text-primary-700 dark:text-primary-300 rounded-md hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
               >
                 Alocar
               </button>
             )}
             {turma?.grupo_id && (
-              <span className="text-xs text-gray-400 font-mono" title="Grupo ID">
+              <span className="text-xs text-gray-400 dark:text-gray-500 font-mono" title="Grupo ID">
                 {turma.grupo_id}
               </span>
             )}
@@ -161,7 +161,7 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
         <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
           {isNew && (
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-600">Dias da Semana</label>
+              <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Dias da Semana</label>
               <div className="flex gap-2 flex-wrap">
                 {DAYS.map((day) => (
                   <button
@@ -170,8 +170,8 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
                     onClick={() => toggleDia(day.key)}
                     className={`px-3 py-1.5 text-sm font-medium rounded-full border transition-colors ${
                       dias.includes(day.key)
-                        ? 'bg-primary-100 border-primary-300 text-primary-700'
-                        : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                        ? 'bg-primary-100 dark:bg-primary-900/30 border-primary-300 dark:border-primary-700 text-primary-700 dark:text-primary-300'
+                        : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                     }`}
                   >
                     {day.chip}
@@ -182,17 +182,17 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
           )}
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-600">Turma</label>
+            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Turma</label>
             <input
               required
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               disabled={isNew}
               placeholder={isNew && dias.length > 0 ? gerarLabel(dias) : ''}
-              className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-50 disabled:text-gray-500"
+              className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400"
             />
             {isNew && label && (
-              <span className="text-xs text-gray-400 mt-0.5 font-mono">
+              <span className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 font-mono">
                 grupo_id: {professorId?.slice(0, 3)?.toLowerCase() || '??'}
                 {dias.map((d) => d.toLowerCase()[0]).join('')}XX
               </span>
@@ -200,7 +200,7 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-600">Horário</label>
+            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Horário</label>
             <input
               required
               type="text"
@@ -217,25 +217,25 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
                 setHorario(mascaraHora(sanitizarInput(colado)));
               }}
               maxLength={5}
-              className={`px-3 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 ${erroHorario ? 'border-red-500 animate-shake' : 'border-gray-300 focus:ring-primary-500'}`}
+              className={`px-3 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 ${erroHorario ? 'border-red-500 animate-shake' : 'border-gray-300 dark:border-gray-600 dark:bg-gray-700 focus:ring-primary-500'}`}
             />
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-600">Nível</label>
+            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Nível</label>
             <input
               value={nivel}
               onChange={(e) => setNivel(e.target.value)}
-              className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-600">Professor</label>
+            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Professor</label>
             <select
               value={professorId}
               onChange={(e) => setProfessorId(e.target.value)}
-              className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
               <option value="">Selecione</option>
               {professores.map((p) => (
@@ -247,23 +247,23 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-600">Capacidade</label>
+            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Capacidade</label>
             <input
               type="number"
               min={1}
               value={capacidade}
               onChange={(e) => setCapacidade(e.target.value)}
-              className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-600">Faixa Etária</label>
+            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Faixa Etária</label>
             <input
               value={faixaEtaria}
               onChange={(e) => setFaixaEtaria(e.target.value)}
               placeholder="ex: 6-10 anos, +16 anos"
-              className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
 
@@ -271,7 +271,7 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
             >
               Cancelar
             </button>
@@ -285,7 +285,7 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
         </form>
 
         {toast && (
-          <div className="fixed bottom-4 right-4 bg-red-600 text-white px-4 py-2 rounded shadow-lg text-sm z-50">
+          <div className="fixed bottom-4 right-4 bg-red-600 dark:bg-red-700 text-white px-4 py-2 rounded shadow-lg dark:shadow-black/20 text-sm z-50">
             {toast.msg}
             <button onClick={() => setToast(null)} className="ml-2 font-bold">&times;</button>
           </div>
