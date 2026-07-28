@@ -96,13 +96,19 @@ const HistoricoAlunoModal: React.FC<Props> = ({ alunoId, alunoNome, onClose }) =
             <div className="flex items-center gap-3">
               <div className="flex-1 bg-gray-200 rounded-full h-4 overflow-hidden">
                 <div
-                  className="h-full rounded-full transition-all duration-500 bg-blue-500"
-                  style={{ width: `${assiduidadeTotal}%` }}
+                  className={`h-full rounded-full transition-all duration-500 ${totalAulas > 0 ? 'bg-blue-500' : 'bg-gray-300'}`}
+                  style={{ width: `${totalAulas > 0 ? assiduidadeTotal : 0}%` }}
                 />
               </div>
-              <span className="text-lg font-bold text-blue-600 min-w-[4rem] text-right">{assiduidadeTotal}%</span>
+              <span className={`text-lg font-bold min-w-[4rem] text-right ${totalAulas > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
+                {totalAulas > 0 ? `${assiduidadeTotal}%` : '-'}
+              </span>
             </div>
-            <p className="text-xs text-gray-500 mt-1">{presentes} presenças em {totalAulas} aulas</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {totalAulas > 0
+                ? `${presentes} presenças em ${totalAulas} aulas`
+                : 'Sem registros de chamada'}
+            </p>
           </div>
 
           {/* Índice de Retenção Total */}
@@ -145,14 +151,18 @@ function RetencaoCard({ retencao }: { retencao: RetencaoAluno }) {
       <div className="flex items-center gap-3">
         <div className="flex-1 bg-blue-200 rounded-full h-5 overflow-hidden">
           <div
-            className="h-full rounded-full transition-all duration-500 bg-blue-600"
+            className={`h-full rounded-full transition-all duration-500 ${retencao.totalDias > 0 ? 'bg-blue-600' : 'bg-gray-300'}`}
             style={{ width: `${retencao.percentual}%` }}
           />
         </div>
-        <span className="text-xl font-bold text-blue-700 min-w-[4rem] text-right">{retencao.percentual}%</span>
+        <span className={`text-xl font-bold min-w-[4rem] text-right ${retencao.totalDias > 0 ? 'text-blue-700' : 'text-gray-400'}`}>
+          {retencao.totalDias > 0 ? `${retencao.percentual}%` : '-'}
+        </span>
       </div>
       <p className="text-xs text-blue-600 mt-1">
-        {retencao.totalDias} dias de permanência em {retencao.diasDesdeInicio} dias desde a primeira matrícula
+        {retencao.totalDias > 0
+          ? `${retencao.totalDias} dias de permanência em ${retencao.diasDesdeInicio} dias desde a primeira matrícula`
+          : 'Sem dados de matrícula para calcular retenção'}
       </p>
     </div>
   );
@@ -182,10 +192,10 @@ function TimelineNode({ period, isLast }: { period: EnrollmentPeriodHistorico; i
             <strong>Permanência:</strong> {period.permanenciaDias} dias
           </span>
           <span className="text-xs text-gray-500">
-            <strong>Assiduidade:</strong> {period.assiduidade}%
+            <strong>Assiduidade:</strong> {period.total > 0 ? `${period.assiduidade}%` : '-'}
           </span>
           <span className="text-xs text-gray-400">
-            ({period.presentes}P / {period.faltas}F / {period.justificados}J)
+            {period.total > 0 ? `(${period.presentes}P / ${period.faltas}F / ${period.justificados}J)` : '(sem registros)'}
           </span>
         </div>
       </div>
