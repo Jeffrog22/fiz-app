@@ -95,12 +95,10 @@ const [tipoSelect, setTipoSelect] = useState('todos');
         const res = await api.post('/exportar/vagas', {}, { responseType: 'blob' });
         downloadBlob(res.data, `fiz_relatorio_vagas_${new Date().toISOString().slice(0,10)}.xlsx`);
       } else if (abaExport === 'cancelamentos') {
-        const body: any = { mes, ano };
-        if (professorId) body.professor_id = professorId;
-        if (label) body.label = label;
+        const body: any = { ano };
         if (tipoSelect !== 'todos') body.tipo_select = tipoSelect;
         const res = await api.post('/exportar/cancelamentos', body, { responseType: 'blob' });
-        downloadBlob(res.data, `fiz_cancelamentos_${mes}_${ano}.xlsx`);
+        downloadBlob(res.data, `fiz_cancelamentos_${ano}.xlsx`);
       } else {
         if (!professorId) {
           setExportMsg('Selecione professor(a).');
@@ -213,47 +211,7 @@ const [tipoSelect, setTipoSelect] = useState('todos');
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Exporta planilha de cancelamentos com dados de ocorrências, motivos e filtros.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Professor(a)</label>
-                  <select
-                    value={professorId}
-                    onChange={(e) => setProfessorId(e.target.value)}
-                    className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
-                  >
-                    <option value="">Todos</option>
-                    {professores.map((p) => (
-                      <option key={p.id} value={p.id}>{p.nome}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Turma (dias)</label>
-                  <select
-                    value={label}
-                    onChange={(e) => setLabel(e.target.value)}
-                    disabled={!professorId}
-                    className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 disabled:opacity-40"
-                  >
-                    {!professorId && <option value="">Primeiro selecione professor</option>}
-                    <option value="">Todas as turmas</option>
-                    {labels.map((l) => (
-                      <option key={l} value={l}>{labelExtenso[l] || l}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Mês</label>
-                  <select
-                    value={mes}
-                    onChange={(e) => setMes(Number(e.target.value))}
-                    className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
-                  >
-                    {meses.map((nome, i) => (
-                      <option key={i + 1} value={i + 1}>{nome}</option>
-                    ))}
-                  </select>
-                </div>
+              <div className="flex flex-wrap items-end gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Ano</label>
                   <select
@@ -266,23 +224,23 @@ const [tipoSelect, setTipoSelect] = useState('todos');
                     ))}
                   </select>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Tipo:</span>
-                {['todos', 'pessoal', 'geral'].map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setTipoSelect(t)}
-                    className={`px-3 py-1 text-xs rounded-full transition ${
-                      tipoSelect === t
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    {t === 'todos' ? 'Todos' : t === 'pessoal' ? 'Pessoal' : 'Geral'}
-                  </button>
-                ))}
+                <div className="flex items-center gap-1">
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mr-1">Tipo:</span>
+                  {['todos', 'pessoal', 'geral'].map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setTipoSelect(t)}
+                      className={`px-3 py-1.5 text-xs rounded-full transition ${
+                        tipoSelect === t
+                          ? 'bg-primary-600 text-white'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {t === 'todos' ? 'Todos' : t === 'pessoal' ? 'Pessoal' : 'Geral'}
+                    </button>
+                  ))}
+                </div>
               </div>
               <button
                 onClick={exportar}

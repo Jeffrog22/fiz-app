@@ -253,9 +253,6 @@ export async function gerarFrequenciaXLSX(
 
 export async function gerarCancelamentosXLSX(
   tenantId: string,
-  professorId: string | undefined,
-  label: string | undefined,
-  mes: number,
   ano: number,
   tipoSelect: string | undefined,
 ): Promise<ExcelJS.Buffer> {
@@ -272,14 +269,11 @@ export async function gerarCancelamentosXLSX(
     .eq('tenant_id', tenantId);
   const profMap = new Map((professores || []).map((p: any) => [p.id, p.nome]));
 
-  let turmasQuery = supabase
+  const { data: turmas } = await supabase
     .from('turmas')
     .select('*')
-    .eq('tenant_id', tenantId);
-  if (professorId) turmasQuery = turmasQuery.eq('professor_id', professorId);
-  if (label) turmasQuery = turmasQuery.eq('label', label);
-
-  const { data: turmas } = await turmasQuery.order('horario', { ascending: true });
+    .eq('tenant_id', tenantId)
+    .order('horario', { ascending: true });
   if (!turmas || turmas.length === 0) throw new AppError('Nenhuma turma encontrada', 404);
 
   const turmaMap = new Map<string, any>();
@@ -287,9 +281,8 @@ export async function gerarCancelamentosXLSX(
     turmaMap.set(t.grupo_id || t.id, t);
   }
 
-  const dataInicio = `${ano}-${String(mes).padStart(2, '0')}-01`;
-  const ultimoDia = new Date(ano, mes, 0).getDate();
-  const dataFim = `${ano}-${String(mes).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
+  const dataInicio = `${ano}-01-01`;
+  const dataFim = `${ano}-12-31`;
 
   let logsQuery = supabase
     .from('chamadas_log')

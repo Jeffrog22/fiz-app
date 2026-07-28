@@ -44,22 +44,19 @@ export class ExportacaoController {
   static async exportarCancelamentos(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const tenantId = req.tenantId!;
-      const { professor_id, label, mes, ano, tipo_select } = req.body;
+      const { ano, tipo_select } = req.body;
 
-      if (!mes || !ano) {
-        res.status(400).json({ error: 'mes e ano são obrigatórios' });
+      if (!ano) {
+        res.status(400).json({ error: 'ano é obrigatório' });
         return;
       }
 
       const buffer = await gerarCancelamentosXLSX(
         tenantId,
-        professor_id || undefined,
-        label || undefined,
-        parseInt(mes, 10),
         parseInt(ano, 10),
         tipo_select || undefined,
       );
-      const filename = `fiz_cancelamentos_${mes}_${ano}.xlsx`;
+      const filename = `fiz_cancelamentos_${ano}.xlsx`;
 
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
