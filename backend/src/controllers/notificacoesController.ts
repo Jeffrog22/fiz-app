@@ -40,4 +40,20 @@ export class NotificacoesController {
       res.json(result);
     } catch (e) { next(e); }
   }
+
+  static async listSubscriptions(req: TenantRequest, res: Response, next: NextFunction) {
+    try {
+      const professorId = req.professorId!;
+      const result = await notificacoesService.listSubscriptions(professorId);
+      res.json(result);
+    } catch (e) { next(e); }
+  }
+
+  static async deleteSubscription(req: TenantRequest, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      await notificacoesService.deleteSubscription(id);
+      res.json({ message: 'Inscrição removida com sucesso' });
+    } catch (e) { next(e); }
+  }
 }

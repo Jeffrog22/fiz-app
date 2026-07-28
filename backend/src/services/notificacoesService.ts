@@ -45,6 +45,27 @@ export async function unsubscribe(endpoint: string): Promise<number> {
   return count || 0;
 }
 
+export async function listSubscriptions(professorId: string): Promise<any[]> {
+  const { data, error } = await supabase
+    .from('notificacoes_subscriptions')
+    .select('id, endpoint, criado_em')
+    .eq('professor_id', professorId)
+    .order('criado_em', { ascending: false });
+
+  if (error) throw new AppError(`Erro ao listar inscrições: ${error.message}`, 500);
+
+  return data || [];
+}
+
+export async function deleteSubscription(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('notificacoes_subscriptions')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw new AppError(`Erro ao remover inscrição: ${error.message}`, 500);
+}
+
 export async function getConfig(professorId: string): Promise<any> {
   const { data, error } = await supabase
     .from('notificacoes_config')

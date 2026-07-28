@@ -2,13 +2,17 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useZoom } from '../hooks/useZoom';
 import { useTheme } from '../context/ThemeContext';
+import NotificationSettings from '../components/notifications/NotificationSettings';
 import api from '../utils/api';
 import { sortLabels } from '../utils/chamadaUtils';
 
 type AbaExport = 'vagas' | 'frequencia';
 
 const Configuracoes: React.FC = () => {
-  const { permission, subscribed, loading } = usePushNotifications();
+  const {
+    permission, subscribed, loading,
+    requestPermission, subscribe, unsubscribe, refresh,
+  } = usePushNotifications();
   const { zoom, aumentar, diminuir, resetar, ZOOM_MIN, ZOOM_MAX } = useZoom();
 
   const { darkMode, toggleDarkMode } = useTheme();
@@ -17,6 +21,11 @@ const Configuracoes: React.FC = () => {
 
   const [exportando, setExportando] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
+
+  const [notifModalOpen, setNotifModalOpen] = useState(false);
+  const [notifAtivo, setNotifAtivo] = useState(true);
+  const [subscriptions, setSubscriptions] = useState<{ id: string; endpoint: string; criado_em: string }[]>([]);
+  const [subsLoading, setSubsLoading] = useState(false);
 
   const [professores, setProfessores] = useState<{ id: string; nome: string; hash: string }[]>([]);
   const [professorId, setProfessorId] = useState('');
@@ -30,6 +39,42 @@ const Configuracoes: React.FC = () => {
       setProfessores(res.data || []);
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    api.get('/notificacoes/config').then((res) => {
+      setNotifAtivo(res.data?.ativo !== false);
+    }).catch(() => {});
+    carregarSubscriptions();
+  }, []);
+
+  const carregarSubscriptions = async () => {
+    setSubsLoading(true);
+    try {
+      const res = await api.get('/notificacoes/subscriptions');
+      setSubscriptions(res.data || []);
+    } catch {
+      setSubscriptions([]);
+    } finally {
+      setSubsLoading(false);
+    }
+  };
+
+  const handleToggleNotif = async () => {
+    try {
+      const novoEstado = !notifAtivo;
+      await api.put('/notificacoes/config', { ativo: novoEstado });
+      setNotifAtivo(novoEstado);
+      if (novoEstado) {
+        await subscribe();
+      } else {
+        await unsubscribe();
+      }
+      await refresh();
+      await carregarSubscriptions();
+    } catch {
+      // error toggling notification
+    }
+  };
 
   useEffect(() => {
     if (!professorId) { setLabels([]); setLabel(''); return; }
@@ -230,7 +275,8 @@ const Configuracoes: React.FC = () => {
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             Gerencie as notificações push do navegador.
           </p>
-          <div className="flex items-center justify-between">
+
+          <div className="flex items-center justify-between mb-3">
             <span className="text-sm text-gray-600 dark:text-gray-400">
               Status:{' '}
               {loading
@@ -253,6 +299,89 @@ const Configuracoes: React.FC = () => {
               }`}
             />
           </div>
+
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-sm text-gray-600 dark:text-gray-400">Notificações ativas</label>
+            <button
+              type="button"
+              onClick={handleToggleNotif}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                notifAtivo ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  notifAtivo ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-2 mb-3">
+            <button
+              type="button"
+              onClick={() => setNotifModalOpen(true)}
+              className="px-3 py-1.5 text-xs bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
+            >
+              Configurar horários
+            </button>
+            {permission === 'default' && (
+              <button
+                type="button"
+                onClick={requestPermission}
+                className="px-3 py-1.5 text-xs bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded-lg hover:bg-yellow-100 dark:hover:bg-yellow-900/50 transition-colors"
+              >
+                Solicitar permissão
+              </button>
+            )}
+            {permission === 'granted' && subscribed && (
+              <button
+                type="button"
+                onClick={async () => { await unsubscribe(); await refresh(); await carregarSubscriptions(); }}
+                className="px-3 py-1.5 text-xs bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
+              >
+                Remover este dispositivo
+              </button>
+            )}
+          </div>
+
+          {permission === 'denied' && (
+            <p className="text-xs text-red-500 dark:text-red-400 mb-3">
+              Permissão bloqueada. Ative nas configurações do navegador.
+            </p>
+          )}
+
+          {subscriptions.length > 0 && (
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                Dispositivos ativos ({subscriptions.length})
+              </p>
+              {subsLoading ? (
+                <p className="text-xs text-gray-400">Carregando...</p>
+              ) : (
+                <ul className="space-y-1">
+                  {subscriptions.map((sub) => (
+                    <li key={sub.id} className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                      <span className="truncate max-w-[200px]">{sub.endpoint.slice(0, 40)}...</span>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await api.delete(`/notificacoes/subscriptions/${sub.id}`);
+                            await carregarSubscriptions();
+                          } catch {}
+                        }}
+                        className="text-red-500 hover:text-red-700 dark:hover:text-red-400 ml-2 flex-shrink-0"
+                        title="Remover dispositivo"
+                      >
+                        ✕
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Tema */}
@@ -312,6 +441,16 @@ const Configuracoes: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <NotificationSettings
+        open={notifModalOpen}
+        onClose={() => {
+          setNotifModalOpen(false);
+          api.get('/notificacoes/config').then((res) => {
+            setNotifAtivo(res.data?.ativo !== false);
+          }).catch(() => {});
+        }}
+      />
     </div>
   );
 };

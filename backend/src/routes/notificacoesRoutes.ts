@@ -9,5 +9,7 @@ router.post('/subscribe', authMiddleware, NotificacoesController.subscribe);
 router.delete('/unsubscribe', authMiddleware, NotificacoesController.unsubscribe);
 router.get('/config', authMiddleware, NotificacoesController.getConfig);
 router.put('/config', authMiddleware, NotificacoesController.updateConfig);
+router.get('/subscriptions', authMiddleware, NotificacoesController.listSubscriptions);
+router.delete('/subscriptions/:id', authMiddleware, NotificacoesController.deleteSubscription);
 
 export default router;

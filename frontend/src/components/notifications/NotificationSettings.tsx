@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
 
-interface NotificationConfig {
+interface NotificationConfigBackend {
   ativo: boolean;
-  frequencia_dia: number;
+  frequencia_dia: string;
   horarios: string[];
   dias_semana: string[];
 }
@@ -24,17 +24,44 @@ const DIAS_SEMANA_OPCOES = [
 ];
 
 const DIAS_SEMANA_NOMES: Record<string, string> = {
-  dom: 'Domingo',
-  seg: 'Segunda',
-  ter: 'Terça',
-  qua: 'Quarta',
-  qui: 'Quinta',
-  sex: 'Sexta',
-  sab: 'Sábado',
+  dom: 'Domingo', seg: 'Segunda', ter: 'Terça', qua: 'Quarta',
+  qui: 'Quinta', sex: 'Sexta', sab: 'Sábado',
 };
 
+function freqToBackend(v: number): string {
+  if (v <= 2) return `${v}x`;
+  return 'personalizado';
+}
+
+function freqFromBackend(v: string): number {
+  if (v === 'personalizado') return 3;
+  return parseInt(v, 10) || 1;
+}
+
+function timeToBackend(t: string): string {
+  return t.replace(':', '');
+}
+
+function timeFromBackend(t: string): string {
+  if (t.includes(':')) return t.slice(0, 5);
+  return `${t.slice(0, 2)}:${t.slice(2, 4)}`;
+}
+
+function daysToBackend(dias: string[]): string[] {
+  return dias.map((d) => d.toUpperCase());
+}
+
+function daysFromBackend(dias: string[]): string[] {
+  return dias.map((d) => d.toLowerCase());
+}
+
 const NotificationSettings: React.FC<NotificationSettingsProps> = ({ open, onClose }) => {
-  const [config, setConfig] = useState<NotificationConfig>({
+  const [config, setConfig] = useState<{
+    ativo: boolean;
+    frequencia_dia: number;
+    horarios: string[];
+    dias_semana: string[];
+  }>({
     ativo: true,
     frequencia_dia: 1,
     horarios: ['08:00'],
@@ -45,9 +72,15 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ open, onClo
 
   useEffect(() => {
     if (!open) return;
-    api.get<NotificationConfig>('/notificacoes/config')
+    setLoaded(false);
+    api.get<NotificationConfigBackend>('/notificacoes/config')
       .then((res) => {
-        setConfig(res.data);
+        setConfig({
+          ativo: res.data.ativo,
+          frequencia_dia: freqFromBackend(res.data.frequencia_dia),
+          horarios: (res.data.horarios || ['0600']).map(timeFromBackend),
+          dias_semana: daysFromBackend(res.data.dias_semana || ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB', 'DOM']),
+        });
         setLoaded(true);
       })
       .catch(() => setLoaded(true));
@@ -97,7 +130,13 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ open, onClo
   const handleSave = async () => {
     setSaving(true);
     try {
-      await api.put('/notificacoes/config', config);
+      const payload = {
+        ativo: config.ativo,
+        frequencia_dia: freqToBackend(config.frequencia_dia),
+        horarios: config.horarios.map(timeToBackend),
+        dias_semana: daysToBackend(config.dias_semana),
+      };
+      await api.put('/notificacoes/config', payload);
       onClose();
     } catch {
       // error
@@ -117,19 +156,19 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ open, onClo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-800">Configuração de Notificações</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Configuração de Notificações</h2>
         </div>
 
         <div className="px-6 py-4 space-y-5">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-gray-600">Notificações Push</label>
+            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Notificações Push</label>
             <button
               type="button"
               onClick={() => setConfig((prev) => ({ ...prev, ativo: !prev.ativo }))}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                config.ativo ? 'bg-primary-600' : 'bg-gray-300'
+                config.ativo ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'
               }`}
             >
               <span
@@ -141,13 +180,13 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ open, onClo
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-600">Frequência</label>
+            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Frequência</label>
             <select
               value={config.frequencia_dia}
               onChange={(e) =>
                 setConfig((prev) => ({ ...prev, frequencia_dia: parseInt(e.target.value, 10) }))
               }
-              className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
               {freqOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -157,42 +196,23 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ open, onClo
             </select>
           </div>
 
-          {config.frequencia_dia > 2 && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-600">Horários</label>
-              {config.horarios.slice(0, config.frequencia_dia).map((h, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500 w-6">{i + 1}.</span>
-                  <input
-                    type="time"
-                    value={h}
-                    onChange={(e) => updateHorario(i, e.target.value)}
-                    className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {config.frequencia_dia <= 2 && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-600">Horários</label>
-              {config.horarios.slice(0, config.frequencia_dia).map((h, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500 w-6">{i + 1}.</span>
-                  <input
-                    type="time"
-                    value={h}
-                    onChange={(e) => updateHorario(i, e.target.value)}
-                    className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Horários</label>
+            {config.horarios.slice(0, config.frequencia_dia).map((h, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <span className="text-sm text-gray-500 w-6">{i + 1}.</span>
+                <input
+                  type="time"
+                  value={h}
+                  onChange={(e) => updateHorario(i, e.target.value)}
+                  className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+            ))}
+          </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-600">Dias da Semana</label>
+            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Dias da Semana</label>
             <div className="flex gap-2 flex-wrap">
               {DIAS_SEMANA_OPCOES.map((dia, idx) => {
                 const selected = config.dias_semana.includes(dia.value);
@@ -204,7 +224,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ open, onClo
                     className={`w-10 h-10 rounded-full text-sm font-medium transition-colors ${
                       selected
                         ? 'bg-primary-600 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                     }`}
                     title={DIAS_SEMANA_NOMES[dia.value]}
                   >
@@ -216,11 +236,11 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ open, onClo
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-2">
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             Cancelar
           </button>
