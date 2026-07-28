@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useZoom } from '../hooks/useZoom';
 import api from '../utils/api';
+import { sortLabels } from '../utils/chamadaUtils';
 
 type AbaExport = 'vagas' | 'frequencia';
 
@@ -42,25 +43,13 @@ const Configuracoes: React.FC = () => {
     }).catch(() => {});
   }, []);
 
-  const LABEL_ORDER: Record<string, number> = {
-    'Seg': 1, 'Seg/Ter': 2, 'Seg/Qua': 3, 'Seg/Qui': 4, 'Seg/Sex': 5,
-    'Ter': 6, 'Ter/Qua': 7, 'Ter/Qui': 8, 'Ter/Sex': 9,
-    'Qua': 10, 'Qua/Qui': 11, 'Qua/Sex': 12,
-    'Qui': 13, 'Qui/Sex': 14,
-    'Sex': 15, 'Sab': 16,
-    'Seg/Ter/Qua': 20, 'Seg/Ter/Qui': 21, 'Seg/Qua/Sex': 22,
-    'Ter/Qua/Qui': 23, 'Ter/Qua/Sex': 24, 'Qua/Qui/Sex': 25,
-    'Seg/Ter/Qua/Qui': 30, 'Seg a Sex': 31,
-  };
-
   useEffect(() => {
     if (!professorId) { setLabels([]); setLabel(''); return; }
     api.get('/turmas', { params: { professor_id: professorId } }).then((res) => {
       const turmas = res.data || [];
       const uniqueLabels = [...new Set(turmas.map((t: any) => t.label).filter(Boolean))] as string[];
-      uniqueLabels.sort((a, b) => (LABEL_ORDER[a] || 99) - (LABEL_ORDER[b] || 99));
-      setLabels(uniqueLabels);
-      setLabel(uniqueLabels[0] || '');
+      setLabels(sortLabels(uniqueLabels));
+      setLabel(sortLabels(uniqueLabels)[0] || '');
     }).catch(() => {});
   }, [professorId]);
 

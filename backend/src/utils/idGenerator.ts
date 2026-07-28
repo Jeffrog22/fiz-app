@@ -122,27 +122,6 @@ export function generateGrupoId(
 }
 
 /**
- * Extrai os nomes dos dias a partir de uma label de turma.
- * Ex: "Ter/Qui" → ["Terça", "Quinta"]
- */
-export function parseDiasFromLabel(label: string): string[] {
-  const ABBREV_MAP: Record<string, string> = {
-    'Seg': 'Segunda',
-    'Ter': 'Terça',
-    'Qua': 'Quarta',
-    'Qui': 'Quinta',
-    'Sex': 'Sexta',
-    'Sab': 'Sábado',
-    'Dom': 'Domingo',
-  };
-  return label
-    .split('/')
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map((s) => ABBREV_MAP[s] || s);
-}
-
-/**
  * Gera uma label legível a partir de array de dias.
  * Ex: ["Terça","Quinta"] → "Ter/Qui"
  */
