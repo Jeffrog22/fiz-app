@@ -18,7 +18,7 @@ const TabFrequenciaAluno: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
-  const [modalAluno, setModalAluno] = useState<{ id: string; nome: string } | null>(null);
+  const [modalAluno, setModalAluno] = useState<FrequenciaAlunoItem | null>(null);
 
   const params = modo === 'historico' ? { mes: 0, ano: 0 }
     : modo === 'ano' ? { mes: 0, ano }
@@ -188,7 +188,7 @@ const TabFrequenciaAluno: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {filtered.map((d) => (
-                    <tr key={d.aluno_id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setModalAluno({ id: d.aluno_id, nome: d.nome })}>
+                    <tr key={d.aluno_id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setModalAluno(d)}>
                       <td className="px-4 py-2 font-medium text-gray-800">{d.nome}</td>
                       <td className="px-4 py-2 text-gray-600">{d.turma_label || '-'}</td>
                       <td className="px-4 py-2 text-center">
@@ -205,7 +205,7 @@ const TabFrequenciaAluno: React.FC = () => {
                       <td className="px-4 py-2 text-center text-yellow-600 font-medium">{d.justificado}</td>
                       <td className="px-4 py-2 text-center">
                         <button
-                          onClick={(e) => { e.stopPropagation(); setModalAluno({ id: d.aluno_id, nome: d.nome }); }}
+                          onClick={(e) => { e.stopPropagation(); setModalAluno(d); }}
                           className="text-xs text-primary-600 hover:text-primary-800 font-medium hover:underline"
                         >
                           Ver
@@ -233,8 +233,7 @@ const TabFrequenciaAluno: React.FC = () => {
       {/* Modal de Histórico */}
       {modalAluno && (
         <HistoricoAlunoModal
-          alunoId={modalAluno.id}
-          alunoNome={modalAluno.nome}
+          alunoData={modalAluno}
           onClose={() => setModalAluno(null)}
         />
       )}

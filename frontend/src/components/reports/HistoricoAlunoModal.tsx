@@ -1,26 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../utils/api';
-import type { HistoricoAlunoResponse, EnrollmentPeriodHistorico, RetencaoAluno } from '../../types';
+import type { FrequenciaAlunoItem, HistoricoAlunoResponse, EnrollmentPeriodHistorico, RetencaoAluno } from '../../types';
 
 interface Props {
-  alunoId: string;
-  alunoNome: string;
+  alunoData: FrequenciaAlunoItem;
   onClose: () => void;
 }
 
-const HistoricoAlunoModal: React.FC<Props> = ({ alunoId, alunoNome, onClose }) => {
+const HistoricoAlunoModal: React.FC<Props> = ({ alunoData, onClose }) => {
   const [data, setData] = useState<HistoricoAlunoResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
-    api.get(`/relatorios/historico-aluno/${alunoId}`)
+    api.get(`/relatorios/historico-aluno/${alunoData.aluno_id}`)
       .then((res) => { if (active) setData(res.data); })
       .catch(() => { if (active) setData(null); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [alunoId]);
+  }, [alunoData.aluno_id]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -30,37 +29,11 @@ const HistoricoAlunoModal: React.FC<Props> = ({ alunoId, alunoNome, onClose }) =
     return () => window.removeEventListener('keydown', handleKey);
   }, [onClose]);
 
-  if (!data && loading) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-        <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 p-6" onClick={(e) => e.stopPropagation()}>
-          <div className="flex justify-center py-12">
-            <div className="animate-spin h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!data) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-        <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 p-6" onClick={(e) => e.stopPropagation()}>
-          <p className="text-sm text-gray-400 text-center py-4">Erro ao carregar histórico.</p>
-          <div className="flex justify-center mt-2">
-            <button onClick={onClose} className="text-sm text-primary-600 hover:underline">Fechar</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const { aluno, enrollmentPeriods, retencao } = data;
-  const totalAulas = enrollmentPeriods.reduce((s, p) => s + p.total, 0);
-  const presentes = enrollmentPeriods.reduce((s, p) => s + p.presentes, 0);
-  const faltas = enrollmentPeriods.reduce((s, p) => s + p.faltas, 0);
-  const justificados = enrollmentPeriods.reduce((s, p) => s + p.justificados, 0);
-  const assiduidadeTotal = totalAulas > 0 ? Math.round((presentes / totalAulas) * 100) : 0;
+  const totalAulas = alunoData.total_aulas;
+  const presentes = alunoData.presente;
+  const faltas = alunoData.falta;
+  const justificados = alunoData.justificado;
+  const assiduidadeTotal = alunoData.percentual_presenca;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
@@ -70,66 +43,73 @@ const HistoricoAlunoModal: React.FC<Props> = ({ alunoId, alunoNome, onClose }) =
       >
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-xl z-10">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-gray-800">{aluno.nome}</h2>
-            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${aluno.ativo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-              {aluno.ativo ? 'Ativo' : 'Inativo'}
-            </span>
-            {aluno.turma_label && (
-              <span className="text-xs text-gray-400 ml-1">{aluno.turma_label}</span>
+            <h2 className="text-lg font-semibold text-gray-800">{alunoData.nome}</h2>
+            {alunoData.turma_label && (
+              <span className="text-xs text-gray-400 ml-1">{alunoData.turma_label} {alunoData.professor ? `(${alunoData.professor})` : ''}</span>
             )}
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
         </div>
 
-        <div className="p-6 space-y-6">
-          {/* 4 cards indicadores */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <MiniCard titulo="Total Aulas" valor={totalAulas} cor="text-blue-600" />
-            <MiniCard titulo="Presenças" valor={presentes} cor="text-green-600" />
-            <MiniCard titulo="Faltas" valor={faltas} cor="text-red-600" />
-            <MiniCard titulo="Justificativas" valor={justificados} cor="text-yellow-600" />
+        {loading && !data ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full" />
           </div>
-
-          {/* Taxa de Assiduidade */}
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <p className="text-sm font-medium text-gray-700 mb-2">Taxa de Assiduidade</p>
-            <div className="flex items-center gap-3">
-              <div className="flex-1 bg-gray-200 rounded-full h-4 overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${totalAulas > 0 ? 'bg-blue-500' : 'bg-gray-300'}`}
-                  style={{ width: `${totalAulas > 0 ? assiduidadeTotal : 0}%` }}
-                />
-              </div>
-              <span className={`text-lg font-bold min-w-[4rem] text-right ${totalAulas > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
-                {totalAulas > 0 ? `${assiduidadeTotal}%` : '-'}
-              </span>
+        ) : (
+          <div className="p-6 space-y-6">
+            {/* 4 cards indicadores — direto do grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <MiniCard titulo="Total Aulas" valor={totalAulas} cor="text-blue-600" />
+              <MiniCard titulo="Presenças" valor={presentes} cor="text-green-600" />
+              <MiniCard titulo="Faltas" valor={faltas} cor="text-red-600" />
+              <MiniCard titulo="Justificativas" valor={justificados} cor="text-yellow-600" />
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {totalAulas > 0
-                ? `${presentes} presenças em ${totalAulas} aulas`
-                : 'Sem registros de chamada'}
-            </p>
-          </div>
 
-          {/* Índice de Retenção Total */}
-          <RetencaoCard retencao={retencao} />
-
-          {/* Nó de Progressão — Linha do Tempo */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-1">
-              <span>📈</span> Nó de Progressão — Linha do Tempo
-            </h3>
-            {enrollmentPeriods.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-4">Nenhum período de matrícula encontrado.</p>
-            ) : (
-              <div className="space-y-0">
-                {enrollmentPeriods.map((p, i) => (
-                  <TimelineNode key={i} period={p} isLast={i === enrollmentPeriods.length - 1} />
-                ))}
+            {/* Taxa de Assiduidade */}
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <p className="text-sm font-medium text-gray-700 mb-2">Taxa de Assiduidade</p>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 bg-gray-200 rounded-full h-4 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${totalAulas > 0 ? 'bg-blue-500' : 'bg-gray-300'}`}
+                    style={{ width: `${totalAulas > 0 ? assiduidadeTotal : 0}%` }}
+                  />
+                </div>
+                <span className={`text-lg font-bold min-w-[4rem] text-right ${totalAulas > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
+                  {totalAulas > 0 ? `${assiduidadeTotal}%` : '-'}
+                </span>
               </div>
-            )}
+              <p className="text-xs text-gray-500 mt-1">
+                {totalAulas > 0
+                  ? `${presentes} presenças em ${totalAulas} aulas`
+                  : 'Sem registros de chamada'}
+              </p>
+            </div>
+
+            {/* Índice de Retenção Total */}
+            {data && <RetencaoCard retencao={data.retencao} />}
+
+            {/* Nó de Progressão — Linha do Tempo */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-1">
+                <span>📈</span> Nó de Progressão — Linha do Tempo
+              </h3>
+              {!data ? (
+                <div className="flex justify-center py-4">
+                  <div className="animate-spin h-6 w-6 border-4 border-primary-500 border-t-transparent rounded-full" />
+                </div>
+              ) : data.enrollmentPeriods.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-4">Nenhum período de matrícula encontrado.</p>
+              ) : (
+                <div className="space-y-0">
+                  {data.enrollmentPeriods.map((p, i) => (
+                    <TimelineNode key={i} period={p} isLast={i === data.enrollmentPeriods.length - 1} />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -180,7 +160,7 @@ function TimelineNode({ period, isLast }: { period: EnrollmentPeriodHistorico; i
         <div className={`w-3.5 h-3.5 rounded-full flex-shrink-0 mt-1 ${period.data_fim ? 'bg-gray-400' : 'bg-primary-500 ring-2 ring-primary-200'}`} />
         {!isLast && <div className="w-0.5 flex-1 bg-gray-300 min-h-[32px]" />}
       </div>
-      <div className={`flex-1 pb-4 ${isLast ? '' : ''}`}>
+      <div className="flex-1 pb-4">
         <p className="text-sm font-medium text-gray-800">
           {period.turma_label || period.nivel}
         </p>
