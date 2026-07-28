@@ -252,6 +252,7 @@ export interface EnrollmentPeriodHistorico {
   nivel: string;
   turma_label: string;
   turma_horario: string;
+  professor: string;
   data_inicio: string;
   data_fim?: string;
   permanenciaDias: number;

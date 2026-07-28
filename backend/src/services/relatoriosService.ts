@@ -517,7 +517,7 @@ export async function historicoAluno(
   const [alunoRes, periodsRes, turmasRes, profsRes] = await Promise.all([
     supabase.from('alunos').select('id, nome, ativo, turma_id, nivel, criado_em').eq('id', alunoId).eq('tenant_id', tenantId).single(),
     supabase.from('enrollment_period').select('*').eq('aluno_id', alunoId).eq('tenant_id', tenantId).order('data_inicio', { ascending: true }),
-    supabase.from('turmas').select('grupo_id, label, horario, nivel').eq('tenant_id', tenantId),
+    supabase.from('turmas').select('grupo_id, label, horario, nivel, professor_id').eq('tenant_id', tenantId),
     supabase.from('professores').select('id, nome').eq('tenant_id', tenantId),
   ]);
 
@@ -605,6 +605,7 @@ export async function historicoAluno(
       nivel: nivel || 'Sem nível',
       turma_label: label,
       turma_horario: turma?.horario?.slice(0, 5) || '',
+      professor: turma?.professor_id ? profMap.get(turma.professor_id) || '-' : '-',
       data_inicio: dataInicio,
       data_fim: period.data_fim || undefined,
       permanenciaDias,
