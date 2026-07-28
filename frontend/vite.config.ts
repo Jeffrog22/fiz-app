@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
@@ -31,7 +32,51 @@ function getAppVersion(): string {
 const appVersion = getAppVersion();
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
+      injectRegister: false,
+      manifest: {
+        name: 'Fiz! App',
+        short_name: 'Fiz!',
+        description: 'Sistema de Lista de Chamada',
+        theme_color: '#2563eb',
+        background_color: '#ffffff',
+        display: 'standalone',
+        orientation: 'portrait',
+        start_url: '/',
+        scope: '/',
+        id: '/',
+        icons: [
+          {
+            src: 'icons/iconFiz!.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: 'icons/iconFiz!.png',
+            sizes: '512x512',
+            type: 'image/png',
+          },
+          {
+            src: 'icons/icondarkFiz!.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+          {
+            src: 'icons/icondarkFiz!.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+        ],
+      },
+    }),
+  ],
   define: {
     __APP_VERSION__: JSON.stringify(appVersion),
   },
