@@ -4,6 +4,7 @@ import PlanningUpload from '../components/planning/PlanningUpload';
 import PlanningModal from '../components/modals/PlanningModal';
 import WeatherWidget from '../components/widgets/WeatherWidget';
 import { getWeatherEmoji, WMO_MAP } from '../utils/climateEngine';
+import { formatDateBR } from '../utils/formatters';
 import type { Planejamento } from '../types';
 
 interface CalendarioEvento {
@@ -224,9 +225,9 @@ const Calendario: React.FC = () => {
 
       {periodo && (
         <div className="flex gap-4 text-xs text-gray-500 bg-gray-50 p-3 rounded border border-gray-200">
-          <span>Início: <strong>{periodo.inicio_aulas || '---'}</strong></span>
-          <span>Férias: <strong>{periodo.ferias_inicio || '---'} a {periodo.ferias_fim || '---'}</strong></span>
-          <span>Término: <strong>{periodo.termino_aulas || '---'}</strong></span>
+          <span>Início: <strong>{formatDateBR(periodo.inicio_aulas) || '---'}</strong></span>
+          <span>Férias: <strong>{formatDateBR(periodo.ferias_inicio) || '---'} a {formatDateBR(periodo.ferias_fim) || '---'}</strong></span>
+          <span>Término: <strong>{formatDateBR(periodo.termino_aulas) || '---'}</strong></span>
         </div>
       )}
 
