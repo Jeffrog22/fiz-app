@@ -526,6 +526,8 @@ export async function historicoAluno(
   const turmas = turmasRes.data || [];
   const professores = profsRes.data || [];
 
+  console.log('[HISTORICO_DEBUG] aluno:', { id: aluno.id, nome: aluno.nome, turma_id: aluno.turma_id, nivel: aluno.nivel, criado_em: aluno.criado_em });
+
   const turmaMap = new Map<string, any>();
   for (const t of turmas) {
     if (t.grupo_id) turmaMap.set(t.grupo_id, t);
@@ -537,6 +539,8 @@ export async function historicoAluno(
   }
 
   const turmaAtual = aluno.turma_id ? turmaMap.get(aluno.turma_id) : undefined;
+  console.log('[HISTORICO_DEBUG] turmaMap keys:', [...turmaMap.keys()]);
+  console.log('[HISTORICO_DEBUG] aluno.turma_id:', aluno.turma_id, 'turmaAtual:', turmaAtual ? turmaAtual.label : 'undefined');
 
   // Se não houver enrollment_periods, criar um sintético a partir da criação do aluno
   const rawPeriods = periodsRes.data || [];
@@ -549,10 +553,26 @@ export async function historicoAluno(
     });
   }
 
-  // Coletar TODOS os grupo_ids possíveis: UUID do aluno + turma atual + todas as turmas dos períodos
+  // Buscar todos os alunos para expandir logs de turma (mesma lógica da frequenciaAluno)
+  const { data: allAlunos } = await supabase
+    .from('alunos')
+    .select('id, turma_id')
+    .eq('tenant_id', tenantId);
+
+  const alunosPorTurma = new Map<string, string[]>();
+  for (const a of allAlunos || []) {
+    if (a.turma_id) {
+      if (!alunosPorTurma.has(a.turma_id)) alunosPorTurma.set(a.turma_id, []);
+      alunosPorTurma.get(a.turma_id)!.push(a.id);
+    }
+  }
+
+  // Coletar TODOS os grupo_ids possíveis: UUID do aluno + turmas onde ele está
   const grupoIds = new Set<string>();
   grupoIds.add(alunoId);
-  if (aluno.turma_id) grupoIds.add(aluno.turma_id);
+  for (const [turmaId, alunos] of alunosPorTurma) {
+    if (alunos.includes(alunoId)) grupoIds.add(turmaId);
+  }
   for (const period of rawPeriods) {
     if (period.turma_id) grupoIds.add(period.turma_id);
   }
@@ -570,6 +590,16 @@ export async function historicoAluno(
     .lte('data', hoje);
 
   const logs = allLogs || [];
+  console.log('[HISTORICO_DEBUG] grupoIds:', [...grupoIds]);
+  console.log('[HISTORICO_DEBUG] dataMin:', dataMin, 'hoje:', hoje);
+  console.log('[HISTORICO_DEBUG] logs encontrados:', logs.length);
+  console.log('[HISTORICO_DEBUG] rawPeriods:', JSON.stringify(rawPeriods));
+  if (logs.length > 0) {
+    const uniqueGrupos = [...new Set(logs.map((l: any) => l.grupo_id))];
+    const statusCount = logs.reduce((acc: any, l: any) => { acc[l.status] = (acc[l.status] || 0) + 1; return acc; }, {});
+    console.log('[HISTORICO_DEBUG] unique grupo_ids nos logs:', uniqueGrupos);
+    console.log('[HISTORICO_DEBUG] status count:', statusCount);
+  }
 
   const enrollmentPeriods: EnrollmentPeriodHistorico[] = [];
 
@@ -581,11 +611,14 @@ export async function historicoAluno(
     const dataInicio = period.data_inicio;
     const dataFim = period.data_fim || hoje;
 
-    // Filtrar logs do período: match por UUID ou turma_id dentro do range
+    // Filtrar logs do período usando expansão de turma (mesma lógica da frequenciaAluno)
     const periodLogs = logs.filter((log: any) => {
       if (log.data < dataInicio || log.data > dataFim) return false;
-      return log.grupo_id === alunoId || (period.turma_id != null && log.grupo_id === period.turma_id);
+      if (log.grupo_id === alunoId) return true;
+      const turmaAlunos = alunosPorTurma.get(log.grupo_id) || [];
+      return turmaAlunos.includes(alunoId);
     });
+    console.log('[HISTORICO_DEBUG] period', { dataInicio, dataFim, turma_id: period.turma_id, periodLogs: periodLogs.length, firstFew: periodLogs.slice(0, 3).map((l: any) => ({ data: l.data, status: l.status, grupo_id: l.grupo_id })) });
 
     let presentes = 0;
     let faltas = 0;
