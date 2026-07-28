@@ -13,6 +13,7 @@ const Login: React.FC = () => {
   const [professorNome, setProfessorNome] = useState('');
   const [pin, setPin] = useState('');
   const [primeiroAcessoAtivo, setPrimeiroAcessoAtivo] = useState(false);
+  const [precisaReautenticar, setPrecisaReautenticar] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [acessoRapido, setAcessoRapido] = useState<string[]>([]);
@@ -62,6 +63,13 @@ const Login: React.FC = () => {
           return;
         }
         await primeiroAcesso(nome, pin.trim(), csvFile || undefined);
+      } else if (precisaReautenticar) {
+        if (!pin.trim()) {
+          setErro('Digite o PIN da unidade para reautenticar');
+          return;
+        }
+        await login(nome, pin.trim());
+        setPrecisaReautenticar(false);
       } else {
         await login(nome);
       }
@@ -73,7 +81,11 @@ const Login: React.FC = () => {
         setAcessoRapido(updated);
       }
     } catch (err: any) {
-      setErro(err?.response?.data?.error || err.message || 'Erro ao autenticar');
+      const msg = err?.response?.data?.error || err.message || 'Erro ao autenticar';
+      setErro(msg);
+      if (!primeiroAcessoAtivo && (msg.includes('Hash') || msg.includes('reautenticar'))) {
+        setPrecisaReautenticar(true);
+      }
     }
   };
 
@@ -161,7 +173,7 @@ const Login: React.FC = () => {
               id="primeiro-acesso"
               type="checkbox"
               checked={primeiroAcessoAtivo}
-              onChange={(e) => { setPrimeiroAcessoAtivo(e.target.checked); setErro(null); }}
+              onChange={(e) => { setPrimeiroAcessoAtivo(e.target.checked); setPrecisaReautenticar(false); setErro(null); }}
               className="h-4 w-4 text-primary-600 dark:text-primary-400 border-gray-300 dark:border-gray-700 rounded"
             />
             <label htmlFor="primeiro-acesso" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
@@ -195,6 +207,24 @@ const Login: React.FC = () => {
               />
             </div>
             </>
+          )}
+
+          {precisaReautenticar && (
+            <div className="p-3 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded space-y-2">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
+                Reautenticação necessária
+              </p>
+              <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                Seu dispositivo não está vinculado a esta conta. Digite o PIN da unidade para reautenticar.
+              </p>
+              <input
+                type="password"
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                placeholder="PIN da unidade"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
           )}
 
           {erro && <p className="text-sm text-red-600 dark:text-red-400">{erro}</p>}

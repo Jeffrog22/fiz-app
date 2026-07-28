@@ -46,12 +46,25 @@ async function registrarLogAcesso(params: {
   }
 }
 
+function validarPin(tenantId: string, pin: string): void {
+  const envPinKey = `PIN_${tenantId.toUpperCase().replace(/-/g, '_')}`;
+  const expectedPin = process.env[envPinKey];
+  if (expectedPin) {
+    if (!pin || pin.trim() !== expectedPin) {
+      throw new AppError('PIN da unidade inválido. Verifique com o administrador.', 401);
+    }
+  } else {
+    console.warn(`[auth] PIN não configurado para ${tenantId} — acesso liberado sem PIN`);
+  }
+}
+
 export async function loginService(
   nome: string,
   hash: string | undefined,
   tenantId: string,
   ip: string,
-): Promise<{ professor: Professor; token: string }> {
+  pin?: string,
+): Promise<{ professor: Professor; token: string; hash?: string }> {
   if (!nome) {
     throw new AppError('Preencha o nome do professor', 400);
   }
@@ -73,19 +86,42 @@ export async function loginService(
     throw new AppError('Nenhum cadastro encontrado. Marque "Primeiro acesso".', 401);
   }
 
-  if (hash) {
-    if (hash !== professor.hash) {
+  const hashValido = hash && hash === professor.hash;
+
+  if (!hashValido) {
+    if (pin) {
+      validarPin(tenantId, pin);
+      const salt = crypto.randomBytes(16).toString('hex');
+      const novoHash = generateHash(nome.trim(), tenantId, salt);
+      const { error: updateError } = await supabase
+        .from('professores')
+        .update({ hash: novoHash })
+        .eq('id', professor.id)
+        .eq('tenant_id', tenantId);
+      if (updateError) {
+        throw new AppError('Erro ao reautenticar. Tente novamente.', 500);
+      }
+      professor.hash = novoHash;
+      await registrarLogAcesso({
+        tenantId,
+        professor: professor.nome,
+        status: 'sucesso',
+        ip,
+      });
+      const token = generateToken(professor);
+      return { professor, token, hash: novoHash };
+    }
+    if (hash) {
       await registrarLogAcesso({
         tenantId,
         professor: nome.trim(),
         status: 'falha',
         ip,
       });
-      throw new AppError('Hash inválido. Faça login novamente pelo primeiro acesso.', 401);
+      throw new AppError('Hash inválido. Use o PIN da unidade para reautenticar neste dispositivo.', 401);
     }
-  } else {
     if (process.env.NODE_ENV === 'production') {
-      throw new AppError('Hash obrigatório para login em produção.', 401);
+      throw new AppError('Hash não encontrado. Use o PIN da unidade para reautenticar neste dispositivo.', 401);
     }
     console.warn('[auth] Login sem hash em modo dev — NÃO USE EM PRODUÇÃO');
   }

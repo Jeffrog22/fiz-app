@@ -6,11 +6,11 @@ import { loginService, primeiroAcessoService, clearDataService } from '../servic
 export class AuthController {
   static async login(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { nome, hash } = req.body;
+      const { nome, hash, pin } = req.body;
       const tenantId = req.tenantId!;
       const ip = req.ip || req.socket.remoteAddress || 'desconhecido';
 
-      const { professor, token } = await loginService(nome, hash, tenantId, ip);
+      const { professor, token, hash: novoHash } = await loginService(nome, hash, tenantId, ip, pin);
 
       res.cookie('token', token, {
         httpOnly: true,
@@ -23,7 +23,7 @@ export class AuthController {
         message: 'Login realizado com sucesso',
         professorId: professor.id,
         nome: professor.nome,
-        hash: professor.hash,
+        hash: novoHash || professor.hash,
         token,
       });
     } catch (error) {

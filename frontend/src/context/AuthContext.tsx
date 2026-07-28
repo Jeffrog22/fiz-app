@@ -4,7 +4,7 @@ import { getTenantId } from '../utils/tenant';
 import api from '../utils/api';
 
 export interface AuthContextType extends AuthState {
-  login: (professorNome: string) => Promise<void>;
+  login: (professorNome: string, pin?: string) => Promise<void>;
   primeiroAcesso: (professorNome: string, pin: string, csvFile?: File) => Promise<void>;
   logout: () => void;
 }
@@ -48,11 +48,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const login = useCallback(async (professorNome: string) => {
+  const login = useCallback(async (professorNome: string, pin?: string) => {
     setState(prev => ({ ...prev, loading: true }));
     try {
       const stored: any = JSON.parse(localStorage.getItem(`${getTenantId()}_professor`) || '{}');
-      const response = await api.post('/auth/login', { nome: professorNome, hash: stored?.hash });
+      const response = await api.post('/auth/login', { nome: professorNome, hash: stored?.hash, pin });
       const { professorId, nome, token, hash } = response.data;
 
       localStorage.setItem(`${getTenantId()}_professor`, JSON.stringify({ professorId, nome, hash, token }));
