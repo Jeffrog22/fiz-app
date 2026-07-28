@@ -163,8 +163,9 @@ function TimelineNode({ period, isLast }: { period: EnrollmentPeriodHistorico; i
       <div className="flex-1 pb-4">
         <div className="flex items-baseline gap-1 flex-wrap">
           {period.turma_label && <span className="text-sm font-medium text-gray-800">{period.turma_label}</span>}
-          {period.nivel && <span className="text-xs text-gray-500">- Nível {period.nivel}</span>}
-          {period.professor && period.professor !== '-' && <span className="text-xs text-gray-400">({period.professor})</span>}
+          {period.turma_label && period.nivel && <span className="text-xs text-gray-500"> - </span>}
+          {period.nivel && <span className="text-xs text-gray-500">{period.nivel}</span>}
+          {period.professor && period.professor !== '-' && <span className="text-xs text-gray-400"> ({period.professor})</span>}
         </div>
         <p className="text-xs text-gray-500">
           De {dataInicio} até {dataFim}
