@@ -6,7 +6,7 @@ import NotificationSettings from '../components/notifications/NotificationSettin
 import api from '../utils/api';
 import { sortLabels } from '../utils/chamadaUtils';
 
-type AbaExport = 'vagas' | 'frequencia';
+type AbaExport = 'vagas' | 'frequencia' | 'cancelamentos';
 
 const Configuracoes: React.FC = () => {
   const {
@@ -31,8 +31,9 @@ const Configuracoes: React.FC = () => {
   const [professorId, setProfessorId] = useState('');
   const [labels, setLabels] = useState<string[]>([]);
   const [label, setLabel] = useState('');
-  const [mes, setMes] = useState(new Date().getMonth() + 1);
-  const [ano, setAno] = useState(new Date().getFullYear());
+const [mes, setMes] = useState(new Date().getMonth() + 1);
+const [ano, setAno] = useState(new Date().getFullYear());
+const [tipoSelect, setTipoSelect] = useState('todos');
 
   useEffect(() => {
     api.get('/professores').then((res) => {
@@ -93,6 +94,13 @@ const Configuracoes: React.FC = () => {
       if (abaExport === 'vagas') {
         const res = await api.post('/exportar/vagas', {}, { responseType: 'blob' });
         downloadBlob(res.data, `fiz_relatorio_vagas_${new Date().toISOString().slice(0,10)}.xlsx`);
+      } else if (abaExport === 'cancelamentos') {
+        const body: any = { mes, ano };
+        if (professorId) body.professor_id = professorId;
+        if (label) body.label = label;
+        if (tipoSelect !== 'todos') body.tipo_select = tipoSelect;
+        const res = await api.post('/exportar/cancelamentos', body, { responseType: 'blob' });
+        downloadBlob(res.data, `fiz_cancelamentos_${mes}_${ano}.xlsx`);
       } else {
         if (!professorId) {
           setExportMsg('Selecione professor(a).');
@@ -112,7 +120,7 @@ const Configuracoes: React.FC = () => {
       setExportando(false);
       setTimeout(() => setExportMsg(null), 4000);
     }
-  }, [abaExport, professorId, label, mes, ano]);
+  }, [abaExport, professorId, label, mes, ano, tipoSelect]);
 
   function downloadBlob(blob: Blob, filename: string) {
     const url = URL.createObjectURL(blob);
@@ -175,6 +183,16 @@ const Configuracoes: React.FC = () => {
             >
               Frequência
             </button>
+            <button
+              onClick={() => setAbaExport('cancelamentos')}
+              className={`px-4 py-2 text-sm rounded-lg transition ${
+                abaExport === 'cancelamentos'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
+              }`}
+            >
+              Cancelamentos
+            </button>
           </div>
 
           {abaExport === 'vagas' ? (
@@ -188,6 +206,90 @@ const Configuracoes: React.FC = () => {
                 className="px-5 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
               >
                 {exportando ? 'Exportando...' : 'Exportar Relatório de Vagas'}
+              </button>
+            </div>
+          ) : abaExport === 'cancelamentos' ? (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Exporta planilha de cancelamentos com dados de ocorrências, motivos e filtros.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Professor(a)</label>
+                  <select
+                    value={professorId}
+                    onChange={(e) => setProfessorId(e.target.value)}
+                    className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                  >
+                    <option value="">Todos</option>
+                    {professores.map((p) => (
+                      <option key={p.id} value={p.id}>{p.nome}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Turma (dias)</label>
+                  <select
+                    value={label}
+                    onChange={(e) => setLabel(e.target.value)}
+                    disabled={!professorId}
+                    className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 disabled:opacity-40"
+                  >
+                    {!professorId && <option value="">Primeiro selecione professor</option>}
+                    <option value="">Todas as turmas</option>
+                    {labels.map((l) => (
+                      <option key={l} value={l}>{labelExtenso[l] || l}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Mês</label>
+                  <select
+                    value={mes}
+                    onChange={(e) => setMes(Number(e.target.value))}
+                    className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                  >
+                    {meses.map((nome, i) => (
+                      <option key={i + 1} value={i + 1}>{nome}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Ano</label>
+                  <select
+                    value={ano}
+                    onChange={(e) => setAno(Number(e.target.value))}
+                    className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                  >
+                    {[ano - 1, ano, ano + 1].map((a) => (
+                      <option key={a} value={a}>{a}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Tipo:</span>
+                {['todos', 'pessoal', 'geral'].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTipoSelect(t)}
+                    className={`px-3 py-1 text-xs rounded-full transition ${
+                      tipoSelect === t
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {t === 'todos' ? 'Todos' : t === 'pessoal' ? 'Pessoal' : 'Geral'}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={exportar}
+                disabled={exportando}
+                className="px-5 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+              >
+                {exportando ? 'Exportando...' : 'Exportar Cancelamentos'}
               </button>
             </div>
           ) : (

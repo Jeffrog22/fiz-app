@@ -65,6 +65,7 @@ app.use('/api/planejamento', planejamentoRoutes);
 app.use('/api/relatorios', relatoriosRoutes);
 app.post('/api/exportar/frequencia', (req, _res, next) => { console.log('[EXPORT] POST frequencia chamado url=' + req.url + ' ct=' + req.headers['content-type']); next(); }, tenantMiddleware, authMiddleware, ExportacaoController.exportarFrequencia);
 app.post('/api/exportar/vagas', tenantMiddleware, authMiddleware, ExportacaoController.exportarVagas);
+app.post('/api/exportar/cancelamentos', tenantMiddleware, authMiddleware, ExportacaoController.exportarCancelamentos);
 
 app.get('/health', (_req, res) => {
   res.json({

@@ -251,6 +251,142 @@ export async function gerarFrequenciaXLSX(
   return workbook.xlsx.writeBuffer();
 }
 
+export async function gerarCancelamentosXLSX(
+  tenantId: string,
+  professorId: string | undefined,
+  label: string | undefined,
+  mes: number,
+  ano: number,
+  tipoSelect: string | undefined,
+): Promise<ExcelJS.Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Fiz! App';
+  workbook.created = new Date();
+  const sheet = workbook.addWorksheet('Cancelamentos', {
+    views: [{ state: 'normal', zoomScale: 90 }],
+  });
+
+  const { data: professores } = await supabase
+    .from('professores')
+    .select('id, nome')
+    .eq('tenant_id', tenantId);
+  const profMap = new Map((professores || []).map((p: any) => [p.id, p.nome]));
+
+  let turmasQuery = supabase
+    .from('turmas')
+    .select('*')
+    .eq('tenant_id', tenantId);
+  if (professorId) turmasQuery = turmasQuery.eq('professor_id', professorId);
+  if (label) turmasQuery = turmasQuery.eq('label', label);
+
+  const { data: turmas } = await turmasQuery.order('horario', { ascending: true });
+  if (!turmas || turmas.length === 0) throw new AppError('Nenhuma turma encontrada', 404);
+
+  const turmaMap = new Map<string, any>();
+  for (const t of turmas) {
+    turmaMap.set(t.grupo_id || t.id, t);
+  }
+
+  const dataInicio = `${ano}-${String(mes).padStart(2, '0')}-01`;
+  const ultimoDia = new Date(ano, mes, 0).getDate();
+  const dataFim = `${ano}-${String(mes).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
+
+  let logsQuery = supabase
+    .from('chamadas_log')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'cancelado')
+    .gte('data', dataInicio)
+    .lte('data', dataFim);
+
+  if (tipoSelect && tipoSelect !== 'todos') {
+    logsQuery = logsQuery.eq('tipo_select', tipoSelect);
+  }
+
+  const { data: logs } = await logsQuery.order('data', { ascending: true });
+
+  if (!logs || logs.length === 0) throw new AppError('Nenhum cancelamento encontrado no período', 404);
+
+  const headerStyle: Partial<ExcelJS.Style> = {
+    font: { bold: true, size: 10, color: { argb: 'FFFFFFFF' } },
+    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E79' } },
+    alignment: { horizontal: 'center', vertical: 'middle' },
+  };
+  const dataStyle: Partial<ExcelJS.Style> = {
+    font: { size: 10 },
+    alignment: { vertical: 'middle' },
+  };
+
+  const columns = [
+    { header: 'Data', width: 14 },
+    { header: 'Dia', width: 10 },
+    { header: 'Turma', width: 14 },
+    { header: 'Horário', width: 10 },
+    { header: 'Professor', width: 20 },
+    { header: 'Nível', width: 16 },
+    { header: 'Tipo', width: 12 },
+    { header: 'Motivo', width: 30 },
+    { header: 'Comp. Dia', width: 12 },
+    { header: 'Origem', width: 14 },
+  ];
+  sheet.columns = columns.map((c) => ({ header: c.header, width: c.width }));
+
+  const headerRow = sheet.getRow(1);
+  headerRow.height = 20;
+  columns.forEach((_, i) => {
+    const cell = headerRow.getCell(i + 1);
+    cell.value = columns[i].header;
+    cell.style = headerStyle;
+  });
+
+  const DIAS_NOME: Record<number, string> = {
+    0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta',
+    4: 'Quinta', 5: 'Sexta', 6: 'Sábado',
+  };
+
+  logs.forEach((log: any, idx: number) => {
+    const rowNum = 2 + idx;
+    const row = sheet.getRow(rowNum);
+    row.height = 16;
+
+    const turma = turmaMap.get(log.grupo_id);
+    const profNome = turma ? profMap.get(turma.professor_id) || '---' : '---';
+    const dataObj = new Date(log.data + 'T12:00:00');
+    const diaSemana = DIAS_NOME[dataObj.getDay()] || '---';
+
+    sheet.getCell(`A${rowNum}`).value = log.data;
+    sheet.getCell(`A${rowNum}`).style = dataStyle;
+    sheet.getCell(`B${rowNum}`).value = diaSemana;
+    sheet.getCell(`B${rowNum}`).style = dataStyle;
+    sheet.getCell(`C${rowNum}`).value = turma?.label || log.grupo_id || '---';
+    sheet.getCell(`C${rowNum}`).style = dataStyle;
+    sheet.getCell(`D${rowNum}`).value = turma?.horario?.slice(0, 5) || '---';
+    sheet.getCell(`D${rowNum}`).style = dataStyle;
+    sheet.getCell(`E${rowNum}`).value = profNome;
+    sheet.getCell(`E${rowNum}`).style = dataStyle;
+    sheet.getCell(`F${rowNum}`).value = turma?.nivel || '---';
+    sheet.getCell(`F${rowNum}`).style = dataStyle;
+    sheet.getCell(`G${rowNum}`).value = log.tipo_select === 'pessoal' ? 'Pessoal' : log.tipo_select === 'geral' ? 'Geral' : '---';
+    sheet.getCell(`G${rowNum}`).style = dataStyle;
+    sheet.getCell(`H${rowNum}`).value = log.motivo || log.tipo_ocorrencia || '---';
+    sheet.getCell(`H${rowNum}`).style = dataStyle;
+    sheet.getCell(`I${rowNum}`).value = log.compromete_dia ? 'Sim' : 'Não';
+    sheet.getCell(`I${rowNum}`).style = dataStyle;
+    sheet.getCell(`J${rowNum}`).value = log.origem || 'manual';
+    sheet.getCell(`J${rowNum}`).style = dataStyle;
+  });
+
+  sheet.pageSetup = {
+    orientation: 'landscape',
+    paperSize: 9,
+    fitToPage: true,
+    fitToWidth: 1,
+    margins: { left: 0.5, right: 0.5, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
+  };
+
+  return workbook.xlsx.writeBuffer();
+}
+
 export async function gerarVagasXLSX(tenantId: string): Promise<ExcelJS.Buffer> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Fiz! App';
