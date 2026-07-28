@@ -158,7 +158,7 @@ const Calendario: React.FC = () => {
   for (let i = 0; i < primeiroDiaSemana; i++) {
     const dia = diasAnterior - primeiroDiaSemana + i + 1;
     diasCalendario.push(
-      <div key={`prev-${i}`} className="p-1.5 text-xs text-gray-300 dark:text-gray-600 text-center">{dia}</div>
+      <div key={`prev-${i}`} className="p-1.5 text-xs text-gray-300 dark:text-gray-500 text-center">{dia}</div>
     );
   }
   for (let dia = 1; dia <= diasNoMes; dia++) {
@@ -199,9 +199,9 @@ const Calendario: React.FC = () => {
           <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center">
             {diaEventos.slice(0, 2).map((ev, i) => (
               <span key={i} className={`w-1.5 h-1.5 rounded-full ${
-                ev.tipo === 'feriado' ? 'bg-red-400' :
-                ev.tipo === 'ponte' ? 'bg-orange-400' :
-                ev.tipo === 'reuniao' ? 'bg-blue-400' : 'bg-purple-400'
+                ev.tipo === 'feriado' ? 'bg-red-400 dark:bg-red-500' :
+                ev.tipo === 'ponte' ? 'bg-orange-400 dark:bg-orange-500' :
+                ev.tipo === 'reuniao' ? 'bg-blue-400 dark:bg-blue-500' : 'bg-purple-400 dark:bg-purple-500'
               }`} />
             ))}
             {diaEventos.length > 2 && <span className="text-[8px] text-gray-400 dark:text-gray-500">+{diaEventos.length - 2}</span>}
@@ -246,7 +246,7 @@ const Calendario: React.FC = () => {
           <button onClick={mesSeguinte} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-2">&gt;</button>
         </div>
 
-        <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700">
+        <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-600">
           {diasSemana.map((d, i) => (
             <div key={d} className={`bg-gray-50 dark:bg-gray-900 p-2 text-xs text-center ${i === 0 || i === 6 ? 'font-bold text-gray-600 dark:text-gray-300' : 'font-medium text-gray-500 dark:text-gray-400'}`}>{d}</div>
           ))}

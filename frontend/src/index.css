@@ -28,3 +28,18 @@ body {
 .animate-shake {
   animation: shake 0.3s ease-in-out;
 }
+
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.dark select,
+.dark textarea {
+  background-color: #374151;
+  color: #f3f4f6;
+  border-color: #4b5563;
+}
+.dark input[type="checkbox"],
+.dark input[type="radio"] {
+  accent-color: #60a5fa;
+}
+.dark input[type="range"] {
+  accent-color: #60a5fa;
+}
