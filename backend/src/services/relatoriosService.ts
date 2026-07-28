@@ -554,10 +554,11 @@ export async function historicoAluno(
   }
 
   // Buscar todos os alunos para expandir logs de turma (mesma lógica da frequenciaAluno)
-  const { data: allAlunos } = await supabase
+  const { data: allAlunos, error: alunosErr } = await supabase
     .from('alunos')
     .select('id, turma_id')
     .eq('tenant_id', tenantId);
+  console.log('[HISTORICO_DEBUG] allAlunos count:', allAlunos?.length, 'error:', alunosErr?.message);
 
   const alunosPorTurma = new Map<string, string[]>();
   for (const a of allAlunos || []) {
@@ -568,21 +569,29 @@ export async function historicoAluno(
   }
 
   // Query de logs: busca TODOS os logs do tenant (sem filtro de grupo_id, igual frequenciaAluno)
-  const { data: allLogs } = await supabase
+  const { data: allLogs, error: logsErr } = await supabase
     .from('chamadas_log')
     .select('status, data, grupo_id')
     .eq('tenant_id', tenantId)
     .gte('data', '2024-01-01')
-    .lte('data', hoje);
+    .lte('data', hoje)
+    .range(0, 1000000);
+
+  console.log('[HISTORICO_DEBUG] allLogs error:', logsErr?.message);
 
   const logs = allLogs || [];
-  console.log('[HISTORICO_DEBUG] logs encontrados:', logs.length);
+  console.log('[HISTORICO_DEBUG] logs encontrados (tenant inteiro):', logs.length);
+  console.log('[HISTORICO_DEBUG] alunosPorTurma keys:', [...alunosPorTurma.keys()]);
+  console.log('[HISTORICO_DEBUG] aluno esta nas turmas:', [...alunosPorTurma.entries()].filter(([k, v]) => v.includes(alunoId)).map(([k]) => k));
   console.log('[HISTORICO_DEBUG] rawPeriods:', JSON.stringify(rawPeriods));
   if (logs.length > 0) {
     const uniqueGrupos = [...new Set(logs.map((l: any) => l.grupo_id))];
     const statusCount = logs.reduce((acc: any, l: any) => { acc[l.status] = (acc[l.status] || 0) + 1; return acc; }, {});
     console.log('[HISTORICO_DEBUG] unique grupo_ids nos logs:', uniqueGrupos);
     console.log('[HISTORICO_DEBUG] status count:', statusCount);
+    // Log some sample logs for debugging
+    const sample = logs.slice(0, 5).map((l: any) => ({ data: l.data, status: l.status, grupo_id: l.grupo_id }));
+    console.log('[HISTORICO_DEBUG] sample logs:', sample);
   }
 
   const enrollmentPeriods: EnrollmentPeriodHistorico[] = [];
@@ -602,7 +611,7 @@ export async function historicoAluno(
       const turmaAlunos = alunosPorTurma.get(log.grupo_id) || [];
       return turmaAlunos.includes(alunoId);
     });
-    console.log('[HISTORICO_DEBUG] period', { dataInicio, dataFim, turma_id: period.turma_id, periodLogs: periodLogs.length, firstFew: periodLogs.slice(0, 3).map((l: any) => ({ data: l.data, status: l.status, grupo_id: l.grupo_id })) });
+    console.log('[HISTORICO_DEBUG] period filter:', { dataInicio, dataFim, totalNoRange: logs.filter((l: any) => l.data >= dataInicio && l.data <= dataFim).length, matched: periodLogs.length, firstFew: periodLogs.slice(0, 3).map((l: any) => ({ data: l.data, status: l.status, grupo_id: l.grupo_id })) });
 
     let presentes = 0;
     let faltas = 0;
