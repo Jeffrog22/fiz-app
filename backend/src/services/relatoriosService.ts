@@ -567,31 +567,15 @@ export async function historicoAluno(
     }
   }
 
-  // Coletar TODOS os grupo_ids possíveis: UUID do aluno + turmas onde ele está
-  const grupoIds = new Set<string>();
-  grupoIds.add(alunoId);
-  for (const [turmaId, alunos] of alunosPorTurma) {
-    if (alunos.includes(alunoId)) grupoIds.add(turmaId);
-  }
-  for (const period of rawPeriods) {
-    if (period.turma_id) grupoIds.add(period.turma_id);
-  }
-
-  // Data mínima = primeiro período
-  const dataMin = rawPeriods.length > 0 ? rawPeriods[0].data_inicio : '2024-01-01';
-
-  // Query única de logs
+  // Query de logs: busca TODOS os logs do tenant (sem filtro de grupo_id, igual frequenciaAluno)
   const { data: allLogs } = await supabase
     .from('chamadas_log')
     .select('status, data, grupo_id')
     .eq('tenant_id', tenantId)
-    .in('grupo_id', [...grupoIds])
-    .gte('data', dataMin)
+    .gte('data', '2024-01-01')
     .lte('data', hoje);
 
   const logs = allLogs || [];
-  console.log('[HISTORICO_DEBUG] grupoIds:', [...grupoIds]);
-  console.log('[HISTORICO_DEBUG] dataMin:', dataMin, 'hoje:', hoje);
   console.log('[HISTORICO_DEBUG] logs encontrados:', logs.length);
   console.log('[HISTORICO_DEBUG] rawPeriods:', JSON.stringify(rawPeriods));
   if (logs.length > 0) {
