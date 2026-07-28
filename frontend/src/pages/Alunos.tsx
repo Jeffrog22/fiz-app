@@ -149,13 +149,15 @@ const Alunos: React.FC = () => {
 
   const handleSave = async ({ data, acao }: SavePayload) => {
     try {
-      if (editando) {
+      if (acao === 'duplicar') {
+        await api.post('/alunos', { ...data, duplicar_cadastro: true });
+      } else if (editando) {
         await api.put(`/alunos/${editando.id}`, { ...data, acao });
       } else {
         await api.post('/alunos', data);
       }
 
-      if (editando) {
+      if (acao === 'duplicar' || editando) {
         setModalOpen(false);
         setEditando(null);
       } else {

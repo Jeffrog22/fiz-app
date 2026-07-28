@@ -68,15 +68,17 @@ export async function criarAlunoService(data: any, tenantId: string): Promise<an
     throw new AppError('Nome do aluno e obrigatorio', 400);
   }
 
-  const { data: existente } = await supabase
-    .from('alunos')
-    .select('id')
-    .eq('tenant_id', tenantId)
-    .eq('nome', nome.trim())
-    .maybeSingle();
+  if (!data.duplicar_cadastro) {
+    const { data: existente } = await supabase
+      .from('alunos')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .eq('nome', nome.trim())
+      .maybeSingle();
 
-  if (existente) {
-    throw new AppError('Aluno ja cadastrado nesta unidade', 400);
+    if (existente) {
+      throw new AppError('Aluno ja cadastrado nesta unidade', 400);
+    }
   }
 
   const categoria = calcularCategoria(data_nascimento);

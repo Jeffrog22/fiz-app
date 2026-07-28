@@ -32,7 +32,7 @@ function normalizarGenero(valor: string): string {
 
 const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], onSave, onClose, lastSession, resetCounter }) => {
   const [editMode, setEditMode] = useState(false);
-  const [acao, setAcao] = useState<'correcao' | 'transferencia' | null>(null);
+  const [acao, setAcao] = useState<'correcao' | 'transferencia' | 'duplicar' | null>(null);
 
   const [nome, setNome] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
@@ -49,6 +49,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
   const [erroData, setErroData] = useState<string | null>(null);
   const [erroContato, setErroContato] = useState<string | null>(null);
   const [transferenciaExterna, setTransferenciaExterna] = useState(false);
+  const [duplicarCadastro, setDuplicarCadastro] = useState(false);
   const [toast, setToast] = useState<{ msg: string; tipo?: 'sucesso' | 'erro' } | null>(null);
 
   const isNew = !aluno;
@@ -95,6 +96,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
     setEditMode(false);
     setAcao(null);
     setTransferenciaExterna(false);
+    setDuplicarCadastro(false);
     setErroData(null);
     setErroContato(null);
     setToast(null);
@@ -135,7 +137,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
       data_atestado: dataAtestado ? formatDateISO(dataAtestado) : undefined,
     };
 
-    if (acao === 'transferencia') {
+    if (acao === 'transferencia' || acao === 'duplicar') {
       payload.turma_id = turmaId || undefined;
       payload.nivel = nivel || undefined;
     } else if (acao === 'correcao') {
@@ -143,6 +145,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
       payload.turma_id = turmaId || undefined;
       payload.nivel = nivel || undefined;
       (payload as any).transferencia_externa = transferenciaExterna || undefined;
+      (payload as any).duplicar_cadastro = duplicarCadastro || undefined;
     }
 
     onSave({ data: payload, acao: acao || undefined });
@@ -194,12 +197,69 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
             >
               Transferência
             </button>
+            <button
+              type="button"
+              onClick={() => setAcao(acao === 'duplicar' ? null : 'duplicar')}
+              className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
+                acao === 'duplicar'
+                  ? 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300'
+                  : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              Criar segundo cadastro
+            </button>
           </div>
         )}
 
         {acao === 'transferencia' && (
           <div className="mx-6 mt-3 p-3 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800 rounded-md space-y-3">
             <p className="text-xs font-medium text-purple-700 dark:text-purple-300">Transferir aluno para outra turma</p>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Professor(a)</label>
+              <select
+                value={professorId}
+                onChange={(e) => {
+                  setProfessorId(e.target.value);
+                  setTurmaId('');
+                  setNivel('');
+                }}
+                className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md text-sm"
+              >
+                <option value="">Selecione</option>
+                {professores.map((p) => (
+                  <option key={p.id} value={p.id}>{p.nome}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Turma + Horário</label>
+              <select
+                value={turmaId}
+                onChange={(e) => {
+                  setTurmaId(e.target.value);
+                  const t = turmas.find((x) => x.grupo_id === e.target.value);
+                  if (t) {
+                    setNivel(t.nivel || '');
+                    setProfessorId(t.professor_id || '');
+                  }
+                }}
+                className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md text-sm"
+                disabled={!professorId}
+              >
+                <option value="">Selecione a turma</option>
+                {turmasOrdenadas.map((t) => (
+                  <option key={t.grupo_id} value={t.grupo_id}>
+                    {t.label} - {(t.horario || '').slice(0, 5)} ({t.nivel || 'sem nível'})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
+        {acao === 'duplicar' && (
+          <div className="mx-6 mt-3 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-md space-y-3">
+            <p className="text-xs font-medium text-green-700 dark:text-green-300">Criar novo cadastro em outra turma (original mantido)</p>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Professor(a)</label>
               <select
@@ -375,15 +435,26 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
               </div>
 
               {turmaId && (
-                <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <input
-                    type="checkbox"
-                    checked={transferenciaExterna}
-                    onChange={(e) => setTransferenciaExterna(e.target.checked)}
-                    className="rounded border-gray-300 dark:border-gray-600 text-primary-600"
-                  />
-                  Veio de outra unidade
-                </label>
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    <input
+                      type="checkbox"
+                      checked={duplicarCadastro}
+                      onChange={(e) => setDuplicarCadastro(e.target.checked)}
+                      className="rounded border-gray-300 dark:border-gray-600 text-primary-600"
+                    />
+                    Já possui cadastro em outra turma
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    <input
+                      type="checkbox"
+                      checked={transferenciaExterna}
+                      onChange={(e) => setTransferenciaExterna(e.target.checked)}
+                      className="rounded border-gray-300 dark:border-gray-600 text-primary-600"
+                    />
+                    Veio de outra unidade
+                  </label>
+                </div>
               )}
             </>
           )}
