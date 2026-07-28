@@ -300,7 +300,8 @@ const Chamadas: React.FC = () => {
 
   const handleTogglePresenca = useCallback(
     (alunoId: string, data: string, status: PresencaStatus) => {
-      if (!retroativo && data < dias[0]) return;
+      const hoje = new Date().toISOString().split('T')[0];
+      if (!retroativo && data < hoje) return;
 
       const currentStatus = logs[alunoId]?.[data]?.[indiceAtual]?.status;
       undoStack.current.push({ type: 'presenca', alunoId, data, indice: indiceAtual, statusAntigo: currentStatus });
