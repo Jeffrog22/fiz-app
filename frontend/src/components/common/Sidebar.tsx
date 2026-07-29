@@ -25,13 +25,12 @@ const configLinks: SidebarLink[] = [
 interface Props {
   collapsed: boolean;
   onToggle: () => void;
-  mobileOpen: boolean;
-  onMobileClose: () => void;
-  isMobile: boolean;
 }
 
-const Sidebar: React.FC<Props> = ({ collapsed, onToggle, mobileOpen, onMobileClose, isMobile }) => {
+const Sidebar: React.FC<Props> = ({ collapsed, onToggle }) => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const touchStartX = React.useRef(0);
+  const touchStartY = React.useRef(0);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -52,9 +51,6 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, mobileOpen, onMobileClo
     if (result.outcome === 'accepted') setDeferredPrompt(null);
   };
 
-  const touchStartX = React.useRef(0);
-  const touchStartY = React.useRef(0);
-
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
@@ -63,86 +59,15 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, mobileOpen, onMobileClo
   const handleTouchEnd = (e: React.TouchEvent) => {
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     const dy = e.changedTouches[0].clientY - touchStartY.current;
-    if (Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 50 && dx < 0) {
-      onMobileClose();
+    if (Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 50) {
+      onToggle();
     }
   };
 
-  if (isMobile) {
-    return (
-      <aside
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        className={`fixed top-[57px] left-0 h-[calc(100vh-57px)] z-40 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-r dark:border-gray-800 flex flex-col py-4 transition-transform duration-300 ease-in-out overflow-hidden w-64 ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <div className="flex items-center justify-between mb-4 px-3">
-          <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Menu</span>
-          <button
-            onClick={onMobileClose}
-            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors text-sm p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
-            title="Fechar menu"
-          >
-            {'\u2716'}
-          </button>
-        </div>
-        <nav className="flex flex-col gap-1 px-2 flex-1">
-          {links.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              onClick={onMobileClose}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors ${
-                  isActive
-                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'
-                }`
-              }
-            >
-              <span className="text-lg flex-shrink-0">{link.icon}</span>
-              <span>{link.label}</span>
-            </NavLink>
-          ))}
-        </nav>
-        <nav className="flex flex-col gap-1 px-2 pt-2 border-t border-gray-200 dark:border-t dark:border-gray-800 mt-2">
-          {configLinks.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              onClick={onMobileClose}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors ${
-                  isActive
-                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'
-                }`
-              }
-            >
-              <span className="text-lg flex-shrink-0">{link.icon}</span>
-              <span>{link.label}</span>
-            </NavLink>
-          ))}
-        </nav>
-        {deferredPrompt && (
-          <div className="px-2 mt-2">
-            <button
-              onClick={handleInstall}
-              className="flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors w-full text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200"
-              title="Instalar App"
-            >
-              <span className="text-lg flex-shrink-0">{'\u2B07'}</span>
-              <span>Instalar App</span>
-            </button>
-          </div>
-        )}
-      </aside>
-    );
-  }
-
   return (
     <aside
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       className={`bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-r dark:border-gray-800 min-h-[calc(100vh-57px)] flex flex-col py-4 transition-all duration-300 ease-in-out overflow-hidden ${
         collapsed ? 'w-14' : 'w-56'
       }`}

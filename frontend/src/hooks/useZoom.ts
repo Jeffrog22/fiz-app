@@ -4,10 +4,6 @@ const ZOOM_MIN = 80;
 const ZOOM_MAX = 150;
 const ZOOM_STEP = 10;
 
-function getOrientationDefault(): number {
-  return window.matchMedia('(orientation: portrait)').matches ? 150 : 90;
-}
-
 function getStoredZoom(): number {
   try {
     const stored = localStorage.getItem('app_zoom');
@@ -16,19 +12,11 @@ function getStoredZoom(): number {
       if (!isNaN(val) && val >= ZOOM_MIN && val <= ZOOM_MAX) return val;
     }
   } catch { /* ignore */ }
-  return getOrientationDefault();
+  return 100;
 }
 
 export function useZoom() {
   const [zoom, setZoomState] = useState(getStoredZoom);
-  const [orientationDefault, setOrientationDefault] = useState(getOrientationDefault);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(orientation: portrait)');
-    const handler = () => setOrientationDefault(getOrientationDefault());
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
 
   useEffect(() => {
     document.documentElement.style.fontSize = `${zoom}%`;
@@ -44,10 +32,10 @@ export function useZoom() {
   }, []);
 
   const resetar = useCallback(() => {
-    setZoomState(orientationDefault);
-  }, [orientationDefault]);
+    setZoomState(100);
+  }, []);
 
-  return { zoom, aumentar, diminuir, resetar, ZOOM_MIN, ZOOM_MAX, orientationDefault };
+  return { zoom, aumentar, diminuir, resetar, ZOOM_MIN, ZOOM_MAX };
 }
 
 export default useZoom;

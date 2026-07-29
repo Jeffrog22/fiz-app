@@ -23,18 +23,8 @@ import { useAuth } from './hooks/useAuth';
 const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
-  const [mobileOpen, setMobileOpen] = React.useState(false);
-  const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
-  const touchStartX = useRef(0);
-  const touchStartY = useRef(0);
   const { enabled: devEnabled, addConsoleLine } = useDevLog();
   const origConsole = useRef<Record<string, (...args: unknown[]) => void>>({});
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   useEffect(() => {
     if (!devEnabled) return;
@@ -55,29 +45,6 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
     };
   }, [devEnabled, addConsoleLine]);
 
-  useEffect(() => {
-    if (!isMobile) return;
-    const el = document.body;
-    const onStart = (e: TouchEvent) => {
-      touchStartX.current = e.touches[0].clientX;
-      touchStartY.current = e.touches[0].clientY;
-    };
-    const onEnd = (e: TouchEvent) => {
-      const dx = e.changedTouches[0].clientX - touchStartX.current;
-      const dy = e.changedTouches[0].clientY - touchStartY.current;
-      if (Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 50) {
-        if (dx > 0 && touchStartX.current < 40) setMobileOpen(true);
-        if (dx < 0) setMobileOpen(false);
-      }
-    };
-    el.addEventListener('touchstart', onStart, { passive: true });
-    el.addEventListener('touchend', onEnd, { passive: true });
-    return () => {
-      el.removeEventListener('touchstart', onStart);
-      el.removeEventListener('touchend', onEnd);
-    };
-  }, [isMobile]);
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
@@ -93,18 +60,8 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
       <TopBar />
-      <div className="flex flex-1 relative">
-        {isMobile && mobileOpen && (
-          <div className="fixed inset-0 bg-black/50 z-30"
-               onClick={() => setMobileOpen(false)} />
-        )}
-        <Sidebar
-          collapsed={sidebarCollapsed}
-          onToggle={() => setSidebarCollapsed(v => !v)}
-          mobileOpen={mobileOpen}
-          onMobileClose={() => setMobileOpen(false)}
-          isMobile={isMobile}
-        />
+      <div className="flex flex-1">
+        <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(v => !v)} />
         <main className="flex-1 p-6 overflow-auto">
           {children}
         </main>
