@@ -203,6 +203,7 @@ export async function primeiroAcessoService(
       console.info(`[primeiroAcesso] CSV processado: ${result.alunosOk} alunos, ${result.turmasOk} turmas`);
     } catch (csvError: any) {
       console.error('[primeiroAcesso] ERRO no CSV:', csvError.message);
+      await supabase.from('professores').delete().eq('id', newProfessor.id);
       throw new AppError(`Erro ao processar CSV: ${csvError.message}`, 400);
     }
   }
@@ -211,21 +212,35 @@ export async function primeiroAcessoService(
   return { professor: newProfessor, hash, token };
 }
 
-export async function clearDataService(tenantId: string): Promise<{ alunos: boolean; turmas: boolean }> {
-  const { error: errAlunos } = await supabase
-    .from('alunos')
-    .delete()
-    .eq('tenant_id', tenantId);
+export async function clearDataService(tenantId: string): Promise<{ ok: boolean }> {
+  const tabelasSimples = [
+    { table: 'planejamento_arquivos', filter: { tenant_id: tenantId } },
+    { table: 'chamadas_log', filter: { tenant_id: tenantId } },
+    { table: 'anotacoes_alunos', filter: { tenant_id: tenantId } },
+    { table: 'card_aula', filter: { tenant_id: tenantId } },
+    { table: 'logs_operacoes', filter: { tenant_id: tenantId } },
+    { table: 'logs_acesso', filter: { unidade: tenantId } },
+    { table: 'calendario', filter: { tenant_id: tenantId } },
+    { table: 'periodos_letivos', filter: { tenant_id: tenantId } },
+  ];
 
+  for (const { table, filter } of tabelasSimples) {
+    const { error } = await supabase.from(table).delete().match(filter);
+    if (error) console.warn(`[clearData] erro ao limpar ${table}: ${error.message}`);
+  }
+
+  const { error: errPlanejamentos } = await supabase.from('planejamentos').delete().eq('tenant_id', tenantId);
+  if (errPlanejamentos) console.warn('[clearData] erro ao limpar planejamentos:', errPlanejamentos.message);
+
+  const { error: errAlunos } = await supabase.from('alunos').delete().eq('tenant_id', tenantId);
   if (errAlunos) throw new AppError(`Erro ao limpar alunos: ${errAlunos.message}`, 500);
 
-  const { error: errTurmas } = await supabase
-    .from('turmas')
-    .delete()
-    .eq('tenant_id', tenantId);
-
+  const { error: errTurmas } = await supabase.from('turmas').delete().eq('tenant_id', tenantId);
   if (errTurmas) throw new AppError(`Erro ao limpar turmas: ${errTurmas.message}`, 500);
 
-  console.info(`[clearData] Dados do tenant "${tenantId}" limpos: alunos e turmas removidos.`);
-  return { alunos: true, turmas: true };
+  const { error: errProfessores } = await supabase.from('professores').delete().eq('tenant_id', tenantId);
+  if (errProfessores) throw new AppError(`Erro ao limpar professores: ${errProfessores.message}`, 500);
+
+  console.info(`[clearData] Tenant "${tenantId}" completamente resetado.`);
+  return { ok: true };
 }

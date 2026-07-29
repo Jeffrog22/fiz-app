@@ -1,7 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useZoom } from '../hooks/useZoom';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../hooks/useAuth';
+import { useTenant } from '../hooks/useTenant';
+import { useDevLog } from '../hooks/useDevLog';
 import NotificationSettings from '../components/notifications/NotificationSettings';
 import api from '../utils/api';
 import { sortLabels } from '../utils/chamadaUtils';
@@ -37,6 +41,12 @@ const [tipoSelect, setTipoSelect] = useState('todos');
 
 const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'latest'>('idle');
 const [updateMsg, setUpdateMsg] = useState<string | null>(null);
+const [resetando, setResetando] = useState(false);
+
+const navigate = useNavigate();
+const { logout } = useAuth();
+const { tenantId } = useTenant();
+const { enabled: devEnabled } = useDevLog();
 
   useEffect(() => {
     api.get('/professores').then((res) => {
@@ -209,6 +219,33 @@ const [updateMsg, setUpdateMsg] = useState<string | null>(null);
     } catch {}
     window.location.reload();
   }, []);
+
+  const handleHardReset = useCallback(async () => {
+    const adminKey = prompt('🔑 Chave de admin para HARD RESET:');
+    if (!adminKey) return;
+    const confirmText = prompt('⚠️ Isso DESTRÓI TODOS os dados do tenant (alunos, turmas, professores, chamadas, notificações, logs, planejamentos, calendário).\n\nDigite "DESTRUIR" para confirmar:');
+    if (confirmText !== 'DESTRUIR') {
+      alert('Confirmação incorreta. HARD RESET cancelado.');
+      return;
+    }
+    setResetando(true);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/auth/clear-data`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-Admin-Key': adminKey },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao resetar');
+      alert('✅ Tenant completamente resetado! O app será recarregado.');
+      logout();
+      navigate('/', { replace: true });
+      window.location.reload();
+    } catch (err: any) {
+      alert(`❌ Erro: ${err.message}`);
+    } finally {
+      setResetando(false);
+    }
+  }, [tenantId, logout, navigate]);
 
   const meses = [
     'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
@@ -616,6 +653,26 @@ const [updateMsg, setUpdateMsg] = useState<string | null>(null);
             <p className={`mt-2 text-sm ${updateMsg.includes('disponível') ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
               {updateMsg}
             </p>
+          )}
+
+          {devEnabled && (
+            <div className="mt-6 pt-6 border-t-2 border-red-300 dark:border-red-700">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-2xl">💀</span>
+                <h3 className="text-base font-bold text-red-600 dark:text-red-400">HARD RESET</h3>
+              </div>
+              <p className="text-sm text-red-500 dark:text-red-400 mb-3 font-medium">
+                Isso DESTRÓI todos os dados do tenant: alunos, turmas, professores, chamadas,
+                notificações, planejamentos, calendário, logs. Não há desfazer.
+              </p>
+              <button
+                onClick={handleHardReset}
+                disabled={resetando}
+                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg transition-colors disabled:opacity-50"
+              >
+                {resetando ? 'Resetando...' : 'Executar HARD RESET'}
+              </button>
+            </div>
           )}
         </div>
       </div>

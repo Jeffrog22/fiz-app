@@ -74,7 +74,7 @@ export class AuthController {
       const result = await clearDataService(tenantId);
 
       res.json({
-        message: `Dados do tenant "${tenantId}" limpos: alunos e turmas removidos.`,
+        message: `Tenant "${tenantId}" completamente resetado.`,
         ...result,
       });
     } catch (error) {
