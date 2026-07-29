@@ -15,11 +15,48 @@ const AnotacoesModal: React.FC<Props> = ({ aberto, aluno, onClose, onAnotacaoCha
   const [novaAnotacao, setNovaAnotacao] = useState('');
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [mensagem, setMensagem] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const salvarAnotacao = useCallback(async (texto: string) => {
+    if (!aluno || !texto.trim()) return;
+    setSalvando(true);
+    setMensagem(null);
+    try {
+      const res = await api.post('/anotacoes', {
+        aluno_id: aluno.id,
+        anotacao: texto.trim(),
+      });
+      setAnotacoes((prev) => [res.data, ...prev]);
+      setNovaAnotacao('');
+      onAnotacaoChange?.(aluno.id);
+      setMensagem('Salvo!');
+      setTimeout(() => setMensagem(null), 2000);
+    } catch (err) {
+      console.error('Erro ao salvar anotacao', err);
+      setMensagem('Erro ao salvar');
+      setTimeout(() => setMensagem(null), 2000);
+    } finally {
+      setSalvando(false);
+    }
+  }, [aluno, onAnotacaoChange]);
+
+  const agendarSalvamento = useCallback((texto: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => salvarAnotacao(texto), 800);
+  }, [salvarAnotacao]);
+
+  useEffect(() => {
+    if (!aberto && novaAnotacao.trim()) {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      salvarAnotacao(novaAnotacao);
+    }
+  }, [aberto]);
 
   useEffect(() => {
     if (aberto && aluno) {
       setNovaAnotacao('');
+      setMensagem(null);
       setCarregando(true);
       api.get(`/anotacoes/aluno/${aluno.id}`)
         .then((res) => setAnotacoes(res.data || []))
@@ -36,27 +73,6 @@ const AnotacoesModal: React.FC<Props> = ({ aberto, aluno, onClose, onAnotacaoCha
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [aberto, onClose]);
-
-  const agendarSalvamento = useCallback((texto: string) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      if (!aluno || !texto.trim()) return;
-      setSalvando(true);
-      try {
-        const res = await api.post('/anotacoes', {
-          aluno_id: aluno.id,
-          anotacao: texto.trim(),
-        });
-        setAnotacoes((prev) => [res.data, ...prev]);
-        setNovaAnotacao('');
-        onAnotacaoChange?.(aluno.id);
-      } catch (err) {
-        console.error('Erro ao salvar anotacao', err);
-      } finally {
-        setSalvando(false);
-      }
-    }, 800);
-  }, [aluno, onAnotacaoChange]);
 
   useEffect(() => {
     return () => {
@@ -115,12 +131,24 @@ const AnotacoesModal: React.FC<Props> = ({ aberto, aluno, onClose, onAnotacaoCha
                 setNovaAnotacao(e.target.value);
                 agendarSalvamento(e.target.value);
               }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  if (debounceRef.current) clearTimeout(debounceRef.current);
+                  salvarAnotacao(novaAnotacao);
+                }
+              }}
               rows={2}
-              placeholder="Digite e aguarde para salvar automaticamente..."
+              placeholder="Enter para salvar, Shift+Enter para nova linha..."
               className="flex-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded p-2 text-sm resize-none"
             />
           </div>
           {salvando && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Salvando...</p>}
+          {mensagem && !salvando && (
+            <p className={`text-xs mt-1 ${mensagem === 'Salvo!' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+              {mensagem}
+            </p>
+          )}
         </div>
 
         <div className="overflow-y-auto flex-1 space-y-2">
