@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-27 — Exportação XLSX + Debug Rotas + Fix professor_id → v2.28.6 -->
+<!-- última-sessão: 2026-07-29 — Sidebar swipe + Dashboard Cancelamentos + Alerta Atestado + Acessibilidade → v2.39.1 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -924,7 +924,7 @@ Regras:
 - `backend/package.json` (@types/* em dependencies)
 - `backend/.env.example` (PIN_* vars)
 - `frontend/package.json` (@types/node)
-- `frontend/tsconfig.node.json` (types: [node])
+ - `frontend/tsconfig.node.json` (types: [node])
 
 ### Typecheck
 - Frontend: 0 erros
@@ -933,4 +933,81 @@ Regras:
 ### Testes
 - Frontend: 41/41 passam
 - Backend: 25/25 passam
+
+---
+
+## Sessão: 29/07/2026 — Dashboard Cancelamentos + Sidebar Swipe + Alerta Atestado + Acessibilidade
+
+### O que foi feito
+
+**Dashboard Cancelamentos** (v2.37.0 → v2.37.1)
+- `TabCancelamentos.tsx` reescrito com 4 stat cards (Total, Motivo + Frequente, Nível + Cancelado, Mês Crítico), 3 novos gráficos (Evolução Mensal/linha, Por Nível/barra, Por Turno/barra), filtros Motivo + Nível
+- Grid de ocorrências intacto
+- Backend: `nivel` adicionado ao select de turmas e retorno de `CancelamentoRegistro`
+- Exportação XLSX: colunas Dia, Comp. Dia e Origem removidas; reordenado para Data → Motivo → Horário → Turma → Nível → Professor → Tipo
+
+**Sidebar Swipe** (v2.38.0 → v2.38.2 → v2.39.1)
+- Versão inicial: overlay mobile com `fixed`, swipe left fecha, backdrop fecha ao tap
+- Correção: troca touch handlers inline por `document.body` listeners com `{ passive: true }`
+- Final: remove overlay mobile, swipe horizontal alterna `collapsed` (recolhe/expande como seta)
+
+**Alerta Atestado** (v2.39.0)
+- `DataGrid.tsx`: nome do aluno fica `bg-red-50 text-red-700` com tooltip quando atestado vence em ≤ 60 dias
+
+**Acessibilidade** (v2.38.1 → v2.39.1)
+- ZOOM_MAX reduzido para 150
+- Orientação removida: `resetar()` vai para 100 sempre, range 80-150
+- `flex-wrap` no card de zoom para evitar overflow
+
+### Decisões
+- Dashboard cancelamentos mantém escopo (todos/pessoal/geral) + novos filtros motivo/nível
+- Sidebar final: sem overlay, mesmo `w-14`/`w-56` em mobile e desktop, swipe alterna collapsed
+- Alerta atestado sobrescreve fundo azul de anotação (prioridade maior)
+
+### Arquivos
+- `frontend/src/components/reports/tabs/TabCancelamentos.tsx` (reescrito — +stats, +charts, +filtros)
+- `frontend/src/components/grid/DataGrid.tsx` (+atestadoProximoVencer, +diasRestantes, +bg-red-50 condicional)
+- `frontend/src/components/common/Sidebar.tsx` (reescrito — touch swipe collapsed, sem overlay mobile)
+- `frontend/src/App.tsx` (simplificado — remove mobileOpen, isMobile, backdrop, touch listeners)
+- `frontend/src/hooks/useZoom.ts` (orientação removida, resetar=100)
+- `frontend/src/pages/Configuracoes.tsx` (flex-wrap no card zoom)
+- `backend/src/services/relatoriosService.ts` (+nivel no select turmas + return)
+- `backend/src/services/exportacaoService.ts` (colunas reduzidas, reordenadas, data BR)
+- `backend/src/types/index.ts` (+nivel? em CancelamentoRegistro)
+- `frontend/src/types/index.ts` (+nivel? em CancelamentoRegistro)
+
+### Typecheck
+- Frontend: 0 erros
+- Backend: 0 erros
+
+---
+
+## Sessão: 28/07/2026 — Histórico Aluno + Dark Mode + PWA + Export Cancelamentos + Duplicar Aluno
+
+### O que foi feito
+
+- **Histórico do aluno** (v2.30.0–v2.32.3): modal com nós de progressão, retenção total, professor no nó, datas PT-BR, busca logs por grupo_id + UUID, range() para +1000 registros
+- **Dark Mode** (v2.33.0): ThemeContext completo + dark: classes em 25+ arquivos (inputs, calendário, sidebar, etc.)
+- **PWA** (v2.34.0–v2.34.4): manifest, instalação, cache offline, push unificado, viewport-fit contain
+- **Notificações** (v2.34.1): formatos horário/dias/frequência, solicitação permissão, gerenciamento dispositivos
+- **Export Cancelamentos XLSX** (v2.35.0–v2.35.1): aba em Configurações, filtros simplificados (ano + tipo)
+- **Duplicar Aluno** (v2.36.0): cadastro do mesmo aluno em outra turma
+- **UX Alunos** (v2.37.0): coluna Status removida, sufixo 'anos' removido, ícones nas ações
+- **Refactor**: unifica parseDiasFromLabel/gerarDiasLetivos/formatMesAno/LABEL_ORDER em chamadaUtils
+
+### Arquivos
+- `frontend/src/components/reports/tabs/TabFrequenciaAluno.tsx` (modal histórico)
+- `frontend/src/context/ThemeContext.tsx` (novo)
+- 25+ arquivos com classes dark:
+- `frontend/src/pages/Configuracoes.tsx` (+export cancelamentos XLSX)
+- `backend/src/services/exportacaoService.ts` (+gerarCancelamentosXLSX)
+- `backend/src/controllers/exportacaoController.ts` (+exportarCancelamentos)
+- `backend/src/index.ts` (+POST /api/exportar/cancelamentos)
+- `frontend/src/pages/Alunos.tsx` (duplicar, UX refinements)
+- `frontend/src/components/modals/AlunoModal.tsx` (duplicar)
+- `frontend/src/utils/chamadaUtils.ts` (unificado)
+
+### Typecheck
+- Frontend: 0 erros
+- Backend: 0 erros
 

@@ -1,5 +1,73 @@
 # Changelog - Fiz! App
 
+## [v2.39.1] - 2026-07-29
+### Fix
+- Sidebar: swipe horizontal alterna `collapsed` (recolhe/expande como a seta); overlay mobile removido
+- Acessibilidade: `resetar()` vai para 100 sempre (remove lógica de orientação); range 80-150 mantido
+- `App.tsx`: volta ao estado original sem mobileOpen/isMobile/backdrop
+
+## [v2.39.0] - 2026-07-29
+### Feat
+- Alerta de atestado no grid — nome do aluno fica `bg-red-50 text-red-700` quando atestado vence em ≤ 60 dias, com tooltip "Alerta: atestado vence em N dias"
+- Prioridade: alerta de atestado > anotação azul > normal
+
+## [v2.38.2] - 2026-07-29
+### Fix
+- Swipe sidebar: troca touch handlers de JSX inline para `document.body` listeners via `useEffect` com `{ passive: true }`
+- Aumenta margem da borda para 40px (compensa safe area iOS)
+
+## [v2.38.1] - 2026-07-29
+### Fix
+- `useZoom`: `ZOOM_MAX` 150, default portrait 150 / landscape 90, `resetar()` orientado
+- `Configuracoes.tsx`: `flex-wrap` no container dos botões de zoom para evitar overflow
+
+## [v2.38.0] - 2026-07-29
+### Feat
+- Finger slide na sidebar em mobile: fixed overlay com slide `translate-x`, swipe left fecha, backdrop fecha ao tap
+- `Sidebar.tsx`: mobile mode `fixed top-[57px]`, `z-40`, swipe-to-close
+- `App.tsx`: `mobileOpen` state, `isMobile` detection, touch handlers, backdrop
+
+## [v2.37.1] - 2026-07-29
+### Fix
+- Exportação XLSX de cancelamentos: remove colunas **Dia**, **Comp. Dia** e **Origem**
+- Reordena colunas: Data → Motivo → Horário → Turma → Nível → Professor → Tipo
+- Data no formato brasileiro (dd/mm/aaaa)
+
+## [v2.37.0] - 2026-07-29
+### Feat
+- Dashboard de cancelamentos na aba Cancelamentos dos Relatórios
+- 4 stat cards: Total, Motivo + Frequente, Nível + Cancelado, Mês Crítico
+- 3 novos gráficos: Evolução Mensal (linha), Por Nível (barra), Por Turno (barra)
+- Filtros: Motivo + Nível dropdown + "Limpar filtros"
+- Grid de ocorrências intacto (mesmo sort, mesmas colunas)
+- Backend: `nivel` adicionado ao select de turmas e retorno de `CancelamentoRegistro`
+
+## [v2.36.0] — 2026-07-28
+### Feat
+- Duplicar cadastro de aluno em outra turma
+- UX refinements no grid de Alunos: remove coluna Status, remove sufixo 'anos', ícones nas ações
+- Exportar cancelamentos XLSX (Configurações > Exportar)
+- Suporte PWA completo: manifest, instalação, cache offline, push unificado
+- Modo escuro completo: ThemeContext + dark: classes em 25+ arquivos
+- Histórico do aluno modal com nós de progressão e retenção total
+
+### Fix
+- Reautenticação via PIN quando hash ausente/inválido
+- Notificações: formatos horário/dias/frequência, solicitação permissão, gerenciamento dispositivos
+- Remove restrição de orientação no manifest PWA (portrait)
+- `viewport-fit: contain` em vez de `cover` (evita sobreposição de ícones do sistema)
+- Dark mode: contraste inputs, calendário grade/dots
+- Corrige bloqueio do checkbox 'permitir lançamento retroativo'
+- Datas do período letivo em formato PT-BR (dd/mm/aaaa)
+- Remove duplicação Nível no nó de progressão
+- Mantém turma_label em bold escuro, nível+professor em cinza menor
+- Histórico aluno: busca logs por turma (grupo_id) além de UUID; corrige primeiraData; `range()` para +1000 registros
+
+### Refactor
+- Simplifica filtros de exportação de cancelamentos para apenas ano + tipo
+- Unifica `parseDiasFromLabel`/`gerarDiasLetivos`/`formatMesAno`/`LABEL_ORDER` em `chamadaUtils` (front+back)
+- Adiciona professor no nó de progressão do histórico em fonte menor cinza
+
 ## [v2.29.8] - 2026-07-27
 ### Fix
 - Fonte export: `C` bold, `j` italic, `*` cinza, `p`/`f` preto padrão

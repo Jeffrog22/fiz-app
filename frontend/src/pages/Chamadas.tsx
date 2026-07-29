@@ -8,6 +8,7 @@ import CardAula from '../components/modals/CardAula';
 import CardBO from '../components/modals/CardBO';
 import type { Aluno, Turma, Professor, ChamadaLog, AnotacaoAluno, CalendarioEvento } from '../types';
 import { gerarDiasLetivos, hojeMesAno } from '../utils/chamadaUtils';
+import { formatDateBR } from '../utils/formatters';
 
 type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento' | undefined;
 
@@ -63,6 +64,7 @@ const Chamadas: React.FC = () => {
   const [cardBOAberto, setCardBOAberto] = useState(false);
   const [dateHeaderClickData, setDateHeaderClickData] = useState<string>('');
   const [alunosComAnotacao, setAlunosComAnotacao] = useState<Set<string>>(new Set());
+  const [alunosComAtestadoAnotacao, setAlunosComAtestadoAnotacao] = useState<Set<string>>(new Set());
   const [cardAulaData, setCardAulaData] = useState<Record<string, Record<number, any>>>({});
 
   const [limparConfirm, setLimparConfirm] = useState(false);
@@ -73,6 +75,24 @@ const Chamadas: React.FC = () => {
   const undoStack = useRef<UndoAction[]>([]);
 
   const statusSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const atestadoProximoVencer = useCallback((aluno: Aluno): boolean => {
+    if (!aluno.atestado_medico || !aluno.data_atestado) return false;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const vencimento = new Date(aluno.data_atestado);
+    vencimento.setHours(0, 0, 0, 0);
+    const diff = Math.ceil((vencimento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+    return diff >= 0 && diff <= 60;
+  }, []);
+
+  const diasRestantes = useCallback((dataAtestado: string): number => {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const vencimento = new Date(dataAtestado);
+    vencimento.setHours(0, 0, 0, 0);
+    return Math.ceil((vencimento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+  }, []);
 
   const turmasDoLabelProf = useMemo(() => {
     if (!labelSelecionada || !professorId) return [];
@@ -177,11 +197,32 @@ const Chamadas: React.FC = () => {
     try {
       const res = await api.get(`/anotacoes/lote?ids=${ids.join(',')}`);
       const data: AnotacaoAluno[] = res.data || [];
-      setAlunosComAnotacao(new Set(data.map((a) => a.aluno_id)));
+      const alunosComAnot = new Set(data.map((a) => a.aluno_id));
+      const alunosComAtestado = new Set(
+        data.filter((a) => a.anotacao.startsWith('[Atestado]')).map((a) => a.aluno_id)
+      );
+      setAlunosComAnotacao(alunosComAnot);
+      setAlunosComAtestadoAnotacao(alunosComAtestado);
+
+      for (const aluno of alunosDaTurma) {
+        if (atestadoProximoVencer(aluno) && !alunosComAtestado.has(aluno.id)) {
+          const dias = diasRestantes(aluno.data_atestado!);
+          try {
+            const nova = await api.post('/anotacoes', {
+              aluno_id: aluno.id,
+              anotacao: `[Atestado] ⚠️ Alerta: vence em ${dias} dias (${formatDateBR(aluno.data_atestado!)})`,
+            });
+            alunosComAnot.add(aluno.id);
+            alunosComAtestado.add(aluno.id);
+            setAlunosComAnotacao(new Set(alunosComAnot));
+            setAlunosComAtestadoAnotacao(new Set(alunosComAtestado));
+          } catch { /* silencioso */ }
+        }
+      }
     } catch (err) {
       console.error('Erro ao carregar anotacoes', err);
     }
-  }, [alunosDaTurma]);
+  }, [alunosDaTurma, atestadoProximoVencer, diasRestantes]);
 
   const carregarCardAulaData = useCallback(async () => {
     if (dias.length === 0) return;
