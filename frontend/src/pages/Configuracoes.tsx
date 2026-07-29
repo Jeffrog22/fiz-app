@@ -35,6 +35,9 @@ const [mes, setMes] = useState(new Date().getMonth() + 1);
 const [ano, setAno] = useState(new Date().getFullYear());
 const [tipoSelect, setTipoSelect] = useState('todos');
 
+const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'latest'>('idle');
+const [updateMsg, setUpdateMsg] = useState<string | null>(null);
+
   useEffect(() => {
     api.get('/professores').then((res) => {
       setProfessores(res.data || []);
@@ -130,6 +133,82 @@ const [tipoSelect, setTipoSelect] = useState('todos');
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
+
+  const verificarAtualizacoes = useCallback(async () => {
+    setUpdateStatus('checking');
+    setUpdateMsg('Verificando...');
+    try {
+      if (!('serviceWorker' in navigator)) {
+        setUpdateMsg('Service Worker não suportado neste navegador.');
+        setUpdateStatus('idle');
+        return;
+      }
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (!reg) {
+        setUpdateMsg('Nenhum service worker registrado (modo dev?).');
+        setUpdateStatus('idle');
+        return;
+      }
+      if (reg.waiting) {
+        setUpdateMsg('Nova versão disponível!');
+        setUpdateStatus('available');
+        return;
+      }
+      const timeout = setTimeout(() => {
+        setUpdateMsg((prev) => prev === 'Verificando...' ? 'Você está na versão mais recente.' : prev);
+        setUpdateStatus((prev) => prev === 'checking' ? 'latest' : prev);
+      }, 8000);
+      const onUpdateFound = () => {
+        const newSW = reg.installing;
+        if (!newSW) return;
+        newSW.addEventListener('statechange', function handler() {
+          if (newSW.state === 'installed') {
+            clearTimeout(timeout);
+            if (navigator.serviceWorker.controller) {
+              setUpdateMsg('Nova versão disponível!');
+              setUpdateStatus('available');
+            } else {
+              setUpdateMsg('App instalado. Versão mais recente.');
+              setUpdateStatus('latest');
+            }
+          }
+        });
+      };
+      reg.addEventListener('updatefound', onUpdateFound);
+      await reg.update();
+    } catch {
+      setUpdateMsg('Erro ao verificar atualizações.');
+      setUpdateStatus('idle');
+    }
+  }, []);
+
+  const atualizarAgora = useCallback(async () => {
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg?.waiting) {
+        reg.waiting.postMessage('SKIP_WAITING');
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload();
+        });
+      } else {
+        window.location.reload();
+      }
+    } catch {
+      window.location.reload();
+    }
+  }, []);
+
+  const hardRefresh = useCallback(async () => {
+    try {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    } catch {}
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((r) => r.unregister()));
+    } catch {}
+    window.location.reload();
+  }, []);
 
   const meses = [
     'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
@@ -499,6 +578,45 @@ const [tipoSelect, setTipoSelect] = useState('todos');
             </button>
             <span className="text-sm text-gray-500 dark:text-gray-400 w-12 text-right">{zoom}%</span>
           </div>
+        </div>
+
+        {/* Atualizações */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-black/20 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-3xl">🔄</span>
+            <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Atualizações</h2>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+            Versão atual: <strong>{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'}</strong>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={verificarAtualizacoes}
+              disabled={updateStatus === 'checking'}
+              className="px-3 py-1.5 text-xs bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors disabled:opacity-50"
+            >
+              {updateStatus === 'checking' ? 'Verificando...' : 'Verificar atualizações'}
+            </button>
+            {updateStatus === 'available' && (
+              <button
+                onClick={atualizarAgora}
+                className="px-3 py-1.5 text-xs bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors"
+              >
+                Atualizar agora
+              </button>
+            )}
+            <button
+              onClick={hardRefresh}
+              className="px-3 py-1.5 text-xs bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
+            >
+              Hard Refresh
+            </button>
+          </div>
+          {updateMsg && (
+            <p className={`mt-2 text-sm ${updateMsg.includes('disponível') ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+              {updateMsg}
+            </p>
+          )}
         </div>
       </div>
 
