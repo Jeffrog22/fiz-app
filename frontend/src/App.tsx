@@ -55,20 +55,28 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
     };
   }, [devEnabled, addConsoleLine]);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
+  useEffect(() => {
     if (!isMobile) return;
-    const dx = e.changedTouches[0].clientX - touchStartX.current;
-    const dy = e.changedTouches[0].clientY - touchStartY.current;
-    if (Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 50) {
-      if (dx > 0 && touchStartX.current < 30) setMobileOpen(true);
-      if (dx < 0) setMobileOpen(false);
-    }
-  };
+    const el = document.body;
+    const onStart = (e: TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX;
+      touchStartY.current = e.touches[0].clientY;
+    };
+    const onEnd = (e: TouchEvent) => {
+      const dx = e.changedTouches[0].clientX - touchStartX.current;
+      const dy = e.changedTouches[0].clientY - touchStartY.current;
+      if (Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 50) {
+        if (dx > 0 && touchStartX.current < 40) setMobileOpen(true);
+        if (dx < 0) setMobileOpen(false);
+      }
+    };
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchend', onEnd, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchend', onEnd);
+    };
+  }, [isMobile]);
 
   if (loading) {
     return (
@@ -83,9 +91,7 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col"
-         onTouchStart={handleTouchStart}
-         onTouchEnd={handleTouchEnd}>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
       <TopBar />
       <div className="flex flex-1 relative">
         {isMobile && mobileOpen && (
