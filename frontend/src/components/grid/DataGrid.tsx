@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import type { ChamadaLog, Aluno, Turma, CalendarioEvento } from '../../types';
 import api from '../../utils/api';
 import { formatarNomeMobile } from '../../utils/formatters';
@@ -335,6 +335,8 @@ const DataGrid: React.FC<DataGridProps> = ({
     return Math.ceil((vencimento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
   }, []);
 
+  const nomes = useMemo(() => alunos.map((a) => a.nome), [alunos]);
+
   return (
     <>
       <div className="overflow-x-auto bg-white rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
@@ -412,7 +414,8 @@ const DataGrid: React.FC<DataGridProps> = ({
                         : 'Clique para ver anotações, duplo clique para ir ao aluno'
                     }
                   >
-                    {formatarNomeMobile(aluno.nome)}
+                    <span className="sm:hidden">{formatarNomeMobile(aluno.nome, nomes)}</span>
+                    <span className="hidden sm:inline">{aluno.nome}</span>
                   </td>
                   {dias.map((dia) => {
                     const status = getStatus(aluno.id, dia);

@@ -4,7 +4,7 @@ import SearchInput from '../../SearchInput';
 import YearPicker from '../YearPicker';
 import PeriodPicker from '../PeriodPicker';
 import HistoricoAlunoModal from '../HistoricoAlunoModal';
-import { normalizeSearch } from '../../../utils/formatters';
+import { normalizeSearch, formatarNomeMobile } from '../../../utils/formatters';
 import type { FrequenciaAlunoItem } from '../../../types';
 
 type Modo = 'historico' | 'ano' | 'mes';
@@ -69,6 +69,8 @@ const TabFrequenciaAluno: React.FC = () => {
     return list;
   }, [data, search, filtroStatus]);
 
+  const nomesLista = useMemo(() => data.map((d) => d.nome), [data]);
+
   return (
     <div className="space-y-4">
       {/* mode selector */}
@@ -127,7 +129,10 @@ const TabFrequenciaAluno: React.FC = () => {
                   <div key={d.aluno_id} className="flex items-center justify-between py-1.5 px-2 rounded bg-gray-50">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-gray-400 w-5">{i + 1}.</span>
-                      <span className="text-sm font-medium text-gray-800">{d.nome}</span>
+                      <span className="text-sm font-medium text-gray-800">
+                        <span className="sm:hidden">{formatarNomeMobile(d.nome, nomesLista)}</span>
+                        <span className="hidden sm:inline">{d.nome}</span>
+                      </span>
                       {d.turma_label && <span className="text-xs text-gray-400">({d.turma_label})</span>}
                     </div>
                     <span className="text-sm font-semibold text-green-600">{d.percentual_presenca}%</span>
@@ -144,7 +149,10 @@ const TabFrequenciaAluno: React.FC = () => {
                   <div key={d.aluno_id} className="flex items-center justify-between py-1.5 px-2 rounded bg-gray-50">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-gray-400 w-5">{i + 1}.</span>
-                      <span className="text-sm font-medium text-gray-800">{d.nome}</span>
+                      <span className="text-sm font-medium text-gray-800">
+                        <span className="sm:hidden">{formatarNomeMobile(d.nome, nomesLista)}</span>
+                        <span className="hidden sm:inline">{d.nome}</span>
+                      </span>
                       {d.turma_label && <span className="text-xs text-gray-400">({d.turma_label})</span>}
                     </div>
                     <span className="text-sm font-semibold text-red-600">{d.falta} falta{d.falta !== 1 ? 's' : ''}</span>
@@ -189,7 +197,10 @@ const TabFrequenciaAluno: React.FC = () => {
                 <tbody className="divide-y divide-gray-100">
                   {filtered.map((d) => (
                     <tr key={d.aluno_id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setModalAluno(d)}>
-                      <td className="px-4 py-2 font-medium text-gray-800">{d.nome}</td>
+                      <td className="px-4 py-2 font-medium text-gray-800">
+                        <span className="sm:hidden">{formatarNomeMobile(d.nome, nomesLista)}</span>
+                        <span className="hidden sm:inline">{d.nome}</span>
+                      </td>
                       <td className="px-4 py-2 text-gray-600">{d.turma_label || '-'}</td>
                       <td className="px-4 py-2 text-center">
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded ${

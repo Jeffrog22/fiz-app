@@ -3,7 +3,7 @@ import api from '../utils/api';
 import SearchInput from '../components/SearchInput';
 import RestoreModal from '../components/modals/RestoreModal';
 import type { Exclusao, Turma, Professor } from '../types';
-import { normalizeSearch, formatDateBR } from '../utils/formatters';
+import { normalizeSearch, formatDateBR, formatarNomeMobile } from '../utils/formatters';
 
 interface SortRule {
   column: string;
@@ -194,6 +194,11 @@ const Exclusoes: React.FC = () => {
     return data;
   }, [exclusoes, filtro, sortRules, turmaMap, professorMap]);
 
+  const exclusaoNomes = useMemo(
+    () => exclusoes.map((exc: any) => exc.alunos?.nome || '').filter(Boolean),
+    [exclusoes],
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -247,7 +252,8 @@ const Exclusoes: React.FC = () => {
                 return (
                   <tr key={exc.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">
-                      {exc.alunos?.nome || '---'}
+                      <span className="sm:hidden">{formatarNomeMobile(exc.alunos?.nome || '---', exclusaoNomes)}</span>
+                      <span className="hidden sm:inline">{exc.alunos?.nome || '---'}</span>
                     </td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
                       {turma?.label || exc.alunos?.turma_id || '---'}

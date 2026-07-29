@@ -1,23 +1,44 @@
 import type { Turma } from '../types';
 
-export function formatarNomeMobile(nomeCompleto: string): string {
-  const partes = nomeCompleto.trim().split(/\s+/);
-  if (partes.length <= 2) return nomeCompleto.trim();
-
+function abreviacaoBase(nome: string): string {
+  const partes = nome.trim().split(/\s+/);
+  if (partes.length <= 2) return nome.trim();
   const primeiro = partes[0];
   const ultimo = partes[partes.length - 1];
   const penultimo = partes[partes.length - 2];
   const preposicoes = ['de', 'da', 'do', 'das', 'dos'];
-
   if (preposicoes.includes(penultimo.toLowerCase())) {
-    if (partes.length > 4) {
-      const segundo = partes[1];
-      return `${primeiro} ${segundo} ${penultimo} ${ultimo}`;
-    }
+    if (partes.length > 4) return `${primeiro} ${partes[1]} ${penultimo} ${ultimo}`;
     return `${primeiro} ${penultimo} ${ultimo}`;
   }
-
   return `${primeiro} ${ultimo}`;
+}
+
+export function formatarNomeMobile(
+  nomeCompleto: string,
+  nomesDaLista?: string[],
+): string {
+  const partes = nomeCompleto.trim().split(/\s+/);
+  if (partes.length <= 2) return nomeCompleto.trim();
+
+  const base = abreviacaoBase(nomeCompleto);
+  if (!nomesDaLista) return base;
+
+  const colisoes = nomesDaLista.filter(
+    (n) => n !== nomeCompleto && abreviacaoBase(n) === base,
+  );
+  if (colisoes.length === 0) return base;
+
+  for (let i = 1; i < partes.length - 1; i++) {
+    const candidato = `${partes[0]} ${partes.slice(1, i + 1).join(' ')} ${partes[partes.length - 1]}`;
+    const aindaColide = colisoes.some((n) => {
+      const p = n.trim().split(/\s+/);
+      return `${p[0]} ${p.slice(1, i + 1).join(' ')} ${p[p.length - 1]}` === candidato;
+    });
+    if (!aindaColide) return candidato;
+  }
+
+  return nomeCompleto.trim();
 }
 
 export function calcIdade(dataNascimento?: string): number | null {

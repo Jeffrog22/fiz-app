@@ -4,7 +4,7 @@ import api from '../utils/api';
 import AlunoModal from '../components/modals/AlunoModal';
 import SearchInput from '../components/SearchInput';
 import type { Aluno, Professor, SavePayload } from '../types';
-import { calcIdade, calcCategoria, normalizeSearch, sortTurmas } from '../utils/formatters';
+import { calcIdade, calcCategoria, normalizeSearch, sortTurmas, formatarNomeMobile } from '../utils/formatters';
 
 interface SortRule {
   column: string;
@@ -145,6 +145,8 @@ const Alunos: React.FC = () => {
 
     return data;
   }, [alunos, filtro, columnFilters, sortRules, professorMap, modoAlocacao]);
+
+  const alunosNomes = useMemo(() => alunos.map((a: any) => a.nome), [alunos]);
 
   const handleSave = async ({ data, acao }: SavePayload) => {
     try {
@@ -548,7 +550,8 @@ const Alunos: React.FC = () => {
                       title="clique para editar"
                       onClick={() => { setEditando(a); setModalOpen(true); }}
                     >
-                      {a.nome}
+                      <span className="sm:hidden">{formatarNomeMobile(a.nome, alunosNomes)}</span>
+                      <span className="hidden sm:inline">{a.nome}</span>
                     </td>
                     <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{a.turma?.nivel || a.nivel || '-'}</td>
                     <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{a.turma?.label || '-'}</td>
