@@ -1,8 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
 
 const ZOOM_MIN = 80;
-const ZOOM_MAX = 200;
+const ZOOM_MAX = 150;
 const ZOOM_STEP = 10;
+
+function getOrientationDefault(): number {
+  return window.matchMedia('(orientation: portrait)').matches ? 150 : 90;
+}
 
 function getStoredZoom(): number {
   try {
@@ -12,11 +16,19 @@ function getStoredZoom(): number {
       if (!isNaN(val) && val >= ZOOM_MIN && val <= ZOOM_MAX) return val;
     }
   } catch { /* ignore */ }
-  return 100;
+  return getOrientationDefault();
 }
 
 export function useZoom() {
   const [zoom, setZoomState] = useState(getStoredZoom);
+  const [orientationDefault, setOrientationDefault] = useState(getOrientationDefault);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(orientation: portrait)');
+    const handler = () => setOrientationDefault(getOrientationDefault());
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   useEffect(() => {
     document.documentElement.style.fontSize = `${zoom}%`;
@@ -32,10 +44,10 @@ export function useZoom() {
   }, []);
 
   const resetar = useCallback(() => {
-    setZoomState(100);
-  }, []);
+    setZoomState(orientationDefault);
+  }, [orientationDefault]);
 
-  return { zoom, aumentar, diminuir, resetar, ZOOM_MIN, ZOOM_MAX };
+  return { zoom, aumentar, diminuir, resetar, ZOOM_MIN, ZOOM_MAX, orientationDefault };
 }
 
 export default useZoom;

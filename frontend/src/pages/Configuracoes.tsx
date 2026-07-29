@@ -476,7 +476,7 @@ const [tipoSelect, setTipoSelect] = useState('todos');
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             Ajuste o zoom da interface para melhor visualização.
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center flex-wrap gap-2">
             <button
               onClick={diminuir}
               disabled={zoom <= ZOOM_MIN}
@@ -497,7 +497,7 @@ const [tipoSelect, setTipoSelect] = useState('todos');
             >
               A+
             </button>
-            <span className="text-sm text-gray-500 dark:text-gray-400 ml-1 w-10 text-right">{zoom}%</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400 w-12 text-right">{zoom}%</span>
           </div>
         </div>
       </div>
