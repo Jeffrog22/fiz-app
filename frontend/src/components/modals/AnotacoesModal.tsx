@@ -21,10 +21,14 @@ const AnotacoesModal: React.FC<Props> = ({ aberto, aluno, onClose, onAnotacaoCha
     if (aberto && aluno) {
       setNovaAnotacao('');
       setCarregando(true);
-      api.get(`/anotacoes/aluno/${aluno.id}`)
-        .then((res) => setAnotacoes(res.data || []))
-        .catch(() => setAnotacoes([]))
-        .finally(() => setCarregando(false));
+      api.post('/anotacoes/verificar-atestados').catch((e: any) =>
+        console.error('Erro ao verificar atestados', e)
+      ).finally(() => {
+        api.get(`/anotacoes/aluno/${aluno.id}`)
+          .then((res) => setAnotacoes(res.data || []))
+          .catch(() => setAnotacoes([]))
+          .finally(() => setCarregando(false));
+      });
     }
   }, [aberto, aluno]);
 

@@ -74,14 +74,13 @@ const Alunos: React.FC = () => {
       setErro(err?.response?.data?.error || err.message || 'Erro ao carregar alunos');
     } finally {
       setCarregando(false);
+      api.post('/anotacoes/verificar-atestados').catch((e: any) =>
+        console.error('Erro ao verificar atestados', e)
+      );
     }
   }, []);
 
   useEffect(() => { carregar(); }, [carregar]);
-
-  useEffect(() => {
-    api.post('/anotacoes/verificar-atestados').catch(() => {});
-  }, []);
 
   const getFilterValue = (a: any, col: string): string => {
     switch (col) {

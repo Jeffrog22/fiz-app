@@ -21,7 +21,11 @@ export async function verificarAtestados(tenantId: string): Promise<{ criadas: n
     .lte('data_atestado', limiteStr);
 
   if (errAlunos) throw new AppError('Erro ao buscar alunos com atestado', 500);
-  if (!alunos || alunos.length === 0) return { criadas: 0 };
+  if (!alunos || alunos.length === 0) {
+    console.log('[atestadoService] Nenhum aluno com atestado no prazo');
+    return { criadas: 0 };
+  }
+  console.log('[atestadoService]', alunos.length, 'aluno(s) com atestado no prazo:', alunos.map((a) => a.id));
 
   const alunoIds = alunos.map((a) => a.id);
 
