@@ -308,6 +308,24 @@ const DataGrid: React.FC<DataGridProps> = ({
   const capacity = turma?.capacidade || alunos.length;
   const lotacao = alunos.length;
 
+  const atestadoProximoVencer = useCallback((aluno: Aluno): boolean => {
+    if (!aluno.atestado_medico || !aluno.data_atestado) return false;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const vencimento = new Date(aluno.data_atestado);
+    vencimento.setHours(0, 0, 0, 0);
+    const diff = Math.ceil((vencimento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+    return diff >= 0 && diff <= 60;
+  }, []);
+
+  const diasRestantes = useCallback((dataAtestado: string): number => {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const vencimento = new Date(dataAtestado);
+    vencimento.setHours(0, 0, 0, 0);
+    return Math.ceil((vencimento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+  }, []);
+
   return (
     <>
       <div className="overflow-x-auto bg-white rounded-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
@@ -365,12 +383,17 @@ const DataGrid: React.FC<DataGridProps> = ({
                 <tr key={aluno.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                   <td
                     className={`sticky left-0 bg-white px-4 py-2 font-medium whitespace-nowrap cursor-pointer z-10 dark:bg-gray-800 ${
-                      temAnotacao(aluno.id) || (alunosComAnotacao?.has(aluno.id))
+                      atestadoProximoVencer(aluno)
+                        ? 'text-red-700 bg-red-50 dark:text-red-400 dark:bg-red-900/30'
+                        : temAnotacao(aluno.id) || (alunosComAnotacao?.has(aluno.id))
                         ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30'
                         : 'text-gray-800 dark:text-gray-100'
                     }`}
                     onClick={() => handleNomeClickTimer(aluno)}
-                    title="Clique para ver anotações, duplo clique para ir ao aluno"
+                    title={atestadoProximoVencer(aluno)
+                      ? `Alerta: atestado vence em ${diasRestantes(aluno.data_atestado!)} dias`
+                      : 'Clique para ver anotações, duplo clique para ir ao aluno'
+                    }
                   >
                     {formatarNomeMobile(aluno.nome)}
                   </td>
