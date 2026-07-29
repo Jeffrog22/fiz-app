@@ -312,15 +312,12 @@ export async function gerarCancelamentosXLSX(
 
   const columns = [
     { header: 'Data', width: 14 },
-    { header: 'Dia', width: 10 },
-    { header: 'Turma', width: 14 },
-    { header: 'Horário', width: 10 },
-    { header: 'Professor', width: 20 },
-    { header: 'Nível', width: 16 },
-    { header: 'Tipo', width: 12 },
     { header: 'Motivo', width: 30 },
-    { header: 'Comp. Dia', width: 12 },
-    { header: 'Origem', width: 14 },
+    { header: 'Horário', width: 10 },
+    { header: 'Turma', width: 14 },
+    { header: 'Nível', width: 16 },
+    { header: 'Professor', width: 20 },
+    { header: 'Tipo', width: 12 },
   ];
   sheet.columns = columns.map((c) => ({ header: c.header, width: c.width }));
 
@@ -332,11 +329,6 @@ export async function gerarCancelamentosXLSX(
     cell.style = headerStyle;
   });
 
-  const DIAS_NOME: Record<number, string> = {
-    0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta',
-    4: 'Quinta', 5: 'Sexta', 6: 'Sábado',
-  };
-
   logs.forEach((log: any, idx: number) => {
     const rowNum = 2 + idx;
     const row = sheet.getRow(rowNum);
@@ -344,29 +336,23 @@ export async function gerarCancelamentosXLSX(
 
     const turma = turmaMap.get(log.grupo_id);
     const profNome = turma ? profMap.get(turma.professor_id) || '---' : '---';
-    const dataObj = new Date(log.data + 'T12:00:00');
-    const diaSemana = DIAS_NOME[dataObj.getDay()] || '---';
+    const [y, m, d] = log.data.split('-');
+    const dataPtBr = `${d}/${m}/${y}`;
 
-    sheet.getCell(`A${rowNum}`).value = log.data;
+    sheet.getCell(`A${rowNum}`).value = dataPtBr;
     sheet.getCell(`A${rowNum}`).style = dataStyle;
-    sheet.getCell(`B${rowNum}`).value = diaSemana;
+    sheet.getCell(`B${rowNum}`).value = log.motivo || log.tipo_ocorrencia || '---';
     sheet.getCell(`B${rowNum}`).style = dataStyle;
-    sheet.getCell(`C${rowNum}`).value = turma?.label || log.grupo_id || '---';
+    sheet.getCell(`C${rowNum}`).value = turma?.horario?.slice(0, 5) || '---';
     sheet.getCell(`C${rowNum}`).style = dataStyle;
-    sheet.getCell(`D${rowNum}`).value = turma?.horario?.slice(0, 5) || '---';
+    sheet.getCell(`D${rowNum}`).value = turma?.label || log.grupo_id || '---';
     sheet.getCell(`D${rowNum}`).style = dataStyle;
-    sheet.getCell(`E${rowNum}`).value = profNome;
+    sheet.getCell(`E${rowNum}`).value = turma?.nivel || '---';
     sheet.getCell(`E${rowNum}`).style = dataStyle;
-    sheet.getCell(`F${rowNum}`).value = turma?.nivel || '---';
+    sheet.getCell(`F${rowNum}`).value = profNome;
     sheet.getCell(`F${rowNum}`).style = dataStyle;
     sheet.getCell(`G${rowNum}`).value = log.tipo_select === 'pessoal' ? 'Pessoal' : log.tipo_select === 'geral' ? 'Geral' : '---';
     sheet.getCell(`G${rowNum}`).style = dataStyle;
-    sheet.getCell(`H${rowNum}`).value = log.motivo || log.tipo_ocorrencia || '---';
-    sheet.getCell(`H${rowNum}`).style = dataStyle;
-    sheet.getCell(`I${rowNum}`).value = log.compromete_dia ? 'Sim' : 'Não';
-    sheet.getCell(`I${rowNum}`).style = dataStyle;
-    sheet.getCell(`J${rowNum}`).value = log.origem || 'manual';
-    sheet.getCell(`J${rowNum}`).style = dataStyle;
   });
 
   sheet.pageSetup = {
