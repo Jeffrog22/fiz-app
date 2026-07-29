@@ -21,14 +21,10 @@ const AnotacoesModal: React.FC<Props> = ({ aberto, aluno, onClose, onAnotacaoCha
     if (aberto && aluno) {
       setNovaAnotacao('');
       setCarregando(true);
-      api.post('/anotacoes/verificar-atestados').catch((e: any) =>
-        console.error('Erro ao verificar atestados', e)
-      ).finally(() => {
-        api.get(`/anotacoes/aluno/${aluno.id}`)
-          .then((res) => setAnotacoes(res.data || []))
-          .catch(() => setAnotacoes([]))
-          .finally(() => setCarregando(false));
-      });
+      api.get(`/anotacoes/aluno/${aluno.id}`)
+        .then((res) => setAnotacoes(res.data || []))
+        .catch(() => setAnotacoes([]))
+        .finally(() => setCarregando(false));
     }
   }, [aberto, aluno]);
 
@@ -78,7 +74,17 @@ const AnotacoesModal: React.FC<Props> = ({ aberto, aluno, onClose, onAnotacaoCha
     }
   };
 
+  const diasRestantesAtestado = useCallback((data: string): number | null => {
+    if (!data) return null;
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    const venc = new Date(data); venc.setHours(0, 0, 0, 0);
+    return Math.ceil((venc.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+  }, []);
+
   if (!aberto || !aluno) return null;
+
+  const atestadoDiff = aluno.atestado_medico && aluno.data_atestado ? diasRestantesAtestado(aluno.data_atestado) : null;
+  const alertaAtestado = atestadoDiff !== null && atestadoDiff <= 60;
 
   return (
     <div className="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-center justify-center z-50"
@@ -91,6 +97,14 @@ const AnotacoesModal: React.FC<Props> = ({ aberto, aluno, onClose, onAnotacaoCha
           </h3>
           <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 text-xl">&times;</button>
         </div>
+
+        {alertaAtestado && (
+          <div className="flex-shrink-0 mb-3 p-3 rounded-lg border text-sm bg-red-50 border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400">
+            {atestadoDiff! >= 0
+              ? `Alerta: atestado vence em ${atestadoDiff} dias (${new Date(aluno.data_atestado!).toLocaleDateString('pt-BR')})`
+              : `Atestado vencido há ${Math.abs(atestadoDiff!)} dias (${new Date(aluno.data_atestado!).toLocaleDateString('pt-BR')})`}
+          </div>
+        )}
 
         <div className="flex-shrink-0 mb-4">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nova anotação</label>

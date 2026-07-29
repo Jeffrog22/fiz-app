@@ -191,12 +191,6 @@ const Chamadas: React.FC = () => {
   }, [eventos, dias, carregarLogs]);
 
   const carregarAnotacoes = useCallback(async () => {
-    try {
-      await api.post('/anotacoes/verificar-atestados');
-    } catch (e) {
-      console.error('Erro ao verificar atestados', e);
-    }
-
     const ids = alunosDaTurma.map((a) => a.id);
     if (ids.length === 0) { setAlunosComAnotacao(new Set()); return; }
     try {
