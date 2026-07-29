@@ -79,6 +79,10 @@ const Alunos: React.FC = () => {
 
   useEffect(() => { carregar(); }, [carregar]);
 
+  useEffect(() => {
+    api.post('/anotacoes/verificar-atestados').catch(() => {});
+  }, []);
+
   const getFilterValue = (a: any, col: string): string => {
     switch (col) {
       case 'nivel': return a.turma?.nivel || a.nivel || '-';

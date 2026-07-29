@@ -8,7 +8,6 @@ import CardAula from '../components/modals/CardAula';
 import CardBO from '../components/modals/CardBO';
 import type { Aluno, Turma, Professor, ChamadaLog, AnotacaoAluno, CalendarioEvento } from '../types';
 import { gerarDiasLetivos, hojeMesAno } from '../utils/chamadaUtils';
-import { formatDateBR } from '../utils/formatters';
 
 type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento' | undefined;
 
@@ -192,6 +191,10 @@ const Chamadas: React.FC = () => {
   }, [eventos, dias, carregarLogs]);
 
   const carregarAnotacoes = useCallback(async () => {
+    try {
+      await api.post('/anotacoes/verificar-atestados');
+    } catch { /* silencioso */ }
+
     const ids = alunosDaTurma.map((a) => a.id);
     if (ids.length === 0) { setAlunosComAnotacao(new Set()); return; }
     try {
@@ -203,26 +206,10 @@ const Chamadas: React.FC = () => {
       );
       setAlunosComAnotacao(alunosComAnot);
       setAlunosComAtestadoAnotacao(alunosComAtestado);
-
-      for (const aluno of alunosDaTurma) {
-        if (atestadoProximoVencer(aluno) && !alunosComAtestado.has(aluno.id)) {
-          const dias = diasRestantes(aluno.data_atestado!);
-          try {
-            const nova = await api.post('/anotacoes', {
-              aluno_id: aluno.id,
-              anotacao: `[Atestado] ⚠️ Alerta: vence em ${dias} dias (${formatDateBR(aluno.data_atestado!)})`,
-            });
-            alunosComAnot.add(aluno.id);
-            alunosComAtestado.add(aluno.id);
-            setAlunosComAnotacao(new Set(alunosComAnot));
-            setAlunosComAtestadoAnotacao(new Set(alunosComAtestado));
-          } catch { /* silencioso */ }
-        }
-      }
     } catch (err) {
       console.error('Erro ao carregar anotacoes', err);
     }
-  }, [alunosDaTurma, atestadoProximoVencer, diasRestantes]);
+  }, [alunosDaTurma]);
 
   const carregarCardAulaData = useCallback(async () => {
     if (dias.length === 0) return;
