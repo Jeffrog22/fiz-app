@@ -64,6 +64,7 @@ interface DataGridProps {
   onUpdateAnotacao: (alunoId: string, data: string, anotacao: string) => void;
   onDateHeaderClick: (data: string) => void;
   alunosComAnotacao?: Set<string>;
+  alunosComAtestadoAnotacao?: Set<string>;
   onAnotacaoChange?: (alunoId: string) => void;
   onSaveJustificativa?: (alunoId: string, data: string, motivo: string) => void;
   onNomeDoubleClick?: (aluno: Aluno) => void;
@@ -84,6 +85,7 @@ const DataGrid: React.FC<DataGridProps> = ({
   alunosComAnotacao,
   onAnotacaoChange,
   onSaveJustificativa,
+  alunosComAtestadoAnotacao,
   onNomeDoubleClick,
 }) => {
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -191,12 +193,15 @@ const DataGrid: React.FC<DataGridProps> = ({
   const getTooltipText = useCallback(
     (alunoId: string, data: string): string | undefined => {
       const status = getStatus(alunoId, data);
-      if (!status) return undefined;
+      const motivo = getAnotacao(alunoId, data);
+      if (!status && !motivo) return undefined;
 
       const dataEventos = eventosPorData(data);
       if (dataEventos.length > 0) {
         const ev = dataEventos[0];
-        return `${ev.tipo}${ev.descricao ? `: ${ev.descricao}` : ''}`;
+        let text = `${ev.tipo}${ev.descricao ? `: ${ev.descricao}` : ''}`;
+        if (motivo) text += ` — ${motivo}`;
+        return text;
       }
 
       const logEntry = logs[alunoId]?.[data]?.[indiceAtual]
@@ -211,12 +216,12 @@ const DataGrid: React.FC<DataGridProps> = ({
         const motivoFinal = logEntry?.motivo || turmaLog?.motivo;
         const tipoSelect = logEntry?.tipo_select || turmaLog?.tipo_select;
         if (ocorrencia) partes.push(`Ocorrência: ${ocorrencia}`);
-        if (motivoFinal) partes.push(`Motivo: ${motivoFinal}`);
+        if (motivoFinal && motivoFinal !== motivo) partes.push(`Motivo: ${motivoFinal}`);
         if (tipoSelect) partes.push(tipoSelect === 'geral' ? 'Geral' : 'Pessoal');
       } else if (status === 'justificado') {
         partes.push('Justificado');
         const motivoFinal = logEntry?.motivo || turmaLog?.motivo;
-        if (motivoFinal) partes.push(`Motivo: ${motivoFinal}`);
+        if (motivoFinal && motivoFinal !== motivo) partes.push(`Motivo: ${motivoFinal}`);
       } else if (status === 'presente' || status === 'falta') {
         partes.push(status === 'presente' ? 'Presente' : 'Falta');
         const clima = cardAulaData?.[data]?.[indiceAtual];
@@ -227,9 +232,13 @@ const DataGrid: React.FC<DataGridProps> = ({
         if (logEntry?.origem === 'extrapolado') partes.push('(extrapolado)');
       }
 
-      return partes.length > 0 ? partes.join(' — ') : status;
+      if (motivo && status !== 'cancelado' && status !== 'justificado') {
+        partes.push(`Anotação: ${motivo}`);
+      }
+
+      return partes.length > 0 ? partes.join(' — ') : (motivo || status || undefined);
     },
-    [getStatus, eventosPorData, logs, turmaGrupoId, indiceAtual, cardAulaData]
+    [getStatus, getAnotacao, eventosPorData, logs, turmaGrupoId, indiceAtual, cardAulaData]
   );
 
   const contarFaltasMes = useCallback((alunoId: string): number => {
@@ -383,16 +392,24 @@ const DataGrid: React.FC<DataGridProps> = ({
                 <tr key={aluno.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                   <td
                     className={`sticky left-0 bg-white px-4 py-2 font-medium whitespace-nowrap cursor-pointer z-10 dark:bg-gray-800 ${
-                      atestadoProximoVencer(aluno)
+                      alunosComAtestadoAnotacao?.has(aluno.id) || atestadoProximoVencer(aluno)
                         ? 'text-red-700 bg-red-50 dark:text-red-400 dark:bg-red-900/30'
                         : temAnotacao(aluno.id) || (alunosComAnotacao?.has(aluno.id))
                         ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30'
                         : 'text-gray-800 dark:text-gray-100'
                     }`}
                     onClick={() => handleNomeClickTimer(aluno)}
-                    title={atestadoProximoVencer(aluno)
-                      ? `Alerta: atestado vence em ${diasRestantes(aluno.data_atestado!)} dias`
-                      : 'Clique para ver anotações, duplo clique para ir ao aluno'
+                    title={
+                      alunosComAtestadoAnotacao?.has(aluno.id) || atestadoProximoVencer(aluno)
+                        ? aluno.data_atestado
+                          ? (() => {
+                              const d = diasRestantes(aluno.data_atestado!);
+                              return d >= 0
+                                ? `Alerta: atestado vence em ${d} dias`
+                                : `Atestado vencido há ${Math.abs(d)} dias`;
+                            })()
+                          : 'Alerta: atestado próximo ao vencimento'
+                        : 'Clique para ver anotações, duplo clique para ir ao aluno'
                     }
                   >
                     {formatarNomeMobile(aluno.nome)}

@@ -677,6 +677,7 @@ const Chamadas: React.FC = () => {
           onUpdateAnotacao={handleUpdateAnotacao}
           onDateHeaderClick={handleDateHeaderClick}
           alunosComAnotacao={alunosComAnotacao}
+          alunosComAtestadoAnotacao={alunosComAtestadoAnotacao}
           onAnotacaoChange={handleAnotacaoChange}
           onSaveJustificativa={handleSaveJustificativa}
           onNomeDoubleClick={handleNomeDoubleClick}
