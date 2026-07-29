@@ -3,10 +3,10 @@ import api from '../../../utils/api';
 import CardStat from '../CardStat';
 import YearPicker from '../YearPicker';
 import type { CancelamentoData } from '../../../types';
-import { PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { formatDateBR } from '../../../utils/formatters';
 
-const CORES = ['#ef4444', '#f59e0b', '#3b82f6', '#94a3b8'];
+const CORES = ['#ef4444', '#f59e0b', '#3b82f6', '#94a3b8', '#22c55e', '#a855f7'];
 const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
 interface SortRule {
@@ -21,6 +21,8 @@ const TabCancelamentos: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [sortRules, setSortRules] = useState<SortRule[]>([]);
   const [escopoFiltro, setEscopoFiltro] = useState<'todos' | 'pessoal' | 'geral'>('todos');
+  const [motivoFilter, setMotivoFilter] = useState('');
+  const [nivelFilter, setNivelFilter] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -66,19 +68,91 @@ const TabCancelamentos: React.FC = () => {
     </button>
   );
 
-  const hasData = !!data && data.total > 0;
-  const pieData = hasData ? data.porMotivo.map((d) => ({ name: d.motivo.charAt(0).toUpperCase() + d.motivo.slice(1), value: d.total })) : [];
-  const barData = hasData ? data.porMes.map((d) => ({ mes: MESES[d.mes - 1] || String(d.mes), Cancelamentos: d.total })) : [];
+  const uniqueMotivos = useMemo(() => {
+    if (!data?.registros) return [];
+    return [...new Set(data.registros.map((r) => r.motivo))].sort();
+  }, [data]);
 
-  const sorted = useMemo(() => {
+  const uniqueNiveis = useMemo(() => {
+    if (!data?.registros) return [];
+    const niveis = new Set(data.registros.map((r) => r.nivel).filter(Boolean));
+    return [...niveis].sort() as string[];
+  }, [data]);
+
+  const filteredRegistros = useMemo(() => {
     if (!data?.registros) return [];
     let list = data.registros;
-    if (escopoFiltro === 'pessoal') {
-      list = list.filter((r) => r.tipo_select === 'pessoal');
-    } else if (escopoFiltro === 'geral') {
-      list = list.filter((r) => r.tipo_select !== 'pessoal');
-    }
-    list = [...list];
+    if (motivoFilter) list = list.filter((r) => r.motivo === motivoFilter);
+    if (nivelFilter) list = list.filter((r) => r.nivel === nivelFilter);
+    if (escopoFiltro === 'pessoal') list = list.filter((r) => r.tipo_select === 'pessoal');
+    else if (escopoFiltro === 'geral') list = list.filter((r) => r.tipo_select !== 'pessoal');
+    return list;
+  }, [data, motivoFilter, nivelFilter, escopoFiltro]);
+
+  const topMotivo = useMemo(() => {
+    if (!filteredRegistros.length) return '-';
+    const counts = new Map<string, number>();
+    filteredRegistros.forEach((r) => counts.set(r.motivo, (counts.get(r.motivo) || 0) + 1));
+    return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  }, [filteredRegistros]);
+
+  const topNivel = useMemo(() => {
+    const comNivel = filteredRegistros.filter((r) => r.nivel);
+    if (!comNivel.length) return '-';
+    const counts = new Map<string, number>();
+    comNivel.forEach((r) => counts.set(r.nivel!, (counts.get(r.nivel!) || 0) + 1));
+    return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  }, [filteredRegistros]);
+
+  const topMes = useMemo(() => {
+    if (!filteredRegistros.length) return '-';
+    const counts = new Map<number, number>();
+    filteredRegistros.forEach((r) => {
+      const m = new Date(r.data).getMonth() + 1;
+      counts.set(m, (counts.get(m) || 0) + 1);
+    });
+    const m = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+    return MESES[m - 1] || '-';
+  }, [filteredRegistros]);
+
+  const chartPorMotivo = useMemo(() => {
+    const counts = new Map<string, number>();
+    filteredRegistros.forEach((r) => counts.set(r.motivo, (counts.get(r.motivo) || 0) + 1));
+    return [...counts.entries()].map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value }));
+  }, [filteredRegistros]);
+
+  const chartEvolucao = useMemo(() => {
+    const arr = new Array(12).fill(0);
+    filteredRegistros.forEach((r) => { const m = new Date(r.data).getMonth(); arr[m]++; });
+    return arr.map((v, i) => ({ mes: MESES[i], Cancelamentos: v }));
+  }, [filteredRegistros]);
+
+  const chartPorNivel = useMemo(() => {
+    const counts = new Map<string, number>();
+    filteredRegistros.forEach((r) => {
+      const n = r.nivel || 'Sem nível';
+      counts.set(n, (counts.get(n) || 0) + 1);
+    });
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, value]) => ({ name, value }));
+  }, [filteredRegistros]);
+
+  const chartPorTurno = useMemo(() => {
+    let manha = 0, tarde = 0;
+    filteredRegistros.forEach((r) => {
+      const h = parseInt(r.horario || '0');
+      if (h < 12) manha++;
+      else tarde++;
+    });
+    return [
+      { name: 'Manhã (até 12h)', value: manha },
+      { name: 'Tarde (pós 12h)', value: tarde },
+    ];
+  }, [filteredRegistros]);
+
+  const sorted = useMemo(() => {
+    const list = [...filteredRegistros];
     for (let i = sortRules.length - 1; i >= 0; i--) {
       const { column, dir } = sortRules[i];
       list.sort((a, b) => {
@@ -98,13 +172,48 @@ const TabCancelamentos: React.FC = () => {
       });
     }
     return list;
-  }, [data, sortRules, escopoFiltro]);
+  }, [filteredRegistros, sortRules]);
+
+  const hasData = !!data && data.total > 0;
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-500">Ano:</span>
-        <YearPicker ano={ano} onChange={setAno} />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">Ano:</span>
+          <YearPicker ano={ano} onChange={setAno} />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">Motivo:</span>
+          <select
+            value={motivoFilter}
+            onChange={(e) => setMotivoFilter(e.target.value)}
+            className="text-sm px-3 py-1.5 border border-gray-300 rounded bg-white"
+          >
+            <option value="">Todos</option>
+            {uniqueMotivos.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">Nível:</span>
+          <select
+            value={nivelFilter}
+            onChange={(e) => setNivelFilter(e.target.value)}
+            className="text-sm px-3 py-1.5 border border-gray-300 rounded bg-white"
+          >
+            <option value="">Todos</option>
+            {uniqueNiveis.map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </div>
+        {(motivoFilter || nivelFilter) && (
+          <button
+            type="button"
+            onClick={() => { setMotivoFilter(''); setNivelFilter(''); }}
+            className="text-xs text-red-600 hover:text-red-800"
+          >
+            Limpar filtros
+          </button>
+        )}
       </div>
       {loading ? (
         <p className="text-sm text-gray-500">Carregando...</p>
@@ -112,32 +221,54 @@ const TabCancelamentos: React.FC = () => {
         <p className="text-sm text-gray-400">Nenhum cancelamento encontrado.</p>
       ) : (
         <>
-          <CardStat titulo="Total de Cancelamentos" valor={data!.total} cor="text-orange-600" icon="🚫" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <CardStat titulo="Total de Cancelamentos" valor={filteredRegistros.length} cor="text-orange-600" icon="🚫" />
+            <CardStat titulo="Motivo + Frequente" valor={topMotivo} cor="text-blue-600" icon="📌" />
+            <CardStat titulo="Nível + Cancelado" valor={topNivel} cor="text-purple-600" icon="📊" />
+            <CardStat titulo="Mês Crítico" valor={topMes} cor="text-red-600" icon="📅" />
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white rounded-lg border border-gray-200 p-4">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Por Motivo</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" outerRadius={80} dataKey="value"
+                  <Pie data={chartPorMotivo} cx="50%" cy="50%" outerRadius={80} dataKey="value"
                     label={({ name, percent }: { name?: string; percent?: number }) => `${name || ''} ${((percent || 0) * 100).toFixed(0)}%`}
                   >
-                    {pieData.map((_, idx) => (<Cell key={idx} fill={CORES[idx % CORES.length]} />))}
+                    {chartPorMotivo.map((_, idx) => (<Cell key={idx} fill={CORES[idx % CORES.length]} />))}
                   </Pie>
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
             </div>
             <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Por Mês</h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Evolução Mensal</h3>
               <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={barData}>
+                <LineChart data={chartEvolucao}>
                   <XAxis dataKey="mes" /><YAxis /><Tooltip />
-                  <Bar dataKey="Cancelamentos" fill="#f97316" radius={[4, 4, 0, 0]} />
+                  <Line type="monotone" dataKey="Cancelamentos" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Por Nível</h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={chartPorNivel} layout="vertical">
+                  <XAxis type="number" /><YAxis type="category" dataKey="name" width={80} /><Tooltip />
+                  <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Por Turno</h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={chartPorTurno}>
+                  <XAxis dataKey="name" /><YAxis /><Tooltip />
+                  <Bar dataKey="value" fill="#f59e0b" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
-
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden mt-6">
             <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between gap-2">
               <h3 className="text-sm font-semibold text-gray-700">Ocorrências</h3>

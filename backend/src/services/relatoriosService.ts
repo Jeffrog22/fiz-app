@@ -315,7 +315,7 @@ export async function cancelamentos(
   if (error) throw new AppError('Erro ao buscar cancelamentos', 500);
 
   const [turmasRes, profsRes] = await Promise.all([
-    supabase.from('turmas').select('grupo_id, label, horario, professor_id').eq('tenant_id', tenantId),
+    supabase.from('turmas').select('grupo_id, label, horario, professor_id, nivel').eq('tenant_id', tenantId),
     supabase.from('professores').select('id, nome').eq('tenant_id', tenantId),
   ]);
 
@@ -345,6 +345,7 @@ export async function cancelamentos(
       horario: turma?.horario,
       tipo_select: item.tipo_select || undefined,
       professor: turma?.professor_id ? profMap.get(turma.professor_id) || '-' : '-',
+      nivel: turma?.nivel,
     });
   }
 

@@ -217,6 +217,7 @@ export interface CancelamentoRegistro {
   horario?: string;
   professor?: string;
   tipo_select?: string;
+  nivel?: string;
 }
 
 export interface CancelamentoData {
