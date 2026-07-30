@@ -36,7 +36,7 @@ const STATUS_SYMBOLS: Record<string, string> = {
   ponte: 'Po',
   reuniao: 'Re',
   evento: 'Ev',
-  ferias: 'Fe',
+  ferias: 'Férias',
 };
 
 const TIPO_EVENTO_CORES: Record<string, string> = {
@@ -466,14 +466,14 @@ const DataGrid: React.FC<DataGridProps> = ({
                             onClick={() => handleCellClick(aluno.id, dia)}
                             aria-disabled={futura || isCalendario}
                             title={getTooltipText(aluno.id, dia)}
-                            className={`w-7 h-7 rounded-md text-xs font-bold transition-all ${
+                            className={`rounded-md font-bold transition-all ${
                               futura
-                                ? 'bg-gray-50 text-gray-200 cursor-not-allowed dark:bg-gray-700 dark:text-gray-600'
+                                ? 'w-7 h-7 text-xs bg-gray-50 text-gray-200 cursor-not-allowed dark:bg-gray-700 dark:text-gray-600'
                                 : isCalendario
-                                ? `${STATUS_COLORS[status || '']} ${status === 'ferias' ? 'text-[9px]' : 'text-xs'} cursor-default`
+                                ? `${STATUS_COLORS[status || '']} ${status === 'ferias' ? 'text-[9px] px-1 py-0.5' : 'w-7 h-7 text-xs'} cursor-default`
                                 : status
-                                ? `${STATUS_COLORS[status]} cursor-pointer ${getOrigem(aluno.id, dia) === 'extrapolado' ? 'border border-dashed border-amber-400' : ''}`
-                                : 'bg-gray-100 hover:bg-gray-200 text-gray-400 cursor-pointer dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-500'
+                                ? `${STATUS_COLORS[status]} w-7 h-7 text-xs cursor-pointer ${getOrigem(aluno.id, dia) === 'extrapolado' ? 'border border-dashed border-amber-400' : ''}`
+                                : 'w-7 h-7 text-xs bg-gray-100 hover:bg-gray-200 text-gray-400 cursor-pointer dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-500'
                             }`}
                           >
                             {futura ? '-' : statusToSymbol(status)}
