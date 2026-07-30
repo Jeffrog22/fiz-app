@@ -420,14 +420,21 @@ const DataGrid: React.FC<DataGridProps> = ({
               const faltasMes = contarFaltasMes(aluno.id);
               return (
                 <tr key={aluno.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                  <td
+                    <td
                     className={`sticky left-0 bg-white px-4 py-2 font-medium whitespace-nowrap cursor-pointer z-10 dark:bg-gray-800 ${
                       alunosComAtestadoAnotacao?.has(aluno.id) || atestadoProximoVencer(aluno)
-                        ? 'text-red-700 bg-red-100 dark:text-red-400 dark:bg-red-900/40'
+                        ? 'text-red-700 dark:text-red-400'
                         : temAnotacao(aluno.id) || (alunosComAnotacao?.has(aluno.id))
-                        ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30'
+                        ? 'text-blue-600 dark:text-blue-400'
                         : 'text-gray-800 dark:text-gray-100'
                     }`}
+                    style={
+                      alunosComAtestadoAnotacao?.has(aluno.id) || atestadoProximoVencer(aluno)
+                        ? { backgroundColor: '#fecaca' }
+                        : temAnotacao(aluno.id) || (alunosComAnotacao?.has(aluno.id))
+                        ? { backgroundColor: '#eff6ff' }
+                        : undefined
+                    }
                     onClick={() => handleNomeClickTimer(aluno)}
                     title={
                       alunosComAtestadoAnotacao?.has(aluno.id) || atestadoProximoVencer(aluno)
