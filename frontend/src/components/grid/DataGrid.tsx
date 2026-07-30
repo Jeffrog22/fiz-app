@@ -150,7 +150,7 @@ const DataGrid: React.FC<DataGridProps> = ({
       }
       // 2. Student-level: clique do usuário P/F/J
       const alunoLog = logs[alunoId]?.[data]?.[indiceAtual];
-      if (alunoLog?.status) {
+      if (alunoLog?.status !== undefined) {
         return alunoLog.status as PresencaStatus;
       }
       // 3. Turma-level: fallback propagado por CardAula/CardBO/extrapolação
