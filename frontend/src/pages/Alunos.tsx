@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
 import AlunoModal from '../components/modals/AlunoModal';
@@ -36,6 +36,14 @@ const Alunos: React.FC = () => {
   const [turmaTransferir, setTurmaTransferir] = useState('');
   const [transferindo, setTransferindo] = useState(false);
   const [turmaOrigemFiltro, setTurmaOrigemFiltro] = useState('');
+
+  const [importando, setImportando] = useState(false);
+  const [importResult, setImportResult] = useState<{
+    inseridos: number;
+    ignorados: number;
+    erros: string[];
+  } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const professorMap = new Map(professores.map((p) => [p.id, p.nome]));
 
@@ -173,6 +181,27 @@ const Alunos: React.FC = () => {
       await carregar();
     } catch (err: any) {
       alert(err?.response?.data?.error || err.message || 'Erro ao salvar aluno');
+    }
+  };
+
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportando(true);
+    try {
+      const formData = new FormData();
+      formData.append('csv', file);
+      const { data } = await api.post('/alunos/importar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setImportResult(data);
+      await carregar();
+    } catch (err: any) {
+      alert(err?.response?.data?.error || err.message || 'Erro ao importar CSV');
+    } finally {
+      setImportando(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -364,6 +393,21 @@ const Alunos: React.FC = () => {
             }`}
           >
             {modoTransferencia ? 'Sair da Transferência' : 'Transferir'}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            onChange={handleImportCSV}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importando}
+            className="px-4 py-2 text-sm bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+          >
+            {importando ? 'Importando...' : '📥 Importar CSV'}
           </button>
           <button
             onClick={() => { setEditando(null); setModalOpen(true); }}
@@ -676,6 +720,40 @@ const Alunos: React.FC = () => {
         lastSession={lastSession}
         resetCounter={resetCounter}
       />
+
+      {importResult && (
+        <div className="fixed inset-0 bg-black/30 dark:bg-black/60 flex items-center justify-center z-40" onClick={() => setImportResult(null)}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-black/20 border dark:border-gray-700 p-6 w-full max-w-sm space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Importação Concluída</h3>
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="font-medium text-green-600 dark:text-green-400">{importResult.inseridos}</span> aluno(s) importados
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="font-medium text-amber-600 dark:text-amber-400">{importResult.ignorados}</span> ignorado(s) (já existentes)
+              </p>
+              {importResult.erros.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-red-600 dark:text-red-400 mb-1">{importResult.erros.length} erro(s):</p>
+                  <ul className="text-xs text-red-500 dark:text-red-400 space-y-0.5 max-h-32 overflow-y-auto">
+                    {importResult.erros.map((e, i) => (
+                      <li key={i}>{e}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setImportResult(null)}
+                className="px-4 py-2 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
