@@ -8,7 +8,7 @@ import { getTenantId, getAvailableTenants } from '../utils/tenant';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { login, primeiroAcesso, loading, isAuthenticated, logout } = useAuth();
+  const { login, primeiroAcesso, adminLogin, loading, isAuthenticated, logout } = useAuth();
   const { tenantId, tenantNome, setTenant } = useTenant();
   const [professorNome, setProfessorNome] = useState('');
   const [pin, setPin] = useState('');
@@ -296,6 +296,22 @@ const Login: React.FC = () => {
                 {limpando ? 'Limpando...' : 'Limpar (GET)'}
               </button>
             </div>
+            <button
+              type="button"
+              onClick={async () => {
+                const key = prompt('🔑 Chave de admin:');
+                if (!key) return;
+                setErro(null);
+                try {
+                  await adminLogin(key);
+                } catch (err: any) {
+                  setErro(err?.response?.data?.error || err.message || 'Erro no login admin');
+                }
+              }}
+              className="w-full text-xs py-1.5 px-3 bg-indigo-500 text-white rounded hover:bg-indigo-600 disabled:bg-gray-400 transition"
+            >
+              🔑 Entrar como Admin
+            </button>
             <div className="pt-1">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input

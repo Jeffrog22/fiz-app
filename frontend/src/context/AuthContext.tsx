@@ -6,6 +6,7 @@ import api from '../utils/api';
 export interface AuthContextType extends AuthState {
   login: (professorNome: string, pin?: string) => Promise<void>;
   primeiroAcesso: (professorNome: string, pin: string, csvFile?: File) => Promise<void>;
+  adminLogin: (adminKey: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -14,6 +15,7 @@ export const AuthContext = createContext<AuthContextType>({
   loading: false,
   login: async () => {},
   primeiroAcesso: async () => {},
+  adminLogin: async () => {},
   logout: () => {},
 });
 
@@ -38,6 +40,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           professorNome: parsed.nome,
           tenantId: getTenantId(),
           loading: false,
+          isAdmin: parsed.isAdmin || false,
         });
       } catch {
         localStorage.removeItem(`${getTenantId()}_professor`);
@@ -55,7 +58,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await api.post('/auth/login', { nome: professorNome, hash: stored?.hash, pin });
       const { professorId, nome, token, hash } = response.data;
 
-      localStorage.setItem(`${getTenantId()}_professor`, JSON.stringify({ professorId, nome, hash, token }));
+      localStorage.setItem(`${getTenantId()}_professor`, JSON.stringify({ professorId, nome, hash, token, isAdmin: false }));
       
       setState({
         isAuthenticated: true,
@@ -63,6 +66,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         professorNome: nome,
         tenantId: getTenantId(),
         loading: false,
+        isAdmin: false,
       });
     } catch (error) {
       setState(prev => ({ ...prev, loading: false }));
@@ -85,7 +89,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
       const { professorId, nome, token, hash } = response.data;
 
-      localStorage.setItem(`${getTenantId()}_professor`, JSON.stringify({ professorId, nome, hash, token }));
+      localStorage.setItem(`${getTenantId()}_professor`, JSON.stringify({ professorId, nome, hash, token, isAdmin: false }));
 
       setState({
         isAuthenticated: true,
@@ -93,6 +97,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         professorNome: nome,
         tenantId: getTenantId(),
         loading: false,
+        isAdmin: false,
+      });
+    } catch (error) {
+      setState(prev => ({ ...prev, loading: false }));
+      throw error;
+    }
+  }, []);
+
+  const adminLogin = useCallback(async (adminKey: string) => {
+    setState(prev => ({ ...prev, loading: true }));
+    try {
+      const response = await api.post('/auth/admin-login', { adminKey });
+      const { professorId, nome, token, isAdmin } = response.data;
+
+      localStorage.setItem(`${getTenantId()}_professor`, JSON.stringify({ professorId, nome, hash: '', token, isAdmin: true }));
+
+      setState({
+        isAuthenticated: true,
+        professorId,
+        professorNome: nome,
+        tenantId: getTenantId(),
+        loading: false,
+        isAdmin: true,
       });
     } catch (error) {
       setState(prev => ({ ...prev, loading: false }));
@@ -109,7 +136,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, primeiroAcesso, logout }}>
+    <AuthContext.Provider value={{ ...state, login, primeiroAcesso, adminLogin, logout }}>
       {children}
     </AuthContext.Provider>
   );

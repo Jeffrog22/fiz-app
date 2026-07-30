@@ -114,6 +114,7 @@ export interface AuthState {
   professorNome?: string;
   tenantId?: string;
   loading: boolean;
+  isAdmin?: boolean;
 }
 
 export interface TurmaExportRow {

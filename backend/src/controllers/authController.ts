@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { TenantRequest } from '../types';
 import { AppError } from '../middleware/errorHandler';
-import { loginService, primeiroAcessoService, clearDataService } from '../services/authService';
+import { loginService, primeiroAcessoService, adminLoginService, clearDataService } from '../services/authService';
 
 export class AuthController {
   static async login(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
@@ -51,6 +51,32 @@ export class AuthController {
         professorId: professor.id,
         nome: professor.nome,
         hash: professor.hash,
+        token,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async adminLogin(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { adminKey } = req.body;
+      const tenantId = req.tenantId!;
+
+      const { professor, token } = await adminLoginService(adminKey, tenantId);
+
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000,
+      });
+
+      res.json({
+        message: 'Login admin realizado com sucesso',
+        professorId: professor.id,
+        nome: professor.nome,
+        isAdmin: true,
         token,
       });
     } catch (error) {

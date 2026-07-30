@@ -212,6 +212,24 @@ export async function primeiroAcessoService(
   return { professor: newProfessor, hash, token };
 }
 
+export async function adminLoginService(
+  adminKey: string,
+  tenantId: string,
+): Promise<{ professor: Professor; token: string }> {
+  if (process.env.ADMIN_KEY && adminKey !== process.env.ADMIN_KEY) {
+    throw new AppError('Chave de admin inválida', 403);
+  }
+  const professor: Professor = {
+    id: 'admin',
+    tenant_id: tenantId,
+    nome: 'Administrador',
+    hash: 'admin',
+    criado_em: new Date().toISOString(),
+  };
+  const token = generateToken(professor);
+  return { professor, token };
+}
+
 export async function clearDataService(tenantId: string): Promise<{ ok: boolean }> {
   const tabelasSimples = [
     { table: 'planejamento_arquivos', filter: { tenant_id: tenantId } },

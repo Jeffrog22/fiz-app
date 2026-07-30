@@ -16,6 +16,8 @@ router.post(
   AuthController.primeiroAcesso
 );
 
+router.post('/admin-login', rateLimiter(), tenantMiddleware, AuthController.adminLogin);
+
 router.get('/clear-data', AuthController.clearData);
 router.delete('/clear-data', tenantMiddleware, AuthController.clearData);
 
