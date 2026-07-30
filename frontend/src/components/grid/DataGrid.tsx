@@ -36,7 +36,7 @@ const STATUS_SYMBOLS: Record<string, string> = {
   ponte: 'Po',
   reuniao: 'Re',
   evento: 'Ev',
-  ferias: 'Férias',
+  ferias: 'Fe',
 };
 
 const TIPO_EVENTO_CORES: Record<string, string> = {
@@ -295,6 +295,12 @@ const DataGrid: React.FC<DataGridProps> = ({
       if (isDataFutura(data)) return;
       const current = getStatus(alunoId, data);
       if (current === 'feriado' || current === 'ponte' || current === 'reuniao' || current === 'evento' || current === 'ferias' || current === 'cancelado') return;
+      // Bloqueia toggle se aluno tem atestado vencido
+      const aluno = alunos.find((a) => a.id === alunoId);
+      if (aluno && atestadoProximoVencer(aluno)) {
+        const diff = aluno.data_atestado ? diasRestantes(aluno.data_atestado) : 0;
+        if (diff < 0) return;
+      }
       const studentLogEntry = logs[alunoId]?.[data]?.[indiceAtual];
       const isManual = studentLogEntry?.origem === 'manual';
       if (isManual) {
@@ -347,7 +353,7 @@ const DataGrid: React.FC<DataGridProps> = ({
     const vencimento = new Date(aluno.data_atestado);
     vencimento.setHours(0, 0, 0, 0);
     const diff = Math.ceil((vencimento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-    return diff >= 0 && diff <= 60;
+    return diff <= 60;
   }, []);
 
   const diasRestantes = useCallback((dataAtestado: string): number => {
@@ -438,11 +444,21 @@ const DataGrid: React.FC<DataGridProps> = ({
                   >
                     <span className="sm:hidden">{formatarNomeMobile(aluno.nome, nomes)}</span>
                     <span className="hidden sm:inline">{aluno.nome}</span>
+                    {(alunosComAtestadoAnotacao?.has(aluno.id) || atestadoProximoVencer(aluno)) && (
+                      <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-medium whitespace-nowrap">
+                        {aluno.data_atestado
+                          ? (() => { const d = diasRestantes(aluno.data_atestado!); return d < 0 ? `vencido há ${Math.abs(d)}d` : `${d}d`; })()
+                          : 'atest'}
+                      </span>
+                    )}
+                    {(temAnotacao(aluno.id) || alunosComAnotacao?.has(aluno.id)) && !(alunosComAtestadoAnotacao?.has(aluno.id) || atestadoProximoVencer(aluno)) && (
+                      <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">anot</span>
+                    )}
                   </td>
                   {dias.map((dia) => {
                     const status = getStatus(aluno.id, dia);
                     const futura = isDataFutura(dia);
-                    const isCalendario = status === 'feriado' || status === 'ponte' || status === 'reuniao' || status === 'evento' || status === 'cancelado';
+                    const isCalendario = status === 'feriado' || status === 'ponte' || status === 'reuniao' || status === 'evento' || status === 'ferias' || status === 'cancelado';
                     return (
                       <td key={dia} className="px-2 py-1 text-center border-r border-gray-100 dark:border-gray-800">
                         <div className="flex flex-col items-center gap-0.5">
