@@ -22,7 +22,7 @@ import { useAuth } from './hooks/useAuth';
 
 const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
-  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(() => window.innerWidth < 768);
   const { enabled: devEnabled, addConsoleLine } = useDevLog();
   const origConsole = useRef<Record<string, (...args: unknown[]) => void>>({});
 
