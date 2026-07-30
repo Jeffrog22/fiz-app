@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-29 — Sidebar swipe + Dashboard Cancelamentos + Alerta Atestado + Acessibilidade → v2.39.1 -->
+<!-- última-sessão: 2026-07-29 — Atestado Automático + Admin Login + Limpar Split + Afastamento Auto-J + Limpar Fixes → v2.48.6 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -1010,4 +1010,95 @@ Regras:
 ### Typecheck
 - Frontend: 0 erros
 - Backend: 0 erros
+
+---
+
+## Sessão: 29/07/2026 — Atestado Automático + Anotações por Enter + Admin Login + HARD RESET + Sidebar Mobile + Limpar Split + Afastamento Auto-J + Limpar Fixes (v2.40.0 → v2.48.6)
+
+### O que foi feito
+
+**Atestado Automático** (v2.40.0 → v2.42.2)
+- Anotação `[Atestado]` criada automaticamente no grid quando atestado vence em ≤ 60 dias
+- Tooltip: prioriza alerta de atestado > anotação azul > normal
+- Card "Atualizações" em Configurações com verificar versão e hard refresh
+- Remove fluxo `verificar-atestados` do backend; alerta direto no AnotacoesModal
+
+**HARD RESET + Rollback CSV + ClearData** (v2.43.0)
+- Rollback (DELETE professor) em `primeiroAcessoService` quando CSV falha
+- `clearDataService` expandido: 12+ tabelas (professores, alunos, turmas, chamadas, etc.)
+- Seção HARD RESET em Configurações > Atualizações (modo dev apenas)
+
+**Mobile Name Suppression** (v2.44.0)
+- `formatarNomeMobile` com resolução de colisão (nome curto + primeira letra do sobrenome)
+- Aplicado em DataGrid, Alunos, Exclusoes, TabFrequenciaAluno (apenas mobile via `sm:hidden`)
+
+**Modal Scroll Fix** (v2.44.1)
+- CardAula e CardBO: `max-h-[90vh] overflow-y-auto`
+
+**AnotacoesModal Melhorias** (v2.44.2)
+- Enter salva imediatamente + flush ao fechar
+
+**Admin Login** (v2.45.0)
+- `POST /auth/admin-login`: valida `adminKey` contra env var, retorna JWT com `professorId: 'admin'`
+- `AuthContext.adminLogin()` com `isAdmin: true`
+- Botão `🔑 Entrar como Admin` no painel Ctrl+Alt+A
+
+**HARD RESET UI Fixes** (v2.45.1)
+- "Não há desfazer" → "Não há como desfazer."
+- Botão "Executar HARD RESET" → "EXECUTAR"
+
+**Admin Mode Mobile** (v2.45.2)
+- 6 toques rápidos (1.5s) no título "Fiz! App" ativa admin mode
+
+**Sidebar Mobile** (v2.45.3)
+- `useState(() => window.innerWidth < 768)` — sidebar começa recolhida em mobile
+
+**Limpar Split Dropdown** (v2.46.0)
+- Botão "Limpar" vira split dropdown: 🗓️ **Limpar este dia** / 🧹 **Limpar tudo**
+- `MAX_UNDO`: 10 → 20
+
+**RLS Fix Anotações** (v2.46.1)
+- Migration 024: `ALTER TABLE anotacoes_alunos DISABLE ROW LEVEL SECURITY`
+
+**Grid Click + Anotações Enter** (v2.47.0)
+- AnotacoesModal: remove auto-save (800ms debounce); salva só no Enter ou ao fechar
+- DataGrid: clique simples na data seleciona coluna; duplo abre CardAula
+
+**Afastamento Auto-J** (v2.48.0)
+- Anotação "afast X dias" auto-aplica "J" nos dias de aula do período corrido
+- `parseDiasFromLabel` exportado de `chamadaUtils.ts`
+
+**Invalid Date Fix** (v2.48.1)
+- Remove `+ 'Z'` duplicado no `new Date(a.criado_em + 'Z')`
+
+**Limpar Dropdown Fix** (v2.48.2)
+- `e.stopPropagation()` + `setTimeout(0)` — dropdown fechava na hora
+
+**Limpar Correções** (v2.48.3 → v2.48.6)
+- Usa `dateHeaderClickData || dias[0]` (respeita data selecionada)
+- Data formato BR no modal
+- `await processarFila()` antes de fechar (fila direta, sem debounce)
+- Server-first + `await carregarLogs()` sync (v2.48.4) → revertido (v2.48.5) porque merge não sobrescreve `origem: 'manual'`
+- Restaura optimistic update + `carregarLogs` sync no final (v2.48.5)
+- `getStatus`: `alunoLog?.status !== undefined` prioriza `null` explícito sobre fallback turma-level (v2.48.6)
+
+### Arquivos
+- `frontend/src/components/modals/AnotacoesModal.tsx` (atestado, Enter save, afastamento)
+- `frontend/src/components/grid/DataGrid.tsx` (getStatus null, date header click, atestado anotação)
+- `frontend/src/pages/Chamadas.tsx` (limpar split, afastamento, dateHeaderClick, processarFila sync)
+- `frontend/src/pages/Configuracoes.tsx` (HARD RESET texto, Atualizações)
+- `frontend/src/pages/Login.tsx` (admin login, 6 toques mobile)
+- `frontend/src/context/AuthContext.tsx` (adminLogin, isAdmin)
+- `frontend/src/types/index.ts` (AuthState.isAdmin)
+- `frontend/src/App.tsx` (sidebar collapsed mobile)
+- `frontend/src/utils/chamadaUtils.ts` (parseDiasFromLabel export)
+- `backend/src/services/authService.ts` (adminLoginService)
+- `backend/src/controllers/authController.ts` (adminLogin handler)
+- `backend/src/routes/authRoutes.ts` (+ /admin-login route)
+- `backend/src/migrations/024_disable_rls_anotacoes_alunos.sql` (novo)
+
+### Typecheck
+- Frontend: 0 erros
+- Backend: 0 erros
+- Testes: 41/41 frontend + 25/25 backend passam
 

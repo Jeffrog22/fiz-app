@@ -1,12 +1,129 @@
 # Changelog - Fiz! App
 
-## [v2.39.1] - 2026-07-29
+## [v2.48.6] - 2026-07-29
 ### Fix
-- Sidebar: swipe horizontal alterna `collapsed` (recolhe/expande como a seta); overlay mobile removido
-- Acessibilidade: `resetar()` vai para 100 sempre (remove lógica de orientação); range 80-150 mantido
-- `App.tsx`: volta ao estado original sem mobileOpen/isMobile/backdrop
+- `DataGrid.getStatus`: `alunoLog?.status !== undefined` prioriza `null` explícito do aluno sobre fallback turma-level (CardAula/BO não sobrepõe célula limpa)
+- Grid exibe célula vazia após "Limpar este dia/tudo" mesmo com logs turma-level ativos
 
-## [v2.39.0] - 2026-07-29
+## [v2.48.5] - 2026-07-29
+### Fix
+- Restaura optimistic update (`setLogs` deleta entries) + `await carregarLogs()` no final
+- Merge do `carregarLogs` funciona: entradas deletadas localmente → server adiciona log `null`
+- Extrapolação (`origem: 'extrapolado'`) não interfere
+
+## [v2.48.4] - 2026-07-29
+### Fix
+- Tenta estratégia server-first: remove `setLogs` optimistic, `carregarLogs` sync
+- Revertido em v2.48.5 (merge não sobrescreve `origem: 'manual'`)
+
+## [v2.48.3] - 2026-07-29
+### Fix
+- `handleLimparDia`: usa `dateHeaderClickData || dias[0]` (respeita data selecionada no grid)
+- Modal: data em formato BR (`toLocaleDateString('pt-BR')`)
+- `handleLimparDia`/`handleLimparTudo`: async, `filaSalvamento` direto + `await processarFila()` antes de fechar modal
+
+## [v2.48.2] - 2026-07-29
+### Fix
+- Dropdown "Limpar": `e.stopPropagation()` no botão + `setTimeout(0)` — impedia dropdown de abrir (fechava na hora pelo listener do window)
+
+## [v2.48.1] - 2026-07-29
+### Fix
+- "Invalid Date" nas anotações: `new Date(a.criado_em + 'Z')` → `new Date(a.criado_em)` (criado_em já vem com timezone do Supabase)
+
+## [v2.48.0] - 2026-07-29
+### Feat
+- Anotação "afast X dias" / "atest X dias" / "afastamento X dias" / "atestado X dias" auto-aplica "J" (justificado) nos dias de aula do período
+- `handleAfastamento`: parseia label (Ter/Qui → [2,4]), itera N dias corridos de hoje, justifica cada dia de aula
+- Undo: `{ type: 'afastamento' }` restaura todos os status de uma vez
+- `parseDiasFromLabel` exportado de `chamadaUtils.ts`
+
+## [v2.47.0] - 2026-07-29
+### Feat
+- AnotacoesModal: remove auto-save (debounce 800ms); salva **só no Enter** (sem Shift) ou ao **fechar** com texto pendente
+- DataGrid: **clique simples** na data seleciona a coluna (`selectedDate`, highlight `bg-blue-50`), **clique duplo** abre CardAula
+- `onDateHeaderDoubleClick` + `selectedDate` prop em DataGrid e Chamadas.tsx
+
+## [v2.46.1] - 2026-07-29
+### Fix
+- Migration 024: `ALTER TABLE anotacoes_alunos DISABLE ROW LEVEL SECURITY` (causava 500 ao criar anotação)
+
+## [v2.46.0] - 2026-07-29
+### Feat
+- Botão "Limpar" → split dropdown com duas opções: **🗓️ Limpar este dia** (só data selecionada) e **🧹 Limpar tudo** (todos os dias do período)
+- `handleLimparDia` / `handleLimparTudo` com undo próprio
+- `MAX_UNDO`: 10 → 20
+- `UndoAction.type`: `'limpar_dia'` | `'limpar_tudo'`
+
+## [v2.45.3] - 2026-07-29
+### Fix
+- Sidebar começa recolhida em mobile: `useState(() => window.innerWidth < 768)` em vez de `false` fixo
+
+## [v2.45.2] - 2026-07-29
+### Fix
+- Admin mode mobile: 6 toques rápidos (1.5s) no título "Fiz! App" ativa o painel admin (além do `Ctrl+Alt+A` para desktop)
+
+## [v2.45.1] - 2026-07-29
+### Fix
+- HARD RESET: "Não há desfazer" → "Não há como desfazer."; botão "Executar HARD RESET" → "EXECUTAR"
+
+## [v2.45.0] - 2026-07-29
+### Feat
+- Admin login via `POST /auth/admin-login`: valida `adminKey` contra env var, retorna JWT com `professorId: 'admin'`
+- `AuthContext.adminLogin()`: guarda sessão admin no localStorage com `isAdmin: true`
+- Login.tsx: botão `🔑 Entrar como Admin` no painel Ctrl+Alt+A
+- `AuthState.isAdmin` opcional
+
+## [v2.44.2] - 2026-07-29
+### Fix
+- AnotacoesModal: Enter salva imediatamente + flush ao fechar
+- AnotacoesModal: refatora fluxo verificar-atestados — alerta de atestado direto no modal (remove endpoint separado)
+- Tooltip do aluno no grid: prioridade alerta atestado > anotação azul > normal
+- Card Atualizações em Configurações com verificar versão e hard refresh
+
+## [v2.44.1] - 2026-07-29
+### Fix
+- CardAula e CardBO: `max-h-[90vh] overflow-y-auto` para scroll em telas pequenas
+
+## [v2.44.0] - 2026-07-29
+### Feat
+- `formatarNomeMobile` com resolução de colisão (nome curto + primeira letra do sobrenome)
+- Aplicado em DataGrid, Alunos, Exclusoes, TabFrequenciaAluno (apenas mobile: `sm:hidden`)
+
+## [v2.43.0] - 2026-07-29
+### Feat
+- Rollback (DELETE professor) em `primeiroAcessoService` quando CSV falha
+- `clearDataService` expandido: deleta 12+ tabelas (alunos, turmas, professores, chamadas, anotações, planejamentos, calendário, logs, card_aula, notificações, períodos letivos, logs_acesso)
+- HARD RESET em Configurações > Atualizações (visível apenas em modo dev com `💀`)
+
+## [v2.42.2] - 2026-07-29
+### Refactor
+- Remove fluxo `verificar-atestados` do backend; alerta de atestado direto no AnotacoesModal
+- Tabela `atestados` removida do serviço
+
+## [v2.42.1] - 2026-07-29
+### Fix
+- Logs de erro no fluxo `verificar-atestados` + chamada no AnotacoesModal
+
+## [v2.42.0] - 2026-07-29
+### Feat
+- Endpoint `GET /alunos/verificar-atestados` centralizado para buscar alunos com atestado próximo ao vencimento
+- Chamado em Chamadas (grid) e Alunos (lista)
+
+## [v2.41.0] - 2026-07-29
+### Feat
+- Card "Atualizações" em Configurações: botão "Verificar versão" + "Hard refresh" (recarrega service worker + limpa cache)
+
+## [v2.40.1] - 2026-07-29
+### Fix
+- Tooltip do aluno: `alunosComAtestadoAnotacao` prop, prioridade no nome cell
+- Anotação `[Atestado]` incluída no `getTooltipText` do DataGrid
+
+## [v2.40.0] - 2026-07-29
+### Feat
+- Cria anotação `[Atestado]` automaticamente quando atestado vence em ≤ 60 dias
+- Gatilho: ao carregar grid de Chamadas ou lista de Alunos
+
+## [v2.39.1] - 2026-07-29
 ### Feat
 - Alerta de atestado no grid — nome do aluno fica `bg-red-50 text-red-700` quando atestado vence em ≤ 60 dias, com tooltip "Alerta: atestado vence em N dias"
 - Prioridade: alerta de atestado > anotação azul > normal
