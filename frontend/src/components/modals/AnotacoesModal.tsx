@@ -153,7 +153,7 @@ const AnotacoesModal: React.FC<Props> = ({ aberto, aluno, onClose, onAnotacaoCha
                 className="flex items-start gap-2 p-3 bg-gray-50 dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">
-                    {new Date(a.criado_em + 'Z').toLocaleDateString('pt-BR', {
+                    {new Date(a.criado_em).toLocaleDateString('pt-BR', {
                       day: '2-digit', month: 'short', year: 'numeric',
                       hour: '2-digit', minute: '2-digit',
                     })}
