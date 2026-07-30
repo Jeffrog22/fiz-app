@@ -8,9 +8,10 @@ interface Props {
   aluno: Aluno | null;
   onClose: () => void;
   onAnotacaoChange?: (alunoId: string) => void;
+  onAfastamento?: (alunoId: string, dias: number) => void;
 }
 
-const AnotacoesModal: React.FC<Props> = ({ aberto, aluno, onClose, onAnotacaoChange }) => {
+const AnotacoesModal: React.FC<Props> = ({ aberto, aluno, onClose, onAnotacaoChange, onAfastamento }) => {
   const [anotacoes, setAnotacoes] = useState<AnotacaoAluno[]>([]);
   const [novaAnotacao, setNovaAnotacao] = useState('');
   const [carregando, setCarregando] = useState(false);
@@ -31,6 +32,13 @@ const AnotacoesModal: React.FC<Props> = ({ aberto, aluno, onClose, onAnotacaoCha
       onAnotacaoChange?.(aluno.id);
       setMensagem('Salvo!');
       setTimeout(() => setMensagem(null), 2000);
+
+      const padraoAfastamento = /^(afastamento|afast|atestado|atest)\s+(\d+)\s*dias?$/i;
+      const match = texto.trim().match(padraoAfastamento);
+      if (match && onAfastamento) {
+        const dias = parseInt(match[2], 10);
+        onAfastamento(aluno.id, dias);
+      }
     } catch (err) {
       console.error('Erro ao salvar anotacao', err);
       setMensagem('Erro ao salvar');
@@ -38,7 +46,7 @@ const AnotacoesModal: React.FC<Props> = ({ aberto, aluno, onClose, onAnotacaoCha
     } finally {
       setSalvando(false);
     }
-  }, [aluno, onAnotacaoChange]);
+  }, [aluno, onAnotacaoChange, onAfastamento]);
 
   useEffect(() => {
     if (!aberto && novaAnotacao.trim()) {

@@ -7,14 +7,14 @@ import GridPagination from '../components/grid/GridPagination';
 import CardAula from '../components/modals/CardAula';
 import CardBO from '../components/modals/CardBO';
 import type { Aluno, Turma, Professor, ChamadaLog, AnotacaoAluno, CalendarioEvento } from '../types';
-import { gerarDiasLetivos, hojeMesAno } from '../utils/chamadaUtils';
+import { gerarDiasLetivos, hojeMesAno, parseDiasFromLabel } from '../utils/chamadaUtils';
 
 type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento' | undefined;
 
 const MAX_UNDO = 20;
 
 interface UndoAction {
-  type: 'presenca' | 'anotacao' | 'limpar_dia' | 'limpar_tudo';
+  type: 'presenca' | 'anotacao' | 'limpar_dia' | 'limpar_tudo' | 'afastamento';
   alunoId?: string;
   data?: string;
   indice?: number;
@@ -555,8 +555,99 @@ const Chamadas: React.FC = () => {
         agendarSalvamento(payload);
         break;
       }
+      case 'afastamento': {
+        if (!action.alunoId || !action.batch) return;
+        const idx = action.indice ?? indiceAtual;
+        const payload: any[] = [];
+        for (const b of action.batch) {
+          if (!b.statuses) continue;
+          for (const [data, status] of Object.entries(b.statuses)) {
+            payload.push({
+              grupo_id: action.alunoId, data,
+              indice_aula: idx,
+              status: status || null, origem: 'manual',
+            });
+          }
+        }
+        setLogs((prev) => {
+          const next = { ...prev };
+          for (const b of action.batch!) {
+            if (!b.statuses) continue;
+            for (const [data, statusAntigo] of Object.entries(b.statuses)) {
+              if (!next[action.alunoId!]) next[action.alunoId!] = {};
+              if (!next[action.alunoId!][data]) next[action.alunoId!][data] = {};
+              if (statusAntigo) {
+                next[action.alunoId!][data][idx] = {
+                  id: '', tenant_id: '', data, grupo_id: action.alunoId!,
+                  indice_aula: idx, status: statusAntigo, origem: 'manual',
+                  criado_em: new Date().toISOString(),
+                };
+              } else {
+                delete next[action.alunoId!][data][idx];
+                if (Object.keys(next[action.alunoId!][data]).length === 0) {
+                  delete next[action.alunoId!][data];
+                }
+              }
+            }
+          }
+          return next;
+        });
+        agendarSalvamento(payload);
+        break;
+      }
     }
   }, [indiceAtual, agendarSalvamento]);
+
+  const handleAfastamento = useCallback((alunoId: string, dias: number) => {
+    if (!labelSelecionada || !professorId) return;
+    const diasSemana = parseDiasFromLabel(labelSelecionada);
+    if (diasSemana.length === 0) return;
+
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const dates: string[] = [];
+    const statuses: Record<string, PresencaStatus> = {};
+
+    for (let i = 0; i < dias; i++) {
+      const data = new Date(hoje);
+      data.setDate(data.getDate() + i);
+      const diaSemana = data.getDay();
+      if (diasSemana.includes(diaSemana)) {
+        const dataStr = data.toISOString().split('T')[0];
+        dates.push(dataStr);
+        statuses[dataStr] = logs[alunoId]?.[dataStr]?.[indiceAtual]?.status;
+      }
+    }
+
+    if (dates.length === 0) return;
+
+    undoStack.current.push({ type: 'afastamento', alunoId, indice: indiceAtual, batch: [{ alunoId, statuses }] });
+    if (undoStack.current.length > MAX_UNDO) undoStack.current.shift();
+    setUndoCount((c) => c + 1);
+
+    const payload = dates.map((data) => ({
+      grupo_id: alunoId, data,
+      indice_aula: indiceAtual,
+      status: 'justificado', origem: 'manual',
+    }));
+
+    setLogs((prev) => {
+      const next = { ...prev };
+      for (const data of dates) {
+        if (!next[alunoId]) next[alunoId] = {};
+        if (!next[alunoId][data]) next[alunoId][data] = {};
+        next[alunoId][data][indiceAtual] = {
+          id: '', tenant_id: '', data, grupo_id: alunoId,
+          indice_aula: indiceAtual,
+          status: 'justificado', origem: 'manual',
+          criado_em: new Date().toISOString(),
+        } as ChamadaLog;
+      }
+      return next;
+    });
+
+    agendarSalvamento(payload);
+  }, [labelSelecionada, professorId, indiceAtual, logs, agendarSalvamento]);
 
   const handleLimparDia = useCallback(() => {
     if (alunosDaTurma.length === 0 || dias.length === 0) return;
@@ -778,6 +869,7 @@ const Chamadas: React.FC = () => {
           onAnotacaoChange={handleAnotacaoChange}
           onSaveJustificativa={handleSaveJustificativa}
           onNomeDoubleClick={handleNomeDoubleClick}
+          onAfastamento={handleAfastamento}
         />
       )}
 

@@ -70,6 +70,7 @@ interface DataGridProps {
   onAnotacaoChange?: (alunoId: string) => void;
   onSaveJustificativa?: (alunoId: string, data: string, motivo: string) => void;
   onNomeDoubleClick?: (aluno: Aluno) => void;
+  onAfastamento?: (alunoId: string, dias: number) => void;
 }
 
 const DataGrid: React.FC<DataGridProps> = ({
@@ -91,6 +92,7 @@ const DataGrid: React.FC<DataGridProps> = ({
   onSaveJustificativa,
   alunosComAtestadoAnotacao,
   onNomeDoubleClick,
+  onAfastamento,
 }) => {
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dateHeaderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -557,6 +559,7 @@ const DataGrid: React.FC<DataGridProps> = ({
         aluno={anotacoesModalAluno}
         onClose={() => setAnotacoesModalAluno(null)}
         onAnotacaoChange={onAnotacaoChange}
+        onAfastamento={onAfastamento}
       />
 
       <JustificativaModal

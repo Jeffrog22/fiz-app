@@ -8,7 +8,7 @@ const ABREV_MAP: Record<string, number> = {
   'Sab': 6, 'sab': 6,
 };
 
-function parseDiasFromLabel(label: string): number[] {
+export function parseDiasFromLabel(label: string): number[] {
   if (!label) return [];
   const dias: number[] = [];
   for (const parte of label.split('/')) {
