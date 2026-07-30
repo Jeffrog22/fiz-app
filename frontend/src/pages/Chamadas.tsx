@@ -724,9 +724,11 @@ const Chamadas: React.FC = () => {
 
   useEffect(() => {
     if (!limparDropdownOpen) return;
-    const close = () => setLimparDropdownOpen(false);
-    window.addEventListener('click', close, { once: true });
-    return () => window.removeEventListener('click', close);
+    const timer = setTimeout(() => {
+      const close = () => setLimparDropdownOpen(false);
+      window.addEventListener('click', close, { once: true });
+    }, 0);
+    return () => clearTimeout(timer);
   }, [limparDropdownOpen]);
 
   useEffect(() => {
@@ -798,7 +800,7 @@ const Chamadas: React.FC = () => {
           </button>
           {alunosDaTurma.length > 0 && (
             <div className="relative">
-              <button onClick={() => setLimparDropdownOpen(v => !v)}
+              <button onClick={(e) => { e.stopPropagation(); setLimparDropdownOpen(v => !v); }}
                 className="px-3 py-1.5 text-xs bg-red-50 text-red-700 rounded hover:bg-red-100 border border-red-200 transition dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 dark:border-red-800">
                 Limpar ▾
               </button>
