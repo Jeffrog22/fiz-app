@@ -649,9 +649,9 @@ const Chamadas: React.FC = () => {
     agendarSalvamento(payload);
   }, [labelSelecionada, professorId, indiceAtual, logs, agendarSalvamento]);
 
-  const handleLimparDia = useCallback(() => {
+  const handleLimparDia = useCallback(async () => {
     if (alunosDaTurma.length === 0 || dias.length === 0) return;
-    const data = dias[0];
+    const data = dateHeaderClickData || dias[0];
     const batch = alunosDaTurma.map((a) => ({
       alunoId: a.id,
       statusAntigo: logs[a.id]?.[data]?.[indiceAtual]?.status,
@@ -677,11 +677,13 @@ const Chamadas: React.FC = () => {
       }
       return next;
     });
-    agendarSalvamento(payload);
+    filaSalvamento.current.push(...payload);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    await processarFila();
     setLimparConfirm(false);
-  }, [alunosDaTurma, dias, indiceAtual, logs, agendarSalvamento]);
+  }, [alunosDaTurma, dias, dateHeaderClickData, indiceAtual, logs, processarFila]);
 
-  const handleLimparTudo = useCallback(() => {
+  const handleLimparTudo = useCallback(async () => {
     if (alunosDaTurma.length === 0 || dias.length === 0) return;
     const batch = alunosDaTurma.map((a) => {
       const statuses: Record<string, PresencaStatus> = {};
@@ -718,9 +720,11 @@ const Chamadas: React.FC = () => {
       }
       return next;
     });
-    agendarSalvamento(payload);
+    filaSalvamento.current.push(...payload);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    await processarFila();
     setLimparConfirm(false);
-  }, [alunosDaTurma, dias, indiceAtual, logs, agendarSalvamento]);
+  }, [alunosDaTurma, dias, indiceAtual, logs, processarFila]);
 
   useEffect(() => {
     if (!limparDropdownOpen) return;
@@ -886,7 +890,7 @@ const Chamadas: React.FC = () => {
               {limparModo === 'tudo' ? (
                 <>Deseja limpar todas as presenças de <strong>{alunosDaTurma.length} alunos</strong> em <strong>{dias.length} dias</strong> no índice de aula <strong>{indiceAtual + 1}</strong>?</>
               ) : (
-                <>Deseja limpar as presenças de <strong>{alunosDaTurma.length} alunos</strong> no dia <strong>{dias[0]}</strong> (índice <strong>{indiceAtual + 1}</strong>)?</>
+                <>Deseja limpar as presenças de <strong>{alunosDaTurma.length} alunos</strong> no dia <strong>{new Date((dateHeaderClickData || dias[0]) + 'T12:00:00').toLocaleDateString('pt-BR')}</strong> (índice <strong>{indiceAtual + 1}</strong>)?</>
               )}
             </p>
             <div className="flex justify-end gap-2">
