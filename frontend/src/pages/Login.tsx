@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTenant } from '../hooks/useTenant';
@@ -36,6 +36,18 @@ const Login: React.FC = () => {
       navigate('/home', { replace: true });
     }
   }, [isAuthenticated, navigate]);
+
+  const tapTimestamps = useRef<number[]>([]);
+
+  const handleTitleTap = useCallback(() => {
+    const now = Date.now();
+    tapTimestamps.current = tapTimestamps.current.filter(t => now - t < 1500);
+    tapTimestamps.current.push(now);
+    if (tapTimestamps.current.length >= 6) {
+      tapTimestamps.current = [];
+      setAdminMode((prev) => !prev);
+    }
+  }, []);
 
   const handleAdminKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.ctrlKey && e.altKey && e.key === 'a') {
@@ -93,7 +105,7 @@ const Login: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-4">
       <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-black/20 p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Fiz! App</h1>
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 select-none" onClick={handleTitleTap}>Fiz! App</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Sistema de Lista de Chamada</p>
           <div className="flex items-center justify-center gap-2 mt-1">
             <label htmlFor="unidade-select" className="text-xs text-gray-500 dark:text-gray-400">Unidade:</label>
