@@ -665,6 +665,18 @@ const Chamadas: React.FC = () => {
       indice_aula: indiceAtual,
       status: null, origem: 'manual',
     }));
+    setLogs((prev) => {
+      const next = { ...prev };
+      for (const b of batch) {
+        if (next[b.alunoId]?.[data]?.[indiceAtual]) {
+          delete next[b.alunoId][data][indiceAtual];
+          if (Object.keys(next[b.alunoId][data]).length === 0) {
+            delete next[b.alunoId][data];
+          }
+        }
+      }
+      return next;
+    });
     filaSalvamento.current.push(...payload);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     await processarFila();
@@ -695,6 +707,20 @@ const Chamadas: React.FC = () => {
         });
       }
     }
+    setLogs((prev) => {
+      const next = { ...prev };
+      for (const b of batch) {
+        for (const d of dias) {
+          if (next[b.alunoId]?.[d]?.[indiceAtual]) {
+            delete next[b.alunoId][d][indiceAtual];
+            if (Object.keys(next[b.alunoId][d]).length === 0) {
+              delete next[b.alunoId][d];
+            }
+          }
+        }
+      }
+      return next;
+    });
     filaSalvamento.current.push(...payload);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     await processarFila();
