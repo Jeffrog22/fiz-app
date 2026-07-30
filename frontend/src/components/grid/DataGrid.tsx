@@ -470,7 +470,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                               futura
                                 ? 'bg-gray-50 text-gray-200 cursor-not-allowed dark:bg-gray-700 dark:text-gray-600'
                                 : isCalendario
-                                ? `${STATUS_COLORS[status || '']} cursor-default`
+                                ? `${STATUS_COLORS[status || '']} ${status === 'ferias' ? 'text-[9px]' : 'text-xs'} cursor-default`
                                 : status
                                 ? `${STATUS_COLORS[status]} cursor-pointer ${getOrigem(aluno.id, dia) === 'extrapolado' ? 'border border-dashed border-amber-400' : ''}`
                                 : 'bg-gray-100 hover:bg-gray-200 text-gray-400 cursor-pointer dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-500'
