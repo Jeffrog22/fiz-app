@@ -663,14 +663,14 @@ const { enabled: devEnabled } = useDevLog();
               </div>
               <p className="text-sm text-red-500 dark:text-red-400 mb-3 font-medium">
                 Isso DESTRÓI todos os dados do tenant: alunos, turmas, professores, chamadas,
-                notificações, planejamentos, calendário, logs. Não há desfazer.
+                notificações, planejamentos, calendário, logs. Não há como desfazer.
               </p>
               <button
                 onClick={handleHardReset}
                 disabled={resetando}
                 className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg transition-colors disabled:opacity-50"
               >
-                {resetando ? 'Resetando...' : 'Executar HARD RESET'}
+                {resetando ? 'Resetando...' : 'EXECUTAR'}
               </button>
             </div>
           )}
