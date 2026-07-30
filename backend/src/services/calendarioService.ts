@@ -116,3 +116,67 @@ export async function removerEvento(tenantId: string, id: string): Promise<void>
     throw new AppError('Erro ao remover evento', 500);
   }
 }
+
+export async function aplicarFerias(
+  tenantId: string,
+  feriasInicio: string,
+  feriasFim: string,
+): Promise<{ ok: boolean; count: number }> {
+  if (!feriasInicio || !feriasFim) throw new AppError('ferias_inicio e ferias_fim sao obrigatorios', 400);
+
+  const inicio = new Date(feriasInicio);
+  const fim = new Date(feriasFim);
+  if (fim < inicio) throw new AppError('ferias_fim deve ser posterior a ferias_inicio', 400);
+
+  const eventos: { tenant_id: string; data: string; tipo: string; descricao: string }[] = [];
+  const current = new Date(inicio);
+  while (current <= fim) {
+    const diaSemana = current.getDay();
+    if (diaSemana !== 0 && diaSemana !== 6) {
+      const dataStr = current.toISOString().split('T')[0];
+      eventos.push({ tenant_id: tenantId, data: dataStr, tipo: 'ferias', descricao: 'Férias' });
+    }
+    current.setDate(current.getDate() + 1);
+  }
+
+  if (eventos.length === 0) return { ok: true, count: 0 };
+
+  const { error } = await supabase
+    .from('calendario')
+    .upsert(eventos, { onConflict: 'tenant_id,data,tipo', ignoreDuplicates: false });
+
+  if (error) {
+    console.error('[calendarioService.aplicarFerias]', error);
+    throw new AppError('Erro ao aplicar ferias no calendario', 500);
+  }
+
+  console.info(`[calendarioService.aplicarFerias] ${eventos.length} dias de ferias inseridos para tenant ${tenantId}`);
+  return { ok: true, count: eventos.length };
+}
+
+export async function removerFerias(
+  tenantId: string,
+  feriasInicio?: string,
+  feriasFim?: string,
+): Promise<{ ok: boolean; count: number }> {
+  let query = supabase
+    .from('calendario')
+    .delete()
+    .eq('tenant_id', tenantId)
+    .eq('tipo', 'ferias');
+
+  if (feriasInicio && feriasFim) {
+    query = query.gte('data', feriasInicio).lte('data', feriasFim);
+  }
+
+  const { data, error } = await query.select('id');
+
+  if (error) {
+    console.error('[calendarioService.removerFerias]', error);
+    throw new AppError('Erro ao remover ferias do calendario', 500);
+  }
+
+  const count = data?.length || 0;
+  console.info(`[calendarioService.removerFerias] ${count} dias de ferias removidos para tenant ${tenantId}`);
+  return { ok: true, count };
+}

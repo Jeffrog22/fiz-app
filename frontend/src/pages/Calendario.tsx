@@ -10,7 +10,7 @@ import type { Planejamento } from '../types';
 interface CalendarioEvento {
   id: string;
   data: string;
-  tipo: 'feriado' | 'ponte' | 'reuniao' | 'evento';
+  tipo: 'feriado' | 'ponte' | 'reuniao' | 'evento' | 'ferias';
   descricao?: string;
 }
 
@@ -154,6 +154,31 @@ const Calendario: React.FC = () => {
     } catch { /* ignore */ }
   };
 
+  const handleAplicarFerias = async () => {
+    if (!periodo?.ferias_inicio || !periodo?.ferias_fim) {
+      alert('Defina o período de férias primeiro');
+      return;
+    }
+    try {
+      await api.post('/calendario/ferias', {
+        ferias_inicio: periodo.ferias_inicio,
+        ferias_fim: periodo.ferias_fim,
+      });
+      carregarEventos();
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Erro ao aplicar ferias');
+    }
+  };
+
+  const handleRemoverFerias = async () => {
+    try {
+      await api.delete('/calendario/ferias');
+      carregarEventos();
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Erro ao remover ferias');
+    }
+  };
+
   const diasCalendario: React.ReactNode[] = [];
   for (let i = 0; i < primeiroDiaSemana; i++) {
     const dia = diasAnterior - primeiroDiaSemana + i + 1;
@@ -201,7 +226,8 @@ const Calendario: React.FC = () => {
               <span key={i} className={`w-1.5 h-1.5 rounded-full ${
                 ev.tipo === 'feriado' ? 'bg-red-400 dark:bg-red-500' :
                 ev.tipo === 'ponte' ? 'bg-orange-400 dark:bg-orange-500' :
-                ev.tipo === 'reuniao' ? 'bg-blue-400 dark:bg-blue-500' : 'bg-purple-400 dark:bg-purple-500'
+                ev.tipo === 'reuniao' ? 'bg-blue-400 dark:bg-blue-500' :
+                ev.tipo === 'ferias' ? 'bg-yellow-400 dark:bg-yellow-500' : 'bg-purple-400 dark:bg-purple-500'
               }`} />
             ))}
             {diaEventos.length > 2 && <span className="text-[8px] text-gray-400 dark:text-gray-500">+{diaEventos.length - 2}</span>}
@@ -224,10 +250,24 @@ const Calendario: React.FC = () => {
       </div>
 
       {periodo && (
-        <div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 p-3 rounded border border-gray-200 dark:border-gray-700">
+        <div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 p-3 rounded border border-gray-200 dark:border-gray-700 items-center flex-wrap">
           <span>Início: <strong>{formatDateBR(periodo.inicio_aulas) || '---'}</strong></span>
           <span>Férias: <strong>{formatDateBR(periodo.ferias_inicio) || '---'} a {formatDateBR(periodo.ferias_fim) || '---'}</strong></span>
           <span>Término: <strong>{formatDateBR(periodo.termino_aulas) || '---'}</strong></span>
+          <div className="flex gap-1 ml-auto">
+            <button
+              onClick={handleAplicarFerias}
+              className="text-xs px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded border border-yellow-200 dark:border-yellow-800 hover:bg-yellow-200 dark:hover:bg-yellow-900/40 transition"
+            >
+              Aplicar férias
+            </button>
+            <button
+              onClick={handleRemoverFerias}
+              className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+            >
+              Remover férias
+            </button>
+          </div>
         </div>
       )}
 

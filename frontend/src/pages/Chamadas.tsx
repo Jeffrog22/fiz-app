@@ -9,7 +9,7 @@ import CardBO from '../components/modals/CardBO';
 import type { Aluno, Turma, Professor, ChamadaLog, AnotacaoAluno, CalendarioEvento } from '../types';
 import { gerarDiasLetivos, hojeMesAno, parseDiasFromLabel } from '../utils/chamadaUtils';
 
-type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento' | undefined;
+type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento' | 'ferias' | undefined;
 
 const MAX_UNDO = 20;
 

@@ -45,4 +45,22 @@ export class CalendarioController {
       res.json({ ok: true });
     } catch (e) { next(e); }
   }
+
+  static async aplicarFerias(req: TenantRequest, res: Response, next: NextFunction) {
+    try {
+      const tenantId = req.tenantId!;
+      const { ferias_inicio, ferias_fim } = req.body;
+      const result = await calendarioService.aplicarFerias(tenantId, ferias_inicio, ferias_fim);
+      res.json(result);
+    } catch (e) { next(e); }
+  }
+
+  static async removerFerias(req: TenantRequest, res: Response, next: NextFunction) {
+    try {
+      const tenantId = req.tenantId!;
+      const { ferias_inicio, ferias_fim } = req.query;
+      const result = await calendarioService.removerFerias(tenantId, ferias_inicio as string | undefined, ferias_fim as string | undefined);
+      res.json(result);
+    } catch (e) { next(e); }
+  }
 }

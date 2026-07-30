@@ -9,4 +9,6 @@ router.get('/periodo', CalendarioController.obterPeriodo);
 router.post('/periodo', CalendarioController.salvarPeriodo);
 router.post('/evento', CalendarioController.salvarEvento);
 router.delete('/evento/:id', CalendarioController.removerEvento);
+router.post('/ferias', CalendarioController.aplicarFerias);
+router.delete('/ferias', CalendarioController.removerFerias);
 export default router;

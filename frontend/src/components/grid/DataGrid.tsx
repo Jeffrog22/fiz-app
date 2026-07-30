@@ -6,7 +6,7 @@ import { isDataFutura } from '../../utils/chamadaUtils';
 import AnotacoesModal from '../modals/AnotacoesModal';
 import JustificativaModal from '../modals/JustificativaModal';
 
-type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento' | undefined;
+type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento' | 'ferias' | undefined;
 
 const STATUS_CYCLE: (PresencaStatus)[] = [
   'presente',
@@ -24,6 +24,7 @@ const STATUS_COLORS: Record<string, string> = {
   ponte: 'bg-orange-200 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
   reuniao: 'bg-blue-200 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
   evento: 'bg-purple-200 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+  ferias: 'bg-yellow-200 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
 };
 
 const STATUS_SYMBOLS: Record<string, string> = {
@@ -35,6 +36,7 @@ const STATUS_SYMBOLS: Record<string, string> = {
   ponte: 'Po',
   reuniao: 'Re',
   evento: 'Ev',
+  ferias: 'Férias',
 };
 
 const TIPO_EVENTO_CORES: Record<string, string> = {
@@ -42,6 +44,7 @@ const TIPO_EVENTO_CORES: Record<string, string> = {
   ponte: 'bg-orange-100 border-orange-300 text-orange-700 dark:bg-orange-900/30 dark:border-orange-800 dark:text-orange-400',
   reuniao: 'bg-blue-100 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400',
   evento: 'bg-purple-100 border-purple-300 text-purple-700 dark:bg-purple-900/30 dark:border-purple-800 dark:text-purple-400',
+  ferias: 'bg-yellow-100 border-yellow-300 text-yellow-700 dark:bg-yellow-900/30 dark:border-yellow-800 dark:text-yellow-400',
 };
 
 interface CardAulaRecord {
@@ -291,7 +294,7 @@ const DataGrid: React.FC<DataGridProps> = ({
     (alunoId: string, data: string) => {
       if (isDataFutura(data)) return;
       const current = getStatus(alunoId, data);
-      if (current === 'feriado' || current === 'ponte' || current === 'reuniao' || current === 'evento' || current === 'cancelado') return;
+      if (current === 'feriado' || current === 'ponte' || current === 'reuniao' || current === 'evento' || current === 'ferias' || current === 'cancelado') return;
       const studentLogEntry = logs[alunoId]?.[data]?.[indiceAtual];
       const isManual = studentLogEntry?.origem === 'manual';
       if (isManual) {

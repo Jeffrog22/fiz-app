@@ -47,7 +47,7 @@ export interface ChamadaLog {
   data: string;
   grupo_id?: string;
   indice_aula: number;
-  status?: 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento';
+  status?: 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento' | 'ferias';
   motivo?: string;
   condicao_clima?: string;
   temperatura_ext?: number;
@@ -89,7 +89,7 @@ export interface AnotacaoAluno {
 export interface CalendarioEvento {
   id: string;
   data: string;
-  tipo: 'feriado' | 'ponte' | 'reuniao' | 'evento';
+  tipo: 'feriado' | 'ponte' | 'reuniao' | 'evento' | 'ferias';
   descricao?: string;
 }
 
