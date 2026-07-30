@@ -11,16 +11,16 @@ import { gerarDiasLetivos, hojeMesAno } from '../utils/chamadaUtils';
 
 type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento' | undefined;
 
-const MAX_UNDO = 10;
+const MAX_UNDO = 20;
 
 interface UndoAction {
-  type: 'presenca' | 'anotacao' | 'limpar';
+  type: 'presenca' | 'anotacao' | 'limpar_dia' | 'limpar_tudo';
   alunoId?: string;
   data?: string;
   indice?: number;
   statusAntigo?: PresencaStatus;
   motivoAntigo?: string;
-  batch?: Array<{ alunoId: string; statusAntigo?: PresencaStatus }>;
+  batch?: Array<{ alunoId: string; statusAntigo?: PresencaStatus; statuses?: Record<string, PresencaStatus> }>;
 }
 
 function getSessionState(key: string, fallback: string): string {
@@ -67,6 +67,8 @@ const Chamadas: React.FC = () => {
   const [cardAulaData, setCardAulaData] = useState<Record<string, Record<number, any>>>({});
 
   const [limparConfirm, setLimparConfirm] = useState(false);
+  const [limparModo, setLimparModo] = useState<'dia' | 'tudo'>('dia');
+  const [limparDropdownOpen, setLimparDropdownOpen] = useState(false);
   const [undoCount, setUndoCount] = useState(0);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -478,8 +480,8 @@ const Chamadas: React.FC = () => {
         agendarSalvamento(payload);
         break;
       }
-      case 'limpar': {
-        if (!action.batch) return;
+      case 'limpar_dia': {
+        if (!action.batch || !action.data) return;
         const idx = action.indice ?? indiceAtual;
         const payload = action.batch.map((b) => ({
           grupo_id: b.alunoId, data: action.data,
@@ -509,17 +511,57 @@ const Chamadas: React.FC = () => {
         agendarSalvamento(payload);
         break;
       }
+      case 'limpar_tudo': {
+        if (!action.batch) return;
+        const idx = action.indice ?? indiceAtual;
+        const payload: any[] = [];
+        for (const b of action.batch) {
+          if (!b.statuses) continue;
+          for (const [data, status] of Object.entries(b.statuses)) {
+            payload.push({
+              grupo_id: b.alunoId, data,
+              indice_aula: idx,
+              status: status || null, origem: 'manual',
+            });
+          }
+        }
+        setLogs((prev) => {
+          const next = { ...prev };
+          for (const b of action.batch!) {
+            if (!b.statuses) continue;
+            for (const [data, statusAntigo] of Object.entries(b.statuses)) {
+              if (!next[b.alunoId]) next[b.alunoId] = {};
+              if (!next[b.alunoId][data]) next[b.alunoId][data] = {};
+              if (statusAntigo) {
+                next[b.alunoId][data][idx] = {
+                  id: '', tenant_id: '', data, grupo_id: b.alunoId,
+                  indice_aula: idx, status: statusAntigo, origem: 'manual',
+                  criado_em: new Date().toISOString(),
+                };
+              } else {
+                delete next[b.alunoId][data][idx];
+                if (Object.keys(next[b.alunoId][data]).length === 0) {
+                  delete next[b.alunoId][data];
+                }
+              }
+            }
+          }
+          return next;
+        });
+        agendarSalvamento(payload);
+        break;
+      }
     }
   }, [indiceAtual, agendarSalvamento]);
 
-  const handleLimpar = useCallback(() => {
+  const handleLimparDia = useCallback(() => {
     if (alunosDaTurma.length === 0 || dias.length === 0) return;
     const data = dias[0];
     const batch = alunosDaTurma.map((a) => ({
       alunoId: a.id,
       statusAntigo: logs[a.id]?.[data]?.[indiceAtual]?.status,
     }));
-    undoStack.current.push({ type: 'limpar', data, indice: indiceAtual, batch });
+    undoStack.current.push({ type: 'limpar_dia', data, indice: indiceAtual, batch });
     if (undoStack.current.length > MAX_UNDO) undoStack.current.shift();
     setUndoCount((c) => c + 1);
 
@@ -543,6 +585,54 @@ const Chamadas: React.FC = () => {
     agendarSalvamento(payload);
     setLimparConfirm(false);
   }, [alunosDaTurma, dias, indiceAtual, logs, agendarSalvamento]);
+
+  const handleLimparTudo = useCallback(() => {
+    if (alunosDaTurma.length === 0 || dias.length === 0) return;
+    const batch = alunosDaTurma.map((a) => {
+      const statuses: Record<string, PresencaStatus> = {};
+      for (const d of dias) {
+        statuses[d] = logs[a.id]?.[d]?.[indiceAtual]?.status;
+      }
+      return { alunoId: a.id, statuses };
+    });
+    undoStack.current.push({ type: 'limpar_tudo', indice: indiceAtual, batch });
+    if (undoStack.current.length > MAX_UNDO) undoStack.current.shift();
+    setUndoCount((c) => c + 1);
+
+    const payload: any[] = [];
+    for (const b of batch) {
+      for (const d of dias) {
+        payload.push({
+          grupo_id: b.alunoId, data: d,
+          indice_aula: indiceAtual,
+          status: null, origem: 'manual',
+        });
+      }
+    }
+    setLogs((prev) => {
+      const next = { ...prev };
+      for (const b of batch) {
+        for (const d of dias) {
+          if (next[b.alunoId]?.[d]?.[indiceAtual]) {
+            delete next[b.alunoId][d][indiceAtual];
+            if (Object.keys(next[b.alunoId][d]).length === 0) {
+              delete next[b.alunoId][d];
+            }
+          }
+        }
+      }
+      return next;
+    });
+    agendarSalvamento(payload);
+    setLimparConfirm(false);
+  }, [alunosDaTurma, dias, indiceAtual, logs, agendarSalvamento]);
+
+  useEffect(() => {
+    if (!limparDropdownOpen) return;
+    const close = () => setLimparDropdownOpen(false);
+    window.addEventListener('click', close, { once: true });
+    return () => window.removeEventListener('click', close);
+  }, [limparDropdownOpen]);
 
   useEffect(() => {
     return () => {
@@ -612,10 +702,28 @@ const Chamadas: React.FC = () => {
             Desfazer
           </button>
           {alunosDaTurma.length > 0 && (
-            <button onClick={() => setLimparConfirm(true)}
-              className="px-3 py-1.5 text-xs bg-red-50 text-red-700 rounded hover:bg-red-100 border border-red-200 transition dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 dark:border-red-800">
-              Limpar
-            </button>
+            <div className="relative">
+              <button onClick={() => setLimparDropdownOpen(v => !v)}
+                className="px-3 py-1.5 text-xs bg-red-50 text-red-700 rounded hover:bg-red-100 border border-red-200 transition dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 dark:border-red-800">
+                Limpar ▾
+              </button>
+              {limparDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1 bg-white rounded shadow-lg border z-50 dark:bg-gray-800 dark:border-gray-700 py-1 min-w-[180px]">
+                  <button
+                    onClick={() => { setLimparDropdownOpen(false); setLimparModo('dia'); setLimparConfirm(true); }}
+                    className="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    🗓️ Limpar este dia
+                  </button>
+                  <button
+                    onClick={() => { setLimparDropdownOpen(false); setLimparModo('tudo'); setLimparConfirm(true); }}
+                    className="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    🧹 Limpar tudo
+                  </button>
+                </div>
+              )}
+            </div>
           )}
           <button onClick={() => { if (!dateHeaderClickData) setDateHeaderClickData(dias[0] || ''); setCardAulaAberto(true); }} disabled={!grupoId}
             className="px-3 py-1.5 text-xs bg-cyan-50 text-cyan-700 rounded hover:bg-cyan-100 border border-cyan-200 transition disabled:opacity-30 disabled:cursor-not-allowed dark:bg-cyan-900/30 dark:text-cyan-400 dark:hover:bg-cyan-900/50 dark:border-cyan-800">
@@ -671,15 +779,20 @@ const Chamadas: React.FC = () => {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 dark:bg-black/60"
           onClick={() => setLimparConfirm(false)}>
           <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl m-4 dark:bg-gray-800 dark:shadow-black/20" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-gray-800 mb-2 dark:text-gray-100">Limpar Chamada</h3>
+            <h3 className="text-lg font-bold text-gray-800 mb-2 dark:text-gray-100">
+              {limparModo === 'tudo' ? '🧹 Limpar tudo' : '🗓️ Limpar este dia'}
+            </h3>
             <p className="text-sm text-gray-600 mb-4 dark:text-gray-400">
-              Deseja limpar todas as presenças de <strong>{alunosDaTurma.length} alunos</strong>
-              {' '}no índice de aula <strong>{indiceAtual + 1}</strong>?
+              {limparModo === 'tudo' ? (
+                <>Deseja limpar todas as presenças de <strong>{alunosDaTurma.length} alunos</strong> em <strong>{dias.length} dias</strong> no índice de aula <strong>{indiceAtual + 1}</strong>?</>
+              ) : (
+                <>Deseja limpar as presenças de <strong>{alunosDaTurma.length} alunos</strong> no dia <strong>{dias[0]}</strong> (índice <strong>{indiceAtual + 1}</strong>)?</>
+              )}
             </p>
             <div className="flex justify-end gap-2">
               <button onClick={() => setLimparConfirm(false)}
                 className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">Cancelar</button>
-              <button onClick={handleLimpar}
+              <button onClick={limparModo === 'tudo' ? handleLimparTudo : handleLimparDia}
                 className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800">Limpar</button>
             </div>
           </div>
