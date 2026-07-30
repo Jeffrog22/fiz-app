@@ -117,21 +117,24 @@ export async function atualizarAlunoService(id: string, data: any, tenantId: str
 
   const categoria = data_nascimento ? calcularCategoria(data_nascimento) : undefined;
 
+  const updateBody: Record<string, any> = {
+    nome: nome?.trim(),
+    data_nascimento,
+    genero,
+    contato,
+    ativo,
+    par_q,
+    atestado_medico,
+    data_atestado,
+    nivel: nivel || null,
+    categoria: categoria || null,
+  };
+
+  if (turma_id !== undefined) updateBody.turma_id = turma_id || null;
+
   const { data: result, error } = await supabase
     .from('alunos')
-    .update({
-      nome: nome?.trim(),
-      data_nascimento,
-      genero,
-      contato,
-      ativo,
-      par_q,
-      atestado_medico,
-      data_atestado,
-      nivel: nivel || null,
-      turma_id: turma_id || null,
-      categoria: categoria || null,
-    })
+    .update(updateBody)
     .eq('id', id)
     .eq('tenant_id', tenantId)
     .select()

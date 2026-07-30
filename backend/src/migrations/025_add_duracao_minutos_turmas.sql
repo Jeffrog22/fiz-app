@@ -1,0 +1,1 @@
+ALTER TABLE turmas ADD COLUMN duracao_minutos INTEGER DEFAULT 45;

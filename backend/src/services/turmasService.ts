@@ -23,7 +23,7 @@ export async function listarTurmasService(
 }
 
 export async function criarTurmaService(data: any, tenantId: string): Promise<any> {
-  const { dias, horario, professor_id, nivel, capacidade, faixa_etaria } = data;
+  const { dias, horario, professor_id, nivel, capacidade, faixa_etaria, duracao_minutos } = data;
 
   if (!dias || dias.length === 0 || !horario) {
     throw new AppError('Dias e horário são obrigatórios', 400);
@@ -55,7 +55,7 @@ export async function criarTurmaService(data: any, tenantId: string): Promise<an
   const existingIds = (allGrupos || []).map((g: any) => g.grupo_id);
   const grupoId = generateGrupoId(professor_id || '', dias, existingIds);
 
-  const payload = {
+  const payload: Record<string, any> = {
     tenant_id: tenantId,
     label,
     grupo_id: grupoId,
@@ -65,6 +65,8 @@ export async function criarTurmaService(data: any, tenantId: string): Promise<an
     capacidade: capacidade ?? null,
     faixa_etaria: faixa_etaria || null,
   };
+
+  if (duracao_minutos !== undefined) payload.duracao_minutos = duracao_minutos ?? null;
 
   const { data: result, error } = await supabase
     .from('turmas')
@@ -78,7 +80,7 @@ export async function criarTurmaService(data: any, tenantId: string): Promise<an
 }
 
 export async function atualizarTurmaService(id: string, data: any, tenantId: string): Promise<any> {
-  const { label, horario, professor_id, nivel, capacidade, faixa_etaria } = data;
+  const { label, horario, professor_id, nivel, capacidade, faixa_etaria, duracao_minutos } = data;
 
   // Valida chave tríplice (excluindo a si mesmo)
   const { data: existing } = await supabase
@@ -104,6 +106,7 @@ export async function atualizarTurmaService(id: string, data: any, tenantId: str
   if (nivel !== undefined) payload.nivel = nivel || null;
   if (capacidade !== undefined) payload.capacidade = capacidade ?? null;
   if (faixa_etaria !== undefined) payload.faixa_etaria = faixa_etaria || null;
+  if (duracao_minutos !== undefined) payload.duracao_minutos = duracao_minutos ?? null;
 
   const { data: result, error } = await supabase
     .from('turmas')

@@ -37,6 +37,7 @@ export interface Turma {
   faixa_etaria?: string;
   grupo_id?: string;
   alunos_count?: number;
+  duracao_minutos?: number;
   criado_em: string;
 }
 

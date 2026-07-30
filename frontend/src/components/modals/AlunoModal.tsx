@@ -76,7 +76,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
       setAtivo(aluno.ativo);
       setParQ(aluno.par_q === true ? 'sim' : aluno.par_q === false ? 'nao' : '');
       setAtestadoMedico(aluno.atestado_medico === true);
-      setDataAtestado(aluno.data_atestado ? formatDateBR(aluno.data_atestado) : '');
+      setDataAtestado(aluno.data_atestado || '');
       setTurmaId(aluno.turma_id || '');
       setNivel(aluno.nivel || (aluno as any).turma?.nivel || '');
       setProfessorId(aluno.turma?.professor_id || '');
@@ -112,6 +112,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
   if (!open) return null;
 
   const isEditMode = isNew || editMode;
+  const camposEditaveis = isEditMode && (isNew || acao !== null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -310,7 +311,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
               required
               value={nome}
               onChange={(e) => setNome(e.target.value)}
-              disabled={!isEditMode}
+               disabled={!camposEditaveis}
               className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400"
             />
           </div>
@@ -332,7 +333,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
                   setDataNascimento(mascaraData(sanitizarInput(e.clipboardData.getData('text'))));
                 }}
                 maxLength={10}
-                disabled={!isEditMode}
+                disabled={!camposEditaveis}
                 className={`px-3 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 ${
                   erroData ? 'border-red-500 animate-shake' : 'border-gray-300 dark:border-gray-600 dark:bg-gray-700 focus:ring-primary-500'
                 }`}
@@ -348,7 +349,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
                 <select
                   value={genero}
                   onChange={(e) => setGenero(e.target.value)}
-                  disabled={!isEditMode}
+                  disabled={!camposEditaveis}
                   className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400"
                 >
                   <option value="">Selecione</option>
@@ -372,7 +373,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
                   }}
                   placeholder="somente números"
                   maxLength={16}
-                  disabled={!isEditMode}
+                  disabled={!camposEditaveis}
                   className={`px-3 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 ${
                     erroContato ? 'border-red-500 animate-shake' : 'border-gray-300 dark:border-gray-600 dark:bg-gray-700 focus:ring-primary-500'
                   }`}
@@ -488,7 +489,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
                       name="parQ"
                       checked={parQ === 'sim'}
                       onChange={() => setParQ('sim')}
-                      disabled={!isEditMode}
+                      disabled={!camposEditaveis}
                       className="text-primary-600"
                     />{' '}
                     Sim
@@ -499,7 +500,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
                       name="parQ"
                       checked={parQ === 'nao'}
                       onChange={() => setParQ('nao')}
-                      disabled={!isEditMode}
+                      disabled={!camposEditaveis}
                       className="text-primary-600"
                     />{' '}
                     Não
@@ -513,11 +514,16 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
                     type="checkbox"
                     checked={atestadoMedico}
                     onChange={(e) => setAtestadoMedico(e.target.checked)}
-                    disabled={!isEditMode}
+                    disabled={!camposEditaveis}
                     className="rounded border-gray-300 dark:border-gray-600 text-primary-600"
                   />
                   <span className="font-medium text-gray-600 dark:text-gray-400">Possui Atestado Médico?</span>
                 </label>
+                {isEditMode && !isNew && acao === null && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    Selecione Correção ou Transferência para editar o atestado
+                  </p>
+                )}
                 {atestadoMedico && (
                   <div className="mt-2">
                     <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Data do Atestado</label>
@@ -525,7 +531,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
                       type="date"
                       value={dataAtestado}
                       onChange={(e) => setDataAtestado(e.target.value)}
-                      disabled={!isEditMode}
+                      disabled={!camposEditaveis}
                       className="mt-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-50 dark:disabled:bg-gray-800"
                     />
                   </div>

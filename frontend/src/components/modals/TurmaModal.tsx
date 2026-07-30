@@ -51,6 +51,7 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
   const [nivel, setNivel] = useState('');
   const [capacidade, setCapacidade] = useState('');
   const [faixaEtaria, setFaixaEtaria] = useState('');
+  const [duracaoMinutos, setDuracaoMinutos] = useState('45');
   const [professorId, setProfessorId] = useState('');
   const [erroHorario, setErroHorario] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; tipo?: string } | null>(null);
@@ -66,6 +67,7 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
       setNivel(turma.nivel || '');
       setCapacidade(turma.capacidade?.toString() || '');
       setFaixaEtaria(turma.faixa_etaria || '');
+      setDuracaoMinutos(turma.duracao_minutos?.toString() || '45');
       setProfessorId(turma.professor_id || '');
     } else {
       setDias([]);
@@ -74,6 +76,7 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
       setNivel('');
       setCapacidade('');
       setFaixaEtaria('');
+      setDuracaoMinutos('45');
       setProfessorId('');
     }
     setErroHorario(null);
@@ -107,6 +110,7 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
         nivel: nivel || undefined,
         capacidade: capacidade ? parseInt(capacidade, 10) : undefined,
         faixa_etaria: faixaEtaria || undefined,
+        duracao_minutos: duracaoMinutos ? parseInt(duracaoMinutos, 10) : undefined,
         professor_id: professorId || undefined,
       });
       return;
@@ -130,6 +134,7 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
       nivel: nivel || undefined,
       capacidade: capacidade ? parseInt(capacidade, 10) : undefined,
       faixa_etaria: faixaEtaria || undefined,
+      duracao_minutos: duracaoMinutos ? parseInt(duracaoMinutos, 10) : undefined,
       professor_id: professorId || undefined,
     });
   };
@@ -218,6 +223,17 @@ const TurmaModal: React.FC<TurmaModalProps> = ({
               }}
               maxLength={5}
               className={`px-3 py-1.5 border rounded-md text-sm focus:outline-none focus:ring-2 ${erroHorario ? 'border-red-500 animate-shake' : 'border-gray-300 dark:border-gray-600 dark:bg-gray-700 focus:ring-primary-500'}`}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Duração (min)</label>
+            <input
+              type="number"
+              min={1}
+              value={duracaoMinutos}
+              onChange={(e) => setDuracaoMinutos(e.target.value)}
+              className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
 

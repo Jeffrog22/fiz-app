@@ -4,6 +4,14 @@ import { AppError } from '../middleware/errorHandler';
 import type { Turma, Aluno, ChamadaLog, Professor } from '../types';
 import { parseDiasFromLabel, gerarDiasLetivos, formatMesAno, sortLabels } from '../utils/chamadaUtils';
 
+function somarMinutos(horario: string, minutos: number): string {
+  const [h, m] = horario.split(':').map(Number);
+  const total = h * 60 + m + minutos;
+  const hora = Math.floor(total / 60) % 24;
+  const min = total % 60;
+  return `${String(hora).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
 const STATUS_MAP: Record<string, string> = {
   presente: 'p', falta: 'f', justificado: 'j',
   cancelado: 'C', feriado: '*', ponte: '*',
@@ -159,7 +167,8 @@ export async function gerarFrequenciaXLSX(
       sheet.getRow(5).height = 15;
       sheet.getCell('A5').value = 'Horário:';
       sheet.getCell('A5').style = headerStyle;
-      sheet.getCell('B5').value = turma.horario.slice(0, 5);
+      const horarioFim = somarMinutos(turma.horario, turma.duracao_minutos || 45);
+      sheet.getCell('B5').value = `${turma.horario.slice(0, 5)} - ${horarioFim}`;
       sheet.getCell('B5').style = dataStyle;
       sheet.getCell('D5').value = 'Mês:';
       sheet.getCell('D5').style = headerStyle;
