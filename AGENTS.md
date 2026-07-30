@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-30 — duracao_minutos + ferias grid + atestado vencido bloqueia + marca-texto → v2.50.5 -->
+<!-- última-sessão: 2026-07-30 — duracao_minutos + ferias grid + atestado vencido bloqueia + marca-texto + CSV incremental → v2.51.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
