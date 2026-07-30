@@ -16,7 +16,6 @@ const AnotacoesModal: React.FC<Props> = ({ aberto, aluno, onClose, onAnotacaoCha
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [mensagem, setMensagem] = useState<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const salvarAnotacao = useCallback(async (texto: string) => {
     if (!aluno || !texto.trim()) return;
@@ -41,17 +40,11 @@ const AnotacoesModal: React.FC<Props> = ({ aberto, aluno, onClose, onAnotacaoCha
     }
   }, [aluno, onAnotacaoChange]);
 
-  const agendarSalvamento = useCallback((texto: string) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => salvarAnotacao(texto), 800);
-  }, [salvarAnotacao]);
-
   useEffect(() => {
     if (!aberto && novaAnotacao.trim()) {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
       salvarAnotacao(novaAnotacao);
     }
-  }, [aberto]);
+  }, [aberto, novaAnotacao, salvarAnotacao]);
 
   useEffect(() => {
     if (aberto && aluno) {
@@ -73,12 +66,6 @@ const AnotacoesModal: React.FC<Props> = ({ aberto, aluno, onClose, onAnotacaoCha
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [aberto, onClose]);
-
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
 
   const handleRemover = async (id: string) => {
     try {
@@ -127,14 +114,10 @@ const AnotacoesModal: React.FC<Props> = ({ aberto, aluno, onClose, onAnotacaoCha
           <div className="flex gap-2">
             <textarea
               value={novaAnotacao}
-              onChange={(e) => {
-                setNovaAnotacao(e.target.value);
-                agendarSalvamento(e.target.value);
-              }}
+              onChange={(e) => setNovaAnotacao(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  if (debounceRef.current) clearTimeout(debounceRef.current);
                   salvarAnotacao(novaAnotacao);
                 }
               }}

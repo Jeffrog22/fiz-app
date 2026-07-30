@@ -63,6 +63,8 @@ interface DataGridProps {
   onTogglePresenca: (alunoId: string, data: string, status: PresencaStatus) => void;
   onUpdateAnotacao: (alunoId: string, data: string, anotacao: string) => void;
   onDateHeaderClick: (data: string) => void;
+  onDateHeaderDoubleClick?: (data: string) => void;
+  selectedDate?: string;
   alunosComAnotacao?: Set<string>;
   alunosComAtestadoAnotacao?: Set<string>;
   onAnotacaoChange?: (alunoId: string) => void;
@@ -82,6 +84,8 @@ const DataGrid: React.FC<DataGridProps> = ({
   onTogglePresenca,
   onUpdateAnotacao,
   onDateHeaderClick,
+  onDateHeaderDoubleClick,
+  selectedDate,
   alunosComAnotacao,
   onAnotacaoChange,
   onSaveJustificativa,
@@ -89,6 +93,7 @@ const DataGrid: React.FC<DataGridProps> = ({
   onNomeDoubleClick,
 }) => {
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dateHeaderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleNomeClickTimer = useCallback((aluno: Aluno) => {
     if (clickTimerRef.current) {
@@ -102,6 +107,19 @@ const DataGrid: React.FC<DataGridProps> = ({
       setAnotacoesModalAluno(aluno);
     }, 250);
   }, [onNomeDoubleClick]);
+
+  const handleDateHeaderClickTimer = useCallback((dia: string) => {
+    if (dateHeaderTimerRef.current) {
+      clearTimeout(dateHeaderTimerRef.current);
+      dateHeaderTimerRef.current = null;
+      onDateHeaderDoubleClick?.(dia);
+      return;
+    }
+    onDateHeaderClick(dia);
+    dateHeaderTimerRef.current = setTimeout(() => {
+      dateHeaderTimerRef.current = null;
+    }, 250);
+  }, [onDateHeaderClick, onDateHeaderDoubleClick]);
 
   const [editandoAnotacao, setEditandoAnotacao] = useState<{
     alunoId: string;
@@ -351,16 +369,17 @@ const DataGrid: React.FC<DataGridProps> = ({
                 const temLog = temAlgumLog(dia);
                 const diaEventos = eventosPorData(dia);
                 const hasEvento = diaEventos.length > 0;
+                const selecionada = selectedDate === dia;
                 return (
                   <th
                     key={dia}
                     className={`px-2 py-1 text-center font-medium min-w-[40px] ${
                       futura ? 'text-gray-300 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400'
-                    }`}
+                    } ${selecionada ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
                   >
                     <button
                       type="button"
-                      onClick={() => !futura && onDateHeaderClick(dia)}
+                      onClick={() => !futura && handleDateHeaderClickTimer(dia)}
                       disabled={futura}
                       className={`block w-full text-center ${
                         !futura
@@ -370,9 +389,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                       title={
                         futura
                           ? 'Data futura'
-                          : temLog
-                          ? `Clima: ${getCondicaoClima(dia) || 'sem registro'}`
-                          : 'Clique para registrar aula'
+                          : `Clique simples para selecionar, duplo para abrir CardAula`
                       }
                     >
                       <span className="text-xs font-bold">

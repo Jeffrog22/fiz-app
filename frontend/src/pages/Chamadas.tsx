@@ -386,6 +386,10 @@ const Chamadas: React.FC = () => {
 
   const handleDateHeaderClick = useCallback((data: string) => {
     setDateHeaderClickData(data);
+  }, []);
+
+  const handleDateHeaderDoubleClick = useCallback((data: string) => {
+    setDateHeaderClickData(data);
     setCardAulaAberto(true);
   }, []);
 
@@ -767,6 +771,8 @@ const Chamadas: React.FC = () => {
           onTogglePresenca={handleTogglePresenca}
           onUpdateAnotacao={handleUpdateAnotacao}
           onDateHeaderClick={handleDateHeaderClick}
+          onDateHeaderDoubleClick={handleDateHeaderDoubleClick}
+          selectedDate={dateHeaderClickData}
           alunosComAnotacao={alunosComAnotacao}
           alunosComAtestadoAnotacao={alunosComAtestadoAnotacao}
           onAnotacaoChange={handleAnotacaoChange}
