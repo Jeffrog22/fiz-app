@@ -444,16 +444,6 @@ const DataGrid: React.FC<DataGridProps> = ({
                   >
                     <span className="sm:hidden">{formatarNomeMobile(aluno.nome, nomes)}</span>
                     <span className="hidden sm:inline">{aluno.nome}</span>
-                    {(alunosComAtestadoAnotacao?.has(aluno.id) || atestadoProximoVencer(aluno)) && (
-                      <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-medium whitespace-nowrap">
-                        {aluno.data_atestado
-                          ? (() => { const d = diasRestantes(aluno.data_atestado!); return d < 0 ? `vencido há ${Math.abs(d)}d` : `${d}d`; })()
-                          : 'atest'}
-                      </span>
-                    )}
-                    {(temAnotacao(aluno.id) || alunosComAnotacao?.has(aluno.id)) && !(alunosComAtestadoAnotacao?.has(aluno.id) || atestadoProximoVencer(aluno)) && (
-                      <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">anot</span>
-                    )}
                   </td>
                   {dias.map((dia) => {
                     const status = getStatus(aluno.id, dia);
