@@ -423,9 +423,9 @@ const DataGrid: React.FC<DataGridProps> = ({
                   <td
                     className={`sticky left-0 bg-white px-4 py-2 font-medium whitespace-nowrap cursor-pointer z-10 dark:bg-gray-800 ${
                       alunosComAtestadoAnotacao?.has(aluno.id) || atestadoProximoVencer(aluno)
-                        ? 'text-red-700 bg-red-300/30 dark:text-red-400 dark:bg-red-500/20'
+                        ? 'text-red-700 bg-red-100 dark:text-red-400 dark:bg-red-900/40'
                         : temAnotacao(aluno.id) || (alunosComAnotacao?.has(aluno.id))
-                        ? 'text-blue-600 bg-blue-300/30 dark:text-blue-400 dark:bg-blue-500/20'
+                        ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30'
                         : 'text-gray-800 dark:text-gray-100'
                     }`}
                     onClick={() => handleNomeClickTimer(aluno)}

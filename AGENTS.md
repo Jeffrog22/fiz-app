@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-29 — Atestado Automático + Admin Login + Limpar Split + Afastamento Auto-J + Limpar Fixes → v2.48.6 -->
+<!-- última-sessão: 2026-07-30 — duracao_minutos + ferias grid + atestado vencido bloqueia + marca-texto → v2.50.5 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -1101,4 +1101,57 @@ Regras:
 - Frontend: 0 erros
 - Backend: 0 erros
 - Testes: 41/41 frontend + 25/25 backend passam
+
+---
+
+## Sessão: 30/07/2026 — duracao_minutos + Férias no Grid + Atestado Vencido Bloqueia + Marca-texto → v2.50.5
+
+### O que foi feito
+
+**1. duracao_minutos nas turmas** (v2.49.0)
+- Migration `025_add_duracao_minutos_turmas.sql`: coluna `duracao_minutos INTEGER DEFAULT 45`
+- Backend: tipos + turmasService (create/update) + exportacaoService (B5 calcula `"07:00 - 07:45"`)
+- Frontend: TurmaModal com campo "Duração (min)" default 45, editável
+
+**2. Bugfix atestado — data ISO + desalocação** (v2.49.0)
+- `AlunoModal.tsx`: `setDataAtestado(aluno.data_atestado || '')` — ISO direto pro `<input type="date">` (antes usava `formatDateBR` que retornava DD/MM/YYYY, incompatível)
+- `AlunoModal.tsx`: todos os campos só editáveis após selecionar chip (`camposEditaveis = isEditMode && (isNew || acao !== null)`)
+  - Botão "✏️ Editar" → chips aparecem, campos travados
+  - Selecionar Correção/Transferência → campos liberam
+  - Aviso âmbar: *"Selecione Correção ou Transferência para editar o atestado"*
+- `alunosService.ts`: `turma_id` só atualizado se presente no body (`!== undefined`) — defensivo contra desalocação acidental
+
+**3. Férias bloqueia grid via calendario** (v2.50.0)
+- `POST /calendario/ferias` + `DELETE /calendario/ferias`
+- `calendarioService.aplicarFerias()` — upsert eventos `tipo: 'ferias'` na `calendario` para cada dia útil do intervalo
+- `calendarioService.removerFerias()` — deleta eventos `ferias` do calendário
+- `Calendario.tsx`: botões "Aplicar férias" / "Remover férias" na barra de período letivo
+- `DataGrid.tsx`: `'ferias'` em `STATUS_COLORS` (amarelo), `STATUS_SYMBOLS`, `PresencaStatus`, `isCalendario`, `handleCellClick`
+- Zero cascata: `dias.length` inalterado, logs intactos, estatísticas não mudam
+
+**4. Grid melhorias** (v2.50.1 → v2.50.5)
+- `STATUS_SYMBOLS['ferias']`: texto por extenso "Férias" em `text-[9px]` com `px-1 py-0.5`
+- `atestadoProximoVencer`: agora pega vencidos também (`diff <= 60`)
+- `handleCellClick`: bloqueia toggle se atestado vencido (`diff < 0`)
+- Marca-texto no nome: `bg-red-300/30` (atestado) e `bg-blue-300/30` (anotação) — cor pigmentada com 30% opacidade
+
+### Arquivos
+- `backend/src/migrations/025_add_duracao_minutos_turmas.sql` (novo)
+- `backend/src/types/index.ts` (+duracao_minutos em Turma, +ferias em ChamadaLog.status)
+- `backend/src/services/turmasService.ts` (+duracao_minutos)
+- `backend/src/services/exportacaoService.ts` (+somarMinutos, B5 calcula fim)
+- `backend/src/services/alunosService.ts` (turma_id defensivo)
+- `backend/src/services/calendarioService.ts` (+aplicarFerias, +removerFerias)
+- `backend/src/controllers/calendarioController.ts` (+aplicarFerias, +removerFerias)
+- `backend/src/routes/calendarioRoutes.ts` (+POST/DELETE /ferias)
+- `frontend/src/types/index.ts` (+duracao_minutos em Turma, +ferias em CalendarioEvento/ChamadaLog)
+- `frontend/src/components/modals/TurmaModal.tsx` (+campo Duração)
+- `frontend/src/components/modals/AlunoModal.tsx` (data_atestado ISO, camposEditaveis, aviso)
+- `frontend/src/components/grid/DataGrid.tsx` (STATUS_SYMBOLS/COLORS, isCalendario, atestadoProximoVencer, handleCellClick bloqueio, marca-texto bg)
+- `frontend/src/pages/Chamadas.tsx` (+ferias em PresencaStatus)
+- `frontend/src/pages/Calendario.tsx` (+botões aplicar/remover férias)
+
+### Typecheck
+- Frontend: 0 erros
+- Backend: 0 erros
 
