@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-31 — kit de documentação replicável (documentação/) + ícones lucide-react nas colunas de ação → v2.53.0 -->
+<!-- última-sessão: 2026-07-31 — kit de documentação extraído do repositório (documentação/) → v2.53.4 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -1184,6 +1184,25 @@ Regras:
 ### Typecheck
 - Frontend: 0 erros (`npm run build` limpo)
 - Testes: 41/41 passam
+
+---
+
+## Sessão: 31/07/2026 — Extração do Kit de Documentação → v2.53.4
+
+### O que foi feito
+- Pasta `documentação/` (kit replicável) **extraída do repositório** para uso externo em novos projetos
+- Removida do working tree; commit registra as deleções
+- Histórico dos commits do kit (v2.53.2/v2.53.3) preservado no `git log` (sem force-push)
+- Sessões históricas que citam `documentação/` (v2.53.0 e v2.53.2) mantidas como registro da época
+
+### Arquivos
+- `documentação/` (10 arquivos removidos: templates, scripts, README)
+- `CHANGELOG.md` (v2.53.4)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros
+- Backend: 0 erros
 
 ---
 

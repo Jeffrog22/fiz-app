@@ -1,5 +1,9 @@
 # Changelog - Fiz! App
 
+## [v2.53.4] - 2026-07-31
+### Removed
+- Pasta `documentação/` (kit replicável) removida do repositório — extraída para uso em novos projetos
+
 ## [v2.53.0] - 2026-07-31
 ### Feat
 - `Alunos.tsx`: coluna Ações — emojis `✏️`/`↔️`/`🗑️` → ícones `lucide-react` `Pencil`/`Unlink`/`Trash2` (16px) com tooltips
