@@ -4,6 +4,10 @@
 ### Feat
 - `Alunos.tsx`: coluna Ações — emojis `✏️`/`↔️`/`🗑️` → ícones `lucide-react` `Pencil`/`Unlink`/`Trash2` (16px) com tooltips
 
+## [v2.53.1] - 2026-07-31
+### Docs
+- Cria `documentação/`: kit replicável de documentação (templates AGENTS/CHANGELOG/DEVELOPMENT/README + hook post-commit + scripts init-projeto e nova-sessao em .sh/.ps1), adaptado para opencode
+
 ## [v2.51.0] - 2026-07-31
 ### Feat
 - Colunas de ação com ícones `lucide-react` (antes botões de texto):

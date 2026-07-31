@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-31 — ícones lucide-react nas colunas de ação (Alunos + Turmas/Exclusoes/DataGrid/TabFrequenciaAluno) → v2.53.0 -->
+<!-- última-sessão: 2026-07-31 — kit de documentação replicável (documentação/) + ícones lucide-react nas colunas de ação → v2.53.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -1184,6 +1184,41 @@ Regras:
 ### Typecheck
 - Frontend: 0 erros (`npm run build` limpo)
 - Testes: 41/41 passam
+
+---
+
+## Sessão: 31/07/2026 — Kit de Documentação Replicável (documentação/) → v2.53.0
+
+### O que foi feito
+- Criada pasta `documentação/` com kit para iniciar novos projetos com o mesmo padrão de documentação do Fiz! App, **adaptado para opencode** (sem referências a Cline)
+- **templates/**: `AGENTS.md.template`, `CHANGELOG.md.template`, `DEVELOPMENT.md.template`, `README.md.template` (placeholders `{{VARIAVEL}}`) + `.githooks/post-commit` (hook SemVer genérico)
+- **scripts/**: `init-projeto.sh`/`.ps1` (inicializa projeto novo: copia templates, preenche placeholders, configura git + hooksPath) e `nova-sessao.sh`/`.ps1` (anexa sessão formatada ao AGENTS.md)
+- `README.md` de guia de uso do kit
+- Validado: `init-projeto.ps1` gerou projeto de teste (todos placeholders substituídos, UTF-8 ok, hook criou tag `v0.0.1` no commit `docs:`); `nova-sessao.ps1` anexou sessão corretamente
+- `.sh` não testados neste ambiente (o `bash` do Windows é WSL sem distro), mas lógica idêntica ao `.ps1`
+
+### Decisões
+- Placeholders preenchidos com defaults de stack (React/Node/PostgreSQL); usuário ajusta no README se o projeto novo usar outra stack
+- Hooks Git via `core.hooksPath` (não copiar para `.git/hooks`)
+- Sem commits de scaffolding automático: o script apenas prepara os arquivos e instrui `git init` + `git config`
+
+### Arquivos
+- `documentação/README.md` (novo)
+- `documentação/templates/AGENTS.md.template` (novo)
+- `documentação/templates/CHANGELOG.md.template` (novo)
+- `documentação/templates/DEVELOPMENT.md.template` (novo)
+- `documentação/templates/README.md.template` (novo)
+- `documentação/templates/.githooks/post-commit` (novo)
+- `documentação/scripts/init-projeto.sh` (novo)
+- `documentação/scripts/init-projeto.ps1` (novo)
+- `documentação/scripts/nova-sessao.sh` (novo)
+- `documentação/scripts/nova-sessao.ps1` (novo)
+- `CHANGELOG.md` (v2.53.1)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros
+- Backend: 0 erros
 
 ---
 

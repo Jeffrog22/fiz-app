@@ -1,0 +1,129 @@
+# {{NOME}}
+
+{{DESCRICAO}}
+
+## Status do Projeto
+![Version](https://img.shields.io/badge/version-{{VERSAO_INICIAL}}--dev-blue)
+![Build](https://img.shields.io/badge/build-passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-passing-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+## Tecnologias Principais
+- **Frontend:** {{STACK_FRONTEND}}
+- **Backend:** {{STACK_BACKEND}}
+- **Banco:** {{STACK_BANCO}}
+- **Testes Frontend:** {{TESTES_FRONTEND}}
+- **Testes Backend:** {{TESTES_BACKEND}}
+
+## Pré-requisitos
+- Node.js 18+
+- npm 9+
+- PostgreSQL 14+ (ou Supabase)
+
+## Como Rodar Localmente
+
+### 1. Backend
+```bash
+cd backend
+npm install
+cp .env.example .env  # configure as credenciais
+npm run dev           # inicia em http://localhost:3001
+```
+
+### 2. Frontend
+```bash
+cd frontend
+npm install
+cp .env.local.example .env.local  # ajuste VITE_API_URL se necessário
+npm run dev           # inicia em http://localhost:5173
+```
+
+### 3. Banco de Dados
+```bash
+# Execute o DDL para criar as tabelas
+psql -h localhost -U postgres -d <dbname> -f database/init.sql
+```
+
+## Variáveis de Ambiente
+
+### Backend (`backend/.env`)
+| Variável | Obrigatório | Padrão | Descrição |
+|---|---|---|---|
+| `PORT` | Não | `3001` | Porta do servidor |
+| `DATABASE_URL` | Sim | — | URL de conexão PostgreSQL |
+| `JWT_SECRET` | Sim* | `dev-secret` | Chave JWT (exigida em produção) |
+| `FRONTEND_URL` | Não | `http://localhost:5173` | URL permitida no CORS |
+| `NODE_ENV` | Não | `development` | Ambiente (`development`/`production`) |
+
+> \* Em produção, `JWT_SECRET` deve ser configurado ou o servidor lançará erro na inicialização.
+
+### Frontend (`frontend/.env.local`)
+| Variável | Obrigatório | Padrão | Descrição |
+|---|---|---|---|
+| `VITE_API_URL` | Não | `http://localhost:3001/api` | URL base da API |
+
+## Deploy
+
+### Backend
+- Plataforma: {{DEPLOY_BACKEND}}
+- Build command: `cd backend && npm install && npm run build`
+- Start command: `cd backend && npm start`
+
+### Frontend
+- Plataforma: {{DEPLOY_FRONTEND}}
+- Build command: `npm run build`
+- Build output: `dist`
+- Configure `VITE_API_URL` apontando para o backend em produção
+
+## Testes
+
+### Backend
+```bash
+cd backend
+npm test            # executa uma vez
+npm run test:watch  # modo watch
+```
+
+### Frontend
+```bash
+cd frontend
+npm test            # executa uma vez
+npm run test:watch  # modo watch
+```
+
+## Estrutura do Projeto
+```
+{{NOME_ESPAÇADO}}/
+├── backend/
+│   └── src/
+│       ├── controllers/   # Lógica das rotas
+│       ├── middleware/     # Auth, logs, erros
+│       ├── routes/        # Definição de rotas
+│       └── index.ts       # Entry point
+├── frontend/
+│   └── src/
+│       ├── components/    # Componentes React
+│       ├── context/       # Contextos globais
+│       ├── hooks/         # Hooks customizados
+│       ├── pages/         # Páginas da aplicação
+│       └── utils/         # Formatters, validators
+├── database/
+│   └── init.sql           # DDL completo
+├── PRD.md                 # Documento de requisitos
+├── ARCHITECTURE.md        # Arquitetura do sistema
+├── DEVELOPMENT.md         # Diretrizes de desenvolvimento
+├── AGENTS.md              # Histórico do projeto
+└── CHANGELOG.md           # Histórico de versões
+```
+
+## Troubleshooting
+
+- **Erro:** `JWT_SECRET not configured for production`
+  Configure a variável `JWT_SECRET` no ambiente ou use `.env`.
+- **Erro:** `ECONNREFUSED` no banco
+  Verifique se o PostgreSQL está rodando e se `DATABASE_URL` está correta.
+- **Erro:** `CORS` no frontend
+  Certifique-se de que `FRONTEND_URL` no backend corresponde à URL do frontend.
+
+## Licença
+MIT
