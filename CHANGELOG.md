@@ -1,5 +1,9 @@
 # Changelog - Fiz! App
 
+## [v2.55.0] - 2026-07-31
+### Feat
+- **Aviso automático de atualização**: novo hook `useUpdateChecker.ts` detecta nova versão via service worker (no mount, a cada 30 min e ao voltar à aba); novo `UpdateBanner.tsx` (banner âmbar fixo no topo com "Atualizar agora" + X dispensável por sessão), renderizado no `ProtectedLayout` abaixo do `ConnectionBanner`
+
 ## [v2.54.0] - 2026-07-31
 ### Feat
 - Login expira em **7 dias** (antes 24h): `JWT_EXPIRES_IN = 604800` exportado no `authService.ts`; cookies `httpOnly` (login, primeiro acesso, admin) usam `JWT_EXPIRES_IN * 1000` — fonte única de verdade

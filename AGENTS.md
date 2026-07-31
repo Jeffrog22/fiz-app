@@ -90,6 +90,33 @@ Regras:
 
 ---
 
+## Sessão: 31/07/2026 — Aviso Automático de Atualização → v2.55.0
+
+### O que foi feito
+- Novo `hooks/useUpdateChecker.ts`: detecta nova versão via service worker — checa `reg.waiting`, escuta `updatefound` + `statechange 'installed'` com `navigator.serviceWorker.controller`, chama `reg.update()`. Gatilhos: mount do ProtectedLayout, `setInterval` 30 min e `visibilitychange` (volta à aba). Se não há SW registrado, aguarda `navigator.serviceWorker.ready`. Expõe `updateAvailable`, `dismiss` (por sessão) e `atualizarAgora` (SKIP_WAITING → controllerchange → reload, fallback reload)
+- Novo `components/common/UpdateBanner.tsx`: banner âmbar fixo no topo "Nova versão disponível — atualize para receber as últimas correções." com botão "Atualizar agora" + X dispensável (por sessão, não re-aparece a cada 30 min)
+- `App.tsx`: `<UpdateBanner />` renderizado no ProtectedLayout, abaixo do `<ConnectionBanner />`
+
+### Decisões
+- Todas as atualizações tratadas como "disponível" (sem distinção disponível/necessária) — decisão do usuário
+- Sem mudanças no backend: detecção 100% via service worker (byte-level do precache), não compara semver
+- Sem dependências novas; "Verificar atualizações" manual do Configuracoes permanece intacto
+- `dismiss` marcado em ref (sessão do layout) para não re-mostrar o aviso a cada ciclo de checagem
+
+### Arquivos
+- `frontend/src/hooks/useUpdateChecker.ts` (novo)
+- `frontend/src/components/common/UpdateBanner.tsx` (novo)
+- `frontend/src/App.tsx` (+UpdateBanner no ProtectedLayout)
+- `CHANGELOG.md` (v2.55.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Backend: 0 erros (`tsc --noEmit`)
+- Testes: 41/41 frontend passam
+
+---
+
 ## Sessão: 31/07/2026 — Login 7 dias + Sessão Expirada + Alerta Offline → v2.54.0
 
 ### O que foi feito

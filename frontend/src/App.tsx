@@ -18,6 +18,7 @@ import Configuracoes from './pages/Configuracoes';
 import TopBar from './components/common/TopBar';
 import Sidebar from './components/common/Sidebar';
 import ConnectionBanner from './components/common/ConnectionBanner';
+import UpdateBanner from './components/common/UpdateBanner';
 import DevPanel from './components/dev/DevPanel';
 import { useAuth } from './hooks/useAuth';
 
@@ -61,6 +62,7 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
       <ConnectionBanner />
+      <UpdateBanner />
       <TopBar />
       <div className="flex flex-1">
         <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(v => !v)} />
