@@ -1,5 +1,14 @@
 # Changelog - Fiz! App
 
+## [v2.51.0] - 2026-07-31
+### Feat
+- Colunas de ação com ícones `lucide-react` (antes botões de texto):
+  - `Turmas.tsx`: Editar/Remover → `Pencil`/`Trash2` com tooltip
+  - `Exclusoes.tsx`: Restaurar/Ocultar → `RotateCcw`/`EyeOff` com tooltip
+  - `DataGrid.tsx`: Just/Hist/Del → `StickyNote`/`History`/`Trash2` (coluna `min-w` 90→70px)
+  - `TabFrequenciaAluno.tsx`: Ver → `Eye` com tooltip
+- Todos os botões com `title`/`aria-label` e classes `dark:` preservadas
+
 ## [v2.48.6] - 2026-07-29
 ### Fix
 - `DataGrid.getStatus`: `alunoLog?.status !== undefined` prioriza `null` explícito do aluno sobre fallback turma-level (CardAula/BO não sobrepõe célula limpa)

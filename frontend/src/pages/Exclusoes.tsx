@@ -4,6 +4,7 @@ import SearchInput from '../components/SearchInput';
 import RestoreModal from '../components/modals/RestoreModal';
 import type { Exclusao, Turma, Professor } from '../types';
 import { normalizeSearch, formatDateBR, formatarNomeMobile } from '../utils/formatters';
+import { RotateCcw, EyeOff } from 'lucide-react';
 
 interface SortRule {
   column: string;
@@ -308,7 +309,7 @@ const Exclusoes: React.FC = () => {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 justify-end">
                         <button
                           onClick={() =>
                             setRestoreTarget({
@@ -316,15 +317,17 @@ const Exclusoes: React.FC = () => {
                               alunoNome: exc.alunos?.nome || 'Aluno',
                             })
                           }
-                          className="text-xs px-2 py-1 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-800 transition"
+                          className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 p-1 rounded hover:bg-green-50 dark:hover:bg-green-900/30"
+                          title="Restaurar"
                         >
-                          Restaurar
+                          <RotateCcw size={16} />
                         </button>
                         <button
                           onClick={() => handleOcultar(exc.id)}
-                          className="text-xs px-2 py-1 bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 rounded border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-800 transition"
+                          className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30"
+                          title="Ocultar"
                         >
-                          Ocultar
+                          <EyeOff size={16} />
                         </button>
                       </div>
                     </td>

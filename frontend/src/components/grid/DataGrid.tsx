@@ -5,6 +5,7 @@ import { formatarNomeMobile } from '../../utils/formatters';
 import { isDataFutura } from '../../utils/chamadaUtils';
 import AnotacoesModal from '../modals/AnotacoesModal';
 import JustificativaModal from '../modals/JustificativaModal';
+import { StickyNote, History, Trash2 } from 'lucide-react';
 
 type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento' | 'ferias' | undefined;
 
@@ -410,7 +411,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                   </th>
                 );
               })}
-              <th className="sticky right-0 bg-gray-50 px-2 py-2 text-center font-medium text-gray-500 min-w-[90px] z-10 dark:bg-gray-900 dark:text-gray-400">
+              <th className="sticky right-0 bg-gray-50 px-2 py-2 text-center font-medium text-gray-500 min-w-[70px] z-10 dark:bg-gray-900 dark:text-gray-400">
                 Ações
               </th>
             </tr>
@@ -486,25 +487,28 @@ const DataGrid: React.FC<DataGridProps> = ({
                           const dia = primeiroDiaJustificado(aluno.id);
                           if (dia) setJustificativaModal({ aluno, data: dia, motivo: getAnotacao(aluno.id, dia) ?? undefined });
                         }}
-                        className="px-1.5 py-0.5 text-[10px] bg-yellow-50 text-yellow-700 rounded hover:bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-400 dark:hover:bg-yellow-900/50"
+                        className="p-1 text-yellow-600 rounded hover:bg-yellow-100 dark:text-yellow-400 dark:hover:bg-yellow-900/50"
                         title="Justificativa"
+                        aria-label="Justificativa"
                       >
-                        Just
+                        <StickyNote size={14} />
                       </button>
                       <button
                         onClick={() => setHistoricoAberto(aluno)}
-                        className="px-1.5 py-0.5 text-[10px] bg-blue-50 text-blue-600 rounded hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
+                        className="p-1 text-blue-600 rounded hover:bg-blue-100 dark:text-blue-400 dark:hover:bg-blue-900/50"
                         title="Histórico de presença"
+                        aria-label="Histórico de presença"
                       >
-                        Hist
+                        <History size={14} />
                       </button>
                       {faltasMes >= 3 && (
                         <button
                           onClick={() => setExclusaoModal({ aluno, faltasMes })}
-                          className="px-1.5 py-0.5 text-[10px] bg-red-50 text-red-600 rounded hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
+                          className="p-1 text-red-600 rounded hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/50"
                           title="Excluir (3+ faltas no mês)"
+                          aria-label="Excluir"
                         >
-                          Del
+                          <Trash2 size={14} />
                         </button>
                       )}
                     </div>

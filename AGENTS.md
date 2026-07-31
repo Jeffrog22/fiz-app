@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-30 — duracao_minutos + ferias grid + atestado vencido bloqueia + marca-texto + CSV incremental → v2.51.0 -->
+<!-- última-sessão: 2026-07-31 — ícones lucide-react nas colunas de ação (Turmas/Exclusoes/DataGrid/TabFrequenciaAluno) → v2.51.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -1154,4 +1154,34 @@ Regras:
 ### Typecheck
 - Frontend: 0 erros
 - Backend: 0 erros
+
+---
+
+## Sessão: 31/07/2026 — Ícones lucide-react nas Colunas de Ação → v2.51.0
+
+### O que foi feito
+- Instalada dependência `lucide-react` no frontend (única biblioteca de ícones do projeto)
+- **Turmas.tsx**: coluna Ações — botões texto `Editar`/`Remover` → ícones `Pencil`/`Trash2` (16px) com `title`, cores existentes mantidas, `whitespace-nowrap`
+- **Exclusoes.tsx**: botões badge `Restaurar`/`Ocultar` → ícones `RotateCcw`/`EyeOff` (16px) com `title` + hover bg sutil
+- **DataGrid.tsx**: botões `Just`/`Hist`/`Del` (10px) → ícones `StickyNote`/`History`/`Trash2` (14px) com `title` + `aria-label`; coluna Ações `min-w-[90px]` → `min-w-[70px]`
+- **TabFrequenciaAluno.tsx**: botão `Ver` → ícone `Eye` (16px) com `title="Ver histórico"`
+- Todos os ícones preservam classes `dark:` e estilos de hover/estado existentes
+
+### Decisões
+- `lucide-react` escolhido pelo usuário (SVG vetorial, tree-shakeable) em vez de emoji (padrão de Alunos.tsx) ou SVG inline
+- Tooltips via `title` (e `aria-label` no DataGrid) substituem a legibilidade do texto removido
+
+### Arquivos
+- `frontend/package.json` (+lucide-react)
+- `frontend/package-lock.json` (+lucide-react)
+- `frontend/src/pages/Turmas.tsx` (Pencil/Trash2)
+- `frontend/src/pages/Exclusoes.tsx` (RotateCcw/EyeOff)
+- `frontend/src/components/grid/DataGrid.tsx` (StickyNote/History/Trash2 + min-w 70px)
+- `frontend/src/components/reports/tabs/TabFrequenciaAluno.tsx` (Eye)
+- `CHANGELOG.md` (v2.51.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Testes: 41/41 passam
 

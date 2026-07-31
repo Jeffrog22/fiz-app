@@ -5,6 +5,7 @@ import YearPicker from '../YearPicker';
 import PeriodPicker from '../PeriodPicker';
 import HistoricoAlunoModal from '../HistoricoAlunoModal';
 import { normalizeSearch, formatarNomeMobile } from '../../../utils/formatters';
+import { Eye } from 'lucide-react';
 import type { FrequenciaAlunoItem } from '../../../types';
 
 type Modo = 'historico' | 'ano' | 'mes';
@@ -217,9 +218,10 @@ const TabFrequenciaAluno: React.FC = () => {
                       <td className="px-4 py-2 text-center">
                         <button
                           onClick={(e) => { e.stopPropagation(); setModalAluno(d); }}
-                          className="text-xs text-primary-600 hover:text-primary-800 font-medium hover:underline"
+                          className="text-primary-600 hover:text-primary-800 font-medium inline-flex items-center justify-center"
+                          title="Ver histórico"
                         >
-                          Ver
+                          <Eye size={16} />
                         </button>
                       </td>
                     </tr>

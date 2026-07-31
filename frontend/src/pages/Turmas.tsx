@@ -4,6 +4,7 @@ import api from '../utils/api';
 import TurmaModal from '../components/modals/TurmaModal';
 import SearchInput from '../components/SearchInput';
 import { normalizeSearch } from '../utils/formatters';
+import { Pencil, Trash2 } from 'lucide-react';
 import type { Turma } from '../types';
 
 interface SortRule {
@@ -217,18 +218,20 @@ const Turmas: React.FC = () => {
                         {alunosCount}/{t.capacidade || '∞'}
                       </span>
                     </td>
-                    <td className="px-4 py-2 text-right space-x-2">
+                    <td className="px-4 py-2 text-right whitespace-nowrap">
                       <button
                         onClick={() => { setEditando(t); setModalOpen(true); }}
-                        className="text-xs text-primary-600 hover:text-primary-800 dark:text-primary-400"
+                        className="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-200 ml-1 align-middle"
+                        title="Editar"
                       >
-                        Editar
+                        <Pencil size={16} />
                       </button>
                       <button
                         onClick={() => handleDelete(t.id)}
-                        className="text-xs text-red-500 hover:text-red-700"
+                        className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 ml-1 align-middle"
+                        title="Remover"
                       >
-                        Remover
+                        <Trash2 size={16} />
                       </button>
                     </td>
                   </tr>
