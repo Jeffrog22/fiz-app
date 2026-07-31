@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-31 — ícones lucide-react nas colunas de ação (Turmas/Exclusoes/DataGrid/TabFrequenciaAluno) → v2.51.0 -->
+<!-- última-sessão: 2026-07-31 — ícones lucide-react nas colunas de ação (Alunos + Turmas/Exclusoes/DataGrid/TabFrequenciaAluno) → v2.52.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -1179,6 +1179,25 @@ Regras:
 - `frontend/src/components/grid/DataGrid.tsx` (StickyNote/History/Trash2 + min-w 70px)
 - `frontend/src/components/reports/tabs/TabFrequenciaAluno.tsx` (Eye)
 - `CHANGELOG.md` (v2.51.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Testes: 41/41 passam
+
+---
+
+## Sessão: 31/07/2026 — Alunos: Coluna de Ações com lucide-react → v2.52.0
+
+### O que foi feito
+- **Alunos.tsx**: coluna Ações (linhas 611-619) — emojis `✏️`/`↔️`/`🗑️` → ícones `lucide-react` `Pencil`/`Unlink`/`Trash2` (16px)
+- Tooltips `title` preservados (`Editar`, `Desalocar`, `Remover`)
+- Cores e classes `dark:` mantidas; `text-base` → `inline-flex items-center align-middle`
+- Toolbar (Alocar/Transferir/Importar CSV/Novo Aluno/Limpar) inalterada por decisão do usuário (escopo = só a coluna Ações)
+
+### Arquivos
+- `frontend/src/pages/Alunos.tsx` (Pencil/Unlink/Trash2)
+- `CHANGELOG.md` (v2.52.0)
 - `AGENTS.md` (esta sessão)
 
 ### Typecheck

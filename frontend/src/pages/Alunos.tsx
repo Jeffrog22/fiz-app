@@ -5,6 +5,7 @@ import AlunoModal from '../components/modals/AlunoModal';
 import SearchInput from '../components/SearchInput';
 import type { Aluno, Professor, SavePayload } from '../types';
 import { calcIdade, calcCategoria, normalizeSearch, sortTurmas, formatarNomeMobile } from '../utils/formatters';
+import { Pencil, Unlink, Trash2 } from 'lucide-react';
 
 interface SortRule {
   column: string;
@@ -610,13 +611,13 @@ const Alunos: React.FC = () => {
                     </td>
                     <td className="px-3 py-2 text-right whitespace-nowrap">
                       <button onClick={() => { setEditando(a); setModalOpen(true); }}
-                        className="text-base text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 ml-1" title="Editar">✏️</button>
+                        className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 ml-1 inline-flex items-center align-middle" title="Editar"><Pencil size={16} /></button>
                       {a.turma_id && (
                         <button onClick={() => setDesalocarTarget({ id: a.id, nome: a.nome })}
-                          className="text-base text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 ml-1" title="Desalocar">↔️</button>
+                          className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 ml-1 inline-flex items-center align-middle" title="Desalocar"><Unlink size={16} /></button>
                       )}
                       <button onClick={() => { setDeleteTarget({ id: a.id, nome: a.nome }); setDeleteMotivo('falta'); }}
-                        className="text-base text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 ml-1" title="Remover">🗑️</button>
+                        className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 ml-1 inline-flex items-center align-middle" title="Remover"><Trash2 size={16} /></button>
                     </td>
                   </tr>
                 );
