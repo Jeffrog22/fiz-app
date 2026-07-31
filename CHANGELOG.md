@@ -1,6 +1,6 @@
 # Changelog - Fiz! App
 
-## [v2.52.0] - 2026-07-31
+## [v2.53.0] - 2026-07-31
 ### Feat
 - `Alunos.tsx`: coluna Ações — emojis `✏️`/`↔️`/`🗑️` → ícones `lucide-react` `Pencil`/`Unlink`/`Trash2` (16px) com tooltips
 

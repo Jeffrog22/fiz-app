@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-31 — ícones lucide-react nas colunas de ação (Alunos + Turmas/Exclusoes/DataGrid/TabFrequenciaAluno) → v2.52.0 -->
+<!-- última-sessão: 2026-07-31 — ícones lucide-react nas colunas de ação (Alunos + Turmas/Exclusoes/DataGrid/TabFrequenciaAluno) → v2.53.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -1187,7 +1187,7 @@ Regras:
 
 ---
 
-## Sessão: 31/07/2026 — Alunos: Coluna de Ações com lucide-react → v2.52.0
+## Sessão: 31/07/2026 — Alunos: Coluna de Ações com lucide-react → v2.53.0
 
 ### O que foi feito
 - **Alunos.tsx**: coluna Ações (linhas 611-619) — emojis `✏️`/`↔️`/`🗑️` → ícones `lucide-react` `Pencil`/`Unlink`/`Trash2` (16px)
@@ -1197,7 +1197,7 @@ Regras:
 
 ### Arquivos
 - `frontend/src/pages/Alunos.tsx` (Pencil/Unlink/Trash2)
-- `CHANGELOG.md` (v2.52.0)
+- `CHANGELOG.md` (v2.53.0)
 - `AGENTS.md` (esta sessão)
 
 ### Typecheck
