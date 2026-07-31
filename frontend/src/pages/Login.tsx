@@ -4,11 +4,12 @@ import { useAuth } from '../hooks/useAuth';
 import { useTenant } from '../hooks/useTenant';
 import { useDevLog } from '../hooks/useDevLog';
 import { useDbStatus } from '../hooks/useDbStatus';
+import ConnectionBanner from '../components/common/ConnectionBanner';
 import { getTenantId, getAvailableTenants } from '../utils/tenant';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { login, primeiroAcesso, adminLogin, loading, isAuthenticated, logout } = useAuth();
+  const { login, primeiroAcesso, adminLogin, loading, isAuthenticated, logout, sessionExpirada } = useAuth();
   const { tenantId, tenantNome, setTenant } = useTenant();
   const [professorNome, setProfessorNome] = useState('');
   const [pin, setPin] = useState('');
@@ -19,6 +20,7 @@ const Login: React.FC = () => {
   const [acessoRapido, setAcessoRapido] = useState<string[]>([]);
   const [adminMode, setAdminMode] = useState(false);
   const [limpando, setLimpando] = useState(false);
+  const [avisoSessaoExpirada, setAvisoSessaoExpirada] = useState(true);
   const { enabled: devEnabled, toggle: toggleDev } = useDevLog();
   const dbStatus = useDbStatus();
   const unidades = getAvailableTenants();
@@ -102,8 +104,30 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-4">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950 px-4">
+      <ConnectionBanner />
+      <div className="flex-1 flex items-center justify-center">
       <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-black/20 p-8">
+        {sessionExpirada && avisoSessaoExpirada && (
+          <div className="mb-6 p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-800 rounded flex items-start justify-between gap-2">
+            <div>
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                Sua sessão expirou
+              </p>
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                Faça login novamente para continuar e evitar perda de alterações.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAvisoSessaoExpirada(false)}
+              className="text-amber-500 hover:text-amber-700 dark:hover:text-amber-400 transition-colors shrink-0"
+              title="Dispensar"
+            >
+              ✕
+            </button>
+          </div>
+        )}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 select-none" onClick={handleTitleTap}>Fiz! App</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Sistema de Lista de Chamada</p>
@@ -342,6 +366,7 @@ const Login: React.FC = () => {
           <span className={`w-2 h-2 rounded-full ${dbStatus === 'online' ? 'bg-green-400' : dbStatus === 'checking' ? 'bg-yellow-400' : 'bg-gray-300 dark:bg-gray-600'}`} />
           <span className="text-xs text-gray-400 dark:text-gray-500">{__APP_VERSION__}</span>
         </div>
+      </div>
       </div>
     </div>
   );

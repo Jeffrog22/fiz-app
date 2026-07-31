@@ -10,7 +10,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET obrigatório em produção');
 }
-const JWT_EXPIRES_IN: number = 86400;
+export const JWT_EXPIRES_IN: number = 604800;
 
 function generateHash(professor: string, tenantId: string, salt: string): string {
   const timestamp = Date.now().toString();

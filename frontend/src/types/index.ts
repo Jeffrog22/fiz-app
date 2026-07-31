@@ -116,6 +116,7 @@ export interface AuthState {
   tenantId?: string;
   loading: boolean;
   isAdmin?: boolean;
+  sessionExpirada?: boolean;
 }
 
 export interface TurmaExportRow {

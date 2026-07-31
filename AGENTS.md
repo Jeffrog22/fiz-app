@@ -90,6 +90,51 @@ Regras:
 
 ---
 
+## Sessão: 31/07/2026 — Login 7 dias + Sessão Expirada + Alerta Offline → v2.54.0
+
+### O que foi feito
+
+**1. Login expira em 7 dias (antes 24h)**
+- `authService.ts`: `JWT_EXPIRES_IN = 86400` → `604800` e **exportada** (fonte única de verdade)
+- `authController.ts`: `maxAge: 24*60*60*1000` → `maxAge: JWT_EXPIRES_IN * 1000` nos 3 pontos (login, primeiro acesso, admin-login). JWT em segundos; cookie em ms
+
+**2. Sessão expirada → força logout + aviso**
+- `types/index.ts`: `AuthState.sessionExpirada?: boolean`
+- `AuthContext.tsx`: helper `isTokenExpirado(token)` (decodifica `exp` via base64url puro, sem dependência); no mount, se token vencido → remove do localStorage, `isAuthenticated:false` + `sessionExpirada:true` (ProtectedLayout redireciona para `/`); zera após login/primeiro-acesso/admin/logout; `useEffect` escuta `auth:session-expired`
+- `api.ts`: no case 401 dispara `window.dispatchEvent(new CustomEvent('auth:session-expired'))` **exceto** para URLs `/auth/*` (não reagir a PIN/hash errado no login)
+- `Login.tsx`: banner âmbar "Sua sessão expirou" dismissível quando `sessionExpirada`
+
+**3. Alerta visual de sem conexão**
+- Novo `hooks/useOnlineStatus.ts`: estado iniciado de `navigator.onLine`, escuta `window online/offline`
+- Novo `components/common/ConnectionBanner.tsx`: banner vermelho fixo no topo "Sem conexão com a internet — alterações não salvas podem ser perdidas", aparece ao ficar offline, some sozinho ao reconectar, não dispensável enquanto offline
+- Render no `ProtectedLayout` (`App.tsx`, abaixo do `<TopBar />`) e no `Login.tsx`
+- Pontinho do `useDbStatus` no TopBar permanece (reflete backend/DB, não internet)
+
+### Decisões
+- 7 dias fixo no código (não configurável via env) — acatado do usuário
+- Sessão vencida ao abrir o app → força logout na hora (não manter usuário na tela)
+- 401 em `/auth/*` não dispara o evento (evita loop de logout com PIN/hash incorretos no login)
+
+### Arquivos
+- `backend/src/services/authService.ts` (JWT_EXPIRES_IN export + 604800)
+- `backend/src/controllers/authController.ts` (maxAge × 3)
+- `frontend/src/types/index.ts` (+sessionExpirada)
+- `frontend/src/context/AuthContext.tsx` (isTokenExpirado, force logout, listener)
+- `frontend/src/utils/api.ts` (dispatch 401 exceto /auth/*)
+- `frontend/src/pages/Login.tsx` (banner sessão expirada + ConnectionBanner)
+- `frontend/src/App.tsx` (+ConnectionBanner no ProtectedLayout)
+- `frontend/src/hooks/useOnlineStatus.ts` (novo)
+- `frontend/src/components/common/ConnectionBanner.tsx` (novo)
+- `CHANGELOG.md` (v2.54.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Backend: 0 erros (`tsc --noEmit`)
+- Testes: 41/41 frontend + 25/25 backend passam
+
+---
+
 ## Sessão: 01/07/2026 — Grid de Alunos + Enrollment
 
 ### O que foi feito

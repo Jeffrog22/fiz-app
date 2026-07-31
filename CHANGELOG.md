@@ -1,5 +1,11 @@
 # Changelog - Fiz! App
 
+## [v2.54.0] - 2026-07-31
+### Feat
+- Login expira em **7 dias** (antes 24h): `JWT_EXPIRES_IN = 604800` exportado no `authService.ts`; cookies `httpOnly` (login, primeiro acesso, admin) usam `JWT_EXPIRES_IN * 1000` — fonte única de verdade
+- **Sessão expirada**: `AuthContext` decodifica `exp` do JWT no mount (`isTokenExpirado`), força logout e marca `sessionExpirada` se vencido; `api.ts` dispara `auth:session-expired` no 401 (exceto `/auth/*`); banner âmbar dismissível no `Login.tsx`
+- **Alerta de sem conexão**: novo hook `useOnlineStatus.ts` (`navigator.onLine` + listeners) e `ConnectionBanner.tsx` (banner vermelho fixo, não-dispensável, some ao reconectar) renderizados no `ProtectedLayout` e no `Login`
+
 ## [v2.53.4] - 2026-07-31
 ### Removed
 - Pasta `documentação/` (kit replicável) removida do repositório — extraída para uso em novos projetos

@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { TenantRequest } from '../types';
 import { AppError } from '../middleware/errorHandler';
-import { loginService, primeiroAcessoService, adminLoginService, clearDataService } from '../services/authService';
+import { loginService, primeiroAcessoService, adminLoginService, clearDataService, JWT_EXPIRES_IN } from '../services/authService';
 
 export class AuthController {
   static async login(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
@@ -16,7 +16,7 @@ export class AuthController {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 24 * 60 * 60 * 1000,
+        maxAge: JWT_EXPIRES_IN * 1000,
       });
 
       res.json({
@@ -43,7 +43,7 @@ export class AuthController {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 24 * 60 * 60 * 1000,
+        maxAge: JWT_EXPIRES_IN * 1000,
       });
 
       res.status(201).json({
@@ -69,7 +69,7 @@ export class AuthController {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 24 * 60 * 60 * 1000,
+        maxAge: JWT_EXPIRES_IN * 1000,
       });
 
       res.json({

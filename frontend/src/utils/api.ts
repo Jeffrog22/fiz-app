@@ -66,6 +66,10 @@ api.interceptors.response.use(
         case 401:
           // Sessão expirada - redirecionar para login
           console.error('Sessão expirada. Faça login novamente.');
+          const url401 = error.config?.url || '';
+          if (!/^\/auth\//.test(url401)) {
+            window.dispatchEvent(new CustomEvent('auth:session-expired'));
+          }
           break;
         case 403:
           console.error('Acesso negado:', data?.error);

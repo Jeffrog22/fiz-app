@@ -3,6 +3,24 @@ import { AuthState } from '../types';
 import { getTenantId } from '../utils/tenant';
 import api from '../utils/api';
 
+function decodeBase64Url(segment: string): string {
+  const base64 = segment.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+  return decodeURIComponent(
+    atob(padded).split('').map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
+  );
+}
+
+export function isTokenExpirado(token: string): boolean {
+  try {
+    const payload = JSON.parse(decodeBase64Url(token.split('.')[1]));
+    if (typeof payload.exp !== 'number') return false;
+    return payload.exp * 1000 < Date.now();
+  } catch {
+    return false;
+  }
+}
+
 export interface AuthContextType extends AuthState {
   login: (professorNome: string, pin?: string) => Promise<void>;
   primeiroAcesso: (professorNome: string, pin: string, csvFile?: File) => Promise<void>;
@@ -34,14 +52,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (storedProfessor) {
       try {
         const parsed = JSON.parse(storedProfessor);
-        setState({
-          isAuthenticated: true,
-          professorId: parsed.professorId,
-          professorNome: parsed.nome,
-          tenantId: getTenantId(),
-          loading: false,
-          isAdmin: parsed.isAdmin || false,
-        });
+        if (parsed.token && isTokenExpirado(parsed.token)) {
+          localStorage.removeItem(`${getTenantId()}_professor`);
+          setState({ isAuthenticated: false, loading: false, sessionExpirada: true });
+        } else {
+          setState({
+            isAuthenticated: true,
+            professorId: parsed.professorId,
+            professorNome: parsed.nome,
+            tenantId: getTenantId(),
+            loading: false,
+            isAdmin: parsed.isAdmin || false,
+          });
+        }
       } catch {
         localStorage.removeItem(`${getTenantId()}_professor`);
         setState({ isAuthenticated: false, loading: false });
@@ -49,6 +72,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } else {
       setState({ isAuthenticated: false, loading: false });
     }
+  }, []);
+
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      localStorage.removeItem(`${getTenantId()}_professor`);
+      setState({
+        isAuthenticated: false,
+        loading: false,
+        sessionExpirada: true,
+      });
+    };
+    window.addEventListener('auth:session-expired', handleSessionExpired);
+    return () => window.removeEventListener('auth:session-expired', handleSessionExpired);
   }, []);
 
   const login = useCallback(async (professorNome: string, pin?: string) => {
@@ -59,7 +95,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { professorId, nome, token, hash } = response.data;
 
       localStorage.setItem(`${getTenantId()}_professor`, JSON.stringify({ professorId, nome, hash, token, isAdmin: false }));
-      
+
       setState({
         isAuthenticated: true,
         professorId,
@@ -67,6 +103,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         tenantId: getTenantId(),
         loading: false,
         isAdmin: false,
+        sessionExpirada: false,
       });
     } catch (error) {
       setState(prev => ({ ...prev, loading: false }));
@@ -98,6 +135,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         tenantId: getTenantId(),
         loading: false,
         isAdmin: false,
+        sessionExpirada: false,
       });
     } catch (error) {
       setState(prev => ({ ...prev, loading: false }));
@@ -120,6 +158,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         tenantId: getTenantId(),
         loading: false,
         isAdmin: true,
+        sessionExpirada: false,
       });
     } catch (error) {
       setState(prev => ({ ...prev, loading: false }));
