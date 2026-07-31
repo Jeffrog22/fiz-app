@@ -18,8 +18,15 @@ Kit para iniciar **novos projetos** com o mesmo padrão de documentação do Fiz
 
 ### 1. Inicializar um novo projeto
 
+O script detecta automaticamente o cenário:
+
+- **Raiz vazia** (projeto do zero) → cria os 4 docs + `.githooks`, roda `git init` + `core.hooksPath`.
+- **Raiz com código** (aperfeiçoar projeto existente) → adiciona apenas o que **faltar**, **sem apagar ou sobrescrever nada** (ex: um `README.md` existente é preservado).
+
+#### Projeto do zero — rodando na raiz:
+
 ```bash
-# dentro do diretório do novo projeto
+cd /caminho/para/o/projeto/novo
 bash /caminho/para/documentação/scripts/init-projeto.sh \
   --nome MeuApp \
   --descricao "Sistema de gestão X" \
@@ -31,14 +38,32 @@ bash /caminho/para/documentação/scripts/init-projeto.sh \
 > & "C:\caminho\para\documentação\scripts\init-projeto.ps1" -Nome MeuApp -Descricao "..." -Repo "..."
 > ```
 
-Isso cria (no diretório atual, dentro de `./MeuApp/`):
+#### Aperfeiçoar um projeto já existente:
+
+```bash
+cd /caminho/para/o/projeto/existente
+bash /caminho/para/documentação/scripts/init-projeto.sh --nome MeuApp
+```
+
+Isso cria (na raiz do diretório atual):
 - `AGENTS.md`, `CHANGELOG.md`, `DEVELOPMENT.md`, `README.md` (placeholders preenchidos)
 - `.githooks/post-commit` e `core.hooksPath` configurado
 
 Depois:
-1. `cd MeuApp && git init && git add -A && git commit -m "docs: scaffolding documentação"` (a tag `v0.1.0` é criada pelo hook)
+1. `git add -A && git commit -m "docs: scaffolding documentação"` (a tag `v0.1.0` é criada pelo hook)
 2. Ajuste no `README.md` os placeholders restantes da stack (`{{STACK_FRONTEND}}`, etc.) se seu projeto usar outra combinação
 3. Crie `ARCHITECTURE.md` e `PRD.md` conforme a necessidade do projeto
+
+### Opções do init-projeto
+
+| Opção | Descrição |
+|---|---|
+| `--nome` / `-Nome` | Nome do projeto (padrão: nome da pasta atual) |
+| `--descricao` / `-Descricao` | Descrição curta do projeto |
+| `--repo` / `-Repo` | URL do repositório git |
+| `--destino` / `-Destino` | Subpasta **nova** (sem isso, usa o diretório atual) |
+| `--versao` / `-Versao` | Versão inicial (padrão: `v0.1.0`) |
+| `--forcar` / `-Forcar` | Sobrescreve os docs existentes (uso em migração) |
 
 ### 2. Registrar uma sessão no AGENTS.md (ao fim de cada trabalho)
 

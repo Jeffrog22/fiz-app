@@ -1,30 +1,36 @@
 #!/bin/bash
 # init-projeto.sh — inicializa um novo projeto com o kit de documentação
-# Uso: ./init-projeto.sh --nome MeuApp [--descricao "..." ] [--repo https://... ] [--destino ./pasta] [--versao v0.1.0]
-# Onde o script rodar, os templates serão copiados e os placeholders preenchidos.
+# Uso (na raiz do projeto novo):
+#   ./init-projeto.sh --nome MeuApp [--descricao "..." ] [--repo https://... ] [--versao v0.1.0]
+#   ./init-projeto.sh --nome MeuApp --destino ./subpasta   # subpasta nova
+#   ./init-projeto.sh --nome MeuApp --forcar               # sobrescreve docs existentes
+#
+# Detecta automaticamente o cenário:
+#   - Raiz vazia (do zero): cria os 4 docs + .githooks e roda git init se preciso.
+#   - Raiz com código (aperfeiçoar): adiciona só o que faltar, sem apagar nada.
 
-set -euo pipefail
+set -uo pipefail
 
-# ----- Resolve o diretório do próprio script (funciona via symlink/caminho relativo) -----
+# ----- Resolve o diretório do próprio script -----
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KIT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 TEMPLATES_DIR="$KIT_DIR/templates"
-SCRIPTS_DIR="$KIT_DIR/scripts"
 
 # ----- Help -----
 usage() {
   cat <<EOF
 init-projeto.sh — inicializa um novo projeto com o kit de documentação
 
-Uso:
+Uso (dentro da raiz do projeto):
   ./init-projeto.sh --nome MeuApp [opções]
 
 Opções:
-  --nome <nome>        Nome do projeto (obrigatório)
+  --nome <nome>        Nome do projeto (padrão: nome da pasta atual)
   --descricao <txt>    Descrição curta do projeto (usa \$NOME se omitido)
   --repo <url>         URL do repositório git (ex: https://github.com/usuario/app)
-  --destino <pasta>    Diretório do novo projeto (padrão: ./<nome>)
+  --destino <pasta>    Subpasta NOVA (se omitido, usa o diretório atual)
   --versao <vX.Y.Z>    Versão inicial (padrão: v0.1.0)
+  --forcar             Sobrescreve docs existentes
   -h, --help           Mostra esta ajuda
 EOF
 }
@@ -35,6 +41,7 @@ DESCRICAO=""
 REPO=""
 DESTINO=""
 VERSAO="v0.1.0"
+FORCAR=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -43,19 +50,28 @@ while [[ $# -gt 0 ]]; do
     --repo) REPO="$2"; shift 2 ;;
     --destino) DESTINO="$2"; shift 2 ;;
     --versao) VERSAO="$2"; shift 2 ;;
+    --forcar) FORCAR="1"; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Opção desconhecida: $1"; usage; exit 1 ;;
   esac
 done
 
-if [[ -z "$NOME" ]]; then
-  echo "ERRO: --nome é obrigatório"
-  usage
-  exit 1
+# ----- Modo raiz (sem --destino) usa o diretório atual -----
+MODORAIZ=""
+if [[ -z "$DESTINO" ]]; then
+  MODORAIZ="1"
+  DESTINO="$PWD"
+  [[ -z "$NOME" ]] && NOME="$(basename "$DESTINO")"
+else
+  [[ -z "$NOME" ]] && NOME="$(basename "$DESTINO")"
+  if [[ -e "$DESTINO" ]]; then
+    echo "ERRO: destino '$DESTINO' já existe. Use o modo raiz (sem --destino) para aplicar num projeto existente."
+    exit 1
+  fi
+  mkdir -p "$DESTINO"
 fi
 
 DESCRICAO="${DESCRICAO:-$NOME}"
-DESTINO="${DESTINO:-$NOME}"
 DATA_INICIAL="$(date +%d/%m/%Y)"
 VERSAO_INICIAL="$VERSAO"
 
@@ -65,9 +81,15 @@ if [[ ! -d "$TEMPLATES_DIR" ]]; then
   exit 1
 fi
 
-if [[ -e "$DESTINO" ]]; then
-  echo "ERRO: destino '$DESTINO' já existe. Abortando."
-  exit 1
+# ----- Detecta se a raiz já tem conteúdo -----
+ITENS_COUNT=$(find "$DESTINO" -mindepth 1 -maxdepth 1 ! -name ".git" 2>/dev/null | wc -l | tr -d ' ')
+if [[ "$ITENS_COUNT" -gt 0 ]]; then
+  echo ""
+  echo "Projeto existente detectado em '$DESTINO' ($ITENS_COUNT itens)."
+  echo "Modo 'aperfeiçoar': adicionando apenas o que faltar, sem apagar nada."
+else
+  echo ""
+  echo "Raiz vazia detectada — projeto do zero."
 fi
 
 # ----- Monta mapa de placeholders (ordem importa: especificos primeiro) -----
@@ -94,45 +116,58 @@ substitui() {
   for ph in "${PLACEHOLDERS[@]}"; do
     from="${ph%%|*}"
     to="${ph#*|}"
-    # Escapa & para o sed de substituição
     to_escaped="${to//&/\\&}"
     sed -i "s|${from}|${to_escaped}|g" "$arquivo"
   done
 }
 
-# ----- Cria destino e copia templates -----
+# ----- Garante a pasta .githooks -----
 mkdir -p "$DESTINO/.githooks"
 
-for tmpl in AGENTS.md.template CHANGELOG.md.template DEVELOPMENT.md.template README.md.template; do
-  cp "$TEMPLATES_DIR/$tmpl" "$DESTINO/${tmpl%.template}"
-done
-
-cp "$TEMPLATES_DIR/.githooks/post-commit" "$DESTINO/.githooks/post-commit"
-
-# ----- Preenche placeholders nos .md -----
-for md in AGENTS.md CHANGELOG.md DEVELOPMENT.md README.md; do
-  substitui "$DESTINO/$md"
-done
+TEMPLATES=(
+  "AGENTS.md.template"
+  "CHANGELOG.md.template"
+  "DEVELOPMENT.md.template"
+  "README.md.template"
+)
 
 echo ""
-echo "Documentação criada em '$DESTINO':"
-echo "  - AGENTS.md"
-echo "  - CHANGELOG.md"
-echo "  - DEVELOPMENT.md"
-echo "  - README.md"
-echo "  - .githooks/post-commit"
+echo "Arquivos criados/pulados:"
+for tmpl in "${TEMPLATES[@]}"; do
+  final="${tmpl%.template}"
+  if [[ -e "$DESTINO/$final" && -z "$FORCAR" ]]; then
+    echo "  [skip] $final (já existe)"
+    continue
+  fi
+  cp "$TEMPLATES_DIR/$tmpl" "$DESTINO/$final"
+  substitui "$DESTINO/$final"
+  echo "  [criado] $final"
+done
 
-# ----- Configura git (se repositório existir) -----
+if [[ -e "$DESTINO/.githooks/post-commit" && -z "$FORCAR" ]]; then
+  echo "  [skip] .githooks/post-commit (já existe)"
+else
+  cp "$TEMPLATES_DIR/.githooks/post-commit" "$DESTINO/.githooks/post-commit"
+  echo "  [criado] .githooks/post-commit"
+fi
+
+# ----- Configura git -----
 if git -C "$DESTINO" rev-parse --is-inside-work-tree &>/dev/null; then
   git -C "$DESTINO" config core.hooksPath .githooks
+  echo ""
   echo "hooksPath configurado: core.hooksPath=.githooks"
+elif [[ "$ITENS_COUNT" -eq 0 ]]; then
+  git -C "$DESTINO" init &>/dev/null
+  git -C "$DESTINO" config core.hooksPath .githooks
+  echo ""
+  echo "git init + hooksPath configurado."
 else
   echo ""
-  echo "AVISO: '$DESTINO' ainda não é um repositório git."
-  echo "Rode dentro da pasta:"
-  echo "  git init"
-  echo "  git config core.hooksPath .githooks"
+  echo "AVISO: '$DESTINO' não é repositório git ainda. Rode:"
+  echo "  git init && git config core.hooksPath .githooks"
 fi
 
 echo ""
-echo "Pronto! Abra '$DESTINO' e ajuste os placeholders restantes se necessário."
+echo "Pronto! Commit inicial (gera a tag $VERSAO automaticamente via hook):"
+echo "  git add -A && git commit -m \"docs: scaffolding documentação\""
+echo "Ajuste no README.md os placeholders de stack ({{STACK_*}}, {{DEPLOY_*}}) se o projeto usar outra combinação."

@@ -1187,6 +1187,36 @@ Regras:
 
 ---
 
+## Sessão: 31/07/2026 — init-projeto: Modo Raiz + Detecção de Cenário → v2.53.2
+
+### O que foi feito
+- `init-projeto.ps1`/`.sh`: `-Destino`/`--destino` agora **opcional** — sem ele, usa o diretório atual (raiz do projeto)
+- **Detecção automática de cenário**:
+  - Raiz vazia (do zero) → cria os 4 docs + `.githooks` + `git init` + `core.hooksPath`
+  - Raiz com código (aperfeiçoar) → adiciona só o que **falta**, preservando `README.md`/código existentes, sem apagar nada
+- `-Nome`/`--nome` opcional → default é o nome da pasta atual
+- Flags `-Forcar`/`--forcar` para sobrescrever docs existentes (migração)
+- `documentação/README.md`: seção "Como usar" com os dois fluxos + tabela de opções
+- Validado: Teste A (raiz vazia → git init + tag v0.0.1 no commit `docs:`), Teste B (README existente preservado), Teste C (subpasta `-Destino`), Teste D (`-Forcar` sobrescreve)
+
+### Decisões
+- Modo raiz é o padrão (uso "solta na raiz do projeto novo"); subpasta via `-Destino` mantida
+- Nunca apagar conteúdo existente no modo raiz — só adicionar o que faltar
+- `git init` automático apenas quando a raiz está vazia (evita sobrescrever config de repo existente)
+
+### Arquivos
+- `documentação/scripts/init-projeto.ps1` (reescrito)
+- `documentação/scripts/init-projeto.sh` (reescrito)
+- `documentação/README.md` (atualizado)
+- `CHANGELOG.md` (v2.53.2)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros
+- Backend: 0 erros
+
+---
+
 ## Sessão: 31/07/2026 — Kit de Documentação Replicável (documentação/) → v2.53.0
 
 ### O que foi feito

@@ -4,9 +4,10 @@
 ### Feat
 - `Alunos.tsx`: coluna Ações — emojis `✏️`/`↔️`/`🗑️` → ícones `lucide-react` `Pencil`/`Unlink`/`Trash2` (16px) com tooltips
 
-## [v2.53.1] - 2026-07-31
+## [v2.53.2] - 2026-07-31
 ### Docs
-- Cria `documentação/`: kit replicável de documentação (templates AGENTS/CHANGELOG/DEVELOPMENT/README + hook post-commit + scripts init-projeto e nova-sessao em .sh/.ps1), adaptado para opencode
+- `init-projeto.{sh,ps1}`: modo raiz — roda na raiz do projeto (sem subpasta), com detecção automática (raiz vazia → git init + hooksPath; projeto existente → adiciona só o que falta, preserva README/código). Flags `--forcar`/`-Forcar`
+- `documentação/README.md`: documenta os dois fluxos (do zero e aperfeiçoar)
 
 ## [v2.51.0] - 2026-07-31
 ### Feat
