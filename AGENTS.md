@@ -90,6 +90,30 @@ Regras:
 
 ---
 
+## Sessão: 31/07/2026 — Fix Motivo Água Muito Fria (+16, 23-25°C) → v2.55.1
+
+### O que foi feito
+- `getTempPiscinaSugestao` (ambos os engines): para `23 ≤ t < 25` com faixa etária "+ 16 anos", o motivo mudou de `'Água fria para maiores de 16'` → **`'Água muito fria'`** (status `FALTA_JUSTIFICADA` inalterado)
+- Alterados `frontend/src/utils/climateEngine.ts:148` e `backend/src/utils/climateEngine.ts:84` — alinhados ao caminho manual do `extrapolarService.ts` (linhas 149-151), que já gerava "Água muito fria"
+- `extrapolarService.ts` inalterado: `motivoMaiores16` mantido como fallback retroativo para logs antigos salvos com a string anterior
+
+### Decisões
+- Escopo Frontend + Backend (decisão do usuário) — mantém os dois motores em sincronia
+- Sem impacto no CardAula: o motivo novo cai no bloco genérico "Motivo: …" (linha 243); o `<li>` específico só renderiza para `AULA_CANCELADA`
+
+### Arquivos
+- `frontend/src/utils/climateEngine.ts` (motivo +16)
+- `backend/src/utils/climateEngine.ts` (motivo +16)
+- `CHANGELOG.md` (v2.55.1)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Backend: 0 erros (`tsc --noEmit`)
+- Testes: 41/41 frontend + 25/25 backend passam
+
+---
+
 ## Sessão: 31/07/2026 — Aviso Automático de Atualização → v2.55.0
 
 ### O que foi feito

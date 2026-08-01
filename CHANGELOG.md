@@ -1,5 +1,9 @@
 # Changelog - Fiz! App
 
+## [v2.55.1] - 2026-07-31
+### Fix
+- Motor de clima: para faixa etária "+ 16 anos" com água entre 23°C e 25°C, o motivo passou de "Água fria para maiores de 16" para **"Água muito fria"** (status `FALTA_JUSTIFICADA` inalterado) — alinha `frontend` e `backend/src/utils/climateEngine.ts` ao caminho manual do `extrapolarService.ts` (que já usava "Água muito fria")
+
 ## [v2.55.0] - 2026-07-31
 ### Feat
 - **Aviso automático de atualização**: novo hook `useUpdateChecker.ts` detecta nova versão via service worker (no mount, a cada 30 min e ao voltar à aba); novo `UpdateBanner.tsx` (banner âmbar fixo no topo com "Atualizar agora" + X dispensável por sessão), renderizado no `ProtectedLayout` abaixo do `ConnectionBanner`
