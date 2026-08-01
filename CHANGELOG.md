@@ -1,5 +1,14 @@
 # Changelog - Fiz! App
 
+## [v2.60.0] - 2026-08-01
+### Feat
+- **Export Frequência → Relatório Mensal**: polimento de estilos no `relatorioMensal.xlsx`
+  - `wrapText` removido de todas as células do relatório (headers, status sugerido, anotações) — texto não quebra mais linha
+  - Header do grid: coluna B (espaçador) agora recebe a mesma cor dos demais headers (`FF1F4E79`)
+  - Header do clima (grupo 2): cor `FF1F4E79` estendida em todas as colunas até a última do grupo 1 (coluna Anotações) — antes só até a coluna Status Sugerido
+  - Header "Observações" (grupo 3): cor `FF2E75B6` estendida em todas as colunas até a última do grupo 1
+  - Status Sugerido: conteúdo alinhado à esquerda (header permanece centralizado)
+
 ## [v2.59.0] - 2026-08-01
 ### Feat
 - **Export Frequência → Relatório Mensal detalhado** (`relatorioMensal.xlsx` como referência): cada folha de turma agora usa o layout novo do template

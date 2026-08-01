@@ -90,6 +90,32 @@ Regras:
 
 ---
 
+## Sessão: 01/08/2026 — Relatório Mensal: Ajustes de Estilo → v2.60.0
+
+### O que foi feito
+- **Sem wrapText**: `wrapText: true` removido de `titleStyle`, header Anotações, células de Status Sugerido e células de anotação dos alunos (nenhuma célula do relatório quebra linha mais)
+- **B6 pintado**: coluna B (espaçador vazio) da header row do grid agora recebe `titleStyle` (antes ficava sem cor)
+- **Header do clima (grupo 2) estendido**: a header row da tabela de clima agora pinta `titleStyle` (FF1F4E79) em **todas** as colunas de 1 até `ultimaColGrupo1` (coluna Anotações = `6 + diasLetivos.length`), em vez de só nas colunas de header (antes ia só até col 14)
+- **Header "Observações" (grupo 3) estendido**: o header Observações aplica seu estilo (FF2E75B6, branco bold, esquerda) em **todas** as colunas de 1 até `ultimaColGrupo1` (antes só na coluna A)
+- `ultimaColGrupo1 = 6 + diasLetivos.length` definido uma vez por turma e reutilizado no header do clima e do Observações
+- Status Sugerido: conteúdo à esquerda mantido (decisão do usuário — header permanece centralizado)
+
+### Decisões
+- Header Status Sugerido permanece **centralizado** com conteúdo à esquerda (usuário escolheu "Manter como está")
+- A cor dos grupos 2 e 3 acompanha a largura do grupo 1 (até a coluna Anotações), deixando o relatório com blocos visuais alinhados
+
+### Arquivos
+- `backend/src/services/exportacaoService.ts` (ultimaColGrupo1, header clima + Observações estendidos, wrapText removido, B6 pintado)
+- `CHANGELOG.md` (v2.60.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Backend: 0 erros (`tsc --noEmit`)
+- Testes: 25/25 backend passam
+- Verificação end-to-end: preview `relatorio_mensal_preview_v261.xlsx` com Supabase mockado confirmou fills estendidos (col 15 nas folhas Ter/Qui, col 14 nas Qua/Sex) — scripts temporários removidos após validação
+
+---
+
 ## Sessão: 01/08/2026 — Relatório Mensal detalhado (Export Frequência) → v2.59.0
 
 ### O que foi feito

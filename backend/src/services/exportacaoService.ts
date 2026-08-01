@@ -175,6 +175,7 @@ export async function gerarFrequenciaXLSX(
 
     for (const turma of turmasLabel) {
       const grupoId = turma.grupo_id || turma.id;
+      const ultimaColGrupo1 = 6 + diasLetivos.length;
       const alunosTurma = (alunos || []).filter((a: Aluno) => a.turma_id === grupoId && a.ativo);
       if (alunosTurma.length === 0) continue;
 
@@ -184,7 +185,7 @@ export async function gerarFrequenciaXLSX(
       });
 
       const labelStyle: Partial<ExcelJS.Style> = { font: { size: 10 }, alignment: { horizontal: 'right', vertical: 'middle' } };
-      const titleStyle: Partial<ExcelJS.Style> = { font: { bold: true, size: 9, color: { argb: 'FFFFFFFF' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E79' } }, alignment: { horizontal: 'center', vertical: 'middle', wrapText: true } };
+      const titleStyle: Partial<ExcelJS.Style> = { font: { bold: true, size: 9, color: { argb: 'FFFFFFFF' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E79' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
       const dataStyle: Partial<ExcelJS.Style> = { font: { size: 9 }, alignment: { vertical: 'middle' } };
       const nameStyle: Partial<ExcelJS.Style> = { font: { bold: true, size: 9 }, alignment: { vertical: 'middle' } };
       const prefeituraStyle: Partial<ExcelJS.Style> = { font: { bold: true, size: 12 }, alignment: { horizontal: 'center', vertical: 'middle' } };
@@ -248,6 +249,7 @@ export async function gerarFrequenciaXLSX(
         cell.value = h;
         cell.style = titleStyle;
       });
+      headerRow6.getCell(2).style = titleStyle;
       diasLetivos.forEach((dataStr, i) => {
         const col = 6 + i;
         const diaNum = parseInt(dataStr.split('-')[2], 10);
@@ -257,7 +259,7 @@ export async function gerarFrequenciaXLSX(
       });
       const anotCell = headerRow6.getCell(6 + diasLetivos.length);
       anotCell.value = 'Anotações';
-      anotCell.style = { font: { bold: true, size: 9, color: { argb: 'FFFFFFFF' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2E75B6' } }, alignment: { horizontal: 'center', vertical: 'middle', wrapText: true } };
+      anotCell.style = { font: { bold: true, size: 9, color: { argb: 'FFFFFFFF' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2E75B6' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
 
       alunosTurma.sort((a: Aluno, b: Aluno) => a.nome.localeCompare(b.nome));
       alunosTurma.forEach((aluno: Aluno, idx: number) => {
@@ -317,7 +319,7 @@ export async function gerarFrequenciaXLSX(
         const anotacao = (anotacoes || []).find((a: any) => a.aluno_id === aluno.id);
         const anotCol = sheet.getCell(rowNum, 6 + diasLetivos.length);
         anotCol.value = anotacao?.anotacao || '';
-        anotCol.style = { font: { size: 8, italic: true }, alignment: { vertical: 'middle', wrapText: true } };
+        anotCol.style = { font: { size: 8, italic: true }, alignment: { vertical: 'middle' } };
       });
 
       const blankRow = 7 + alunosTurma.length;
@@ -333,6 +335,9 @@ export async function gerarFrequenciaXLSX(
         cell.value = h;
         cell.style = titleStyle;
       });
+      for (let c = 1; c <= ultimaColGrupo1; c++) {
+        climaHeader.getCell(c).style = titleStyle;
+      }
 
       diasLetivos.forEach((dataStr, i) => {
         const rowNum = climaHeaderRow + 1 + i;
@@ -377,7 +382,7 @@ export async function gerarFrequenciaXLSX(
 
         const cellStatus = sheet.getCell(rowNum, 14);
         cellStatus.font = { size: 9 };
-        cellStatus.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        cellStatus.alignment = { horizontal: 'left', vertical: 'middle' };
         cellStatus.value = evento
           ? (EVENTO_NOME[evento.tipo] || capFirst(evento.tipo))
           : formatStatusSugerido(clima?.status_sugerido, clima?.motivo_sugerido);
@@ -388,6 +393,19 @@ export async function gerarFrequenciaXLSX(
       cellLegend.value = '❄ = água < 25°C (água muito fria)';
       cellLegend.font = { size: 9 };
       cellLegend.alignment = { horizontal: 'left', vertical: 'middle' };
+
+      const obsHeaderRow = legendRow + 2;
+      const obsHeaderStyle: Partial<ExcelJS.Style> = { font: { bold: true, size: 9, color: { argb: 'FFFFFFFF' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2E75B6' } }, alignment: { horizontal: 'left', vertical: 'middle' } };
+      const obsHeader = sheet.getCell(obsHeaderRow, 1);
+      obsHeader.value = 'Observações';
+      obsHeader.style = obsHeaderStyle;
+      for (let c = 2; c <= ultimaColGrupo1; c++) {
+        sheet.getCell(obsHeaderRow, c).style = obsHeaderStyle;
+      }
+      for (let i = 0; i < 5; i++) {
+        sheet.getRow(obsHeaderRow + 1 + i).height = 15;
+        sheet.getCell(obsHeaderRow + 1 + i, 1).border = { top: { style: 'thin', color: { argb: 'FFD9D9D9' } }, bottom: { style: 'thin', color: { argb: 'FFD9D9D9' } } };
+      }
     }
   }
 
