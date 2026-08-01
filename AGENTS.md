@@ -90,6 +90,34 @@ Regras:
 
 ---
 
+## Sessão: 01/08/2026 — Bloqueio de Presença sem ParQ → v2.57.0
+
+### O que foi feito
+- **DataGrid.tsx**: aluno com `par_q !== true` (vazio ou "Não") não alterna mais P/F/J no grid de chamada
+- `handleCellClick` retorna cedo quando `semParQ(aluno)` (após o bloco de atestado vencido)
+- Célula de status: `cursor-not-allowed` + tooltip "ParQ pendente — registre o ParQ do aluno" (estilo data futura); `aria-disabled` inclui o bloqueio
+- Nome do aluno: destaque âmbar (`bg #fef3c7` / `text-amber-700`) + tooltip "ParQ pendente — aluno sem aptidão (ParQ) para participar"
+- Prioridade visual no nome: atestado (vermelho) > ParQ (âmbar) > anotação (azul)
+- Helper `semParQ(aluno) = aluno.par_q !== true` no corpo do componente
+
+### Decisões
+- **Validade sem expiração**: `par_q === true` é suficiente; `par_q_data` só registra data (Fase B)
+- **Bloquear + badge/tooltip**: mesmo padrão do bloqueio por atestado vencido
+- Escopo Fase A: **só** o bloqueio de presença — alocação e AlunoModal (cadastro de ParQ) permanecem liberados; sem migration
+- **Fase B (próxima rodada, decisões travadas)**: rematrícula **não** mexe em `enrollment_period` (preserva progressão de nível) — só `par_q=true` + `par_q_data=hoje`; botão "Rematrículas" ao lado de "Período Letivo" (Calendario.tsx) abre janela com `rematricula_inicio`/`rematricula_fim` (colunas em `periodos_letivos`); modo "Rematrículas" no grid de Alunos disponível só dentro da janela
+- Modelar rematrícula como evento/feriado/ponte no calendário foi descartado: evento é por-dia (`UNIQUE(tenant_id, data, tipo)`) e todo evento bloqueia o grid (DataGrid getStatus) — janela dedicada é mais simples e não toca no grid
+
+### Arquivos
+- `frontend/src/components/grid/DataGrid.tsx` (semParQ + bloqueio + destaque âmbar + cursor-not-allowed)
+- `CHANGELOG.md` (v2.57.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Testes: 41/41 frontend passam
+
+---
+
 ## Sessão: 31/07/2026 — Fix Motivo Água Muito Fria (+16, 23-25°C) → v2.55.1
 
 ### O que foi feito

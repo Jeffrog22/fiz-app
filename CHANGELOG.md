@@ -1,5 +1,11 @@
 # Changelog - Fiz! App
 
+## [v2.57.0] - 2026-08-01
+### Feat
+- **Bloqueio de presença sem ParQ**: aluno com `par_q !== true` (vazio ou "Não") não alterna mais P/F/J no grid de chamada — `handleCellClick` retorna cedo, célula ganha `cursor-not-allowed` + tooltip "ParQ pendente — registre o ParQ do aluno" e o nome recebe destaque âmbar com tooltip "ParQ pendente — aluno sem aptidão (ParQ) para participar"
+- Prioridade visual no nome: atestado (vermelho) > ParQ (âmbar) > anotação (azul)
+- Alocação e cadastro de ParQ (AlunoModal) permanecem liberados; sem migration
+
 ## [v2.56.0] - 2026-07-31
 ### Feat
 - CardBO: **"Raios e Trovões"** agora é tipo de cancelamento (extrapola `cancelado` para todas as turmas do label, via_1)

@@ -302,6 +302,8 @@ const DataGrid: React.FC<DataGridProps> = ({
         const diff = aluno.data_atestado ? diasRestantes(aluno.data_atestado) : 0;
         if (diff < 0) return;
       }
+      // Bloqueia toggle se aluno não tem ParQ (aptidão)
+      if (aluno && semParQ(aluno)) return;
       const studentLogEntry = logs[alunoId]?.[data]?.[indiceAtual];
       const isManual = studentLogEntry?.origem === 'manual';
       if (isManual) {
@@ -365,6 +367,8 @@ const DataGrid: React.FC<DataGridProps> = ({
     return Math.ceil((vencimento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
   }, []);
 
+  const semParQ = (aluno: Aluno): boolean => aluno.par_q !== true;
+
   const nomes = useMemo(() => alunos.map((a) => a.nome), [alunos]);
 
   return (
@@ -425,6 +429,8 @@ const DataGrid: React.FC<DataGridProps> = ({
                     className={`sticky left-0 bg-white px-4 py-2 font-medium whitespace-nowrap cursor-pointer z-10 dark:bg-gray-800 ${
                       alunosComAtestadoAnotacao?.has(aluno.id) || atestadoProximoVencer(aluno)
                         ? 'text-red-700 dark:text-red-400'
+                        : semParQ(aluno)
+                        ? 'text-amber-700 dark:text-amber-400'
                         : temAnotacao(aluno.id) || (alunosComAnotacao?.has(aluno.id))
                         ? 'text-blue-600 dark:text-blue-400'
                         : 'text-gray-800 dark:text-gray-100'
@@ -432,6 +438,8 @@ const DataGrid: React.FC<DataGridProps> = ({
                     style={
                       alunosComAtestadoAnotacao?.has(aluno.id) || atestadoProximoVencer(aluno)
                         ? { backgroundColor: '#fecaca' }
+                        : semParQ(aluno)
+                        ? { backgroundColor: '#fef3c7' }
                         : temAnotacao(aluno.id) || (alunosComAnotacao?.has(aluno.id))
                         ? { backgroundColor: '#eff6ff' }
                         : undefined
@@ -447,6 +455,8 @@ const DataGrid: React.FC<DataGridProps> = ({
                                 : `Atestado vencido há ${Math.abs(d)} dias`;
                             })()
                           : 'Alerta: atestado próximo ao vencimento'
+                        : semParQ(aluno)
+                        ? 'ParQ pendente — aluno sem aptidão (ParQ) para participar'
                         : 'Clique para ver anotações, duplo clique para ir ao aluno'
                     }
                   >
@@ -457,16 +467,21 @@ const DataGrid: React.FC<DataGridProps> = ({
                     const status = getStatus(aluno.id, dia);
                     const futura = isDataFutura(dia);
                     const isCalendario = status === 'feriado' || status === 'ponte' || status === 'reuniao' || status === 'evento' || status === 'ferias' || status === 'cancelado';
+                    const bloqueadoParQ = semParQ(aluno);
                     return (
                       <td key={dia} className="px-2 py-1 text-center border-r border-gray-100 dark:border-gray-800">
                         <div className="flex flex-col items-center gap-0.5">
                           <button
                             onClick={() => handleCellClick(aluno.id, dia)}
-                            aria-disabled={futura || isCalendario}
-                            title={getTooltipText(aluno.id, dia)}
+                            aria-disabled={futura || isCalendario || bloqueadoParQ}
+                            title={bloqueadoParQ && !status ? 'ParQ pendente — registre o ParQ do aluno' : getTooltipText(aluno.id, dia)}
                             className={`rounded-md font-bold transition-all ${
                               futura
                                 ? 'w-7 h-7 text-xs bg-gray-50 text-gray-200 cursor-not-allowed dark:bg-gray-700 dark:text-gray-600'
+                                : bloqueadoParQ
+                                ? status
+                                  ? `${STATUS_COLORS[status]} w-7 h-7 text-xs cursor-not-allowed ${getOrigem(aluno.id, dia) === 'extrapolado' ? 'border border-dashed border-amber-400' : ''}`
+                                  : 'w-7 h-7 text-xs bg-gray-100 text-gray-300 cursor-not-allowed dark:bg-gray-700 dark:text-gray-600'
                                 : isCalendario
                                 ? `${STATUS_COLORS[status || '']} ${status === 'ferias' ? 'text-[9px] px-1 py-0.5' : 'w-7 h-7 text-xs'} cursor-default`
                                 : status
