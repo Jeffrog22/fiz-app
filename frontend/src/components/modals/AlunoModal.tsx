@@ -134,6 +134,10 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
       contato: contato ? desmascarar(contato) : undefined,
       ativo,
       par_q: parQ === 'sim' ? true : parQ === 'nao' ? false : undefined,
+      par_q_data: parQ === 'sim' ? (() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      })() : undefined,
       atestado_medico: atestadoMedico || undefined,
       data_atestado: dataAtestado ? formatDateISO(dataAtestado) : undefined,
     };

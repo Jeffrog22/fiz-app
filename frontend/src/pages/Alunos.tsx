@@ -4,7 +4,7 @@ import api from '../utils/api';
 import AlunoModal from '../components/modals/AlunoModal';
 import SearchInput from '../components/SearchInput';
 import type { Aluno, Professor, SavePayload } from '../types';
-import { calcIdade, calcCategoria, normalizeSearch, sortTurmas, formatarNomeMobile } from '../utils/formatters';
+import { calcIdade, calcCategoria, normalizeSearch, sortTurmas, formatarNomeMobile, formatDateBR } from '../utils/formatters';
 import { Pencil, Unlink, Trash2 } from 'lucide-react';
 
 interface SortRule {
@@ -30,8 +30,16 @@ const Alunos: React.FC = () => {
   const [sortRules, setSortRules] = useState<SortRule[]>([]);
   const [modoAlocacao, setModoAlocacao] = useState(false);
   const [modoTransferencia, setModoTransferencia] = useState(false);
+  const [modoRematricula, setModoRematricula] = useState(false);
+  const [rematriculando, setRematriculando] = useState(false);
+  const [rematriculaJanela, setRematriculaJanela] = useState<{ inicio: string; fim: string } | null>(null);
   const [lastSession, setLastSession] = useState({ genero: '', turmaId: '', professorId: '', nivel: '' });
   const [resetCounter, setResetCounter] = useState(0);
+
+  const hojeLocal = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
 
   const [professorTransferir, setProfessorTransferir] = useState('');
   const [turmaTransferir, setTurmaTransferir] = useState('');
@@ -88,6 +96,25 @@ const Alunos: React.FC = () => {
 
   useEffect(() => { carregar(); }, [carregar]);
 
+  const carregarJanelaRematricula = useCallback(async () => {
+    try {
+      const res = await api.get('/calendario/periodo');
+      if (res.data?.rematricula_inicio && res.data?.rematricula_fim) {
+        setRematriculaJanela({ inicio: res.data.rematricula_inicio, fim: res.data.rematricula_fim });
+      } else {
+        setRematriculaJanela(null);
+      }
+    } catch {
+      setRematriculaJanela(null);
+    }
+  }, []);
+
+  useEffect(() => { carregarJanelaRematricula(); }, [carregarJanelaRematricula]);
+
+  const janelaAberta = rematriculaJanela
+    ? hojeLocal() >= rematriculaJanela.inicio && hojeLocal() <= rematriculaJanela.fim
+    : false;
+
   const getFilterValue = (a: any, col: string): string => {
     switch (col) {
       case 'nivel': return a.turma?.nivel || a.nivel || '-';
@@ -114,6 +141,7 @@ const Alunos: React.FC = () => {
 
     if (modoAlocacao) data = data.filter((a: any) => !a.turma_id);
     if (modoTransferencia && turmaOrigemFiltro) data = data.filter((a: any) => a.turma_id === turmaOrigemFiltro);
+    if (modoRematricula) data = data.filter((a: any) => a.par_q !== true);
 
     if (filtro) {
       const q = normalizeSearch(filtro);
@@ -153,7 +181,7 @@ const Alunos: React.FC = () => {
     }
 
     return data;
-  }, [alunos, filtro, columnFilters, sortRules, professorMap, modoAlocacao]);
+  }, [alunos, filtro, columnFilters, sortRules, professorMap, modoAlocacao, modoTransferencia, modoRematricula, turmaOrigemFiltro]);
 
   const alunosNomes = useMemo(() => alunos.map((a: any) => a.nome), [alunos]);
 
@@ -297,6 +325,28 @@ const Alunos: React.FC = () => {
     }
   };
 
+  const handleRematricular = async () => {
+    if (selectedIds.size === 0) return;
+    setRematriculando(true);
+    try {
+      const hoje = hojeLocal();
+      for (const alunoId of selectedIds) {
+        await api.put(`/alunos/${alunoId}`, {
+          par_q: true,
+          par_q_data: hoje,
+          acao: 'rematricula',
+        });
+      }
+      setSelectedIds(new Set());
+      await carregar();
+      await carregarJanelaRematricula();
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Erro ao rematricular alunos');
+    } finally {
+      setRematriculando(false);
+    }
+  };
+
   const toggleSort = (column: string) => {
     setSortRules((prev) => {
       const idx = prev.findIndex((r) => r.column === column);
@@ -394,6 +444,28 @@ const Alunos: React.FC = () => {
             }`}
           >
             {modoTransferencia ? 'Sair da Transferência' : 'Transferir'}
+          </button>
+          <button
+            type="button"
+            disabled={!janelaAberta}
+            onClick={() => {
+              if (modoRematricula) { setSelectedIds(new Set()); }
+              setModoAlocacao(false);
+              setModoTransferencia(false);
+              setModoRematricula(!modoRematricula);
+            }}
+            title={janelaAberta
+              ? undefined
+              : rematriculaJanela
+                ? `Janela de rematrículas: ${formatDateBR(rematriculaJanela.inicio)} a ${formatDateBR(rematriculaJanela.fim)}`
+                : 'Configure a janela de rematrículas no Calendário'}
+            className={`px-4 py-2 text-sm rounded-md transition-colors ${
+              modoRematricula
+                ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            {modoRematricula ? 'Sair das Rematrículas' : 'Rematrículas'}
           </button>
           <input
             ref={fileInputRef}
@@ -545,6 +617,36 @@ const Alunos: React.FC = () => {
         </div>
       )}
 
+      {modoRematricula && (
+        <div className="flex items-center gap-3 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 rounded-md flex-wrap">
+          <span className="text-sm text-gray-600 dark:text-gray-400">
+            Alunos sem ParQ (aptidão): <strong className="text-emerald-700 dark:text-emerald-300">{processed.length}</strong>
+          </span>
+          {selectedIds.size > 0 && (
+            <>
+              <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300 whitespace-nowrap">
+                {selectedIds.size} selecionado{selectedIds.size !== 1 ? 's' : ''}
+              </span>
+              <button
+                type="button"
+                onClick={handleRematricular}
+                disabled={rematriculando}
+                className="px-4 py-1.5 text-sm bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {rematriculando ? 'Rematriculando...' : 'Rematricular selecionados'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedIds(new Set())}
+                className="px-4 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Limpar
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {carregando ? (
         <p className="text-sm text-gray-500 dark:text-gray-400">Carregando...</p>
       ) : (
@@ -552,7 +654,7 @@ const Alunos: React.FC = () => {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                {(modoAlocacao || modoTransferencia) && (
+                {(modoAlocacao || modoTransferencia || modoRematricula) && (
                   <th className="w-8 px-2 py-2">
                     <input
                       type="checkbox"
@@ -580,7 +682,7 @@ const Alunos: React.FC = () => {
                 const profNome = a.turma?.professor_id ? professorMap.get(a.turma.professor_id) : null;
                 return (
                   <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                    {(modoAlocacao || modoTransferencia) && (
+                    {(modoAlocacao || modoTransferencia || modoRematricula) && (
                       <td className="px-2 py-2">
                         <input
                           type="checkbox"
@@ -624,7 +726,7 @@ const Alunos: React.FC = () => {
               })}
               {processed.length === 0 && !carregando && (
                 <tr>
-                  <td colSpan={modoAlocacao || modoTransferencia ? 10 : 9} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
+                  <td colSpan={modoAlocacao || modoTransferencia || modoRematricula ? 10 : 9} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
                     Nenhum aluno encontrado
                   </td>
                 </tr>

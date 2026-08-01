@@ -17,6 +17,7 @@ export interface Aluno {
   contato?: string;
   ativo: boolean;
   par_q?: boolean;
+  par_q_data?: string;
   atestado_medico?: boolean;
   data_atestado?: string;
   turma_id?: string;

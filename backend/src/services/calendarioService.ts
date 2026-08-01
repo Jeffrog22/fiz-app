@@ -20,9 +20,24 @@ export async function listar(tenantId: string, mes?: number, ano?: number): Prom
 
 export async function salvarPeriodo(
   tenantId: string,
-  periodo: { inicio_aulas?: string; ferias_inicio?: string; ferias_fim?: string; termino_aulas?: string },
+  periodo: {
+    inicio_aulas?: string; ferias_inicio?: string; ferias_fim?: string; termino_aulas?: string;
+    rematricula_inicio?: string; rematricula_fim?: string;
+  },
 ): Promise<void> {
-  const { inicio_aulas, ferias_inicio, ferias_fim, termino_aulas } = periodo;
+  const {
+    inicio_aulas, ferias_inicio, ferias_fim, termino_aulas,
+    rematricula_inicio, rematricula_fim,
+  } = periodo;
+
+  const payload = {
+    inicio_aulas: inicio_aulas || null,
+    ferias_inicio: ferias_inicio || null,
+    ferias_fim: ferias_fim || null,
+    termino_aulas: termino_aulas || null,
+    rematricula_inicio: rematricula_inicio || null,
+    rematricula_fim: rematricula_fim || null,
+  };
 
   const { data: existing, error: queryError } = await supabase
     .from('periodos_letivos')
@@ -38,7 +53,7 @@ export async function salvarPeriodo(
   if (existing && existing.length > 0) {
     const { error } = await supabase
       .from('periodos_letivos')
-      .update({ inicio_aulas, ferias_inicio, ferias_fim, termino_aulas })
+      .update(payload)
       .eq('tenant_id', tenantId);
     if (error) {
       console.error('[calendarioService.salvarPeriodo] erro ao atualizar', error);
@@ -47,7 +62,7 @@ export async function salvarPeriodo(
   } else {
     const { error } = await supabase
       .from('periodos_letivos')
-      .insert({ tenant_id: tenantId, inicio_aulas, ferias_inicio, ferias_fim, termino_aulas });
+      .insert({ tenant_id: tenantId, ...payload });
     if (error) {
       console.error('[calendarioService.salvarPeriodo] erro ao criar', error);
       throw new AppError('Erro ao criar periodo', 500);

@@ -64,6 +64,10 @@ export class AlunosController {
           case 'desalocacao':
             await fecharPeriodoAtivoService(id, tenantId, 'desalocacao');
             break;
+          case 'rematricula':
+            // Rematrícula NÃO mexe em enrollment_period (preserva progressão de nível).
+            // Apenas atualiza par_q/par_q_data via atualizarAlunoService abaixo.
+            break;
         }
       }
 

@@ -20,6 +20,8 @@ interface PeriodoLetivo {
   ferias_inicio: string;
   ferias_fim: string;
   termino_aulas: string;
+  rematricula_inicio?: string | null;
+  rematricula_fim?: string | null;
 }
 
 const TIPOS_EVENTO = [
@@ -40,6 +42,8 @@ const Calendario: React.FC = () => {
   const [formPeriodo, setFormPeriodo] = useState<PeriodoLetivo>({
     inicio_aulas: '', ferias_inicio: '', ferias_fim: '', termino_aulas: '',
   });
+  const [showRematriculaModal, setShowRematriculaModal] = useState(false);
+  const [formRematricula, setFormRematricula] = useState({ rematricula_inicio: '', rematricula_fim: '' });
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [selectedDayEventos, setSelectedDayEventos] = useState<CalendarioEvento[]>([]);
   const [novoEventoTipo, setNovoEventoTipo] = useState<string>('evento');
@@ -82,6 +86,10 @@ const Calendario: React.FC = () => {
       if (res.data) {
         setPeriodo(res.data);
         setFormPeriodo(res.data);
+        setFormRematricula({
+          rematricula_inicio: res.data.rematricula_inicio || '',
+          rematricula_fim: res.data.rematricula_fim || '',
+        });
       }
     } catch { /* ignore */ }
   }, []);
@@ -116,6 +124,22 @@ const Calendario: React.FC = () => {
       setShowPeriodoModal(false);
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Erro ao salvar periodo');
+    }
+  };
+
+  const handleSalvarRematricula = async () => {
+    try {
+      const payload = {
+        ...formPeriodo,
+        rematricula_inicio: formRematricula.rematricula_inicio || null,
+        rematricula_fim: formRematricula.rematricula_fim || null,
+      };
+      await api.post('/calendario/periodo', payload);
+      setPeriodo(payload);
+      setFormPeriodo(payload);
+      setShowRematriculaModal(false);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Erro ao salvar janela de rematriculas');
     }
   };
 
@@ -241,12 +265,26 @@ const Calendario: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Calendário</h1>
-        <button
-          onClick={() => setShowPeriodoModal(true)}
-          className="text-sm px-3 py-1.5 bg-primary-50 text-primary-700 rounded border border-primary-200 hover:bg-primary-100 transition dark:bg-primary-900/30 dark:text-primary-300 dark:border-primary-800 dark:hover:bg-primary-900/40"
-        >
-          Período Letivo
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setFormRematricula({
+                rematricula_inicio: periodo?.rematricula_inicio || '',
+                rematricula_fim: periodo?.rematricula_fim || '',
+              });
+              setShowRematriculaModal(true);
+            }}
+            className="text-sm px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded border border-emerald-200 hover:bg-emerald-100 transition dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800 dark:hover:bg-emerald-900/40"
+          >
+            Rematrículas
+          </button>
+          <button
+            onClick={() => setShowPeriodoModal(true)}
+            className="text-sm px-3 py-1.5 bg-primary-50 text-primary-700 rounded border border-primary-200 hover:bg-primary-100 transition dark:bg-primary-900/30 dark:text-primary-300 dark:border-primary-800 dark:hover:bg-primary-900/40"
+          >
+            Período Letivo
+          </button>
+        </div>
       </div>
 
       {periodo && (
@@ -254,6 +292,7 @@ const Calendario: React.FC = () => {
           <span>Início: <strong>{formatDateBR(periodo.inicio_aulas) || '---'}</strong></span>
           <span>Férias: <strong>{formatDateBR(periodo.ferias_inicio) || '---'} a {formatDateBR(periodo.ferias_fim) || '---'}</strong></span>
           <span>Término: <strong>{formatDateBR(periodo.termino_aulas) || '---'}</strong></span>
+          <span>Rematrículas: <strong>{periodo.rematricula_inicio ? formatDateBR(periodo.rematricula_inicio) : '---'} a {periodo.rematricula_fim ? formatDateBR(periodo.rematricula_fim) : '---'}</strong></span>
           <div className="flex gap-1 ml-auto">
             <button
               onClick={handleAplicarFerias}
@@ -366,6 +405,37 @@ const Calendario: React.FC = () => {
             <div className="flex gap-2 justify-end pt-2">
               <button onClick={() => setShowPeriodoModal(false)} className="text-sm px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancelar</button>
               <button onClick={handleSalvarPeriodo} className="text-sm px-4 py-2 bg-primary-600 dark:bg-primary-500 text-white rounded hover:bg-primary-700 dark:hover:bg-primary-600 transition">Salvar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRematriculaModal && (
+        <div className="fixed inset-0 bg-black/30 dark:bg-black/60 flex items-center justify-center z-40" onClick={() => setShowRematriculaModal(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-black/20 p-6 w-full max-w-md space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Janela de Rematrículas</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              O modo "Rematrículas" no grid de Alunos só fica disponível dentro deste intervalo.
+            </p>
+            <div className="space-y-3">
+              {([
+                { key: 'rematricula_inicio', label: 'Início das rematrículas' },
+                { key: 'rematricula_fim', label: 'Fim das rematrículas' },
+              ] as const).map(({ key, label }) => (
+                <div key={key}>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{label}</label>
+                  <input
+                    type="date"
+                    value={formRematricula[key]}
+                    onChange={(e) => setFormRematricula(prev => ({ ...prev, [key]: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 justify-end pt-2">
+              <button onClick={() => setShowRematriculaModal(false)} className="text-sm px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancelar</button>
+              <button onClick={handleSalvarRematricula} className="text-sm px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition">Salvar</button>
             </div>
           </div>
         </div>

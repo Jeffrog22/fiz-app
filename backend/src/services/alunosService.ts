@@ -60,7 +60,7 @@ export async function listarAlunosService(
 export async function criarAlunoService(data: any, tenantId: string): Promise<any> {
   const {
     nome, data_nascimento, genero, contato,
-    par_q, atestado_medico, data_atestado,
+    par_q, par_q_data, atestado_medico, data_atestado,
     nivel, turma_id,
   } = data;
 
@@ -92,6 +92,7 @@ export async function criarAlunoService(data: any, tenantId: string): Promise<an
       genero: genero || null,
       contato: contato || null,
       par_q: par_q ?? null,
+      par_q_data: par_q_data || null,
       atestado_medico: atestado_medico ?? null,
       data_atestado: data_atestado || null,
       nivel: nivel || null,
@@ -111,7 +112,7 @@ export async function criarAlunoService(data: any, tenantId: string): Promise<an
 export async function atualizarAlunoService(id: string, data: any, tenantId: string): Promise<any> {
   const {
     nome, data_nascimento, genero, contato, ativo,
-    par_q, atestado_medico, data_atestado,
+    par_q, par_q_data, atestado_medico, data_atestado,
     nivel, turma_id,
   } = data;
 
@@ -124,6 +125,7 @@ export async function atualizarAlunoService(id: string, data: any, tenantId: str
     contato,
     ativo,
     par_q,
+    par_q_data,
     atestado_medico,
     data_atestado,
     nivel: nivel || null,

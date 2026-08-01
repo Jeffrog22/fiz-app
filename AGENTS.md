@@ -90,6 +90,46 @@ Regras:
 
 ---
 
+## Sessão: 01/08/2026 — Janela de Rematrículas + Modo Rematrículas → v2.58.0
+
+### O que foi feito
+- **Botão "Rematrículas"** no Calendário (ao lado de "Período Letivo") abre modal com `rematricula_inicio`/`rematricula_fim`; intervalo exibido na barra de período
+- **`calendarioService.salvarPeriodo`** agora aceita/persiste a janela (todas as datas convertidas com `|| null` para limpar via null)
+- **Modo "Rematrículas" no grid de Alunos**: filtro `par_q !== true`, checkboxes + "Rematricular selecionados" → `PUT /alunos/:id { par_q: true, par_q_data: hoje, acao: 'rematricula' }`
+- **Botão do modo disponível SÓ dentro da janela**: `janelaAberta = hoje >= inicio && hoje <= fim`; fora dela fica `disabled` com tooltip do intervalo
+- **`alunosController`**: case `rematricula` **não** chama `iniciarPeriodoService`/`fecharPeriodoAtivoService` — rematrícula não toca em `enrollment_period` (preserva progressão de nível); só atualiza `par_q`/`par_q_data` via `atualizarAlunoService`
+- **`alunosService`**: `par_q_data` adicionado a criar/atualizar (updateBody inclui o campo)
+- **`AlunoModal`**: ao marcar ParQ = Sim, payload envia `par_q_data = hoje`
+- **Tipos**: `Aluno.par_q_data?` (backend + frontend)
+
+### Migration (executar no Supabase)
+- `026_rematricula_parq.sql`: `alunos.par_q_data DATE` + `periodos_letivos.rematricula_inicio/fim DATE` — **pendente execução**
+
+### Decisões
+- Rematrícula NÃO gera período novo em `enrollment_period` (evita poluir visualização de progressão de nível) — decisão do usuário
+- Janela dedicada (não evento/feriado/ponte): evento é por-dia e bloqueia o grid; janela é mais simples e não toca no chamada
+- Modo Rematrículas restrito à janela configurada (não sempre disponível)
+
+### Arquivos
+- `backend/src/migrations/026_rematricula_parq.sql` (novo)
+- `backend/src/types/index.ts` (+par_q_data)
+- `backend/src/services/alunosService.ts` (+par_q_data)
+- `backend/src/services/calendarioService.ts` (salvarPeriodo +janela, datas `|| null`)
+- `backend/src/controllers/alunosController.ts` (case rematricula)
+- `frontend/src/types/index.ts` (+par_q_data)
+- `frontend/src/pages/Calendario.tsx` (botão + modal + info bar)
+- `frontend/src/pages/Alunos.tsx` (modo Rematrículas + janela + handleRematricular)
+- `frontend/src/components/modals/AlunoModal.tsx` (par_q_data no payload)
+- `CHANGELOG.md` (v2.58.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Backend: 0 erros (`tsc --noEmit`)
+- Testes: 41/41 frontend + 25/25 backend passam
+
+---
+
 ## Sessão: 01/08/2026 — Bloqueio de Presença sem ParQ → v2.57.0
 
 ### O que foi feito

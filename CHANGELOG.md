@@ -1,5 +1,13 @@
 # Changelog - Fiz! App
 
+## [v2.58.0] - 2026-08-01
+### Feat
+- **Janela de Rematrículas**: novo botão "Rematrículas" ao lado de "Período Letivo" (Calendário) abre modal com `rematricula_inicio`/`rematricula_fim`; intervalo exibido na barra de período; `calendarioService.salvarPeriodo` agora persiste a janela (com `null` para datas vazias)
+- **Modo "Rematrículas" no grid de Alunos**: disponível **só dentro da janela configurada** (botão desabilitado fora dela, com tooltip do intervalo). Filtra alunos sem ParQ, checkboxes + "Rematricular selecionados" → `par_q=true` + `par_q_data=hoje` via `PUT /alunos/:id { acao: 'rematricula' }`
+- **Rematrícula NÃO mexe em `enrollment_period`** — preserva a progressão de nível do aluno; case `rematricula` no `alunosController` só passa pelo update de aluno
+- `par_q_data` (data da assinatura do ParQ) registrado também ao marcar ParQ = Sim no AlunoModal
+- Migration `026_rematricula_parq.sql`: `alunos.par_q_data DATE` + `periodos_letivos.rematricula_inicio/fim DATE` (**executar no Supabase**)
+
 ## [v2.57.0] - 2026-08-01
 ### Feat
 - **Bloqueio de presença sem ParQ**: aluno com `par_q !== true` (vazio ou "Não") não alterna mais P/F/J no grid de chamada — `handleCellClick` retorna cedo, célula ganha `cursor-not-allowed` + tooltip "ParQ pendente — registre o ParQ do aluno" e o nome recebe destaque âmbar com tooltip "ParQ pendente — aluno sem aptidão (ParQ) para participar"
