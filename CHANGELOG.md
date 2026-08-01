@@ -1,5 +1,14 @@
 # Changelog - Fiz! App
 
+## [v2.59.0] - 2026-08-01
+### Feat
+- **Export Frequência → Relatório Mensal detalhado** (`relatorioMensal.xlsx` como referência): cada folha de turma agora usa o layout novo do template
+  - Colunas `Nome | (vazia) | Whatsapp | parQ | Data Nasc. | dias | Anotações` (antes: Nome/Whatsapp/parQ/Aniversário/dias/Anotações)
+  - Cabeçalho com `Nível:` e `Mês:` reposicionados (E/F), merges `D1:M1`/`D2:M2` dinâmicos conforme nº de dias letivos
+  - **Tabela diária de clima** no rodapé de TODAS as folhas: `Dia | Piscina °C | Externa °C | Cloro ppm | Clima | Sensação | Status Sugerido` (uma linha por dia letivo), alimentada de `card_aula` (fallback `chamadas_log`)
+  - Piscina < 25°C exibe `❄` + linha de legenda `❄ = água < 25°C (água muito fria)`
+  - Status Sugerido: evento do calendário (`Ponte`/`Feriado`/etc.) > `Aula NORMAL` > `JUSTIFICADA — {motivo}` > `CANCELADA — {motivo}`
+
 ## [v2.58.0] - 2026-08-01
 ### Feat
 - **Janela de Rematrículas**: novo botão "Rematrículas" ao lado de "Período Letivo" (Calendário) abre modal com `rematricula_inicio`/`rematricula_fim`; intervalo exibido na barra de período; `calendarioService.salvarPeriodo` agora persiste a janela (com `null` para datas vazias)

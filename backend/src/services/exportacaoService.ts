@@ -18,6 +18,33 @@ const STATUS_MAP: Record<string, string> = {
   reuniao: '*', evento: '*',
 };
 
+const EVENTO_NOME: Record<string, string> = {
+  feriado: 'Feriado', ponte: 'Ponte', reuniao: 'Reunião',
+  evento: 'Evento', ferias: 'Férias',
+};
+
+function formatStatusSugerido(status?: string, motivo?: string): string {
+  if (!status) return '';
+  if (status === 'AULA_NORMAL') return 'Aula NORMAL';
+  const prefixo = status === 'AULA_CANCELADA' ? 'CANCELADA' : 'JUSTIFICADA';
+  return motivo ? `${prefixo} — ${motivo}` : prefixo;
+}
+
+function capFirst(s: string): string {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function colLetter(n: number): string {
+  let s = '';
+  while (n > 0) {
+    const r = (n - 1) % 26;
+    s = String.fromCharCode(65 + r) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
+}
+
 export async function gerarFrequenciaXLSX(
   tenantId: string,
   professorId: string,
@@ -94,6 +121,42 @@ export async function gerarFrequenciaXLSX(
 
   if (eventosError) throw new AppError('Erro ao buscar eventos', 500);
 
+  let cardAulaMap = new Map<string, any>();
+  const { data: cardAula, error: cardAulaError } = await supabase
+    .from('card_aula')
+    .select('data, temperatura_piscina, temperatura_externa, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido')
+    .eq('tenant_id', tenantId)
+    .gte('data', dataInicio)
+    .lte('data', dataFim);
+  if (cardAulaError && !cardAulaError.message?.includes('relation') && !cardAulaError.message?.includes('does not exist')) {
+    throw new AppError('Erro ao buscar card_aula', 500);
+  }
+  for (const ca of cardAula || []) {
+    if (!cardAulaMap.has(ca.data) || (!cardAulaMap.get(ca.data).condicao_clima && ca.condicao_clima)) {
+      cardAulaMap.set(ca.data, ca);
+    }
+  }
+
+  const climaDoDia = (dataStr: string): any => {
+    const ca = cardAulaMap.get(dataStr);
+    if (ca) return ca;
+    const log = (logs || []).find((l: ChamadaLog) => l.data === dataStr && l.condicao_clima != null);
+    if (log) {
+      const l = log as any;
+      return {
+        data: dataStr,
+        temperatura_piscina: l.temperatura_piscina,
+        temperatura_externa: l.temperatura_ext,
+        cloro_ppm: l.cloro_ppm,
+        condicao_clima: l.condicao_clima,
+        sensacao: l.sensacao,
+        status_sugerido: l.status_sugerido,
+        motivo_sugerido: l.motivo_sugerido,
+      };
+    }
+    return null;
+  };
+
   const labelExtenso: Record<string, string> = {
     'Seg/Ter': 'Segunda e Terça', 'Seg/Qua': 'Segunda e Quarta', 'Seg/Qui': 'Segunda e Quinta',
     'Seg/Sex': 'Segunda e Sexta', 'Ter/Qua': 'Terça e Quarta', 'Ter/Qui': 'Terça e Quinta',
@@ -120,77 +183,79 @@ export async function gerarFrequenciaXLSX(
         pageSetup: { orientation: 'portrait', paperSize: 9, margins: { left: 0.5, right: 0.5, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 } },
       });
 
-      const headerStyle: Partial<ExcelJS.Style> = { font: { bold: true, size: 10 }, alignment: { vertical: 'middle' } };
-      const titleStyle: Partial<ExcelJS.Style> = { font: { bold: true, size: 10, color: { argb: 'FFFFFFFF' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E79' } }, alignment: { horizontal: 'center', vertical: 'middle', wrapText: true } };
+      const labelStyle: Partial<ExcelJS.Style> = { font: { size: 10 }, alignment: { horizontal: 'right', vertical: 'middle' } };
+      const titleStyle: Partial<ExcelJS.Style> = { font: { bold: true, size: 9, color: { argb: 'FFFFFFFF' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E79' } }, alignment: { horizontal: 'center', vertical: 'middle', wrapText: true } };
       const dataStyle: Partial<ExcelJS.Style> = { font: { size: 9 }, alignment: { vertical: 'middle' } };
       const nameStyle: Partial<ExcelJS.Style> = { font: { bold: true, size: 9 }, alignment: { vertical: 'middle' } };
+      const prefeituraStyle: Partial<ExcelJS.Style> = { font: { bold: true, size: 12 }, alignment: { horizontal: 'center', vertical: 'middle' } };
 
-      const colWidths: Record<number, number> = { 1: 36, 2: 20, 3: 11, 4: 13 };
-      for (let c = 5; c <= 4 + diasLetivos.length; c++) colWidths[c] = 3.5;
-      colWidths[5 + diasLetivos.length] = 40;
+      const colWidths: Record<number, number> = { 1: 11.6, 2: 21.4, 3: 13.1, 4: 10, 5: 9.3 };
+      for (let c = 6; c <= 5 + diasLetivos.length; c++) colWidths[c] = 3.4;
+      colWidths[6 + diasLetivos.length] = 41.9;
       sheet.columns = Object.entries(colWidths).map(([idx, w]) => ({ key: `col${idx}`, width: w }));
 
       sheet.getRow(1).height = 15;
       sheet.getCell('A1').value = 'Modalidade:';
-      sheet.getCell('A1').style = headerStyle;
+      sheet.getCell('A1').style = labelStyle;
       sheet.getCell('B1').value = 'Natação';
       sheet.getCell('B1').style = dataStyle;
-      sheet.mergeCells('D1:K1');
+      const mergeFim = colLetter(5 + diasLetivos.length);
+      sheet.mergeCells(`D1:${mergeFim}1`);
       sheet.getCell('D1').value = 'PREFEITURA MUNICIPAL DE VINHEDO';
-      sheet.getCell('D1').style = { font: { bold: true, size: 10 }, alignment: { horizontal: 'center', vertical: 'middle' } };
+      sheet.getCell('D1').style = prefeituraStyle;
 
       sheet.getRow(2).height = 15;
       sheet.getCell('A2').value = 'Local:';
-      sheet.getCell('A2').style = headerStyle;
+      sheet.getCell('A2').style = labelStyle;
       sheet.getCell('B2').value = 'Piscina Bela Vista';
       sheet.getCell('B2').style = dataStyle;
-      sheet.mergeCells('D2:K2');
+      sheet.mergeCells(`D2:${mergeFim}2`);
       sheet.getCell('D2').value = 'SECRETARIA DE ESPORTE E LAZER';
-      sheet.getCell('D2').style = { font: { bold: true, size: 10 }, alignment: { horizontal: 'center', vertical: 'middle' } };
+      sheet.getCell('D2').style = prefeituraStyle;
 
       sheet.getRow(3).height = 15;
       sheet.getCell('A3').value = 'Professor:';
-      sheet.getCell('A3').style = headerStyle;
+      sheet.getCell('A3').style = labelStyle;
       sheet.getCell('B3').value = professorNome;
       sheet.getCell('B3').style = dataStyle;
 
       sheet.getRow(4).height = 15;
       sheet.getCell('A4').value = 'Turma:';
-      sheet.getCell('A4').style = headerStyle;
+      sheet.getCell('A4').style = labelStyle;
       sheet.getCell('B4').value = labelExtenso[turma.label] || turma.label;
       sheet.getCell('B4').style = dataStyle;
-      sheet.getCell('D4').value = 'Nível:';
-      sheet.getCell('D4').style = headerStyle;
-      sheet.getCell('E4').value = turma.nivel || '---';
-      sheet.getCell('E4').style = dataStyle;
+      sheet.getCell('E4').value = 'Nível:';
+      sheet.getCell('E4').style = labelStyle;
+      sheet.getCell('F4').value = turma.nivel || '---';
+      sheet.getCell('F4').style = dataStyle;
 
       sheet.getRow(5).height = 15;
       sheet.getCell('A5').value = 'Horário:';
-      sheet.getCell('A5').style = headerStyle;
+      sheet.getCell('A5').style = labelStyle;
       const horarioFim = somarMinutos(turma.horario, turma.duracao_minutos || 45);
       sheet.getCell('B5').value = `${turma.horario.slice(0, 5)} - ${horarioFim}`;
       sheet.getCell('B5').style = dataStyle;
-      sheet.getCell('D5').value = 'Mês:';
-      sheet.getCell('D5').style = headerStyle;
-      sheet.getCell('E5').value = formatMesAno(mes, ano);
-      sheet.getCell('E5').style = dataStyle;
+      sheet.getCell('E5').value = 'Mês:';
+      sheet.getCell('E5').style = labelStyle;
+      sheet.getCell('F5').value = formatMesAno(mes, ano);
+      sheet.getCell('F5').style = dataStyle;
 
       const headerRow6 = sheet.getRow(6);
       headerRow6.height = 20;
-      const headers = ['Nome', 'Whatsapp', 'parQ', 'Aniversário'];
-      headers.forEach((h, i) => {
-        const cell = headerRow6.getCell(i + 1);
+      const gridHeaders: Array<[number, string]> = [[1, 'Nome'], [3, 'Whatsapp'], [4, 'parQ'], [5, 'Data Nasc.']];
+      gridHeaders.forEach(([col, h]) => {
+        const cell = headerRow6.getCell(col);
         cell.value = h;
-        cell.style = i === 0 ? { ...titleStyle, font: { bold: true, size: 9, color: { argb: 'FFFFFFFF' } } } : titleStyle;
+        cell.style = titleStyle;
       });
       diasLetivos.forEach((dataStr, i) => {
-        const col = 5 + i;
+        const col = 6 + i;
         const diaNum = parseInt(dataStr.split('-')[2], 10);
         const cell = headerRow6.getCell(col);
         cell.value = diaNum;
         cell.style = titleStyle;
       });
-      const anotCell = headerRow6.getCell(5 + diasLetivos.length);
+      const anotCell = headerRow6.getCell(6 + diasLetivos.length);
       anotCell.value = 'Anotações';
       anotCell.style = { font: { bold: true, size: 9, color: { argb: 'FFFFFFFF' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2E75B6' } }, alignment: { horizontal: 'center', vertical: 'middle', wrapText: true } };
 
@@ -203,18 +268,18 @@ export async function gerarFrequenciaXLSX(
         sheet.getCell(`A${rowNum}`).value = aluno.nome;
         sheet.getCell(`A${rowNum}`).style = nameStyle;
 
-        sheet.getCell(`B${rowNum}`).value = aluno.contato || '';
-        sheet.getCell(`B${rowNum}`).style = dataStyle;
-
-        sheet.getCell(`C${rowNum}`).value = aluno.par_q ? 'Sim' : 'Não';
+        sheet.getCell(`C${rowNum}`).value = aluno.contato || '';
         sheet.getCell(`C${rowNum}`).style = dataStyle;
 
-        const dn = aluno.data_nascimento ? new Date(aluno.data_nascimento + 'T12:00:00') : null;
-        sheet.getCell(`D${rowNum}`).value = dn ? `${String(dn.getDate()).padStart(2,'0')}/${String(dn.getMonth()+1).padStart(2,'0')}/${dn.getFullYear()}` : '';
+        sheet.getCell(`D${rowNum}`).value = aluno.par_q ? 'Sim' : 'Não';
         sheet.getCell(`D${rowNum}`).style = dataStyle;
 
+        const dn = aluno.data_nascimento ? new Date(aluno.data_nascimento + 'T12:00:00') : null;
+        sheet.getCell(`E${rowNum}`).value = dn ? `${String(dn.getDate()).padStart(2,'0')}/${String(dn.getMonth()+1).padStart(2,'0')}/${dn.getFullYear()}` : '';
+        sheet.getCell(`E${rowNum}`).style = dataStyle;
+
         diasLetivos.forEach((dataStr, di) => {
-          const col = 5 + di;
+          const col = 6 + di;
           const cell = sheet.getCell(rowNum, col);
           cell.font = { size: 9 };
           cell.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -250,10 +315,79 @@ export async function gerarFrequenciaXLSX(
         });
 
         const anotacao = (anotacoes || []).find((a: any) => a.aluno_id === aluno.id);
-        const anotCol = sheet.getCell(rowNum, 5 + diasLetivos.length);
+        const anotCol = sheet.getCell(rowNum, 6 + diasLetivos.length);
         anotCol.value = anotacao?.anotacao || '';
         anotCol.style = { font: { size: 8, italic: true }, alignment: { vertical: 'middle', wrapText: true } };
       });
+
+      const blankRow = 7 + alunosTurma.length;
+      const climaHeaderRow = blankRow + 1;
+      const climaHeader = sheet.getRow(climaHeaderRow);
+      climaHeader.height = 20;
+      const climaHeaders: Array<[number, string]> = [
+        [1, 'Dia'], [2, 'Piscina °C'], [3, 'Externa °C'], [4, 'Cloro ppm'],
+        [6, 'Clima'], [11, 'Sensação'], [14, 'Status Sugerido'],
+      ];
+      climaHeaders.forEach(([col, h]) => {
+        const cell = climaHeader.getCell(col);
+        cell.value = h;
+        cell.style = titleStyle;
+      });
+
+      diasLetivos.forEach((dataStr, i) => {
+        const rowNum = climaHeaderRow + 1 + i;
+        const row = sheet.getRow(rowNum);
+        row.height = 15;
+        const clima = climaDoDia(dataStr);
+        const evento = (eventos || []).find((e: any) => e.data === dataStr);
+
+        const [y, m, d] = dataStr.split('-');
+        const cellDia = sheet.getCell(rowNum, 1);
+        cellDia.value = `${d}/${m}/${y.slice(2)}`;
+        cellDia.font = { size: 9 };
+        cellDia.alignment = { horizontal: 'center', vertical: 'middle' };
+
+        const cellPisc = sheet.getCell(rowNum, 2);
+        cellPisc.font = { size: 9 };
+        cellPisc.alignment = { horizontal: 'center', vertical: 'middle' };
+        cellPisc.value = clima?.temperatura_piscina != null
+          ? (clima.temperatura_piscina < 25 ? `${clima.temperatura_piscina.toFixed(1)} ❄` : clima.temperatura_piscina.toFixed(1))
+          : '—';
+
+        const cellExt = sheet.getCell(rowNum, 3);
+        cellExt.font = { size: 9 };
+        cellExt.alignment = { horizontal: 'center', vertical: 'middle' };
+        cellExt.value = clima?.temperatura_externa != null ? clima.temperatura_externa.toFixed(1) : '—';
+
+        const cellCloro = sheet.getCell(rowNum, 4);
+        cellCloro.font = { size: 9 };
+        cellCloro.alignment = { horizontal: 'center', vertical: 'middle' };
+        cellCloro.value = clima?.cloro_ppm != null ? clima.cloro_ppm.toFixed(1) : '—';
+
+        const cellClima = sheet.getCell(rowNum, 6);
+        cellClima.font = { size: 9 };
+        cellClima.alignment = { horizontal: 'center', vertical: 'middle' };
+        cellClima.value = clima?.condicao_clima ? capFirst(clima.condicao_clima) : '—';
+
+        const cellSens = sheet.getCell(rowNum, 11);
+        cellSens.font = { size: 9 };
+        cellSens.alignment = { horizontal: 'center', vertical: 'middle' };
+        const sensacoes: string[] = clima?.sensacao || [];
+        cellSens.value = sensacoes.length > 0 ? sensacoes.join(' + ') : '—';
+
+        const cellStatus = sheet.getCell(rowNum, 14);
+        cellStatus.font = { size: 9 };
+        cellStatus.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        cellStatus.value = evento
+          ? (EVENTO_NOME[evento.tipo] || capFirst(evento.tipo))
+          : formatStatusSugerido(clima?.status_sugerido, clima?.motivo_sugerido);
+      });
+
+      const legendRow = climaHeaderRow + 1 + diasLetivos.length;
+      const cellLegend = sheet.getCell(legendRow, 1);
+      cellLegend.value = '❄ = água < 25°C (água muito fria)';
+      cellLegend.font = { size: 9 };
+      cellLegend.alignment = { horizontal: 'left', vertical: 'middle' };
     }
   }
 

@@ -90,6 +90,37 @@ Regras:
 
 ---
 
+## Sessão: 01/08/2026 — Relatório Mensal detalhado (Export Frequência) → v2.59.0
+
+### O que foi feito
+- **`gerarFrequenciaXLSX` reescrita** usando o `relatorioMensal.xlsx` (adicionado pelo usuário em `backend/src/templates/`) como referência — a folha 1 do template é o layout-alvo; folhas 2-4 são cópias do formato antigo
+- **Novo grid por folha de turma**: `Nome | (coluna B vazia, espaçador) | Whatsapp | parQ | Data Nasc. | dias letivos | Anotações` (antes: Nome/Whatsapp/parQ/Aniversário/dias/Anotações, sem coluna vazia)
+- **Cabeçalho**: `Nível:`/`Mês:` reposicionados para colunas E/F (antes D/E); merges `D1:M1`/`D2:M2` agora **dinâmicos** (`colLetter(5 + diasLetivos.length)`) para labels com mais dias (ex.: Seg a Sex)
+- **Nova tabela diária de clima no rodapé de TODAS as folhas** (decisão do usuário): `Dia | Piscina °C | Externa °C | Cloro ppm | Clima | Sensação | Status Sugerido` nas posições exatas do template (A,B,C,D,F,K,N), uma linha por dia letivo
+- **Fonte do clima**: `card_aula` do mês (query tolerante a tabela inexistente) com fallback para `chamadas_log` quando o dia não tem card_aula (mesmo padrão do `cardAulaService.buscarCardAulaFallback`) — `climaDoDia` dedup por data
+- **Status Sugerido**: evento do calendário (`Ponte`/`Feriado`/`Reunião`/`Evento`/`Férias`) tem precedência; senão `AULA_NORMAL`→`Aula NORMAL`, `FALTA_JUSTIFICADA`→`JUSTIFICADA — {motivo}`, `AULA_CANCELADA`→`CANCELADA — {motivo}`
+- **Piscina < 25°C** exibe `❄` (ex.: `24.8 ❄`) + linha de legenda `❄ = água < 25°C (água muito fria)`
+- Larguras de coluna do template (A=11.6, B=21.4, C=13.1, D=10, E=9.3, dias=3.4, Anotações=41.9)
+- `STATUS_MAP` (p/f/j/C/*) e estilos dos dias mantidos; grid de alunos inalterado em comportamento
+
+### Decisões
+- **Tabela de clima em todas as folhas** (usuário escolheu) — cada folha é um relatório autocontido, apesar de o clima ser igual para todas as turmas da label
+- **Replicação fiel do template** (usuário escolheu) — coluna B vazia como espaçador e posições fixas de Clima (F)/Sensação (K)/Status Sugerido (N) no rodapé
+- Clima capitalizado da primeira letra (`condicao_clima` armazenado em lowercase WMO) — não inventa valores como "Ensolarado"/"Chuvoso"
+- Sem migration (não toca no banco) e sem dependências novas; frontend inalterado
+
+### Arquivos
+- `backend/src/services/exportacaoService.ts` (gerarFrequenciaXLSX reescrita + helpers EVENTO_NOME/formatStatusSugerido/capFirst/colLetter)
+- `CHANGELOG.md` (v2.59.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Backend: 0 erros (`tsc --noEmit`)
+- Testes: 25/25 backend passam
+- Verificação end-to-end: teste temporário com Supabase mockado confirmou layout (cabeçalho, grid, tabela de clima, fallback chamadas_log, evento `Ponte`, ❄ e legenda) — removido após validação
+
+---
+
 ## Sessão: 01/08/2026 — Janela de Rematrículas + Modo Rematrículas → v2.58.0
 
 ### O que foi feito
