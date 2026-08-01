@@ -15,6 +15,7 @@ const CANCELAMENTO_TIPOS = new Set([
   'Particular',
   'Reunião',
   'Secretaria',
+  'Raios e Trovões',
 ]);
 
 const TIPOS_PESSOAIS = [
@@ -37,16 +38,18 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId })
   const [tipo, setTipo] = useState(TIPOS_PESSOAIS[0]);
   const [descricao, setDescricao] = useState('');
   const [salvando, setSalvando] = useState(false);
+  const [cancelarAula, setCancelarAula] = useState(false);
 
   if (!aberto) return null;
 
   const handleTogglePessoal = (v: boolean) => {
     setIsPessoal(v);
     setTipo(v ? TIPOS_PESSOAIS[0] : TIPOS_GERAIS[0]);
+    setCancelarAula(false);
   };
 
   const tipos = isPessoal ? TIPOS_PESSOAIS : TIPOS_GERAIS;
-  const isCancelamento = CANCELAMENTO_TIPOS.has(tipo);
+  const isCancelamento = CANCELAMENTO_TIPOS.has(tipo) || (tipo === 'Manutenção/Incidente' && cancelarAula);
   const via = isPessoal ? 'via_2' : 'via_1';
 
   const handleSalvar = async () => {
@@ -59,6 +62,7 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId })
         tipo_ocorrencia: tipo,
         motivo: descricao,
         compromete_dia: comprometeDia || undefined,
+        cancelar_aula: cancelarAula || undefined,
         grupo_id: grupoId,
       });
       onClose();
@@ -113,13 +117,27 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId })
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo</label>
-            <select value={tipo} onChange={(e) => setTipo(e.target.value)}
+            <select value={tipo} onChange={(e) => { setTipo(e.target.value); setCancelarAula(false); }}
               className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded p-2 mt-1 text-sm">
               {tipos.map((t) => (
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>
           </div>
+
+          {tipo === 'Manutenção/Incidente' && (
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="cancelarAulaCheck" checked={cancelarAula}
+                onChange={(e) => setCancelarAula(e.target.checked)}
+                className="w-4 h-4 text-primary-600 border-gray-300 dark:border-gray-600 rounded" />
+              <label htmlFor="cancelarAulaCheck" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Cancelar aula na matriz
+              </label>
+              <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-auto">
+                Marque se a ocorrência cancela a aula
+              </span>
+            </div>
+          )}
 
           {isCancelamento && (
             <div className="p-2 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded text-xs text-red-600 dark:text-red-400 space-y-1">

@@ -341,6 +341,7 @@ const CANCELAMENTO_TIPOS = new Set([
   'Particular',
   'Reunião',
   'Secretaria',
+  'Raios e Trovões',
 ]);
 
 async function salvarMetadadosBO(
@@ -392,12 +393,13 @@ export async function salvarCardBO(
   compromete_dia?: boolean,
   professorId?: string,
   grupoId?: string,
+  cancelarAula?: boolean,
 ): Promise<void> {
   if (!data) throw new AppError('Campo data e obrigatorio', 400);
 
   const aulaIdx = indice_aula ?? 0;
   const tMotivo = motivo || '';
-  const isCancelamento = CANCELAMENTO_TIPOS.has(tipo_ocorrencia);
+  const isCancelamento = CANCELAMENTO_TIPOS.has(tipo_ocorrencia) || cancelarAula === true;
 
   if (!isCancelamento || !grupoId) {
     await salvarMetadadosBO(tenantId, data, aulaIdx, tipo_ocorrencia, tMotivo);
