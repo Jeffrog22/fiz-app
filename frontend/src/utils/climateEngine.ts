@@ -145,7 +145,7 @@ export function getTempPiscinaSugestao(
     return { status: 'AULA_CANCELADA', motivo: 'Água muito fria para menores' };
   }
   if (temp < 25) {
-    return { status: 'FALTA_JUSTIFICADA', motivo: 'Água fria para maiores de 16' };
+    return { status: 'FALTA_JUSTIFICADA', motivo: 'Água muito fria' };
   }
   if (temp < 26) {
     return { status: 'FALTA_JUSTIFICADA', motivo: 'Água muito fria' };
