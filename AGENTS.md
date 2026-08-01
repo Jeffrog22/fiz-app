@@ -114,6 +114,37 @@ Regras:
 
 ---
 
+## Sessão: 31/07/2026 — CardBO: Raios e Trovões cancela + Checkbox Manutenção/Incidente → v2.56.0
+
+### O que foi feito
+- `'Raios e Trovões'` adicionado ao `CANCELAMENTO_TIPOS` (frontend `CardBO.tsx` + backend `chamadasService.ts`) — agora extrapola `cancelado` (via_1, todas as turmas do label)
+- Checkbox **"Cancelar aula na matriz"** exclusivo para `Manutenção/Incidente` (padrão desmarcado):
+  - Marcado → `cancelar_aula: true` → `salvarCardBO` trata como cancelamento (extrapola via_1)
+  - Desmarcado → comportamento atual (só `salvarMetadadosBO`, sem cancelar a aula)
+- `salvarCardBO` ganhou parâmetro `cancelarAula?: boolean`; `isCancelamento = CANCELAMENTO_TIPOS.has(tipo) || cancelarAula === true`
+- `isCancelamento` no frontend inclui o checkbox (aviso vermelho reflete o estado real)
+- `cancelarAula` reseta ao trocar de tipo (onChange do select) e ao alternar Pessoal/Geral
+
+### Decisões
+- Escopo do checkbox: **só Manutenção/Incidente** (decisão do usuário) — não genérico
+- Estado padrão: **desmarcado** (preserva comportamento atual)
+- Dashboard Cancelamentos/TabCancelamentos usam motivos dinâmicos — novos tipos aparecem automaticamente, sem alteração
+- Nenhuma migration: BOs antigos de "Raios e Trovões" (metadados) permanecem como estão
+
+### Arquivos
+- `frontend/src/components/modals/CardBO.tsx` (CANCELAMENTO_TIPOS + checkbox + isCancelamento + payload)
+- `backend/src/controllers/chamadasController.ts` (+cancelar_aula)
+- `backend/src/services/chamadasService.ts` (CANCELAMENTO_TIPOS + salvarCardBO cancelarAula)
+- `CHANGELOG.md` (v2.56.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Backend: 0 erros (`tsc --noEmit`)
+- Testes: 41/41 frontend + 25/25 backend passam
+
+---
+
 ## Sessão: 31/07/2026 — Aviso Automático de Atualização → v2.55.0
 
 ### O que foi feito

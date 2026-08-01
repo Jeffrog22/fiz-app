@@ -1,5 +1,11 @@
 # Changelog - Fiz! App
 
+## [v2.56.0] - 2026-07-31
+### Feat
+- CardBO: **"Raios e Trovões"** agora é tipo de cancelamento (extrapola `cancelado` para todas as turmas do label, via_1)
+- CardBO: checkbox **"Cancelar aula na matriz"** exclusivo para **"Manutenção/Incidente"** (padrão desmarcado) — marcado, extrapola cancelamento; desmarcado, mantém comportamento atual (só metadados BO)
+- Backend `salvarCardBO` aceita `cancelar_aula`; `CANCELAMENTO_TIPOS` sincronizado (frontend + backend)
+
 ## [v2.55.1] - 2026-07-31
 ### Fix
 - Motor de clima: para faixa etária "+ 16 anos" com água entre 23°C e 25°C, o motivo passou de "Água fria para maiores de 16" para **"Água muito fria"** (status `FALTA_JUSTIFICADA` inalterado) — alinha `frontend` e `backend/src/utils/climateEngine.ts` ao caminho manual do `extrapolarService.ts` (que já usava "Água muito fria")
