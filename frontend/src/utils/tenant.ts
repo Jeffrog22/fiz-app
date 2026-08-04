@@ -5,6 +5,7 @@ const DOMAIN_TENANT_MAP: Record<string, string> = {
   'chamadasaomatheus.pages.dev': 'sao-matheus',
   'chamadavila.pages.dev': 'vila',
   'chamadaparque.pages.dev': 'parque',
+  'chamada3aidade.pages.dev': '3aidade',
   'localhost': 'bela-vista',
   '127.0.0.1': 'bela-vista',
 };
@@ -14,6 +15,7 @@ const TENANTS = [
   { id: 'sao-matheus', nome: 'São Matheus' },
   { id: 'vila', nome: 'Vila' },
   { id: 'parque', nome: 'Parque' },
+  { id: '3aidade', nome: '3ª Idade' },
 ] as const;
 
 export function getTenantId(): string {
@@ -31,6 +33,7 @@ export function getTenantNome(tenantId: string): string {
     'sao-matheus': 'São Matheus',
     'vila': 'Vila',
     'parque': 'Parque',
+    '3aidade': '3ª Idade',
   };
   return nomes[tenantId] || tenantId;
 }

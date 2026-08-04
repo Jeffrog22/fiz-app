@@ -10,6 +10,7 @@ const DOMAIN_TENANT_MAP: Record<string, string> = {
   'chamadasaomatheus.pages.dev': 'sao-matheus',
   'chamadavila.pages.dev': 'vila',
   'chamadaparque.pages.dev': 'parque',
+  'chamada3aidade.pages.dev': '3aidade',
   'localhost': 'bela-vista',
 };
 
