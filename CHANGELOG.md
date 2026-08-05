@@ -1,5 +1,10 @@
 # Changelog - Fiz! App
 
+## [v2.61.2] - 2026-08-05
+### Fix
+- **CardAula — inputs de temperatura sem "0" preso**: os campos de Temperatura Externa/Piscina trocaram de `<input type="number">` controlado (que dessincronizava o display — ex.: editar 22 para 16 mostrava `016`, embora o valor salvo ficasse certo) para `type="text"` + `inputMode="decimal"` com estado de display em string e parse numérico (`parseDecimal`, aceitando vírgula pt-BR). `onBlur` normaliza o display a partir do número (vazio/inválido → último valor válido)
+- **Clima atual, real no CardAula e WeatherWidget**: a URL da Open-Meteo em `backend/src/utils/weather.ts` agora inclui `current=temperature_2m,weather_code,is_day,precipitation`; `obterClima()` (`chamadasService`) passa a retornar `temperatura`/`weatherCode` **do clima atual** (fallback para o daily do dia se `current` indisponível). O `raw.daily` é preservado (Calendário continua funcionando) e o cache segue em **2h** (decisão do usuário)
+
 ## [v2.61.0] - 2026-08-05
 ### Fix
 - **Atualização de versão confiável e sem tela branca** (Configurações → Atualizações + banner)

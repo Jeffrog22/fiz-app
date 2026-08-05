@@ -516,13 +516,18 @@ export async function obterClima(): Promise<any> {
   const tempMin = daily.temperature_2m_min?.[idx];
   const precipitacao = daily.precipitation_probability_max?.[idx] ?? 0;
 
+  // Clima atual, real (quando disponível); fallback para o daily do dia
+  const current = data.raw.current;
+  const temperaturaAtual = current?.temperature_2m;
+  const weatherCodeAtual = current?.weather_code;
+
   return {
     ok: true,
     raw: data.raw,
-    temperatura: tempMax ?? 26.0,
+    temperatura: temperaturaAtual ?? tempMax ?? 26.0,
     temperaturaMin: tempMin ?? 18.0,
-    weatherCode,
-    condicao: condicoes[weatherCode] || 'Desconhecido',
+    weatherCode: weatherCodeAtual ?? weatherCode,
+    condicao: condicoes[weatherCodeAtual ?? weatherCode] || 'Desconhecido',
     precipitacao,
   };
 }

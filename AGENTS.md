@@ -90,6 +90,38 @@ Regras:
 
 ---
 
+## Sessão: 05/08/2026 — Fix Inputs Temperatura CardAula + Clima Atual Real → v2.61.2
+
+### O que foi feito
+
+**1. CardAula — "0" preso nos inputs de temperatura**
+- Os campos de Temperatura Externa/Piscina usavam `<input type="number">` controlado com estado numérico → desync do display (ex.: editar 22 para 16 mostrava `016`; o valor salvo ficava certo)
+- Corrigido: `type="text"` + `inputMode="decimal"` + estado de display em string (`tempExternaInput`/`tempPiscinaInput`), parse via `parseDecimal()` (aceita vírgula pt-BR), `onBlur` normaliza o display a partir do número (vazio/inválido → último valor válido)
+- Estados numéricos `tempExterna`/`tempPiscina` mantidos para o motor climático e o salvar; sincronizados nos pontos de load (card_aula, fallback clima, defaults)
+
+**2. Clima atual, real (CardAula fallback + WeatherWidget)**
+- `backend/src/utils/weather.ts`: URL da Open-Meteo ganhou `current=temperature_2m,weather_code,is_day,precipitation` (mantém `daily` no `raw` — Calendário usa `raw.daily`); **cache mantido em 2h** (decisão do usuário)
+- `backend/src/services/chamadasService.ts` `obterClima()`: `temperatura`/`weatherCode` agora vêm de `raw.current` (clima atual), com fallback para o daily do dia
+- CardAula e WeatherWidget consomem `temperatura`/`weatherCode` — sem mudança de frontend necessária
+
+### Decisões
+- Cache de clima permanece **2h** (usuário: "não tem problema manter o cache de clima em 2h")
+- `type="text" inputMode="decimal"` em vez de `type="number"` — elimina a dessincronização do input controlado do React e aceita vírgula decimal (pt-BR)
+
+### Arquivos
+- `frontend/src/components/modals/CardAula.tsx` (string state + inputs text/decimal + parseDecimal + onBlur normalize)
+- `backend/src/utils/weather.ts` (current= na URL da Open-Meteo)
+- `backend/src/services/chamadasService.ts` (obterClima prioriza current)
+- `CHANGELOG.md` (v2.61.2)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Backend: 0 erros (`tsc --noEmit`)
+- Testes: 41/41 frontend + 25/25 backend passam
+
+---
+
 ## Sessão: 05/08/2026 — Atualização Confiável + Sem Tela Branca + Sempre-Fresco → v2.61.0
 
 ### O que foi feito

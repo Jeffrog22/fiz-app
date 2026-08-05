@@ -25,9 +25,16 @@ const SENSACOES = ['Calor', 'Abafado', 'Seco', 'Agradável', 'Vento', 'Frio', 'F
 
 const CONDICOES = Object.values(WMO_MAP).filter((v, i, a) => a.indexOf(v) === i);
 
+function parseDecimal(v: string): number {
+  const n = parseFloat(String(v).replace(',', '.'));
+  return Number.isFinite(n) ? n : NaN;
+}
+
 const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, nivelTurma, faixaEtariaTurma, onAbrirBO }) => {
   const [tempExterna, setTempExterna] = useState(26);
   const [tempPiscina, setTempPiscina] = useState(28);
+  const [tempExternaInput, setTempExternaInput] = useState('26');
+  const [tempPiscinaInput, setTempPiscinaInput] = useState('28');
   const [cloro, setCloro] = useState(2.5);
   const [condicao, setCondicao] = useState('parcialmente nublado');
   const [sensacoes, setSensacoes] = useState<string[]>([]);
@@ -54,8 +61,14 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
           const cardRecord = sorted.find((r: any) => r.indice_aula <= indiceAula);
           if (cardRecord) {
             if (cardRecord.condicao_clima) setCondicao(cardRecord.condicao_clima);
-            if (cardRecord.temperatura_externa != null) setTempExterna(cardRecord.temperatura_externa);
-            if (cardRecord.temperatura_piscina != null) setTempPiscina(cardRecord.temperatura_piscina);
+            if (cardRecord.temperatura_externa != null) {
+              setTempExterna(cardRecord.temperatura_externa);
+              setTempExternaInput(String(cardRecord.temperatura_externa));
+            }
+            if (cardRecord.temperatura_piscina != null) {
+              setTempPiscina(cardRecord.temperatura_piscina);
+              setTempPiscinaInput(String(cardRecord.temperatura_piscina));
+            }
             if (cardRecord.cloro_ppm != null) setCloro(cardRecord.cloro_ppm);
             if (cardRecord.sensacao) setSensacoes(cardRecord.sensacao);
             if (cardRecord.id) setUltimoHash(cardRecord.id.slice(0, 8));
@@ -73,16 +86,19 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
               if (res2.data?.ok) {
                 const temp = res2.data.temperatura ?? 26;
                 setTempExterna(temp);
+                setTempExternaInput(String(temp));
                 setCondicao(getCondicaoFromWeatherCode(res2.data.weatherCode ?? null));
                 const sens = getSensacoesFromTemperatura(temp);
                 if (sens.length > 0) setSensacoes((prev) => [...new Set([...prev, ...sens])]);
               } else {
                 setTempExterna(26);
+                setTempExternaInput('26');
                 setCondicao('Parcialmente Nublado');
               }
             })
             .catch(() => {
               setTempExterna(26);
+              setTempExternaInput('26');
               setCondicao('parcialmente nublado');
             });
         })
@@ -94,16 +110,19 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
               if (res2.data?.ok) {
                 const temp = res2.data.temperatura ?? 26;
                 setTempExterna(temp);
+                setTempExternaInput(String(temp));
                 setCondicao(getCondicaoFromWeatherCode(res2.data.weatherCode ?? null));
                 const sens = getSensacoesFromTemperatura(temp);
                 if (sens.length > 0) setSensacoes((prev) => [...new Set([...prev, ...sens])]);
               } else {
                 setTempExterna(26);
+                setTempExternaInput('26');
                 setCondicao('Parcialmente Nublado');
               }
             })
             .catch(() => {
               setTempExterna(26);
+              setTempExternaInput('26');
               setCondicao('parcialmente nublado');
             });
         })
@@ -187,15 +206,27 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
                   Temperatura Externa (°C)
                   {tempExterna < 15 && <span className="ml-2 text-xs text-red-500 dark:text-red-400">Frio detectado</span>}
                 </label>
-                <input type="number" step="1" value={tempExterna}
-                  onChange={(e) => setTempExterna(Number(e.target.value))}
+                <input type="text" inputMode="decimal" value={tempExternaInput}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    setTempExternaInput(raw);
+                    const n = parseDecimal(raw);
+                    if (!Number.isNaN(n)) setTempExterna(n);
+                  }}
+                  onBlur={() => setTempExternaInput(String(tempExterna))}
                   className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded p-2 mt-1 text-sm" />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Temperatura Piscina (°C)</label>
-                <input type="number" step="0.5" value={tempPiscina}
-                  onChange={(e) => setTempPiscina(Number(e.target.value))}
+                <input type="text" inputMode="decimal" value={tempPiscinaInput}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    setTempPiscinaInput(raw);
+                    const n = parseDecimal(raw);
+                    if (!Number.isNaN(n)) setTempPiscina(n);
+                  }}
+                  onBlur={() => setTempPiscinaInput(String(tempPiscina))}
                   className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded p-2 mt-1 text-sm" />
               </div>
 

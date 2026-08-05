@@ -21,7 +21,7 @@ export async function fetchWeather() {
 
   try {
     const url =
-      'https://api.open-meteo.com/v1/forecast?latitude=-23.0300&longitude=-46.9750&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=16';
+      'https://api.open-meteo.com/v1/forecast?latitude=-23.0300&longitude=-46.9750&current=temperature_2m,weather_code,is_day,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=16';
 
     const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
     if (!response.ok) throw new Error('Falha ao buscar clima');
