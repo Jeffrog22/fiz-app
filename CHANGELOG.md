@@ -1,5 +1,12 @@
 # Changelog - Fiz! App
 
+## [v2.64.0] - 2026-08-05
+### Feat
+- **Clear button (X) nas justificativas do mês**: cada item da lista "Justificativas do mês" no `JustificativaModal` agora tem um botão `X` à direita que remove aquela justificativa (`status` volta para vazio, `origem: 'manual'`), com undo (Desfazer reaplica o J). O item some da lista ao vivo, sem fechar o modal
+  - `Chamadas.tsx`: novo `handleLimparJustificativa(alunoId, data)` (guarda se o log é `justificado`, empilha undo tipo `presenca` com `statusAntigo: 'justificado'`, remove do `logs`, `agendarSalvamento` com `status: null`) + prop `onClearJustificativa` ao `DataGrid`
+  - `DataGrid.tsx`: prop `onClearJustificativa?.(alunoId, data)` repassada ao `JustificativaModal`
+  - `JustificativaModal.tsx`: prop `onClearJustificativa?` + botão `X` em cada `<li>` (hover vermelho, `title`/`aria-label`)
+
 ## [v2.63.1] - 2026-08-05
 ### Fix
 - **Lista "Justificativas do mês" mais limpa**: o item de justificativa deixou de exibir o badge `J` e o separador `—`, ficando apenas `04/08 Consulta médica` (data + motivo) no modal de justificativa

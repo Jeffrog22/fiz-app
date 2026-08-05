@@ -11,6 +11,7 @@ interface Props {
   motivoAtual?: string;
   justificativas?: { data: string; motivo?: string }[];
   onSave: (alunoId: string, data: string, motivo: string, dias?: number) => void;
+  onClearJustificativa?: (alunoId: string, data: string) => void;
 }
 
 const MOTIVOS = [
@@ -24,7 +25,7 @@ const MOTIVOS = [
 ];
 
 const JustificativaModal: React.FC<Props> = ({
-  aberto, onClose, aluno, data, indiceAula, motivoAtual, justificativas = [], onSave,
+  aberto, onClose, aluno, data, indiceAula, motivoAtual, justificativas = [], onSave, onClearJustificativa,
 }) => {
   const [motivo, setMotivo] = useState(motivoAtual || MOTIVOS[0]);
   const [diasAtestado, setDiasAtestado] = useState('');
@@ -57,6 +58,14 @@ const JustificativaModal: React.FC<Props> = ({
                 <li key={j.data} className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 bg-yellow-50 dark:bg-yellow-900/30 rounded px-2 py-1">
                   <span className="font-medium">{j.data.slice(8, 10)}/{j.data.slice(5, 7)}</span>
                   {j.motivo && <span className="truncate">{j.motivo}</span>}
+                  <button
+                    onClick={() => onClearJustificativa?.(aluno.id, j.data)}
+                    className="ml-auto flex-shrink-0 px-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-900/30 transition"
+                    title="Remover justificativa"
+                    aria-label="Remover justificativa"
+                  >
+                    &times;
+                  </button>
                 </li>
               ))}
             </ul>

@@ -73,6 +73,7 @@ interface DataGridProps {
   alunosComAtestadoAnotacao?: Set<string>;
   onAnotacaoChange?: (alunoId: string) => void;
   onSaveJustificativa?: (alunoId: string, data: string, motivo: string, dias?: number) => void;
+  onClearJustificativa?: (alunoId: string, data: string) => void;
   onNomeDoubleClick?: (aluno: Aluno) => void;
   onAfastamento?: (alunoId: string, dias: number) => void;
 }
@@ -94,6 +95,7 @@ const DataGrid: React.FC<DataGridProps> = ({
   alunosComAnotacao,
   onAnotacaoChange,
   onSaveJustificativa,
+  onClearJustificativa,
   alunosComAtestadoAnotacao,
   onNomeDoubleClick,
   onAfastamento,
@@ -627,6 +629,7 @@ const DataGrid: React.FC<DataGridProps> = ({
           onSaveJustificativa?.(alunoId, data, motivo, dias);
           setJustificativaModal(null);
         }}
+        onClearJustificativa={(alunoId, jdata) => onClearJustificativa?.(alunoId, jdata)}
       />
 
       {exclusaoModal && (

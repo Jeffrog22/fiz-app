@@ -90,6 +90,31 @@ Regras:
 
 ---
 
+## Sessão: 05/08/2026 — Justificativa: clear button (X) por item no modal → v2.64.0
+
+### O que foi feito
+- **JustificativaModal**: cada item da lista "Justificativas do mês" ganhou um botão `X` à direita (`ml-auto`) com hover vermelho (`title`/`aria-label` "Remover justificativa") — clica e remove aquela justificativa
+- **Chamadas.tsx**: novo `handleLimparJustificativa(alunoId, data)` — guarda se `logs[alunoId][data][indiceAtual]?.status === 'justificado'`, empilha undo `{ type: 'presenca', statusAntigo: 'justificado' }` (Desfazer reaplica o J), remove a entrada do `logs` (padrão do `handleLimparDia`) e chama `agendarSalvamento` com `status: null, origem: 'manual'`. Passado ao DataGrid como `onClearJustificativa`
+- **DataGrid.tsx**: prop `onClearJustificativa?.(alunoId, data)` repassada ao `JustificativaModal`
+
+### Decisões
+- Escopo: **X por item** (decisão do usuário) — não há botão "limpar tudo" do mês
+- Remoção seta `status: null` (célula vazia, consistente com o Limpar do grid); undo restaura o J
+- A lista é derivada do estado do pai (`listarJustificativas`), então o item some ao vivo sem fechar o modal
+
+### Arquivos
+- `frontend/src/pages/Chamadas.tsx` (handleLimparJustificativa + prop ao DataGrid)
+- `frontend/src/components/grid/DataGrid.tsx` (prop onClearJustificativa + repasse)
+- `frontend/src/components/modals/JustificativaModal.tsx` (prop onClearJustificativa + botão X)
+- `CHANGELOG.md` (v2.64.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Testes: 41/41 frontend passam
+
+---
+
 ## Sessão: 05/08/2026 — Justificativa: item da lista sem badge J → v2.63.1
 
 ### O que foi feito

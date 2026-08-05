@@ -482,6 +482,33 @@ const Chamadas: React.FC = () => {
     [indiceAtual, agendarSalvamento, aplicarAfastamento],
   );
 
+  const handleLimparJustificativa = useCallback((alunoId: string, data: string) => {
+    const logAtual = logs[alunoId]?.[data]?.[indiceAtual];
+    if (logAtual?.status !== 'justificado') return;
+
+    undoStack.current.push({
+      type: 'presenca', alunoId, data, indice: indiceAtual, statusAntigo: 'justificado' as PresencaStatus,
+    });
+    if (undoStack.current.length > MAX_UNDO) undoStack.current.shift();
+    setUndoCount((c) => c + 1);
+
+    setLogs((prev) => {
+      const next = { ...prev };
+      if (next[alunoId]?.[data]?.[indiceAtual]) {
+        delete next[alunoId][data][indiceAtual];
+        if (Object.keys(next[alunoId][data]).length === 0) {
+          delete next[alunoId][data];
+        }
+      }
+      return next;
+    });
+
+    agendarSalvamento([{
+      grupo_id: alunoId, data, indice_aula: indiceAtual,
+      status: null, origem: 'manual',
+    }]);
+  }, [logs, indiceAtual, agendarSalvamento]);
+
   const handleNomeDoubleClick = useCallback((aluno: Aluno) => {
     navigate(`/alunos?search=${encodeURIComponent(aluno.nome)}`);
   }, [navigate]);
@@ -890,6 +917,7 @@ const Chamadas: React.FC = () => {
           alunosComAtestadoAnotacao={alunosComAtestadoAnotacao}
           onAnotacaoChange={handleAnotacaoChange}
           onSaveJustificativa={handleSaveJustificativa}
+          onClearJustificativa={handleLimparJustificativa}
           onNomeDoubleClick={handleNomeDoubleClick}
           onAfastamento={handleAfastamento}
         />
