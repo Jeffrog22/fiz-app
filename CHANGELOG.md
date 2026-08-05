@@ -1,5 +1,19 @@
 # Changelog - Fiz! App
 
+## [v2.61.0] - 2026-08-05
+### Fix
+- **Atualização de versão confiável e sem tela branca** (Configurações → Atualizações + banner)
+  - `sw.ts`: `self.skipWaiting()` removido do install — o SW novo fica em `waiting` (detecção por `reg.waiting` volta a funcionar) e "Atualizar agora" ativa via `SKIP_WAITING`; sem a ativação forçada no meio da sessão, a tela branca após atualizar some
+  - `sw.ts`: navegações (`request.mode === 'navigate'`) trocadas de `CacheFirst` → `NetworkFirst` (cacheName `html-cache`, timeout 3s) e registradas **antes** de `precacheAndRoute` — o `index.html`/rotas SPA passam a ser buscados do servidor a cada abertura, então o app abre sempre na última versão mesmo sem banner
+  - `sw.ts`: `CacheFirst` mantido apenas para `style/script/font` (assets com hash, imutáveis)
+  - `vite.config.ts`: plugin `closeBundle` gera `dist/version.json` com `{ version: __APP_VERSION__ }` no build; `navigateFallback: '/index.html'` no VitePWA (SPA offline)
+  - Novo `utils/version.ts`: `buscarUltimaVersao()` (fetch `/version.json` com `cache: 'no-store'`) + `compararVersoes()` (semver)
+  - `Configuracoes.tsx`: `verificarAtualizacoes` agora compara `__APP_VERSION__` com o `version.json` do deploy (determinístico, independente de SW — não "mente" mais "versão mais recente"); fallback SW se `version.json` indisponível; mostra a versão nova detectada
+  - `useUpdateChecker.ts`: banner passa a usar a mesma checagem de `version.json` (mount + 30min + `visibilitychange`) — alerta consistente
+  - `public/_headers` (novo): `Cache-Control: no-cache` para `/sw.js`, `/version.json` e `/index.html` no Cloudflare Pages
+  - `usePushNotifications.ts`: registro do SW independente de `'PushManager' in window` — PWA/banner/offline funcionam mesmo sem suporte a push
+  - `README.md`: build command do Cloudflare Pages documentado com `git fetch --tags --unshallow` (versão correta via `git describe --tags`)
+
 ## [v2.60.0] - 2026-08-01
 ### Feat
 - **Export Frequência → Relatório Mensal**: polimento de estilos no `relatorioMensal.xlsx`

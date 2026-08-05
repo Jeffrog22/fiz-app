@@ -32,18 +32,20 @@ export function usePushNotifications(): UsePushNotificationsReturn {
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
 
   const refresh = useCallback(async () => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    if (!('serviceWorker' in navigator)) {
       setPermission('unsupported');
       setSubscribed(false);
       setLoading(false);
       return;
     }
-    setPermission(Notification.permission);
+    setPermission('PushManager' in window ? Notification.permission : 'unsupported');
     try {
       const reg = await navigator.serviceWorker.register('/sw.js');
       registrationRef.current = reg;
-      const existingSub = await reg.pushManager.getSubscription();
-      setSubscribed(!!existingSub);
+      if ('PushManager' in window) {
+        const existingSub = await reg.pushManager.getSubscription();
+        setSubscribed(!!existingSub);
+      }
     } catch {
       setSubscribed(false);
     }

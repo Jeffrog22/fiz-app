@@ -90,6 +90,55 @@ Regras:
 
 ---
 
+## Sessão: 05/08/2026 — Atualização Confiável + Sem Tela Branca + Sempre-Fresco → v2.61.0
+
+### O que foi feito
+
+**1. `sw.ts` — remoção do `self.skipWaiting()` no install**
+- O SW novo não assume mais o controle sozinho: fica em `waiting`, o que faz `reg.waiting` funcionar de novo (detecção em `Configuracoes`/`useUpdateChecker`)
+- "Atualizar agora" ativa via mensagem `SKIP_WAITING` → `controllerchange` → reload. Sem ativação forçada no meio da sessão, some a **tela branca** após atualizar (transição do SW)
+- `clients.claim()` mantido no activate; `CacheFirst` mantido só para `style/script/font` (assets com hash, imutáveis)
+
+**2. `sw.ts` — HTML sempre-fresco na navegação**
+- Navegações (`request.mode === 'navigate'`) trocadas de `CacheFirst` → `NetworkFirst` (cacheName `html-cache`, `networkTimeoutSeconds: 3`), registradas **antes** de `precacheAndRoute` (senão `/` continua servido do precache velho)
+- Toda abertura/navegação busca o `index.html` mais novo do servidor → app abre **sempre na última versão**, mesmo sem banner
+- `vite.config.ts`: `navigateFallback: '/index.html'` no VitePWA (SPA offline)
+
+**3. `version.json` como fonte de verdade**
+- `vite.config.ts`: plugin `closeBundle` gera `dist/version.json` com `{ version: __APP_VERSION__ }` a cada build
+- Novo `frontend/src/utils/version.ts`: `buscarUltimaVersao()` (`fetch('/version.json', { cache: 'no-store' })`) + `compararVersoes()` (semver)
+- `Configuracoes.tsx`: `verificarAtualizacoes` compara `__APP_VERSION__` com o `version.json` do deploy — determinístico, não depende mais do estado do SW e não "mente" mais "versão mais recente"; fallback SW se `version.json` indisponível; mostra a versão nova
+- `useUpdateChecker.ts`: banner passa a usar a mesma checagem (mount + 30min + `visibilitychange`) — alerta consistente (antes dependia de evento `updatefound` com timing frágil)
+
+**4. Hardening**
+- `public/_headers` (novo): `Cache-Control: no-cache` para `/sw.js`, `/version.json`, `/index.html` no Cloudflare Pages
+- `usePushNotifications.ts`: `register('/sw.js')` independente de `'PushManager' in window` — PWA/offline/banner funcionam mesmo sem suporte a push
+- `README.md`: build do Cloudflare Pages documentado com `git fetch --tags --unshallow && npm run build` (versão correta via `git describe --tags`)
+
+### Decisões
+- Estratégia escolhida pelo usuário: **sempre-fresco ao abrir** (NetworkFirst no HTML) em vez de depender do banner manual
+- `navigateFallback: '/index.html'` mantém SPA offline funcional via precache
+- `networkTimeoutSeconds: 3` no NetworkFirst do HTML — em rede lenta, serve o cache em ≤ 3s em vez de travar
+
+### Arquivos
+- `frontend/src/sw.ts` (skipWaiting removido, navigate NetworkFirst, ordem das rotas)
+- `frontend/vite.config.ts` (versionJsonPlugin + navigateFallback)
+- `frontend/src/utils/version.ts` (novo)
+- `frontend/src/pages/Configuracoes.tsx` (verificarAtualizacoes via version.json, atualizarAgora seguro)
+- `frontend/src/hooks/useUpdateChecker.ts` (checagem por version.json)
+- `frontend/src/hooks/usePushNotifications.ts` (SW independente do PushManager)
+- `frontend/public/_headers` (novo)
+- `README.md` (build command com fetch de tags)
+- `CHANGELOG.md` (v2.61.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Testes: 41/41 passam
+- `dist/version.json` gerado com a versão do `git describe`; `dist/sw.js` compilado confirma navigate route antes de `precacheAndRoute`
+
+---
+
 ## Sessão: 01/08/2026 — Relatório Mensal: Ajustes de Estilo → v2.60.0
 
 ### O que foi feito

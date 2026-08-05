@@ -72,7 +72,7 @@ async function enviarNotificacao(professorId: string) {
 
     const payload = JSON.stringify({
       title: 'Fiz! App',
-      body: 'Hora de registrar a chamada!',
+      body: 'Já fez a chamada?',
       icon: '/favicon.ico',
       data: { url: '/chamadas' },
     });

@@ -75,7 +75,7 @@ psql -h localhost -U postgres -d fizapp -f database/init.sql
 ### Frontend (Cloudflare Pages v2)
 1. Conecte o repositório
 2. Root directory: `frontend`
-3. Build command: `npm run build`
+3. Build command: `git fetch --tags --unshallow && npm run build` (o fetch das tags garante a versão correta via `git describe --tags`)
 4. Build output: `dist`
 5. Defina `VITE_API_URL` apontando para o backend em produção
 

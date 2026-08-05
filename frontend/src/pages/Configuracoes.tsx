@@ -9,6 +9,7 @@ import { useDevLog } from '../hooks/useDevLog';
 import NotificationSettings from '../components/notifications/NotificationSettings';
 import api from '../utils/api';
 import { sortLabels } from '../utils/chamadaUtils';
+import { buscarUltimaVersao, compararVersoes } from '../utils/version';
 
 type AbaExport = 'vagas' | 'frequencia' | 'cancelamentos';
 
@@ -148,44 +149,53 @@ const { enabled: devEnabled } = useDevLog();
     setUpdateStatus('checking');
     setUpdateMsg('Verificando...');
     try {
-      if (!('serviceWorker' in navigator)) {
-        setUpdateMsg('Service Worker não suportado neste navegador.');
-        setUpdateStatus('idle');
-        return;
-      }
-      const reg = await navigator.serviceWorker.getRegistration();
-      if (!reg) {
-        setUpdateMsg('Nenhum service worker registrado (modo dev?).');
-        setUpdateStatus('idle');
-        return;
-      }
-      if (reg.waiting) {
-        setUpdateMsg('Nova versão disponível!');
+      const atual = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '';
+      const ultima = await buscarUltimaVersao();
+
+      if (ultima && atual && compararVersoes(ultima, atual) > 0) {
+        setUpdateMsg(`Nova versão disponível: ${ultima}.`);
         setUpdateStatus('available');
         return;
       }
-      const timeout = setTimeout(() => {
-        setUpdateMsg((prev) => prev === 'Verificando...' ? 'Você está na versão mais recente.' : prev);
-        setUpdateStatus((prev) => prev === 'checking' ? 'latest' : prev);
-      }, 8000);
-      const onUpdateFound = () => {
-        const newSW = reg.installing;
-        if (!newSW) return;
-        newSW.addEventListener('statechange', function handler() {
-          if (newSW.state === 'installed') {
-            clearTimeout(timeout);
-            if (navigator.serviceWorker.controller) {
-              setUpdateMsg('Nova versão disponível!');
+
+      if (!ultima && 'serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (!reg) {
+          setUpdateMsg('Não foi possível verificar atualizações.');
+          setUpdateStatus('idle');
+          return;
+        }
+        const timeout = setTimeout(() => {
+          setUpdateMsg((prev) => prev === 'Verificando...' ? 'Nenhuma atualização encontrada.' : prev);
+          setUpdateStatus((prev) => prev === 'checking' ? 'latest' : prev);
+        }, 8000);
+        const onUpdateFound = () => {
+          const newSW = reg.installing;
+          if (!newSW) return;
+          newSW.addEventListener('statechange', function handler() {
+            if (newSW.state === 'installed') {
+              clearTimeout(timeout);
+              setUpdateMsg('Nova versão disponível.');
               setUpdateStatus('available');
-            } else {
-              setUpdateMsg('App instalado. Versão mais recente.');
-              setUpdateStatus('latest');
             }
-          }
-        });
-      };
-      reg.addEventListener('updatefound', onUpdateFound);
-      await reg.update();
+          });
+        };
+        reg.addEventListener('updatefound', onUpdateFound);
+        await reg.update();
+        if (reg.waiting) {
+          clearTimeout(timeout);
+          setUpdateMsg('Nova versão disponível.');
+          setUpdateStatus('available');
+        }
+        return;
+      }
+
+      setUpdateMsg(
+        ultima && atual
+          ? `Você está na versão mais recente (${atual}).`
+          : 'Nenhuma atualização encontrada.',
+      );
+      setUpdateStatus('latest');
     } catch {
       setUpdateMsg('Erro ao verificar atualizações.');
       setUpdateStatus('idle');
@@ -200,6 +210,7 @@ const { enabled: devEnabled } = useDevLog();
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           window.location.reload();
         });
+        setTimeout(() => window.location.reload(), 3000);
       } else {
         window.location.reload();
       }

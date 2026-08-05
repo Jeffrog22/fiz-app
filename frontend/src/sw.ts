@@ -6,6 +6,14 @@ import { NetworkFirst, CacheFirst } from 'workbox-strategies';
 
 declare const self: ServiceWorkerGlobalScope;
 
+registerRoute(
+  ({ request }) => request.mode === 'navigate',
+  new NetworkFirst({
+    cacheName: 'html-cache',
+    networkTimeoutSeconds: 3,
+  }),
+);
+
 precacheAndRoute(self.__WB_MANIFEST);
 
 registerRoute(
@@ -17,8 +25,7 @@ registerRoute(
   ({ request }) =>
     request.destination === 'style' ||
     request.destination === 'script' ||
-    request.destination === 'font' ||
-    request.destination === 'document',
+    request.destination === 'font',
   new CacheFirst({ cacheName: 'static-assets' }),
 );
 
@@ -58,10 +65,6 @@ self.addEventListener('notificationclick', (event) => {
       }
     }),
   );
-});
-
-self.addEventListener('install', () => {
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {

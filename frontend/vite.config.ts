@@ -1,8 +1,8 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { execSync } from 'child_process';
-import { readFileSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -31,6 +31,22 @@ function getAppVersion(): string {
 
 const appVersion = getAppVersion();
 
+function versionJsonPlugin(): Plugin {
+  return {
+    name: 'write-version-json',
+    apply: 'build',
+    closeBundle() {
+      const outDir = resolve(__dirname, 'dist');
+      mkdirSync(outDir, { recursive: true });
+      writeFileSync(
+        resolve(outDir, 'version.json'),
+        JSON.stringify({ version: appVersion }, null, 2),
+        'utf-8',
+      );
+    },
+  };
+}
+
 export default defineConfig({
   plugins: [
     react(),
@@ -39,6 +55,7 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.ts',
       injectRegister: false,
+      navigateFallback: '/index.html',
       manifest: {
         name: 'Fiz! App',
         short_name: 'Fiz!',
@@ -75,6 +92,7 @@ export default defineConfig({
         ],
       },
     }),
+    versionJsonPlugin(),
   ],
   define: {
     __APP_VERSION__: JSON.stringify(appVersion),

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { buscarUltimaVersao, compararVersoes } from '../utils/version';
 
 const CHECK_INTERVAL_MS = 30 * 60 * 1000;
 
@@ -12,36 +13,14 @@ export function useUpdateChecker(): {
   const checkingRef = useRef(false);
 
   const checkForUpdate = useCallback(async () => {
-    if (!('serviceWorker' in navigator)) return;
     if (checkingRef.current) return;
     checkingRef.current = true;
     try {
-      let reg = await navigator.serviceWorker.getRegistration();
-      if (!reg) {
-        try {
-          reg = await navigator.serviceWorker.ready;
-        } catch {
-          return;
-        }
-      }
-      if (!reg) return;
-
-      if (reg.waiting) {
+      const atual = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '';
+      const ultima = await buscarUltimaVersao();
+      if (ultima && atual && compararVersoes(ultima, atual) > 0) {
         setUpdateAvailable(true);
-        return;
       }
-
-      const onUpdateFound = () => {
-        const newSW = reg!.installing;
-        if (!newSW) return;
-        newSW.addEventListener('statechange', function handler() {
-          if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-            setUpdateAvailable(true);
-          }
-        });
-      };
-      reg.addEventListener('updatefound', onUpdateFound);
-      await reg.update();
     } catch {
       // verificação de atualização falhou — ignora silenciosamente
     } finally {
@@ -78,6 +57,7 @@ export function useUpdateChecker(): {
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           window.location.reload();
         });
+        setTimeout(() => window.location.reload(), 3000);
       } else {
         window.location.reload();
       }
