@@ -90,6 +90,26 @@ Regras:
 
 ---
 
+## Sessão: 05/08/2026 — Justificativa: item da lista sem badge J → v2.63.1
+
+### O que foi feito
+- `JustificativaModal.tsx`: o item da seção "Justificativas do mês" deixou de exibir o badge `J` e o separador `—` — agora renderiza apenas `04/08 Consulta médica` (data + motivo)
+
+### Decisões
+- Formato enxuto da linha (decisão do usuário: "ex. J 04/08 Consulta médica → por 04/08 Consulta médica")
+- Sem mudança de dados/lógica; só a apresentação do item
+
+### Arquivos
+- `frontend/src/components/modals/JustificativaModal.tsx` (item da lista sem J/—)
+- `CHANGELOG.md` (v2.63.1)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Testes: 41/41 frontend passam
+
+---
+
 ## Sessão: 05/08/2026 — Justificativa: Atestado com dias corridos + novas opções de motivo → v2.63.0
 
 ### O que foi feito

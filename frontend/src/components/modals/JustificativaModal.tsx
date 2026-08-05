@@ -55,9 +55,8 @@ const JustificativaModal: React.FC<Props> = ({
             <ul className="mt-1 space-y-1 max-h-32 overflow-y-auto">
               {justificativas.map((j) => (
                 <li key={j.data} className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 bg-yellow-50 dark:bg-yellow-900/30 rounded px-2 py-1">
-                  <span className="font-bold text-yellow-700 dark:text-yellow-400">J</span>
                   <span className="font-medium">{j.data.slice(8, 10)}/{j.data.slice(5, 7)}</span>
-                  {j.motivo && <span className="truncate">— {j.motivo}</span>}
+                  {j.motivo && <span className="truncate">{j.motivo}</span>}
                 </li>
               ))}
             </ul>

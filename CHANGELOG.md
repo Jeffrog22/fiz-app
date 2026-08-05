@@ -1,5 +1,9 @@
 # Changelog - Fiz! App
 
+## [v2.63.1] - 2026-08-05
+### Fix
+- **Lista "Justificativas do mês" mais limpa**: o item de justificativa deixou de exibir o badge `J` e o separador `—`, ficando apenas `04/08 Consulta médica` (data + motivo) no modal de justificativa
+
 ## [v2.63.0] - 2026-08-05
 ### Feat
 - **Justificativa com Atestado aplica J por dias corridos + novas opções de motivo**
