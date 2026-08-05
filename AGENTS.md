@@ -90,6 +90,35 @@ Regras:
 
 ---
 
+## Sessão: 05/08/2026 — Justificativa: Atestado com dias corridos + novas opções de motivo → v2.63.0
+
+### O que foi feito
+- **JustificativaModal**: ao selecionar `Atestado`, exibe input "Qtd. de dias (afastamento)" — ao salvar com valor ≥ 1, `onSave` envia `dias?` (parseInt; ignorado se < 1)
+- **Chamadas.tsx**: extraído helper `aplicarAfastamento(alunoId, dataInicial, dias, motivo?)` a partir do núcleo do antigo `handleAfastamento` — conta `dias` dias corridos de `dataInicial`, marca `J` (`status:'justificado'`, `origem:'manual'`) apenas nos dias de aula (dias da semana da label via `parseDiasFromLabel`), empilha undo (reusa case `'afastamento'`), atualiza `logs` e chama `agendarSalvamento`. Data string montada manualmente (sem `toISOString` — evita bug de fuso)
+- `handleAfastamento` (anotações, "afast X dias") agora chama o helper com `dataInicial = hoje` (sem motivo, comportamento preservado)
+- `handleSaveJustificativa(alunoId, data, motivo, dias?)`: salva sempre o dia em foco; se `dias ≥ 1` e `motivo === 'Atestado'`, chama `aplicarAfastamento(alunoId, data, dias, 'Atestado')` — células aplicadas ficam com motivo `Atestado` e aparecem na lista "Justificativas do mês"
+- **Novas opções de motivo** no modal: `Consulta médica`, `Atestado`, `Problema familiar`, `Questão de saúde`, `Falta de transporte`, `Trabalho`, `Outro` (removidos `Médico`, `Falta justificada pelo responsável`, `Condição climática`; default = `Consulta médica`)
+- `DataGrid.tsx`: prop `onSaveJustificativa?.(alunoId, data, motivo, dias?)` + repasse no `onSave` do modal
+
+### Decisões
+- Contagem começa **da data em foco do modal** (decisão do usuário: "Do dia em foco") — não de hoje
+- O input de dias aparece **só** para o motivo `Atestado` (escopo do pedido)
+- Dias aplicados carregam `motivo: 'Atestado'` para consistência com a lista "Justificativas do mês"
+- Sem migration (nenhuma mudança de banco)
+
+### Arquivos
+- `frontend/src/components/modals/JustificativaModal.tsx` (MOTIVOS novos + input dias + onSave com dias)
+- `frontend/src/pages/Chamadas.tsx` (aplicarAfastamento extraído, handleAfastamento refatorado, handleSaveJustificativa com dias)
+- `frontend/src/components/grid/DataGrid.tsx` (prop onSaveJustificativa com dias)
+- `CHANGELOG.md` (v2.63.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Testes: 41/41 frontend passam
+
+---
+
 ## Sessão: 05/08/2026 — Justificativa: sem destaque no nome + registro no modal + ícone → v2.62.0
 
 ### O que foi feito

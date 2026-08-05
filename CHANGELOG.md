@@ -1,5 +1,14 @@
 # Changelog - Fiz! App
 
+## [v2.63.0] - 2026-08-05
+### Feat
+- **Justificativa com Atestado aplica J por dias corridos + novas opções de motivo**
+  - `JustificativaModal`: ao selecionar **Atestado**, aparece o input "Qtd. de dias (afastamento)" — ao salvar com valor ≥ 1, o sistema conta os dias corridos **a partir da data em foco** e aplica `J` (justificado) nos dias de aula (dias da semana da label), com motivo `Atestado` (as células aparecem na lista "Justificativas do mês")
+  - **Novas opções de motivo**: `Consulta médica`, `Atestado`, `Problema familiar`, `Questão de saúde`, `Falta de transporte`, `Trabalho`, `Outro` (removidos `Médico`, `Falta justificada pelo responsável` e `Condição climática`; default = `Consulta médica`)
+  - `Chamadas.tsx`: extraído helper `aplicarAfastamento(alunoId, dataInicial, dias, motivo?)` (núcleo do cálculo de dias corridos + undo via case `'afastamento'` + `agendarSalvamento`); `handleAfastamento` das anotações passa a chamá-lo a partir de hoje; `handleSaveJustificativa` ganhou o parâmetro `dias?` e chama o helper quando Atestado com dias
+  - `DataGrid.tsx`: prop `onSaveJustificativa` repassa `dias?` ao salvar
+  - Sem migration (não toca no banco)
+
 ## [v2.62.0] - 2026-08-05
 ### Feat
 - **Justificativa via ações sem destaque no nome + registro no modal + ícone destacado** (`DataGrid.tsx` + `JustificativaModal.tsx`)

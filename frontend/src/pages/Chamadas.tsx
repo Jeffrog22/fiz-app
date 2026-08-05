@@ -397,8 +397,62 @@ const Chamadas: React.FC = () => {
     carregarAnotacoes();
   }, [carregarAnotacoes]);
 
+  const aplicarAfastamento = useCallback(
+    (alunoId: string, dataInicial: string, dias: number, motivo?: string) => {
+      if (!labelSelecionada || !professorId) return;
+      const diasSemana = parseDiasFromLabel(labelSelecionada);
+      if (diasSemana.length === 0 || dias < 1) return;
+
+      const inicio = new Date(dataInicial + 'T12:00');
+      inicio.setHours(0, 0, 0, 0);
+      const dates: string[] = [];
+      const statuses: Record<string, PresencaStatus> = {};
+
+      for (let i = 0; i < dias; i++) {
+        const data = new Date(inicio);
+        data.setDate(data.getDate() + i);
+        const diaSemana = data.getDay();
+        if (diasSemana.includes(diaSemana)) {
+          const dataStr = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
+          dates.push(dataStr);
+          statuses[dataStr] = logs[alunoId]?.[dataStr]?.[indiceAtual]?.status;
+        }
+      }
+
+      if (dates.length === 0) return;
+
+      undoStack.current.push({ type: 'afastamento', alunoId, indice: indiceAtual, batch: [{ alunoId, statuses }] });
+      if (undoStack.current.length > MAX_UNDO) undoStack.current.shift();
+      setUndoCount((c) => c + 1);
+
+      const payload = dates.map((data) => ({
+        grupo_id: alunoId, data,
+        indice_aula: indiceAtual,
+        status: 'justificado', motivo: motivo || null, origem: 'manual',
+      }));
+
+      setLogs((prev) => {
+        const next = { ...prev };
+        for (const data of dates) {
+          if (!next[alunoId]) next[alunoId] = {};
+          if (!next[alunoId][data]) next[alunoId][data] = {};
+          next[alunoId][data][indiceAtual] = {
+            id: '', tenant_id: '', data, grupo_id: alunoId,
+            indice_aula: indiceAtual,
+            status: 'justificado', motivo: motivo || undefined, origem: 'manual',
+            criado_em: new Date().toISOString(),
+          } as ChamadaLog;
+        }
+        return next;
+      });
+
+      agendarSalvamento(payload);
+    },
+    [labelSelecionada, professorId, indiceAtual, logs, agendarSalvamento],
+  );
+
   const handleSaveJustificativa = useCallback(
-    (alunoId: string, data: string, motivo: string) => {
+    (alunoId: string, data: string, motivo: string, dias?: number) => {
       const payload = [{
         grupo_id: alunoId, data, indice_aula: indiceAtual,
         status: 'justificado', motivo: motivo || null, origem: 'manual',
@@ -420,8 +474,12 @@ const Chamadas: React.FC = () => {
         return next;
       });
       agendarSalvamento(payload);
+
+      if (dias && dias >= 1 && motivo === 'Atestado') {
+        aplicarAfastamento(alunoId, data, dias, 'Atestado');
+      }
     },
-    [indiceAtual, agendarSalvamento],
+    [indiceAtual, agendarSalvamento, aplicarAfastamento],
   );
 
   const handleNomeDoubleClick = useCallback((aluno: Aluno) => {
@@ -599,55 +657,11 @@ const Chamadas: React.FC = () => {
   }, [indiceAtual, agendarSalvamento]);
 
   const handleAfastamento = useCallback((alunoId: string, dias: number) => {
-    if (!labelSelecionada || !professorId) return;
-    const diasSemana = parseDiasFromLabel(labelSelecionada);
-    if (diasSemana.length === 0) return;
-
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
-    const dates: string[] = [];
-    const statuses: Record<string, PresencaStatus> = {};
-
-    for (let i = 0; i < dias; i++) {
-      const data = new Date(hoje);
-      data.setDate(data.getDate() + i);
-      const diaSemana = data.getDay();
-      if (diasSemana.includes(diaSemana)) {
-        const dataStr = data.toISOString().split('T')[0];
-        dates.push(dataStr);
-        statuses[dataStr] = logs[alunoId]?.[dataStr]?.[indiceAtual]?.status;
-      }
-    }
-
-    if (dates.length === 0) return;
-
-    undoStack.current.push({ type: 'afastamento', alunoId, indice: indiceAtual, batch: [{ alunoId, statuses }] });
-    if (undoStack.current.length > MAX_UNDO) undoStack.current.shift();
-    setUndoCount((c) => c + 1);
-
-    const payload = dates.map((data) => ({
-      grupo_id: alunoId, data,
-      indice_aula: indiceAtual,
-      status: 'justificado', origem: 'manual',
-    }));
-
-    setLogs((prev) => {
-      const next = { ...prev };
-      for (const data of dates) {
-        if (!next[alunoId]) next[alunoId] = {};
-        if (!next[alunoId][data]) next[alunoId][data] = {};
-        next[alunoId][data][indiceAtual] = {
-          id: '', tenant_id: '', data, grupo_id: alunoId,
-          indice_aula: indiceAtual,
-          status: 'justificado', origem: 'manual',
-          criado_em: new Date().toISOString(),
-        } as ChamadaLog;
-      }
-      return next;
-    });
-
-    agendarSalvamento(payload);
-  }, [labelSelecionada, professorId, indiceAtual, logs, agendarSalvamento]);
+    const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+    aplicarAfastamento(alunoId, hojeStr, dias);
+  }, [aplicarAfastamento]);
 
   const handleLimparDia = useCallback(async () => {
     if (alunosDaTurma.length === 0 || dias.length === 0) return;

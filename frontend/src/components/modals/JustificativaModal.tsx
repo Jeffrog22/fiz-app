@@ -10,17 +10,16 @@ interface Props {
   indiceAula: number;
   motivoAtual?: string;
   justificativas?: { data: string; motivo?: string }[];
-  onSave: (alunoId: string, data: string, motivo: string) => void;
+  onSave: (alunoId: string, data: string, motivo: string, dias?: number) => void;
 }
 
 const MOTIVOS = [
-  'Médico',
+  'Consulta médica',
   'Atestado',
-  'Falta justificada pelo responsável',
   'Problema familiar',
   'Questão de saúde',
   'Falta de transporte',
-  'Condição climática',
+  'Trabalho',
   'Outro',
 ];
 
@@ -28,11 +27,13 @@ const JustificativaModal: React.FC<Props> = ({
   aberto, onClose, aluno, data, indiceAula, motivoAtual, justificativas = [], onSave,
 }) => {
   const [motivo, setMotivo] = useState(motivoAtual || MOTIVOS[0]);
+  const [diasAtestado, setDiasAtestado] = useState('');
 
   if (!aberto || !aluno) return null;
 
   const handleSave = () => {
-    onSave(aluno.id, data, motivo);
+    const dias = motivo === 'Atestado' && diasAtestado.trim() !== '' ? parseInt(diasAtestado, 10) : undefined;
+    onSave(aluno.id, data, motivo, dias && dias >= 1 ? dias : undefined);
     onClose();
   };
 
@@ -74,6 +75,22 @@ const JustificativaModal: React.FC<Props> = ({
               ))}
             </select>
           </div>
+          {motivo === 'Atestado' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Qtd. de dias (afastamento)</label>
+              <input
+                type="number"
+                min={1}
+                value={diasAtestado}
+                onChange={(e) => setDiasAtestado(e.target.value)}
+                placeholder="ex.: 5"
+                className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded p-2 mt-1 text-sm"
+              />
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                Conta os dias corridos a partir desta data e aplica J nos dias de aula.
+              </p>
+            </div>
+          )}
         </div>
         <div className="flex justify-end gap-2 mt-6">
           <button onClick={onClose}
