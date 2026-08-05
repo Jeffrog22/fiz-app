@@ -1,5 +1,12 @@
 # Changelog - Fiz! App
 
+## [v2.64.1] - 2026-08-05
+### Fix
+- **Scheduler de notificações usa o fuso local (BRT), não UTC**: `notificationScheduler.ts` comparava `horarios`/`dias_semana` de `notificacoes_config` (hora local do professor) contra o relógio UTC do servidor Render — a notificação configurada para 06:00 disparava às 06:00 UTC = 03:00 BRT (e após 21:00 BRT o dia em UTC já era o próximo, pulando o match de `dias_semana`). Agora `getCurrentHorario()`/`getCurrentDiaSemana()` calculam hora/dia via `Intl.DateTimeFormat` no fuso `NOTIF_TIMEZONE` (env, default `America/Sao_Paulo`) — independe do TZ do servidor
+  - `notificationScheduler.ts`: `getPartIntl` (Intl + `formatToParts`), `NOTIF_TIMEZONE` de env, log de diagnóstico no startup (`fuso`, `horaLocal`, `dia`, `horaUTC`)
+  - `.env.example`: adicionado `NOTIF_TIMEZONE=America/Sao_Paulo`
+  - Sem migration
+
 ## [v2.64.0] - 2026-08-05
 ### Feat
 - **Clear button (X) nas justificativas do mês**: cada item da lista "Justificativas do mês" no `JustificativaModal` agora tem um botão `X` à direita que remove aquela justificativa (`status` volta para vazio, `origem: 'manual'`), com undo (Desfazer reaplica o J). O item some da lista ao vivo, sem fechar o modal

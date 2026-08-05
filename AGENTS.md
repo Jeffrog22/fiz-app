@@ -90,6 +90,31 @@ Regras:
 
 ---
 
+## Sessão: 05/08/2026 — Scheduler de notificações: fix fuso UTC → BRT → v2.64.1
+
+### O que foi feito
+- **Problema**: `notificationScheduler.ts` comparava `horarios`/`dias_semana` de `notificacoes_config` (hora local do professor, BRT) contra o relógio do servidor — o Render roda em **UTC** e não havia `TZ`/env de fuso. Configurada para 06:00, a notificação disparava às 06:00 UTC = **03:00 BRT** (ninguém vê → "não chega"); após 21:00 BRT o dia já é o próximo em UTC e o match de `dias_semana` falhava
+- **Fix**: `getCurrentHorario()`/`getCurrentDiaSemana()` agora usam `Intl.DateTimeFormat` com `timeZone` do env `NOTIF_TIMEZONE` (default `America/Sao_Paulo`) via `formatToParts` (`getPartIntl`) — independe do TZ do servidor
+- **Log de diagnóstico** no `startNotificationScheduler()`: `[notifications] ... fuso=America/Sao_Paulo horaLocal=HHMM dia=SEG horaUTC=HHMM` — confirma o relógio local nos logs do Render
+- `.env.example` ganhou `NOTIF_TIMEZONE=America/Sao_Paulo`
+
+### Decisões
+- Fuso configurável via env com default BR (escolha do usuário)
+- **Não** implementada redundância contra instância dormindo do Render (plano free/Starter dorme e para o `setInterval`) — apenas verificação de logs (escolha do usuário). Se os logs mostrarem que o scheduler não roda de madrugada, subir plano ou usar cron externo
+- Sem migration (só lógica de fuso)
+
+### Arquivos
+- `backend/src/services/notificationScheduler.ts` (NOTIF_TIMEZONE, getPartIntl, getCurrentHorario/DiaSemana, log startup)
+- `backend/.env.example` (+NOTIF_TIMEZONE)
+- `CHANGELOG.md` (v2.64.1)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Backend: 0 erros (`tsc --noEmit`)
+- Testes: 25/25 backend passam
+
+---
+
 ## Sessão: 05/08/2026 — Justificativa: clear button (X) por item no modal → v2.64.0
 
 ### O que foi feito

@@ -15,14 +15,31 @@ function ensureInitialized() {
   initialized = true;
 }
 
+const NOTIF_TIMEZONE = process.env.NOTIF_TIMEZONE || 'America/Sao_Paulo';
+
+function getPartIntl(tipo: 'hour' | 'minute' | 'weekday'): string {
+  const formato = new Intl.DateTimeFormat('en-GB', {
+    timeZone: NOTIF_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    weekday: 'short',
+  });
+  const part = formato.formatToParts(new Date()).find((p) => p.type === tipo);
+  return part ? part.value : '';
+}
+
 function getCurrentHorario(): string {
-  const now = new Date();
-  return `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+  const h = getPartIntl('hour');
+  const m = getPartIntl('minute');
+  return `${h}${m}`;
 }
 
 function getCurrentDiaSemana(): string {
-  const dias = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
-  return dias[new Date().getDay()];
+  const map: Record<string, string> = {
+    SUN: 'DOM', MON: 'SEG', TUE: 'TER', WED: 'QUA', THU: 'QUI', FRI: 'SEX', SAT: 'SAB',
+  };
+  return map[getPartIntl('weekday').toUpperCase()] || 'DOM';
 }
 
 async function processarNotificacoes() {
@@ -109,7 +126,9 @@ export function startNotificationScheduler() {
     console.warn('[notifications] Scheduler não iniciado — VAPID keys ausentes');
     return;
   }
-  console.log('[notifications] Iniciando scheduler de notificações (intervalo: 1 minuto)');
+  const now = new Date();
+  const horaUtc = `${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}`;
+  console.log(`[notifications] Iniciando scheduler (intervalo: 1 minuto) — fuso=${NOTIF_TIMEZONE} horaLocal=${getCurrentHorario()} dia=${getCurrentDiaSemana()} horaUTC=${horaUtc}`);
   processarNotificacoes();
   setInterval(processarNotificacoes, 60 * 1000);
 }
