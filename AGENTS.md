@@ -90,6 +90,31 @@ Regras:
 
 ---
 
+## Sessão: 05/08/2026 — Justificativa: sem destaque no nome + registro no modal + ícone → v2.62.0
+
+### O que foi feito
+- `temAnotacao` (DataGrid.tsx) ignora logs com `status === 'justificado'` — registrar justificativa via Ações **não deixa mais o nome do aluno azul**; anotações reais (AnotacoesModal) e anotações inline (motivo sem status) continuam destacando em azul
+- Novos helpers: `listarJustificativas(alunoId)` (todas as `{ data, motivo }` com `status 'justificado'` do aluno no período, ordenadas por dia) e `temJustificativa(alunoId)`
+- **Ícone Justificativa (StickyNote)** da coluna Ações ganha fundo amarelo + `ring` quando o aluno tem registro (identificação visual); sem registro mantém o estilo atual
+- **JustificativaModal**: nova prop `justificativas?: { data, motivo }[]` + seção "Justificativas do mês" listando **todas** as justificativas do aluno no período (`J dd/mm — motivo`, scroll `max-h-32`); vazio → "Nenhuma justificativa registrada neste mês."
+
+### Decisões
+- Registro aparente fica **no modal** (decisão do usuário: "o registro aparente seria no modal, todas do mês") — não há linha extra abaixo do nome no grid
+- Destaque do ícone = substituição visual da "identificação de que há registro" que o fundo azul do nome fazia
+- Célula `J` do grid (STATUS_COLORS.justificado) permanece inalterada — escopo foi o destaque do aluno (nome)
+
+### Arquivos
+- `frontend/src/components/grid/DataGrid.tsx` (temAnotacao, listarJustificativas, temJustificativa, ícone destacado, prop justificativas)
+- `frontend/src/components/modals/JustificativaModal.tsx` (+prop justificativas, +seção "Justificativas do mês")
+- `CHANGELOG.md` (v2.62.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Testes: 41/41 frontend passam
+
+---
+
 ## Sessão: 05/08/2026 — Fix Inputs Temperatura CardAula + Clima Atual Real → v2.61.2
 
 ### O que foi feito

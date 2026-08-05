@@ -275,10 +275,24 @@ const DataGrid: React.FC<DataGridProps> = ({
 
   const temAnotacao = useCallback((alunoId: string): boolean => {
     for (const dia of dias) {
-      if (getAnotacao(alunoId, dia)) return true;
+      const log = logs[alunoId]?.[dia]?.[indiceAtual];
+      if (log?.motivo && log.status !== 'justificado') return true;
     }
     return false;
-  }, [dias, getAnotacao]);
+  }, [dias, logs, indiceAtual]);
+
+  const listarJustificativas = useCallback((alunoId: string): { data: string; motivo?: string }[] => {
+    const lista: { data: string; motivo?: string }[] = [];
+    for (const dia of dias) {
+      const log = logs[alunoId]?.[dia]?.[indiceAtual];
+      if (log?.status === 'justificado') lista.push({ data: dia, motivo: log.motivo });
+    }
+    return lista;
+  }, [dias, logs, indiceAtual]);
+
+  const temJustificativa = useCallback((alunoId: string): boolean => {
+    return listarJustificativas(alunoId).length > 0;
+  }, [listarJustificativas]);
 
   const isEventoCalendario = useCallback((data: string): boolean => {
     return eventosPorData(data).length > 0;
@@ -502,7 +516,11 @@ const DataGrid: React.FC<DataGridProps> = ({
                           const dia = primeiroDiaJustificado(aluno.id);
                           if (dia) setJustificativaModal({ aluno, data: dia, motivo: getAnotacao(aluno.id, dia) ?? undefined });
                         }}
-                        className="p-1 text-yellow-600 rounded hover:bg-yellow-100 dark:text-yellow-400 dark:hover:bg-yellow-900/50"
+                        className={`p-1 rounded transition-colors ${
+                          temJustificativa(aluno.id)
+                            ? 'bg-yellow-100 text-yellow-700 ring-1 ring-yellow-400 dark:bg-yellow-900/50 dark:text-yellow-300 dark:ring-yellow-600'
+                            : 'text-yellow-600 hover:bg-yellow-100 dark:text-yellow-400 dark:hover:bg-yellow-900/50'
+                        }`}
                         title="Justificativa"
                         aria-label="Justificativa"
                       >
@@ -603,6 +621,7 @@ const DataGrid: React.FC<DataGridProps> = ({
         data={justificativaModal?.data || ''}
         indiceAula={0}
         motivoAtual={justificativaModal?.motivo}
+        justificativas={listarJustificativas(justificativaModal?.aluno?.id || '')}
         onClose={() => setJustificativaModal(null)}
         onSave={(alunoId, data, motivo) => {
           onSaveJustificativa?.(alunoId, data, motivo);

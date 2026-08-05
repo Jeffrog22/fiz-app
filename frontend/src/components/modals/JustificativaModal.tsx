@@ -9,6 +9,7 @@ interface Props {
   data: string;
   indiceAula: number;
   motivoAtual?: string;
+  justificativas?: { data: string; motivo?: string }[];
   onSave: (alunoId: string, data: string, motivo: string) => void;
 }
 
@@ -24,7 +25,7 @@ const MOTIVOS = [
 ];
 
 const JustificativaModal: React.FC<Props> = ({
-  aberto, onClose, aluno, data, indiceAula, motivoAtual, onSave,
+  aberto, onClose, aluno, data, indiceAula, motivoAtual, justificativas = [], onSave,
 }) => {
   const [motivo, setMotivo] = useState(motivoAtual || MOTIVOS[0]);
 
@@ -47,6 +48,22 @@ const JustificativaModal: React.FC<Props> = ({
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
           {formatarNomeMobile(aluno.nome)} — {new Date(data + 'T12:00').toLocaleDateString('pt-BR')} — Aula {indiceAula + 1}
         </p>
+        <div className="mb-4">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Justificativas do mês</p>
+          {justificativas.length > 0 ? (
+            <ul className="mt-1 space-y-1 max-h-32 overflow-y-auto">
+              {justificativas.map((j) => (
+                <li key={j.data} className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 bg-yellow-50 dark:bg-yellow-900/30 rounded px-2 py-1">
+                  <span className="font-bold text-yellow-700 dark:text-yellow-400">J</span>
+                  <span className="font-medium">{j.data.slice(8, 10)}/{j.data.slice(5, 7)}</span>
+                  {j.motivo && <span className="truncate">— {j.motivo}</span>}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Nenhuma justificativa registrada neste mês.</p>
+          )}
+        </div>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Motivo</label>

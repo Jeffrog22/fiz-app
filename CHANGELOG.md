@@ -1,5 +1,13 @@
 # Changelog - Fiz! App
 
+## [v2.62.0] - 2026-08-05
+### Feat
+- **Justificativa via ações sem destaque no nome + registro no modal + ícone destacado** (`DataGrid.tsx` + `JustificativaModal.tsx`)
+  - `temAnotacao` ignora logs com `status === 'justificado'` — registrar justificativa pelas ações **não deixa mais o nome do aluno azul**; anotações reais (AnotacoesModal) e anotações inline continuam destacando em azul
+  - Novos helpers `listarJustificativas(alunoId)` (todas as `{ data, motivo }` com `status 'justificado'` do aluno no período, ordenadas por dia) e `temJustificativa(alunoId)`
+  - **Ícone Justificativa (StickyNote) da coluna Ações destacado** quando o aluno tem registro: fundo amarelo + `ring` (claro/escuro); sem registro mantém o estilo atual — identificação visual de que há justificativa salva
+  - **JustificativaModal**: nova seção "Justificativas do mês" lista **todas** as justificativas do aluno no período (`J dd/mm — motivo`), com scroll (`max-h-32`); quando não há registros, mostra "Nenhuma justificativa registrada neste mês." Selector de motivo permanece para registrar/editar
+
 ## [v2.61.2] - 2026-08-05
 ### Fix
 - **CardAula — inputs de temperatura sem "0" preso**: os campos de Temperatura Externa/Piscina trocaram de `<input type="number">` controlado (que dessincronizava o display — ex.: editar 22 para 16 mostrava `016`, embora o valor salvo ficasse certo) para `type="text"` + `inputMode="decimal"` com estado de display em string e parse numérico (`parseDecimal`, aceitando vírgula pt-BR). `onBlur` normaliza o display a partir do número (vazio/inválido → último valor válido)
