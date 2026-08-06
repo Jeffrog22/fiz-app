@@ -185,6 +185,13 @@ const Alunos: React.FC = () => {
 
   const alunosNomes = useMemo(() => alunos.map((a: any) => a.nome), [alunos]);
 
+  const temFiltro =
+    !!filtro ||
+    Object.keys(columnFilters).length > 0 ||
+    modoAlocacao ||
+    modoTransferencia ||
+    modoRematricula;
+
   const handleSave = async ({ data, acao }: SavePayload) => {
     try {
       if (acao === 'duplicar') {
@@ -491,12 +498,19 @@ const Alunos: React.FC = () => {
         </div>
       </div>
 
-      <SearchInput
-        value={filtro}
-        onChange={setFiltro}
-        placeholder="Buscar por nome, nível, turma, horário ou professor..."
-        className="w-full max-w-md"
-      />
+      <div className="flex items-center justify-between gap-3">
+        <SearchInput
+          value={filtro}
+          onChange={setFiltro}
+          placeholder="Buscar por nome, nível, turma, horário ou professor..."
+          className="flex-1 max-w-md"
+        />
+        <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
+          {processed.length}
+          {temFiltro ? ` de ${alunos.length} ` : ' '}
+          aluno{processed.length !== 1 ? 's' : ''}
+        </span>
+      </div>
 
       {erro && !carregando && alunos.length === 0 && (
         <p className="text-sm text-red-500 dark:text-red-400">{erro}</p>

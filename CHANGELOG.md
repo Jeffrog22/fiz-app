@@ -1,5 +1,10 @@
 # Changelog - Fiz! App
 
+## [v2.65.0] - 2026-08-06
+### Feat
+- **Total de alunos na página Alunos reage aos filtros**: label discreto (`text-xs text-gray-400`) à direita do campo de busca exibindo `X alunos` — com busca/filtro de coluna ou modo ativo mostra `X de Y alunos`. Baseado no array `processed` (já filtrado), então responde a busca, filtros de coluna e modos de alocação/transferência/rematrícula
+  - `Alunos.tsx`: `temFiltro` computado + SearchInput em container `flex items-center justify-between` com o contador
+
 ## [v2.64.1] - 2026-08-05
 ### Fix
 - **Scheduler de notificações usa o fuso local (BRT), não UTC**: `notificationScheduler.ts` comparava `horarios`/`dias_semana` de `notificacoes_config` (hora local do professor) contra o relógio UTC do servidor Render — a notificação configurada para 06:00 disparava às 06:00 UTC = 03:00 BRT (e após 21:00 BRT o dia em UTC já era o próximo, pulando o match de `dias_semana`). Agora `getCurrentHorario()`/`getCurrentDiaSemana()` calculam hora/dia via `Intl.DateTimeFormat` no fuso `NOTIF_TIMEZONE` (env, default `America/Sao_Paulo`) — independe do TZ do servidor

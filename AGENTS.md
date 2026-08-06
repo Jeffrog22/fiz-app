@@ -90,6 +90,28 @@ Regras:
 
 ---
 
+## Sessão: 06/08/2026 — Alunos: label de total reagindo aos filtros → v2.65.0
+
+### O que foi feito
+- **Label discreto de total de alunos**: à direita do `SearchInput` (container `flex items-center justify-between gap-3`), um span pequeno (`text-xs text-gray-400 dark:text-gray-500`, `whitespace-nowrap`) exibe `X alunos`
+- Com busca textual, filtro de coluna ou modo (Alocação/Transferência/Rematrículas) ativo, mostra `X de Y alunos` (exibidos de total); sem filtro, mostra apenas `X alunos`
+- Baseado no array `processed` (já filtrado) — reage automaticamente a busca, filtros de coluna e modos
+- Novo `temFiltro` computado antes do return (deriva de `filtro`, `columnFilters`, `modoAlocacao`, `modoTransferencia`, `modoRematricula`)
+
+### Decisões
+- Label discreto e sem destaque (cinza, texto pequeno), alinhado à direita da busca — não compete visualmente com o título Ações
+- Mostra "X de Y" apenas quando há filtro ativo (evita ruído no estado padrão)
+
+### Arquivos
+- `frontend/src/pages/Alunos.tsx` (temFiltro + SearchInput em flex + label contador)
+- `CHANGELOG.md` (v2.65.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+
+---
+
 ## Sessão: 05/08/2026 — Scheduler de notificações: fix fuso UTC → BRT → v2.64.1
 
 ### O que foi feito
