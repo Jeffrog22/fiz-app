@@ -1,5 +1,14 @@
 # Changelog - Fiz! App
 
+## [v2.66.0] - 2026-08-07
+### Feat
+- **Coluna "Anotações" do relatório de Frequência (Configurações → Exportar Frequência) agora é preenchida com anotações do aluno e justificativas dentro do mês**: antes a célula mostrava apenas a primeira anotação do `anotacoes_alunos` (sem filtro de mês) e ignorava justificativas
+  - `exportacaoService.ts` (`gerarFrequenciaXLSX`): célula Anotações montada como `[...anotacoesMes, ...justifLinhas].join(' | ')`
+  - **Justificativas**: derivadas de `chamadas_log` (já filtrado pelo mês) com `status === 'justificado'` e `grupo_id` igual a `aluno.id` ou `aluno.turma_id`; dedupe por `data` (mesmo critério do lookup de status), ordenadas por data; formato compacto `${dia}-${motivo}` (dia sem zero à esquerda, ex.: `4-Consulta médica | 10-Atestado`)
+  - **Anotações**: filtradas por `criado_em` no mês/ano do relatório e agregadas **todas** (não só a primeira); anotações inline de `chamadas_log.motivo` em dias de P/F **não** entram (escopo: apenas `anotacoes_alunos`)
+  - Célula vazia quando não há anotação nem justificativa no mês; estilo mantido (`size 8 italic`)
+  - Sem migration
+
 ## [v2.65.1] - 2026-08-06
 ### Fix
 - **Atestado não retroage mais a datas anteriores no modal de justificativa**: o `JustificativaModal` era aberto com `data = primeiroDiaJustificado(aluno.id)`, que quando o aluno não tinha `J` no mês caía no fallback `dias[0]` — o **primeiro dia letivo do mês** (ex.: 04/08), anterior a hoje. Ao aplicar "Atestado" com N dias, o `aplicarAfastamento` marcava `J` a partir dessa data antiga, sobrescrevendo presenças reais de dias passados e enchendo a lista "Justificativas do mês" com datas anteriores

@@ -316,9 +316,26 @@ export async function gerarFrequenciaXLSX(
           }
         });
 
-        const anotacao = (anotacoes || []).find((a: any) => a.aluno_id === aluno.id);
+        const anotacoesMes = (anotacoes || []).filter((a: any) => {
+          if (a.aluno_id !== aluno.id) return false;
+          const d = new Date(a.criado_em);
+          return !isNaN(d.getTime()) && d.getFullYear() === ano && d.getMonth() === mes - 1;
+        }).map((a: any) => a.anotacao);
+
+        const justifDedup = new Set<string>();
+        const justifLinhas: string[] = [];
+        const justifs = (logs || [])
+          .filter((l: ChamadaLog) => l.status === 'justificado' && (l.grupo_id === aluno.id || l.grupo_id === aluno.turma_id))
+          .sort((a: ChamadaLog, b: ChamadaLog) => a.data.localeCompare(b.data));
+        for (const j of justifs) {
+          if (justifDedup.has(j.data)) continue;
+          justifDedup.add(j.data);
+          const dia = parseInt(j.data.slice(8, 10), 10);
+          justifLinhas.push(j.motivo ? `${dia}-${j.motivo}` : `${dia}`);
+        }
+
         const anotCol = sheet.getCell(rowNum, 6 + diasLetivos.length);
-        anotCol.value = anotacao?.anotacao || '';
+        anotCol.value = [...anotacoesMes, ...justifLinhas].join(' | ');
         anotCol.style = { font: { size: 8, italic: true }, alignment: { vertical: 'middle' } };
       });
 

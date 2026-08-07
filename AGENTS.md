@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-08-06 — fix modal justificativa: atestado não retroage (dia em foco) → v2.65.1 -->
+<!-- última-sessão: 2026-08-07 — export frequência: coluna Anotações com anotações do mês + justificativas → v2.66.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -87,6 +87,34 @@ Regras:
 - `chamadas_log.grupo_id` é TEXT (migration 017) — aceita `jeftq01`, necessário para extrapolação (antes UUID rejeitava)
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
+
+---
+
+## Sessão: 07/08/2026 — Export Frequência: coluna Anotações com anotações do mês + justificativas → v2.66.0
+
+### O que foi feito
+- **Bug/limitação**: a coluna "Anotações" do relatório de Frequência (`Configuracoes.tsx` → Exportar Frequência → `gerarFrequenciaXLSX`) mostrava apenas a **primeira** anotação de `anotacoes_alunos` (sem filtro de mês) e **ignorava justificativas**
+- **Fix** (`exportacaoService.ts`, célula Anotações no loop de alunos): valor montado como `[...anotacoesMes, ...justifLinhas].join(' | ')`
+  - **Justificativas do mês**: de `chamadas_log` (já filtrado por `dataInicio`/`dataFim`) com `status === 'justificado'` e `grupo_id === aluno.id || grupo_id === aluno.turma_id`; dedupe por `data` (mesmo critério do lookup de status da célula), ordenadas por data; formato `${dia}-${motivo}` com dia **sem zero à esquerda** (ex.: `4-Consulta médica | 10-Atestado`)
+  - **Anotações do mês**: filtradas por `criado_em` no mês/ano do relatório (`getFullYear() === ano && getMonth() === mes - 1`) e agregadas **todas** (não só a primeira)
+  - Anotações inline de `chamadas_log.motivo` em dias de P/F **não** entram (escopo: só `anotacoes_alunos`)
+  - Célula vazia quando não há anotação nem justificativa no mês; estilo mantido (`size 8 italic`)
+
+### Decisões
+- Formato compacto `dia-motivo` separado por `|` (exemplos dados pelo usuário: `4-Consulta médica|10-Atestado`, `afast. 30 dias`, `só quinta|12-Questão de saúde`) — espelha a apresentação compacta, não o `dd/mm motivo` do modal
+- Escopo de anotação: **apenas AnotacoesModal** (`anotacoes_alunos`), não as notas inline por dia
+- Múltiplas anotações do mês: **todas** agregadas
+- Sem migration (nenhuma mudança de banco)
+
+### Arquivos
+- `backend/src/services/exportacaoService.ts` (célula Anotações com justificativas + anotações do mês)
+- `CHANGELOG.md` (v2.66.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Backend: 0 erros (`tsc --noEmit`)
+- Testes: 25/25 backend passam
+- Verificação end-to-end: teste temporário com Supabase mockado (jest) confirmou — Ana `4-Consulta médica | 10-Atestado` (justificativas do mês, fora do mês excluído), Bruno `afast. 30 dias` (só anotação do mês; inline `só quinta` não entra), Carla vazia — removido após validação
 
 ---
 
