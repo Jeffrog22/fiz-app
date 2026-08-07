@@ -1,5 +1,12 @@
 # Changelog - Fiz! App
 
+## [v2.65.1] - 2026-08-06
+### Fix
+- **Atestado não retroage mais a datas anteriores no modal de justificativa**: o `JustificativaModal` era aberto com `data = primeiroDiaJustificado(aluno.id)`, que quando o aluno não tinha `J` no mês caía no fallback `dias[0]` — o **primeiro dia letivo do mês** (ex.: 04/08), anterior a hoje. Ao aplicar "Atestado" com N dias, o `aplicarAfastamento` marcava `J` a partir dessa data antiga, sobrescrevendo presenças reais de dias passados e enchendo a lista "Justificativas do mês" com datas anteriores
+  - `DataGrid.tsx`: novo helper `diaFocoJustificativa()` que ancora o modal no **dia em foco** — `selectedDate` (coluna clicada) se for dia letivo do período; senão o primeiro dia letivo `>= hoje`; senão o último dia do período. Removido `primeiroDiaJustificado`
+  - `DataGrid.tsx`: `indiceAula={indiceAtual}` no modal em vez do `0` hardcoded (header "Aula X" correto)
+  - Sem migration
+
 ## [v2.65.0] - 2026-08-06
 ### Feat
 - **Total de alunos na página Alunos reage aos filtros**: label discreto (`text-xs text-gray-400`) à direita do campo de busca exibindo `X alunos` — com busca/filtro de coluna ou modo ativo mostra `X de Y alunos`. Baseado no array `processed` (já filtrado), então responde a busca, filtros de coluna e modos de alocação/transferência/rematrícula

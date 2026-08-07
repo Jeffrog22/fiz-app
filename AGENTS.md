@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-07-31 — kit de documentação extraído do repositório (documentação/) → v2.53.4 -->
+<!-- última-sessão: 2026-08-06 — fix modal justificativa: atestado não retroage (dia em foco) → v2.65.1 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -87,6 +87,33 @@ Regras:
 - `chamadas_log.grupo_id` é TEXT (migration 017) — aceita `jeftq01`, necessário para extrapolação (antes UUID rejeitava)
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
+
+---
+
+## Sessão: 06/08/2026 — Fix modal justificativa: atestado retroagia a datas anteriores → v2.65.1
+
+### O que foi feito
+- **Bug**: o `JustificativaModal` era aberto com `data = primeiroDiaJustificado(aluno.id)`; quando o aluno **não tinha `J` no mês**, o fallback retornava `dias[0]` — o **primeiro dia letivo do mês** (ex.: 04/08), anterior a hoje. Ao aplicar "Atestado" com N dias, `aplicarAfastamento` marcava `J` a partir dessa data antiga, **sobrescrevendo presenças reais de dias passados** e enchendo a lista "Justificativas do mês" com datas anteriores ao dia atual
+- **Fix** (`DataGrid.tsx`): novo helper `diaFocoJustificativa()` ancora o modal no **dia em foco** —
+  - `selectedDate` (coluna de data clicada) se for dia letivo do período;
+  - senão o primeiro dia letivo `>= hoje` (`dias.find(d => d >= hojeStr)` — hoje mesmo se for aula);
+  - senão `dias[dias.length - 1]` (meses passados/futuros)
+- Removido `primeiroDiaJustificado` (ficou sem uso)
+- `indiceAula={indiceAtual}` passado ao modal em vez do `0` hardcoded (header "Aula X" correto na paginação)
+
+### Decisões
+- Âncora escolhida pelo usuário: **hoje ou coluna clicada** — atestado de N dias nunca retroage
+- `motivoAtual` continua derivado da data âncora (`getAnotacao(aluno.id, dia)`); a lista "Justificativas do mês" segue listando todos os `J` do período (com X para remover)
+- Sem migration (só lógica de ancoragem no frontend)
+
+### Arquivos
+- `frontend/src/components/grid/DataGrid.tsx` (diaFocoJustificativa + onClick StickyNote + indiceAula real)
+- `CHANGELOG.md` (v2.65.1)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Testes: 41/41 frontend passam
 
 ---
 

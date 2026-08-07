@@ -300,12 +300,15 @@ const DataGrid: React.FC<DataGridProps> = ({
     return eventosPorData(data).length > 0;
   }, [eventosPorData]);
 
-  const primeiroDiaJustificado = useCallback((alunoId: string): string | null => {
-    for (const dia of dias) {
-      if (getStatus(alunoId, dia) === 'justificado') return dia;
-    }
-    return dias.length > 0 ? dias[0] : null;
-  }, [dias, getStatus]);
+  const diaFocoJustificativa = useCallback((): string | null => {
+    if (selectedDate && dias.includes(selectedDate)) return selectedDate;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+    const proximo = dias.find((d) => d >= hojeStr);
+    if (proximo) return proximo;
+    return dias.length > 0 ? dias[dias.length - 1] : null;
+  }, [dias, selectedDate]);
 
   const handleCellClick = useCallback(
     (alunoId: string, data: string) => {
@@ -515,7 +518,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                     <div className="flex gap-1 justify-center">
                       <button
                         onClick={() => {
-                          const dia = primeiroDiaJustificado(aluno.id);
+                          const dia = diaFocoJustificativa();
                           if (dia) setJustificativaModal({ aluno, data: dia, motivo: getAnotacao(aluno.id, dia) ?? undefined });
                         }}
                         className={`p-1 rounded transition-colors ${
@@ -621,7 +624,7 @@ const DataGrid: React.FC<DataGridProps> = ({
         aberto={!!justificativaModal}
         aluno={justificativaModal?.aluno || null}
         data={justificativaModal?.data || ''}
-        indiceAula={0}
+        indiceAula={indiceAtual}
         motivoAtual={justificativaModal?.motivo}
         justificativas={listarJustificativas(justificativaModal?.aluno?.id || '')}
         onClose={() => setJustificativaModal(null)}
