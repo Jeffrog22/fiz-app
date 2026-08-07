@@ -325,7 +325,7 @@ export async function gerarFrequenciaXLSX(
         const justifDedup = new Set<string>();
         const justifLinhas: string[] = [];
         const justifs = (logs || [])
-          .filter((l: ChamadaLog) => l.status === 'justificado' && (l.grupo_id === aluno.id || l.grupo_id === aluno.turma_id))
+          .filter((l: ChamadaLog) => l.status === 'justificado' && l.origem === 'manual' && (l.grupo_id === aluno.id || l.grupo_id === aluno.turma_id))
           .sort((a: ChamadaLog, b: ChamadaLog) => a.data.localeCompare(b.data));
         for (const j of justifs) {
           if (justifDedup.has(j.data)) continue;

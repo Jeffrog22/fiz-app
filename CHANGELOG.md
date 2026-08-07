@@ -1,5 +1,11 @@
 # Changelog - Fiz! App
 
+## [v2.66.1] - 2026-08-07
+### Fix
+- **Coluna "Anotações" do relatório de Frequência exclui justificativas extrapoladas (log da piscina)**: o motor climático extrapola presença para as turmas do label quando a piscina está fria, criando logs `chamadas_log` com `status: 'justificado'` e `origem: 'extrapolado'` (ex.: "Água muito fria") — essas entradas automáticas apareciam na coluna Anotações junto com as justificativas reais
+  - `exportacaoService.ts` (`gerarFrequenciaXLSX`): o filtro de justificativas da célula Anotações agora exige `l.origem === 'manual'` — a coluna mostra apenas anotações de `anotacoes_alunos` do mês e justificativas registradas manualmente (JustificativaModal/afastamento), sem alterar grid/modal do app
+  - Sem migration
+
 ## [v2.66.0] - 2026-08-07
 ### Feat
 - **Coluna "Anotações" do relatório de Frequência (Configurações → Exportar Frequência) agora é preenchida com anotações do aluno e justificativas dentro do mês**: antes a célula mostrava apenas a primeira anotação do `anotacoes_alunos` (sem filtro de mês) e ignorava justificativas

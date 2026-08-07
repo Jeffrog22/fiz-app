@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-08-07 — export frequência: coluna Anotações com anotações do mês + justificativas → v2.66.0 -->
+<!-- última-sessão: 2026-08-07 — export frequência: coluna Anotações só com anotações do mês + justificativas manuais (sem log da piscina) → v2.66.1 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -87,6 +87,32 @@ Regras:
 - `chamadas_log.grupo_id` é TEXT (migration 017) — aceita `jeftq01`, necessário para extrapolação (antes UUID rejeitava)
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
+
+---
+
+## Sessão: 07/08/2026 — Export Frequência: coluna Anotações só com anotações do mês + justificativas manuais (sem log da piscina) → v2.66.1
+
+### O que foi feito
+- **Comportamento**: o usuário verificou a impressão do relatório e apontou que a coluna "Anotações" mostrava a **anotação de log da piscina** (justificativas extrapoladas pelo motor climático)
+- **Causa**: o motor climático extrapola presença para as turmas do label quando a piscina está fria, criando `chamadas_log` com `status: 'justificado'`, `origem: 'extrapolado'` e motivos como "Água muito fria"/"Água fria para iniciação" — o filtro de justificativas da célula Anotações (v2.66.0) pegava **todos** os `justificado` do mês, incluindo esses automáticos
+- **Fix** (`exportacaoService.ts`, filtro de justificativas da célula Anotações): adicionado `l.origem === 'manual'` — a coluna mostra **apenas**:
+  - anotações de `anotacoes_alunos` do mês (AnotacoesModal)
+  - justificativas registradas manualmente (`origem: 'manual'`, ex.: JustificativaModal/afastamento)
+- As extrapoladas da piscina ficam **fora** apenas nesta célula do relatório — grid/modal do app inalterados (decisão do usuário: "só no relatório")
+
+### Decisões
+- Escopo: **só o relatório** (usuário escolheu) — a lista "Justificativas do mês" do modal do app continua mostrando o que o grid carrega
+- Sem migration
+
+### Arquivos
+- `backend/src/services/exportacaoService.ts` (filtro justificativas com `origem === 'manual'`)
+- `CHANGELOG.md` (v2.66.1)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Backend: 0 erros (`tsc --noEmit`)
+- Testes: 25/25 backend passam
+- Verificação end-to-end: teste temporário com Supabase mockado (jest) confirmou — Ana `4-Consulta médica | 10-Atestado` (extrapoladas "Água muito fria" e "Água fria para iniciação" excluídas), Bruno `5-Questão de saúde` — removido após validação
 
 ---
 
