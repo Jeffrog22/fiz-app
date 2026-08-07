@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-08-07 — export frequência: coluna Anotações só com anotações do mês + justificativas manuais (sem log da piscina) → v2.66.1 -->
+<!-- última-sessão: 2026-08-07 — export frequência: coluna Anotações sem espaçamento (join '|') → v2.66.2 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -87,6 +87,28 @@ Regras:
 - `chamadas_log.grupo_id` é TEXT (migration 017) — aceita `jeftq01`, necessário para extrapolação (antes UUID rejeitava)
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
+
+---
+
+## Sessão: 07/08/2026 — Export Frequência: coluna Anotações sem espaçamento (join '|') → v2.66.2
+
+### O que foi feito
+- **Comportamento**: o usuário pediu para trocar o separador da coluna "Anotações" do relatório de Frequência de `4-Questão de saúde | 6-Atestado` para `4-Questão de saúde|6-Atestado` — **sempre sem espaçamento**
+- **Fix** (`exportacaoService.ts`, célula Anotações): `join('|')` no lugar de `join(' | ')` — vale para combinação de anotações + justificativas misturadas
+
+### Decisões
+- Separador sem espaços é o padrão definitivo (usuário: "sempre sem espaçamento")
+- Sem migration
+
+### Arquivos
+- `backend/src/services/exportacaoService.ts` (join sem espaços)
+- `CHANGELOG.md` (v2.66.2)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Backend: 0 erros (`tsc --noEmit`)
+- Testes: 25/25 backend passam
+- Verificação end-to-end: teste temporário com Supabase mockado (jest) confirmou — Ana `4-Questão de saúde|6-Atestado`, Bruno `afast. 30 dias` — removido após validação
 
 ---
 

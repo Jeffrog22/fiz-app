@@ -335,7 +335,7 @@ export async function gerarFrequenciaXLSX(
         }
 
         const anotCol = sheet.getCell(rowNum, 6 + diasLetivos.length);
-        anotCol.value = [...anotacoesMes, ...justifLinhas].join(' | ');
+        anotCol.value = [...anotacoesMes, ...justifLinhas].join('|');
         anotCol.style = { font: { size: 8, italic: true }, alignment: { vertical: 'middle' } };
       });
 

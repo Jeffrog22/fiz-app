@@ -1,5 +1,11 @@
 # Changelog - Fiz! App
 
+## [v2.66.2] - 2026-08-07
+### Fix
+- **Coluna "Anotações" do relatório de Frequência sem espaçamento**: itens separados por `|` agora sem espaços (`4-Questão de saúde|6-Atestado`), inclusive quando há anotações + justificativas misturadas
+  - `exportacaoService.ts` (`gerarFrequenciaXLSX`): `.join('|')` no lugar de `.join(' | ')`
+  - Sem migration
+
 ## [v2.66.1] - 2026-08-07
 ### Fix
 - **Coluna "Anotações" do relatório de Frequência exclui justificativas extrapoladas (log da piscina)**: o motor climático extrapola presença para as turmas do label quando a piscina está fria, criando logs `chamadas_log` com `status: 'justificado'` e `origem: 'extrapolado'` (ex.: "Água muito fria") — essas entradas automáticas apareciam na coluna Anotações junto com as justificativas reais
