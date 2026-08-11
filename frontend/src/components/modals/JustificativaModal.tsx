@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { Aluno } from '../../types';
 import { formatarNomeMobile } from '../../utils/formatters';
 
@@ -27,14 +27,25 @@ const MOTIVOS = [
 const JustificativaModal: React.FC<Props> = ({
   aberto, onClose, aluno, data, indiceAula, motivoAtual, justificativas = [], onSave, onClearJustificativa,
 }) => {
-  const [motivo, setMotivo] = useState(motivoAtual || MOTIVOS[0]);
+  const ehOutroCustom = !!motivoAtual && !MOTIVOS.includes(motivoAtual);
+  const [motivo, setMotivo] = useState(ehOutroCustom ? 'Outro' : (motivoAtual || MOTIVOS[0]));
+  const [outroTexto, setOutroTexto] = useState(ehOutroCustom ? motivoAtual || '' : '');
   const [diasAtestado, setDiasAtestado] = useState('');
+
+  useEffect(() => {
+    if (!aberto || !aluno) return;
+    const custom = motivoAtual && !MOTIVOS.includes(motivoAtual);
+    setMotivo(custom ? 'Outro' : (motivoAtual || MOTIVOS[0]));
+    setOutroTexto(custom ? motivoAtual || '' : '');
+    setDiasAtestado('');
+  }, [aberto, aluno?.id, data, motivoAtual]);
 
   if (!aberto || !aluno) return null;
 
   const handleSave = () => {
+    const motivoFinal = motivo === 'Outro' ? (outroTexto.trim() || 'Outro') : motivo;
     const dias = motivo === 'Atestado' && diasAtestado.trim() !== '' ? parseInt(diasAtestado, 10) : undefined;
-    onSave(aluno.id, data, motivo, dias && dias >= 1 ? dias : undefined);
+    onSave(aluno.id, data, motivoFinal, dias && dias >= 1 ? dias : undefined);
     onClose();
   };
 
@@ -97,6 +108,19 @@ const JustificativaModal: React.FC<Props> = ({
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                 Conta os dias corridos a partir desta data e aplica J nos dias de aula.
               </p>
+            </div>
+          )}
+          {motivo === 'Outro' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Outro (descreva)</label>
+              <input
+                type="text"
+                maxLength={30}
+                value={outroTexto}
+                onChange={(e) => setOutroTexto(e.target.value)}
+                placeholder="Digite o motivo"
+                className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded p-2 mt-1 text-sm"
+              />
             </div>
           )}
         </div>
