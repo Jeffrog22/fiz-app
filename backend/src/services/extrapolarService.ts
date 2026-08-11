@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient';
 import { AppError } from '../middleware/errorHandler';
 import { registrarOperacao } from '../utils/logEngine';
-import { getClimaSugestao, getTempPiscinaSugestao, getCloroSugestao, getSugestaoFinal } from '../utils/climateEngine';
+import { getClimaSugestao, getTempPiscinaSugestao, getCloroSugestao, getSugestaoFinal, isFaixaEtariaMaior16 } from '../utils/climateEngine';
 
 async function extrapolarPorLabel(
   tenantId: string,
@@ -133,7 +133,7 @@ async function extrapolarPorLabel(
       if (temperaturaPiscina !== undefined) {
         const t = temperaturaPiscina;
         const isIniciacao = nivel.startsWith('INICIAÇÃO');
-        const isMaior16 = faixa === '+ 16 anos' || faixa === '+16 anos' || faixa === '+16';
+        const isMaior16 = isFaixaEtariaMaior16(faixa);
         let perTurmaStatus: string | null = null;
         let perTurmaMotivo: string | null = null;
 
@@ -176,7 +176,7 @@ async function extrapolarPorLabel(
         continue;
       }
 
-      if (motivoMenores && (faixa === '+ 16 anos' || faixa === '+16 anos' || faixa === '+16')) {
+      if (motivoMenores && isFaixaEtariaMaior16(faixa)) {
         logsCriados.push({
           tenant_id: tenantId,
           data,
@@ -190,7 +190,7 @@ async function extrapolarPorLabel(
         });
         continue;
       }
-      if (motivoMaiores16 && faixa !== '+ 16 anos' && faixa !== '+16 anos' && faixa !== '+16') continue;
+      if (motivoMaiores16 && !isFaixaEtariaMaior16(faixa)) continue;
       if (motivoIniciacao && !nivel.startsWith('INICIAÇÃO')) continue;
       if ((motivoMuitoFria || motivoFria) && nivel.startsWith('INICIAÇÃO')) continue;
       logsCriados.push({

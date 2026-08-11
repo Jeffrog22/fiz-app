@@ -66,6 +66,12 @@ export function getClimaSugestao(condicao: string, sensacoes: string[]): Sugesta
   return { status: 'AULA_NORMAL', motivo: null };
 }
 
+export function isFaixaEtariaMaior16(faixa?: string): boolean {
+  if (!faixa) return false;
+  const norm = faixa.toLowerCase().replace(/\s+/g, '').replace(/anos?/g, '');
+  return norm === '+16' || norm === '16+' || norm === '>16';
+}
+
 export function getTempPiscinaSugestao(
   temp: number,
   nivelTurma?: string,
@@ -77,7 +83,7 @@ export function getTempPiscinaSugestao(
   if (nivelTurma?.toUpperCase()?.startsWith('INICIAÇÃO') && temp < 28) {
     return { status: 'AULA_CANCELADA', motivo: 'Água fria para iniciação' };
   }
-  if (temp < 25 && faixaEtariaTurma !== '+ 16 anos' && faixaEtariaTurma !== '+16 anos' && faixaEtariaTurma !== '+16') {
+  if (temp < 25 && !isFaixaEtariaMaior16(faixaEtariaTurma)) {
     return { status: 'AULA_CANCELADA', motivo: 'Água muito fria para menores' };
   }
   if (temp < 25) {
