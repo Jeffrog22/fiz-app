@@ -1,5 +1,21 @@
 # Changelog - Fiz! App
 
+## [v2.67.0] - 2026-08-11
+### Feat
+- **Justificativa com motivo "Outro" e campo de texto livre**: ao abrir o modal de justificativa com um motivo que não pertence à lista padrão (motivo custom salvo em registro anterior), o select passa a apresentar "Outro" com o texto já preenchido
+  - `JustificativaModal.tsx`: novo helper `ehOutroCustom` (motivo de fora de `MOTIVOS` → "Outro"), estado `outroTexto` + input "Outro (descreva)" (`maxLength 30`) renderizado quando `motivo === 'Outro'`; `handleSave` registra o texto digitado como motivo (`outroTexto.trim() || 'Outro'`); `useEffect` de reset ao abrir/alterar data/motivo
+  - Sem migration
+
+## [v2.66.3] - 2026-08-11
+### Fix
+- **Faixa etária "maior de 16" agora aceita todas as variantes no motor climático**: a lógica de cancelamento/justificativa só reconhecia `+ 16 anos`, `+16 anos` e `+16`; outras grafias (`>16`, `> 16 anos`, `16+`, `16 + anos`, case-insensitive) faziam alunos maiores de 16 receberem cancelamento (em vez de justificativa) na faixa de 23-25°C
+  - `climateEngine.ts` (frontend + backend): novo helper exportado `isFaixaEtariaMaior16(faixa?)` que normaliza a string (lowercase, remove espaços e "ano(s)") e aceita `+16`, `>16` e `16+`
+  - `climateEngine.ts`: `getTempPiscinaSugestao` usa o helper (remove as comparações hardcoded)
+  - `extrapolarService.ts`: `extrapolarPorLabel` usa o helper nos 3 pontos (isMaior16, motivoMenores, motivoMaiores16)
+  - Novos testes `climateEngine.test.ts` (frontend + backend): variantes de +16/>16/16+ e a exceção 23-25°C
+  - `.gitignore`: + `relatorio_mensal_preview*.xlsx` (artefatos de preview)
+  - Sem migration
+
 ## [v2.66.2] - 2026-08-07
 ### Fix
 - **Coluna "Anotações" do relatório de Frequência sem espaçamento**: itens separados por `|` agora sem espaços (`4-Questão de saúde|6-Atestado`), inclusive quando há anotações + justificativas misturadas

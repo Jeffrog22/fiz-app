@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-08-07 — export frequência: coluna Anotações sem espaçamento (join '|') → v2.66.2 -->
+<!-- última-sessão: 2026-08-11 — justificativa Outro com campo de texto livre + fix faixa >16 no clima → v2.67.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -34,7 +34,7 @@ Regras:
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v2.0.0
+- **Versão atual:** v2.67.0
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Build Cloudflare:** `git fetch --tags --unshallow` é necessário no build command para `git describe --tags` funcionar (clone shallow sem tags)
@@ -87,6 +87,61 @@ Regras:
 - `chamadas_log.grupo_id` é TEXT (migration 017) — aceita `jeftq01`, necessário para extrapolação (antes UUID rejeitava)
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
+
+---
+
+## Sessão: 11/08/2026 — Justificativa "Outro" com campo de texto livre → v2.67.0
+
+### O que foi feito
+- **Comportamento**: no `JustificativaModal`, quando o registro do aluno tem um motivo que **não está na lista padrão** (`MOTIVOS`), o select apresenta a opção "Outro" já com o texto preenchido; quando o usuário seleciona "Outro", um campo de texto livre permite descrever o motivo
+- `JustificativaModal.tsx`:
+  - `ehOutroCustom = !!motivoAtual && !MOTIVOS.includes(motivoAtual)` — motivos custom salvos anteriormente abrem como "Outro" com `outroTexto` preenchido
+  - Estado `outroTexto` + input "Outro (descreva)" (`maxLength 30`, placeholder "Digite o motivo") renderizado apenas quando `motivo === 'Outro'`
+  - `handleSave`: `motivoFinal = motivo === 'Outro' ? (outroTexto.trim() || 'Outro') : motivo` — o texto digitado vira o motivo registrado na célula
+  - `useEffect` de reset ao abrir o modal / mudar data / mudar `motivoAtual`
+
+### Decisões
+- O texto livre substitui "Outro" como motivo padrão genérico (decisão do usuário: registrar o motivo real digitado)
+- `maxLength 30` no campo de texto (limite consistente com o armazenamento da célula)
+- Sem migration (nenhuma mudança de banco)
+
+### Arquivos
+- `frontend/src/components/modals/JustificativaModal.tsx`
+- `CHANGELOG.md` (v2.67.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+
+---
+
+## Sessão: 11/08/2026 — Fix faixa etária maior de 16 aceita variantes (+16, >16, 16+) no clima → v2.66.3
+
+### O que foi feito
+- **Bug**: a lógica de cancelamento/justificativa por temperatura de piscina (23-25°C) só reconhecia as grafias `+ 16 anos`, `+16 anos` e `+16` para a exceção "maior de 16". Alunos com a faixa registrada de outra forma (`>16`, `16+`, `> 16 anos`, etc.) recebiam `AULA_CANCELADA` em vez de `FALTA_JUSTIFICADA`
+- **Fix**: novo helper **`isFaixaEtariaMaior16(faixa?)`** exportado de `climateEngine.ts` (frontend + backend) — normaliza `toLowerCase() + remove espaços + remove "ano(s)"` e retorna true para `+16`, `16+` ou `>16`
+- Aplicado em `getTempPiscinaSugestao` (frontend + backend) e nos 3 pontos de `extrapolarPorLabel` (`extrapolarService.ts`: isMaior16, motivoMenores, motivoMaiores16) — substitui as comparações hardcoded
+- **Testes novos**: `climateEngine.test.ts` em `frontend/src/utils/__tests__/` e `backend/src/utils/__tests__/` — variantes de +16/>16/16+, case-insensitive, rejeição de faixas comuns e exceção 23-25°C
+- `.gitignore`: + `relatorio_mensal_preview*.xlsx`
+
+### Decisões
+- Helper centralizado (uma única fonte de verdade para a faixa em ambos os motores)
+- Sem migration (lógica pura, nenhuma mudança de banco)
+
+### Arquivos
+- `frontend/src/utils/climateEngine.ts`
+- `backend/src/utils/climateEngine.ts`
+- `backend/src/services/extrapolarService.ts`
+- `frontend/src/utils/__tests__/climateEngine.test.ts` (novo)
+- `backend/src/utils/__tests__/climateEngine.test.ts` (novo)
+- `.gitignore`
+- `CHANGELOG.md` (v2.66.3)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Backend: 0 erros (`tsc --noEmit`)
+- Testes: 41/41 frontend + 25/25 backend passam
 
 ---
 
