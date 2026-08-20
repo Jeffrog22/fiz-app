@@ -1,6 +1,6 @@
 # Changelog - Fiz! App
 
-## [v2.67.1] - 2026-08-20
+## [v2.67.2] - 2026-08-20
 ### Fix
 - **Categoria do aluno agora usa a idade do ano de nascimento, não a idade real**: a categoria era calculada pela idade exata (com ajuste de mês/dia do aniversário), fazendo alunos com mesmo ano de nascimento mas datas próximas de aniversário caírem na mesma categoria — ex.: Jorge (09/10/2015) e Carlos (03/05/2016), ambos com 10 anos reais em 20/08/2026, ficavam em `Mirim II`; pela regra da idade do ano Jorge (2026−2015=11) é `Petiz I` e Carlos (2026−2016=10) é `Mirim II`
   - `frontend/src/utils/formatters.ts`: novo helper `calcIdadeDoAno(dataNascimento?)` = `anoAtual − ano de nascimento` (sem ajuste de mês/dia); `calcIdade` (idade real) mantido para a coluna Idade do grid

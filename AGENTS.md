@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-08-20 — categoria por idade do ano de nascimento (fix) → v2.67.1 -->
+<!-- última-sessão: 2026-08-20 — categoria por idade do ano de nascimento (fix) → v2.67.2 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -34,7 +34,7 @@ Regras:
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v2.67.1
+- **Versão atual:** v2.67.2
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Build Cloudflare:** `git fetch --tags --unshallow` é necessário no build command para `git describe --tags` funcionar (clone shallow sem tags)
@@ -90,7 +90,7 @@ Regras:
 
 ---
 
-## Sessão: 20/08/2026 — Categoria por idade do ano de nascimento (fix) → v2.67.1
+## Sessão: 20/08/2026 — Categoria por idade do ano de nascimento (fix) → v2.67.2
 
 ### O que foi feito
 - **Bug**: a categoria era calculada pela **idade real** (com ajuste de mês/dia do aniversário via `new Date()`), então alunos com mesmo ano de nascimento podiam cair na mesma categoria mesmo devendo competir em categorias diferentes — ex.: Jorge (09/10/2015) e Carlos (03/05/2016), ambos com 10 anos reais em 20/08/2026, ficavam em `Mirim II`
@@ -114,7 +114,7 @@ Regras:
 - `backend/src/services/relatoriosService.ts` (demografico recalcula on-the-fly)
 - `frontend/src/utils/__tests__/formatters.test.ts` (+testes calcIdadeDoAno)
 - `backend/src/utils/__tests__/categoria.test.ts` (novo)
-- `CHANGELOG.md` (v2.67.1)
+- `CHANGELOG.md` (v2.67.2)
 - `AGENTS.md` (esta sessão)
 
 ### Typecheck
