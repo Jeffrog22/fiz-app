@@ -4,7 +4,7 @@ import api from '../utils/api';
 import AlunoModal from '../components/modals/AlunoModal';
 import SearchInput from '../components/SearchInput';
 import type { Aluno, Professor, SavePayload } from '../types';
-import { calcIdade, calcCategoria, normalizeSearch, sortTurmas, formatarNomeMobile, formatDateBR } from '../utils/formatters';
+import { calcIdade, calcIdadeDoAno, calcCategoria, normalizeSearch, sortTurmas, formatarNomeMobile, formatDateBR } from '../utils/formatters';
 import { Pencil, Unlink, Trash2 } from 'lucide-react';
 
 interface SortRule {
@@ -118,7 +118,7 @@ const Alunos: React.FC = () => {
   const getFilterValue = (a: any, col: string): string => {
     switch (col) {
       case 'nivel': return a.turma?.nivel || a.nivel || '-';
-      case 'categoria': return calcCategoria(calcIdade(a.data_nascimento)) || '-';
+      case 'categoria': return calcCategoria(calcIdadeDoAno(a.data_nascimento)) || '-';
       case 'turma': return a.turma?.label || '-';
       case 'horario': return (a.turma?.horario || '-').substring(0, 5);
       default: return '';
@@ -170,7 +170,7 @@ const Alunos: React.FC = () => {
           case 'horario': va = a.turma?.horario || ''; vb = b.turma?.horario || ''; break;
           case 'professor': va = professorMap.get(a.turma?.professor_id) || ''; vb = professorMap.get(b.turma?.professor_id) || ''; break;
           case 'idade': va = calcIdade(a.data_nascimento) ?? -1; vb = calcIdade(b.data_nascimento) ?? -1; break;
-          case 'categoria': va = calcCategoria(calcIdade(a.data_nascimento)) || ''; vb = calcCategoria(calcIdade(b.data_nascimento)) || ''; break;
+          case 'categoria': va = calcCategoria(calcIdadeDoAno(a.data_nascimento)) || ''; vb = calcCategoria(calcIdadeDoAno(b.data_nascimento)) || ''; break;
           case 'genero': va = a.genero || ''; vb = b.genero || ''; break;
           default: return 0;
         }
@@ -692,7 +692,7 @@ const Alunos: React.FC = () => {
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {processed.map((a: any) => {
                 const idade = calcIdade(a.data_nascimento);
-                const categoria = calcCategoria(idade);
+                const categoria = calcCategoria(calcIdadeDoAno(a.data_nascimento));
                 const profNome = a.turma?.professor_id ? professorMap.get(a.turma.professor_id) : null;
                 return (
                   <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">

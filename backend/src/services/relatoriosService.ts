@@ -431,7 +431,7 @@ export async function demografico(tenantId: string): Promise<DemograficoData> {
   let countIdade = 0;
 
   for (const a of alunos) {
-    const cat = a.categoria || (a.data_nascimento ? calcularCategoria(a.data_nascimento) : null);
+    const cat = a.data_nascimento ? calcularCategoria(a.data_nascimento) : null;
     if (cat) porCategoriaMap.set(cat, (porCategoriaMap.get(cat) || 0) + 1);
     if (a.genero) porGeneroMap.set(a.genero, (porGeneroMap.get(a.genero) || 0) + 1);
     if (a.data_nascimento) {

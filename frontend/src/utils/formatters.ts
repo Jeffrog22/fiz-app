@@ -51,6 +51,12 @@ export function calcIdade(dataNascimento?: string): number | null {
   return idade;
 }
 
+export function calcIdadeDoAno(dataNascimento?: string): number | null {
+  if (!dataNascimento) return null;
+  const nasc = new Date(dataNascimento + 'T12:00:00');
+  return new Date().getFullYear() - nasc.getFullYear();
+}
+
 export function calcCategoria(idade: number | null): string {
   if (idade === null || idade < 0) return '';
   if (idade < 9) return 'Pré-Mirim';

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../utils/api';
 import type { Aluno, Turma, Professor, SavePayload } from '../../types';
 import { mascaraTelefone, mascaraData, desmascarar, formatDateISO, formatDateBR, sortTurmas } from '../../utils/formatters';
-import { calcIdade, calcCategoria } from '../../utils/formatters';
+import { calcIdade, calcIdadeDoAno, calcCategoria } from '../../utils/formatters';
 import { validarData, validarTelefone, sanitizarInput } from '../../utils/validators';
 
 interface LastSession {
@@ -54,7 +54,7 @@ const AlunoModal: React.FC<AlunoModalProps> = ({ open, aluno, professores = [], 
 
   const isNew = !aluno;
   const idade = calcIdade(dataNascimento ? formatDateISO(dataNascimento) : undefined);
-  const categoria = calcCategoria(idade);
+  const categoria = calcCategoria(calcIdadeDoAno(dataNascimento ? formatDateISO(dataNascimento) : undefined));
   const turmasFiltradas = useMemo(() => {
     if (!professorId) return turmas;
     return turmas.filter((t) => t.professor_id === professorId);

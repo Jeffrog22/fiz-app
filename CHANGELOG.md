@@ -1,5 +1,15 @@
 # Changelog - Fiz! App
 
+## [v2.67.1] - 2026-08-20
+### Fix
+- **Categoria do aluno agora usa a idade do ano de nascimento, não a idade real**: a categoria era calculada pela idade exata (com ajuste de mês/dia do aniversário), fazendo alunos com mesmo ano de nascimento mas datas próximas de aniversário caírem na mesma categoria — ex.: Jorge (09/10/2015) e Carlos (03/05/2016), ambos com 10 anos reais em 20/08/2026, ficavam em `Mirim II`; pela regra da idade do ano Jorge (2026−2015=11) é `Petiz I` e Carlos (2026−2016=10) é `Mirim II`
+  - `frontend/src/utils/formatters.ts`: novo helper `calcIdadeDoAno(dataNascimento?)` = `anoAtual − ano de nascimento` (sem ajuste de mês/dia); `calcIdade` (idade real) mantido para a coluna Idade do grid
+  - `Alunos.tsx` (filtro/sort/display de Categoria) e `AlunoModal.tsx`: categoria calculada via `calcCategoria(calcIdadeDoAno(...))`
+  - `backend/src/utils/categoria.ts` (novo, módulo puro): `calcularCategoria` passa a usar a idade do ano; `alunosService.ts` importa/re-exporta de lá (era definida inline com a lógica de idade real)
+  - `relatoriosService.ts` (`demografico`): categoria recalculada on-the-fly via `calcularCategoria(a.data_nascimento)` em vez do valor congelado `a.categoria` armazenado no banco
+  - Novos testes `formatters.test.ts` (`calcIdadeDoAno` + cenário Jorge/Carlos) e `backend/src/utils/__tests__/categoria.test.ts`
+  - Sem migration
+
 ## [v2.67.0] - 2026-08-11
 ### Feat
 - **Justificativa com motivo "Outro" e campo de texto livre**: ao abrir o modal de justificativa com um motivo que não pertence à lista padrão (motivo custom salvo em registro anterior), o select passa a apresentar "Outro" com o texto já preenchido

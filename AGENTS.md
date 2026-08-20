@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-08-11 — justificativa Outro com campo de texto livre + fix faixa >16 no clima → v2.67.0 -->
+<!-- última-sessão: 2026-08-20 — categoria por idade do ano de nascimento (fix) → v2.67.1 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -34,7 +34,7 @@ Regras:
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v2.67.0
+- **Versão atual:** v2.67.1
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Build Cloudflare:** `git fetch --tags --unshallow` é necessário no build command para `git describe --tags` funcionar (clone shallow sem tags)
@@ -87,6 +87,40 @@ Regras:
 - `chamadas_log.grupo_id` é TEXT (migration 017) — aceita `jeftq01`, necessário para extrapolação (antes UUID rejeitava)
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
+
+---
+
+## Sessão: 20/08/2026 — Categoria por idade do ano de nascimento (fix) → v2.67.1
+
+### O que foi feito
+- **Bug**: a categoria era calculada pela **idade real** (com ajuste de mês/dia do aniversário via `new Date()`), então alunos com mesmo ano de nascimento podiam cair na mesma categoria mesmo devendo competir em categorias diferentes — ex.: Jorge (09/10/2015) e Carlos (03/05/2016), ambos com 10 anos reais em 20/08/2026, ficavam em `Mirim II`
+- **Regra esperada (CBDA)**: a categoria usa a **idade do ano de nascimento** = `anoAtual − ano de nascimento` (ignora mês/dia) — Jorge (2026−2015=11) → `Petiz I`, Carlos (2026−2016=10) → `Mirim II` (categorias diferentes)
+- **Frontend**: novo helper `calcIdadeDoAno(dataNascimento?)` em `formatters.ts` (sem ajuste de mês/dia); `Alunos.tsx` (filtro/sort/display da coluna Categoria) e `AlunoModal.tsx` agora usam `calcCategoria(calcIdadeDoAno(...))`. `calcIdade` (idade real) **mantido** para a coluna Idade do grid (decisão do usuário: manter idade real lá)
+- **Backend**: `calcularCategoria` extraída para módulo puro novo `backend/src/utils/categoria.ts` (era inline em `alunosService.ts`, acoplada ao supabaseClient que dá `process.exit` sem env — impossível testar); `alunosService.ts` importa/re-exporta; mesma regra do ano
+- **`relatoriosService.ts` (`demografico`)**: categoria agora recalculada on-the-fly via `calcularCategoria(a.data_nascimento)` em vez do valor congelado `a.categoria` armazenado no banco (defasava com o passar dos anos)
+- **Testes**: `formatters.test.ts` (+`calcIdadeDoAno` e cenário Jorge/Carlos) e novo `backend/src/utils/__tests__/categoria.test.ts`
+
+### Decisões
+- Coluna Idade continua exibindo idade real (escolha do usuário) — escopo do fix é só Categoria
+- `categoria` continua sendo gravada no banco no create/update (agora com a regra nova), mas nenhuma UI lê o valor armazenado — frontend recalcula on-the-fly
+- Sem migration (categoria é derivada, não canônica)
+
+### Arquivos
+- `frontend/src/utils/formatters.ts` (+calcIdadeDoAno)
+- `frontend/src/pages/Alunos.tsx` (filtro/sort/display via calcIdadeDoAno)
+- `frontend/src/components/modals/AlunoModal.tsx` (categoria via calcIdadeDoAno)
+- `backend/src/utils/categoria.ts` (novo)
+- `backend/src/services/alunosService.ts` (import + re-export)
+- `backend/src/services/relatoriosService.ts` (demografico recalcula on-the-fly)
+- `frontend/src/utils/__tests__/formatters.test.ts` (+testes calcIdadeDoAno)
+- `backend/src/utils/__tests__/categoria.test.ts` (novo)
+- `CHANGELOG.md` (v2.67.1)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Backend: 0 erros (`tsc --noEmit`)
+- Testes: 54/54 frontend + 43/43 backend passam
 
 ---
 

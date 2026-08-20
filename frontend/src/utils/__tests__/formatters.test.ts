@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   formatarNomeMobile,
   calcIdade,
+  calcIdadeDoAno,
   calcCategoria,
   mascaraData,
   mascaraHora,
@@ -48,6 +49,24 @@ describe('calcIdade', () => {
   });
 });
 
+describe('calcIdadeDoAno', () => {
+  const ano = new Date().getFullYear();
+
+  it('calcula idade pelo ano de nascimento (ignora mês/dia)', () => {
+    expect(calcIdadeDoAno(`${ano - 11}-10-09`)).toBe(11);
+    expect(calcIdadeDoAno(`${ano - 10}-05-03`)).toBe(10);
+  });
+
+  it('mesmo ano de nascimento tem a mesma idade do ano', () => {
+    expect(calcIdadeDoAno(`${ano - 11}-01-01`)).toBe(calcIdadeDoAno(`${ano - 11}-12-31`));
+  });
+
+  it('retorna null para data vazia ou undefined', () => {
+    expect(calcIdadeDoAno('')).toBeNull();
+    expect(calcIdadeDoAno(undefined)).toBeNull();
+  });
+});
+
 describe('calcCategoria', () => {
   it('retorna Pré-Mirim para idade < 9', () => expect(calcCategoria(5)).toBe('Pré-Mirim'));
   it('retorna Mirim I para 9', () => expect(calcCategoria(9)).toBe('Mirim I'));
@@ -59,6 +78,11 @@ describe('calcCategoria', () => {
   it('retorna G50+ para 50-54', () => expect(calcCategoria(52)).toBe('G50+'));
   it('retorna M80+ para 80+', () => expect(calcCategoria(85)).toBe('M80+'));
   it('retorna string vazia para null', () => expect(calcCategoria(null)).toBe(''));
+  it('categoria usa a idade do ano de nascimento (Jorge 2015 vs Carlos 2016)', () => {
+    const ano = new Date().getFullYear();
+    expect(calcCategoria(calcIdadeDoAno(`${ano - 11}-10-09`))).toBe('Petiz I');
+    expect(calcCategoria(calcIdadeDoAno(`${ano - 10}-05-03`))).toBe('Mirim II');
+  });
 });
 
 describe('mascaraData', () => {
