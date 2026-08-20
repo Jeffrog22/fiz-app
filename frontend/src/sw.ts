@@ -2,9 +2,16 @@
 
 import { precacheAndRoute } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
-import { NetworkFirst, CacheFirst } from 'workbox-strategies';
+import { NetworkFirst, NetworkOnly, CacheFirst } from 'workbox-strategies';
 
 declare const self: ServiceWorkerGlobalScope;
+
+// version.json nunca deve ser servido pelo SW — sempre vir do servidor,
+// senão o precache antigo serve a versão velha e o banner de atualização nunca dispara
+registerRoute(
+  ({ url }) => url.pathname === '/version.json',
+  new NetworkOnly(),
+);
 
 registerRoute(
   ({ request }) => request.mode === 'navigate',
@@ -14,7 +21,12 @@ registerRoute(
   }),
 );
 
-precacheAndRoute(self.__WB_MANIFEST);
+precacheAndRoute(
+  self.__WB_MANIFEST.filter((entry) => {
+    const url = typeof entry === 'string' ? entry : entry.url;
+    return !url.includes('version.json');
+  }),
+);
 
 registerRoute(
   ({ url }) => url.pathname.startsWith('/api/'),

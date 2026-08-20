@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-08-20 — categoria por idade do ano de nascimento (fix) → v2.67.2 -->
+<!-- última-sessão: 2026-08-20 — banner de atualização: version.json fora do precache (fix) → v2.67.4 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -34,7 +34,7 @@ Regras:
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v2.67.2
+- **Versão atual:** v2.67.4
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Build Cloudflare:** `git fetch --tags --unshallow` é necessário no build command para `git describe --tags` funcionar (clone shallow sem tags)
@@ -87,6 +87,31 @@ Regras:
 - `chamadas_log.grupo_id` é TEXT (migration 017) — aceita `jeftq01`, necessário para extrapolação (antes UUID rejeitava)
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
+
+---
+
+## Sessão: 20/08/2026 — Banner de atualização: version.json fora do precache (fix) → v2.67.4
+
+### O que foi feito
+- **Bug**: após corrigir a categoria (v2.67.2) e publicar, o **banner "Nova versão disponível" não aparecia** avisando que havia atualização
+- **Causa raiz**: o `versionJsonPlugin` grava `dist/version.json` e o service worker fazia `precacheAndRoute(self.__WB_MANIFEST)` — o `version.json` **entrava no precache**. O SW antigo em controle servia o `version.json` **antigo** do seu cache para `buscarUltimaVersao()`, então a comparação (`version.json` do servidor vs `__APP_VERSION__`) nunca via a versão nova. `fetch(cache: 'no-store')` não adianta porque a requisição é interceptada pelo SW antes de chegar na rede
+- **Fix** (`sw.ts`):
+  - `version.json` **excluído do precache** via filtro no `__WB_MANIFEST` (manipula entradas string e `{url}` do workbox)
+  - Rota `NetworkOnly` dedicada para `/version.json` — a checagem de atualização sempre busca a versão no servidor
+- Build validado: precache ficou com 6 entradas (index.html, assets, css, manifest, ícones) — `version.json` fora da lista
+
+### Decisões
+- `version.json` é o único artefato que deve ser sempre fresco — não entra em nenhum cache do SW
+- Sem migration (não toca no banco)
+
+### Arquivos
+- `frontend/src/sw.ts` (filtro no precache + rota NetworkOnly para version.json)
+- `CHANGELOG.md` (v2.67.4)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- `dist/sw.js` verificado: `version.json` ausente do manifest de precache
 
 ---
 

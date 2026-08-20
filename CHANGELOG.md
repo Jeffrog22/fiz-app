@@ -1,5 +1,11 @@
 # Changelog - Fiz! App
 
+## [v2.67.4] - 2026-08-20
+### Fix
+- **Banner "Nova versão disponível" não aparecia**: o `version.json` é gerado dentro de `dist/` e, portanto, entrava no **precache do service worker** (`precacheAndRoute(self.__WB_MANIFEST)`). O SW antigo em controle servia o `version.json` antigo do seu cache, então `buscarUltimaVersao()` (versão nova do servidor) nunca era vista — `cache: 'no-store'` não adianta porque a requisição é interceptada pelo SW
+  - `sw.ts`: `version.json` **excluído do precache** (filtro no `__WB_MANIFEST`) e ganhou rota `NetworkOnly` dedicada — a checagem de atualização sempre busca a versão no servidor
+  - Sem migration
+
 ## [v2.67.2] - 2026-08-20
 ### Fix
 - **Categoria do aluno agora usa a idade do ano de nascimento, não a idade real**: a categoria era calculada pela idade exata (com ajuste de mês/dia do aniversário), fazendo alunos com mesmo ano de nascimento mas datas próximas de aniversário caírem na mesma categoria — ex.: Jorge (09/10/2015) e Carlos (03/05/2016), ambos com 10 anos reais em 20/08/2026, ficavam em `Mirim II`; pela regra da idade do ano Jorge (2026−2015=11) é `Petiz I` e Carlos (2026−2016=10) é `Mirim II`
