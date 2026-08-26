@@ -52,13 +52,12 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
       api.get(`/chamadas/card-aula/daily/${data}`)
         .then((res) => {
           const records: any[] = Array.isArray(res.data) ? res.data : [];
-          // Propaga do log mais recentemente salvo (criado_em DESC)
-          // que tenha indice_aula <= atual.
-          const sorted = [...records].sort((a: any, b: any) =>
-            new Date(b.criado_em || 0).getTime() - new Date(a.criado_em || 0).getTime() ||
-            b.indice_aula - a.indice_aula
-          );
-          const cardRecord = sorted.find((r: any) => r.indice_aula <= indiceAula);
+          // 1º: tenta registro próprio (indice_aula exato)
+          // 2º: propaga do índice imediatamente anterior (indice_aula < atual, maior índice)
+          const ownRecord = records.find((r: any) => r.indice_aula === indiceAula);
+          const cardRecord = ownRecord || [...records]
+            .filter((r: any) => r.indice_aula < indiceAula)
+            .sort((a: any, b: any) => b.indice_aula - a.indice_aula)[0];
           if (cardRecord) {
             if (cardRecord.condicao_clima) setCondicao(cardRecord.condicao_clima);
             if (cardRecord.temperatura_externa != null) {
@@ -73,9 +72,9 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
             if (cardRecord.sensacao) setSensacoes(cardRecord.sensacao);
             if (cardRecord.id) setUltimoHash(cardRecord.id.slice(0, 8));
             if (cardRecord.indice_aula === indiceAula) {
-              setDebugInfo(`Registro próprio (Aula ${indiceAula + 1})`);
+              setDebugInfo(`Dados desta aula (Aula ${indiceAula + 1})`);
             } else {
-              setDebugInfo(`Propagado de Aula ${cardRecord.indice_aula + 1} (mais recente)`);
+              setDebugInfo(`Propagado da Aula ${cardRecord.indice_aula + 1}`);
             }
             return;
           }
