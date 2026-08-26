@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-08-20 — banner de atualização: version.json fora do precache (fix) → v2.67.4 -->
+<!-- última-sessão: 2026-08-26 — fix propagação card_aula entre índices (São Matheus) → v2.67.5 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -34,7 +34,7 @@ Regras:
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v2.67.4
+- **Versão atual:** v2.67.5
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Build Cloudflare:** `git fetch --tags --unshallow` é necessário no build command para `git describe --tags` funcionar (clone shallow sem tags)
@@ -87,6 +87,32 @@ Regras:
 - `chamadas_log.grupo_id` é TEXT (migration 017) — aceita `jeftq01`, necessário para extrapolação (antes UUID rejeitava)
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
+
+---
+
+## Sessão: 26/08/2026 — Fix propagação card_aula entre índices (São Matheus) → v2.67.5
+
+### O que foi feito
+- **Bug relatado por São Matheus**: persistência de card_aula dentro do índice falhava — temperaturas salvas em um índice apareciam em outro
+- **Causa raiz**: a lógica de leitura do `CardAula.tsx` ordenava registros por `criado_em DESC` e buscava o primeiro com `indice_aula <= indiceAula`. Ao re-salvar um índice anterior (ex: Aula 1), seu `criado_em` ficava mais recente, e a propagação passava a mostrar os dados do índice anterior em vez do próprio índice
+- **Fix frontend** (`CardAula.tsx`): lógica reescrita — busca primeiro registro com `indice_aula === indiceAula` (match exato); só propaga de índice anterior (`< indiceAula`, maior índice) se não existir registro próprio
+- **Fix backend** (`cardAulaService.ts`): separado insert/update — `criado_em` só é definido no insert, preservado no update (antes era sobrescrito toda vez, quebrando propagação de outros índices)
+
+### Decisões
+- Prioridade: match exato > propagação do índice imediatamente anterior (não do mais recente)
+- `criado_em` serve como timestamp de criação, não de última atualização — preservado em updates
+- Sem migration (correção de lógica, não de schema)
+
+### Arquivos
+- `frontend/src/components/modals/CardAula.tsx` (lógica de leitura reescrita)
+- `backend/src/services/cardAulaService.ts` (insert/update separado, criado_em preservado)
+- `CHANGELOG.md` (v2.67.5)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Backend: 0 erros (`tsc --noEmit`)
+- Testes: 43/43 backend passam
 
 ---
 
