@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../../utils/api';
 import {
   getClimaSugestao,
@@ -25,16 +25,169 @@ const SENSACOES = ['Calor', 'Abafado', 'Seco', 'Agradável', 'Vento', 'Frio', 'F
 
 const CONDICOES = Object.values(WMO_MAP).filter((v, i, a) => a.indexOf(v) === i);
 
-function parseDecimal(v: string): number {
-  const n = parseFloat(String(v).replace(',', '.'));
-  return Number.isFinite(n) ? n : NaN;
+/* ── TempWheel: input de temperatura com +/- buttons e scroll wheel ── */
+
+interface TempWheelProps {
+  value: number;
+  onChange: (v: number) => void;
+  min?: number;
+  max?: number;
+  label?: string;
+  alert?: React.ReactNode;
 }
+
+function TempWheel({ value, onChange, min = -10, max = 50, label, alert }: TempWheelProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  const clamp = useCallback((v: number) => {
+    const stepped = Math.round(v * 2) / 2;
+    return Math.min(max, Math.max(min, stepped));
+  }, [min, max]);
+
+  const increment = useCallback(() => onChange(clamp(value + 0.5)), [value, onChange, clamp]);
+  const decrement = useCallback(() => onChange(clamp(value - 0.5)), [value, onChange, clamp]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (e.deltaY < 0) onChange(clamp(value + 0.5));
+      else if (e.deltaY > 0) onChange(clamp(value - 0.5));
+    };
+
+    const onTouchStart = (e: TouchEvent) => {
+      touchStartY.current = e.touches[0].clientY;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (touchStartY.current === null) return;
+      e.preventDefault();
+      const dy = touchStartY.current - e.touches[0].clientY;
+      if (Math.abs(dy) >= 15) {
+        onChange(clamp(value + (dy > 0 ? 0.5 : -0.5)));
+        touchStartY.current = e.touches[0].clientY;
+      }
+    };
+
+    const onTouchEnd = () => { touchStartY.current = null; };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [value, onChange, clamp]);
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        {label}{alert}
+      </label>
+      <div ref={ref} className="flex items-center gap-2 mt-1 select-none touch-none">
+        <button type="button" onClick={decrement}
+          className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xl font-bold active:bg-gray-200 dark:active:bg-gray-600 transition">
+          −
+        </button>
+        <span className="flex-1 text-center text-lg font-mono tabular-nums text-gray-800 dark:text-gray-100">
+          {value.toFixed(1)}
+        </span>
+        <button type="button" onClick={increment}
+          className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xl font-bold active:bg-gray-200 dark:active:bg-gray-600 transition">
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── CloroSlider: slider colorido sem input ── */
+
+interface CloroSliderProps {
+  value: number;
+  onChange: (v: number) => void;
+}
+
+function cloroColor(v: number): string {
+  if (v <= 0.5) return '#9CA3AF';
+  if (v <= 1.0) return '#FDE68A';
+  if (v <= 2.0) return '#FCD34D';
+  if (v <= 3.0) return '#F59E0B';
+  if (v <= 3.5) return '#FB923C';
+  if (v <= 5.0) return '#F97316';
+  if (v <= 5.5) return '#EA580C';
+  return '#C2410C';
+}
+
+function CloroSlider({ value, onChange }: CloroSliderProps) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+
+  const pct = (value / 7) * 100;
+  const color = cloroColor(value);
+
+  const calcValue = useCallback((clientX: number) => {
+    const el = trackRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const stepped = Math.round(ratio * 14) / 2;
+    onChange(Math.max(0, Math.min(7, stepped)));
+  }, [onChange]);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent | TouchEvent) => {
+      if (!dragging.current) return;
+      const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      calcValue(x);
+    };
+    const onUp = () => { dragging.current = false; };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchmove', onMove, { passive: true });
+    document.addEventListener('touchend', onUp);
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onUp);
+    };
+  }, [calcValue]);
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Cloro</label>
+      <div className="text-center text-lg font-mono font-bold mt-1 mb-2" style={{ color }}>{value.toFixed(1)}</div>
+      <div ref={trackRef}
+        className="relative h-3 rounded-full cursor-pointer touch-none"
+        style={{ background: `linear-gradient(to right, ${color} ${pct}%, #E5E7EB ${pct}%)` }}
+        onMouseDown={(e) => { dragging.current = true; calcValue(e.clientX); }}
+        onTouchStart={(e) => { dragging.current = true; calcValue(e.touches[0].clientX); }}
+      >
+        <div className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white border-2 shadow transition-colors"
+          style={{ left: `calc(${pct}% - 10px)`, borderColor: color }} />
+      </div>
+      <div className="flex justify-between text-[10px] text-gray-400 dark:text-gray-500 mt-1 px-0.5">
+        <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── CardAula ── */
 
 const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, nivelTurma, faixaEtariaTurma, onAbrirBO }) => {
   const [tempExterna, setTempExterna] = useState(26);
   const [tempPiscina, setTempPiscina] = useState(28);
-  const [tempExternaInput, setTempExternaInput] = useState('26');
-  const [tempPiscinaInput, setTempPiscinaInput] = useState('28');
   const [cloro, setCloro] = useState(2.5);
   const [condicao, setCondicao] = useState('parcialmente nublado');
   const [sensacoes, setSensacoes] = useState<string[]>([]);
@@ -48,26 +201,17 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
       setCarregou(false);
       setSensacoes([]);
       setDebugInfo('');
-      // Tenta ler do card_aula (documento diario, agora por indice_aula)
       api.get(`/chamadas/card-aula/daily/${data}`)
         .then((res) => {
           const records: any[] = Array.isArray(res.data) ? res.data : [];
-          // 1º: tenta registro próprio (indice_aula exato)
-          // 2º: propaga do índice imediatamente anterior (indice_aula < atual, maior índice)
           const ownRecord = records.find((r: any) => r.indice_aula === indiceAula);
           const cardRecord = ownRecord || [...records]
             .filter((r: any) => r.indice_aula < indiceAula)
             .sort((a: any, b: any) => b.indice_aula - a.indice_aula)[0];
           if (cardRecord) {
             if (cardRecord.condicao_clima) setCondicao(cardRecord.condicao_clima);
-            if (cardRecord.temperatura_externa != null) {
-              setTempExterna(cardRecord.temperatura_externa);
-              setTempExternaInput(String(cardRecord.temperatura_externa));
-            }
-            if (cardRecord.temperatura_piscina != null) {
-              setTempPiscina(cardRecord.temperatura_piscina);
-              setTempPiscinaInput(String(cardRecord.temperatura_piscina));
-            }
+            if (cardRecord.temperatura_externa != null) setTempExterna(cardRecord.temperatura_externa);
+            if (cardRecord.temperatura_piscina != null) setTempPiscina(cardRecord.temperatura_piscina);
             if (cardRecord.cloro_ppm != null) setCloro(cardRecord.cloro_ppm);
             if (cardRecord.sensacao) setSensacoes(cardRecord.sensacao);
             if (cardRecord.id) setUltimoHash(cardRecord.id.slice(0, 8));
@@ -79,49 +223,41 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
             return;
           }
           setDebugInfo('Fallback climático (sem registro anterior)');
-          // Fallback: clima da API
           api.get('/chamadas/clima')
             .then((res2) => {
               if (res2.data?.ok) {
                 const temp = res2.data.temperatura ?? 26;
                 setTempExterna(temp);
-                setTempExternaInput(String(temp));
                 setCondicao(getCondicaoFromWeatherCode(res2.data.weatherCode ?? null));
                 const sens = getSensacoesFromTemperatura(temp);
                 if (sens.length > 0) setSensacoes((prev) => [...new Set([...prev, ...sens])]);
               } else {
                 setTempExterna(26);
-                setTempExternaInput('26');
                 setCondicao('Parcialmente Nublado');
               }
             })
             .catch(() => {
               setTempExterna(26);
-              setTempExternaInput('26');
               setCondicao('parcialmente nublado');
             });
         })
         .catch(() => {
           setDebugInfo('Erro ao carregar registros');
-          // Fallback: clima da API
           api.get('/chamadas/clima')
             .then((res2) => {
               if (res2.data?.ok) {
                 const temp = res2.data.temperatura ?? 26;
                 setTempExterna(temp);
-                setTempExternaInput(String(temp));
                 setCondicao(getCondicaoFromWeatherCode(res2.data.weatherCode ?? null));
                 const sens = getSensacoesFromTemperatura(temp);
                 if (sens.length > 0) setSensacoes((prev) => [...new Set([...prev, ...sens])]);
               } else {
                 setTempExterna(26);
-                setTempExternaInput('26');
                 setCondicao('Parcialmente Nublado');
               }
             })
             .catch(() => {
               setTempExterna(26);
-              setTempExternaInput('26');
               setCondicao('parcialmente nublado');
             });
         })
@@ -200,44 +336,24 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Temperatura Externa (°C)
-                  {tempExterna < 15 && <span className="ml-2 text-xs text-red-500 dark:text-red-400">Frio detectado</span>}
-                </label>
-                <input type="text" inputMode="decimal" value={tempExternaInput}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    setTempExternaInput(raw);
-                    const n = parseDecimal(raw);
-                    if (!Number.isNaN(n)) setTempExterna(n);
-                  }}
-                  onBlur={() => setTempExternaInput(String(tempExterna))}
-                  className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded p-2 mt-1 text-sm" />
-              </div>
+              <TempWheel
+                value={tempExterna}
+                onChange={setTempExterna}
+                min={-10}
+                max={50}
+                label="Temperatura Externa (°C)"
+                alert={tempExterna < 15 && <span className="ml-2 text-xs text-red-500 dark:text-red-400">Frio detectado</span>}
+              />
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Temperatura Piscina (°C)</label>
-                <input type="text" inputMode="decimal" value={tempPiscinaInput}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    setTempPiscinaInput(raw);
-                    const n = parseDecimal(raw);
-                    if (!Number.isNaN(n)) setTempPiscina(n);
-                  }}
-                  onBlur={() => setTempPiscinaInput(String(tempPiscina))}
-                  className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded p-2 mt-1 text-sm" />
-              </div>
+              <TempWheel
+                value={tempPiscina}
+                onChange={setTempPiscina}
+                min={15}
+                max={40}
+                label="Temperatura Piscina (°C)"
+              />
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Cloro (ppm): {cloro.toFixed(1)}</label>
-                <input type="range" min="0" max="7" step="0.5" value={cloro}
-                  onChange={(e) => setCloro(Number(e.target.value))}
-                  className="w-full mt-1" />
-                <div className="flex justify-between text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
-                  <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span>
-                </div>
-              </div>
+              <CloroSlider value={cloro} onChange={setCloro} />
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sensação</label>
