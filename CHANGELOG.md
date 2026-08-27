@@ -1,5 +1,13 @@
 # Changelog - Fiz! App
 
+## [v2.68.0] - 2026-08-26
+### Feat
+- **Card de Aula: inputs de temperatura com scroll wheel e slider de cloro colorido**
+  - Novo componente `TempWheel`: `[−] 26.0 [+]` com step 0.5, scroll wheel no desktop (`onWheel`) e arraste vertical no mobile (`onTouchMove` com threshold 15px), range configurável (exterior ±10–50°C, piscina 15–40°C)
+  - Novo componente `CloroSlider`: slider customizado com thumb branco + track dinâmico — cor muda conforme faixa: cinza (0–0.5), 3 tons de amarelo (1–3), abóbora/laranja claro (3.5–5), laranja escuro (5.5–7). Valor exibido acima do slider em cor correspondente
+  - Removidos `tempExternaInput`/`tempPiscinaInput` (estados string), `parseDecimal`, `<input type="text">` e `<input type="range">`
+  - Sem migration
+
 ## [v2.67.5] - 2026-08-26
 ### Fix
 - **Propagação de card_aula entre índices preservava temperaturas incorretamente** (reportado por São Matheus): ao re-salvar um índice anterior (ex: Aula 1), seu `criado_em` ficava mais recente, e a lógica de leitura passava a propagar os dados do índice anterior em vez do próprio índice

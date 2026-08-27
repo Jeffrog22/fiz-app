@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-08-26 — fix propagação card_aula entre índices (São Matheus) → v2.67.5 -->
+<!-- última-sessão: 2026-08-26 — feat temp wheel + slider cloro colorido → v2.68.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -87,6 +87,33 @@ Regras:
 - `chamadas_log.grupo_id` é TEXT (migration 017) — aceita `jeftq01`, necessário para extrapolação (antes UUID rejeitava)
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
+
+---
+
+## Sessão: 26/08/2026 — Temp Wheel + Slider Cloro Colorido (CardAula) → v2.68.0
+
+### O que foi feito
+- **TempWheel** (`CardAula.tsx`): componente inline `[−] 26.0 [+]` substitui os `<input type="text">` de temperatura
+  - Step 0.5, range ±10–50°C (externa) e 15–40°C (piscina)
+  - Desktop: scroll wheel (`onWheel` com `deltaY`) + botoes +/-
+  - Mobile: arraste vertical (`onTouchMove` com threshold 15px para evitar triggers acidentais)
+  - Removidos estados string `tempExternaInput`/`tempPiscinaInput` e `parseDecimal`
+- **CloroSlider** (`CardAula.tsx`): slider customizado substitui `<input type="range">` + label com valor
+  - Valor exibido acima do slider em cor correspondente
+  - Track dinâmico com gradiente da cor atual até cinza
+  - Thumb branco com borda colorida
+  - Cores: cinza (0–0.5), 3 amarelos (1–3), abóbora/laranja claro (3.5–5), laranja escuro (5.5–7)
+  - Drag via `onPointerDown`/`onPointerMove` no document (funciona mesmo arrastando fora do slider)
+- Sem migration (alteração pura de UI)
+
+### Arquivos
+- `frontend/src/components/modals/CardAula.tsx` (TempWheel + CloroSlider inline, remoção de inputs antigos)
+- `CHANGELOG.md` (v2.68.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Testes: 54/54 passam
 
 ---
 
