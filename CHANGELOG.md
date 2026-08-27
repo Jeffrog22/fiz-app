@@ -1,5 +1,12 @@
 # Changelog - Fiz! App
 
+## [v2.67.5] - 2026-08-26
+### Fix
+- **Propagação de card_aula entre índices preservava temperaturas incorretamente** (reportado por São Matheus): ao re-salvar um índice anterior (ex: Aula 1), seu `criado_em` ficava mais recente, e a lógica de leitura passava a propagar os dados do índice anterior em vez do próprio índice
+  - `CardAula.tsx`: lógica reescrita — busca primeiro registro com `indice_aula === indiceAula` (match exato); só propaga de índice anterior (`< indiceAula`, maior índice) se não existir registro próprio
+  - `cardAulaService.ts`: separado insert/update — `criado_em` só é definido no insert, preservado no update (antes era sobrescrito toda vez, quebrando propagação de outros índices)
+  - Sem migration
+
 ## [v2.67.4] - 2026-08-20
 ### Fix
 - **Banner "Nova versão disponível" não aparecia**: o `version.json` é gerado dentro de `dist/` e, portanto, entrava no **precache do service worker** (`precacheAndRoute(self.__WB_MANIFEST)`). O SW antigo em controle servia o `version.json` antigo do seu cache, então `buscarUltimaVersao()` (versão nova do servidor) nunca era vista — `cache: 'no-store'` não adianta porque a requisição é interceptada pelo SW
