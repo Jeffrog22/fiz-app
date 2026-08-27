@@ -20,6 +20,16 @@ const TabFrequenciaAluno: React.FC = () => {
   const [search, setSearch] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
   const [modalAluno, setModalAluno] = useState<FrequenciaAlunoItem | null>(null);
+  const [sortCol, setSortCol] = useState<'nome' | 'turma_label' | 'percentual_presenca'>('nome');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const toggleSort = (col: typeof sortCol) => {
+    if (sortCol === col) setSortDir((d) => d === 'asc' ? 'desc' : 'asc');
+    else { setSortCol(col); setSortDir('asc'); }
+  };
+
+  const sortIndicator = (col: typeof sortCol) =>
+    sortCol !== col ? '' : sortDir === 'asc' ? ' ▲' : ' ▼';
 
   const params = modo === 'historico' ? { mes: 0, ano: 0 }
     : modo === 'ano' ? { mes: 0, ano }
@@ -69,6 +79,22 @@ const TabFrequenciaAluno: React.FC = () => {
     }
     return list;
   }, [data, search, filtroStatus]);
+
+  const sortedData = useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      const va = a[sortCol];
+      const vb = b[sortCol];
+      if (typeof va === 'number' && typeof vb === 'number') {
+        return sortDir === 'asc' ? va - vb : vb - va;
+      }
+      const sa = String(va ?? '');
+      const sb = String(vb ?? '');
+      const cmp = sa.localeCompare(sb, 'pt-BR');
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return arr;
+  }, [filtered, sortCol, sortDir]);
 
   const nomesLista = useMemo(() => data.map((d) => d.nome), [data]);
 
@@ -186,9 +212,9 @@ const TabFrequenciaAluno: React.FC = () => {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">Nome</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">Turma</th>
-                    <th className="text-center px-4 py-3 font-medium text-gray-600">%</th>
+                    <th onClick={() => toggleSort('nome')} className="text-left px-4 py-3 font-medium text-gray-600 cursor-pointer hover:bg-gray-100 select-none">Nome{sortIndicator('nome')}</th>
+                    <th onClick={() => toggleSort('turma_label')} className="text-left px-4 py-3 font-medium text-gray-600 cursor-pointer hover:bg-gray-100 select-none">Turma{sortIndicator('turma_label')}</th>
+                    <th onClick={() => toggleSort('percentual_presenca')} className="text-center px-4 py-3 font-medium text-gray-600 cursor-pointer hover:bg-gray-100 select-none">%{sortIndicator('percentual_presenca')}</th>
                     <th className="text-center px-4 py-3 font-medium text-gray-600">P</th>
                     <th className="text-center px-4 py-3 font-medium text-gray-600">F</th>
                     <th className="text-center px-4 py-3 font-medium text-gray-600">J</th>
@@ -196,7 +222,7 @@ const TabFrequenciaAluno: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {filtered.map((d) => (
+                  {sortedData.map((d) => (
                     <tr key={d.aluno_id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setModalAluno(d)}>
                       <td className="px-4 py-2 font-medium text-gray-800">
                         <span className="sm:hidden">{formatarNomeMobile(d.nome, nomesLista)}</span>
@@ -226,7 +252,7 @@ const TabFrequenciaAluno: React.FC = () => {
                       </td>
                     </tr>
                   ))}
-                  {filtered.length === 0 && (
+                  {sortedData.length === 0 && (
                     <tr>
                       <td colSpan={7} className="py-6 text-center text-gray-400">
                         {search || filtroStatus !== 'todos' ? 'Nenhum aluno encontrado com esses filtros.' : 'Nenhum dado disponível.'}
@@ -237,7 +263,7 @@ const TabFrequenciaAluno: React.FC = () => {
               </table>
             </div>
             <p className="text-xs text-gray-400 mt-2 text-right">
-              {filtered.length} de {data.length} alunos
+              {sortedData.length} de {data.length} alunos
             </p>
           </div>
         </>

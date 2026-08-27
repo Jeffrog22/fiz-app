@@ -1,5 +1,15 @@
 # Changelog - Fiz! App
 
+## [v2.69.0] - 2026-08-26
+### Feat
+- **Ordenação por coluna nos grids de Frequência por Aluno e Frequência por Turma**: headers clicáveis com ciclo ASC → DESC → remover, indicador ▲/▼, ordenação numérica para % e string para Nome/Turma/Horário
+  - `TabFrequenciaAluno.tsx`: ordenável por Nome (default ASC), Turma e %
+  - `TabFrequenciaTurma.tsx`: ordenável por Turma (default ASC), Horário e %
+
+### Fix
+- **Banner "Nova versão disponível" nunca aparecia**: `version.json` gerado com chave `version` mas `version.ts` lia `data.versao` (undefined) — `buscarUltimaVersao()` sempre retornava null
+  - `version.ts`: `data.versao` → `data.version` (+ interface `VersaoInfo` atualizada)
+
 ## [v2.68.0] - 2026-08-26
 ### Feat
 - **Card de Aula: inputs de temperatura com scroll wheel e slider de cloro colorido**

@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-08-26 — feat temp wheel + slider cloro colorido → v2.68.0 -->
+<!-- última-sessão: 2026-08-26 — fix banner + ordenação relatórios → v2.69.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -87,6 +87,28 @@ Regras:
 - `chamadas_log.grupo_id` é TEXT (migration 017) — aceita `jeftq01`, necessário para extrapolação (antes UUID rejeitava)
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
+
+---
+
+## Sessão: 26/08/2026 — Fix Banner + Ordenação Relatórios → v2.69.0
+
+### O que foi feito
+- **Fix banner "Nova versão disponível"**: `version.ts` lia `data.versao` mas `vite.config.ts` escrevia `{ "version": ... }` — `buscarUltimaVersao()` sempre retornava `null`
+  - `version.ts`: `data.versao` → `data.version` + interface `VersaoInfo` atualizada
+- **Ordenação por coluna nos grids de relatórios**: headers clicáveis com ciclo ASC → DESC → sem ordenação
+  - `TabFrequenciaAluno.tsx`: ordenável por Nome (default ASC), Turma e %. Tipo numérico para %, `localeCompare('pt-BR')` para strings
+  - `TabFrequenciaTurma.tsx`: ordenável por Turma (default ASC), Horário e %. Indicador ▲/▼ no header
+
+### Arquivos
+- `frontend/src/utils/version.ts` (fix chave version.json)
+- `frontend/src/components/reports/tabs/TabFrequenciaAluno.tsx` (+sort state, +toggleSort, +sortedData, headers clicáveis)
+- `frontend/src/components/reports/tabs/TabFrequenciaTurma.tsx` (+sort state, +toggleSort, +sortedData, headers clicáveis)
+- `CHANGELOG.md` (v2.69.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Testes: 54/54 passam
 
 ---
 

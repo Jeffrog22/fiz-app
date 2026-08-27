@@ -1,5 +1,5 @@
 export interface VersaoInfo {
-  versao: string;
+  version: string;
 }
 
 function numeros(v: string): number[] {
@@ -25,7 +25,7 @@ export async function buscarUltimaVersao(): Promise<string | null> {
     const res = await fetch('/version.json', { cache: 'no-store' });
     if (!res.ok) return null;
     const data = (await res.json()) as VersaoInfo;
-    return typeof data.versao === 'string' ? data.versao : null;
+    return typeof data.version === 'string' ? data.version : null;
   } catch {
     return null;
   }

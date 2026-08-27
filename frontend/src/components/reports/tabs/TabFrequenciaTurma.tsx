@@ -29,6 +29,16 @@ const TabFrequenciaTurma: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [labelAtiva, setLabelAtiva] = useState('');
   const [professorAtivo, setProfessorAtivo] = useState('');
+  const [sortCol, setSortCol] = useState<'label' | 'horario' | 'percentual_presenca'>('label');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const toggleSort = (col: typeof sortCol) => {
+    if (sortCol === col) setSortDir((d) => d === 'asc' ? 'desc' : 'asc');
+    else { setSortCol(col); setSortDir('asc'); }
+  };
+
+  const sortIndicator = (col: typeof sortCol) =>
+    sortCol !== col ? '' : sortDir === 'asc' ? ' ▲' : ' ▼';
 
   const params = modo === 'historico' ? { mes: 0, ano: 0 }
     : modo === 'ano' ? { mes: 0, ano }
@@ -60,6 +70,22 @@ const TabFrequenciaTurma: React.FC = () => {
     () => data.filter((d) => d.label === labelAtiva && d.professor === professorAtivo),
     [data, labelAtiva, professorAtivo],
   );
+
+  const sortedData = useMemo(() => {
+    const arr = [...filteredData];
+    arr.sort((a, b) => {
+      const va = a[sortCol];
+      const vb = b[sortCol];
+      if (typeof va === 'number' && typeof vb === 'number') {
+        return sortDir === 'asc' ? va - vb : vb - va;
+      }
+      const sa = String(va ?? '');
+      const sb = String(vb ?? '');
+      const cmp = sa.localeCompare(sb, 'pt-BR');
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return arr;
+  }, [filteredData, sortCol, sortDir]);
 
   const hasFiltered = filteredData.length > 0;
   const mediaPresenca = hasFiltered
@@ -222,10 +248,19 @@ const TabFrequenciaTurma: React.FC = () => {
           <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
-                <tr><th className="text-left px-4 py-3 font-medium text-gray-600">Turma</th><th className="text-left px-4 py-3 font-medium text-gray-600">Horário</th><th className="text-left px-4 py-3 font-medium text-gray-600">Professor</th><th className="text-left px-4 py-3 font-medium text-gray-600">Nível</th><th className="text-center px-4 py-3 font-medium text-gray-600">%</th><th className="text-center px-4 py-3 font-medium text-gray-600">P</th><th className="text-center px-4 py-3 font-medium text-gray-600">F</th><th className="text-center px-4 py-3 font-medium text-gray-600">J</th></tr>
+                <tr>
+                  <th onClick={() => toggleSort('label')} className="text-left px-4 py-3 font-medium text-gray-600 cursor-pointer hover:bg-gray-100 select-none">Turma{sortIndicator('label')}</th>
+                  <th onClick={() => toggleSort('horario')} className="text-left px-4 py-3 font-medium text-gray-600 cursor-pointer hover:bg-gray-100 select-none">Horário{sortIndicator('horario')}</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Professor</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Nível</th>
+                  <th onClick={() => toggleSort('percentual_presenca')} className="text-center px-4 py-3 font-medium text-gray-600 cursor-pointer hover:bg-gray-100 select-none">%{sortIndicator('percentual_presenca')}</th>
+                  <th className="text-center px-4 py-3 font-medium text-gray-600">P</th>
+                  <th className="text-center px-4 py-3 font-medium text-gray-600">F</th>
+                  <th className="text-center px-4 py-3 font-medium text-gray-600">J</th>
+                </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {data.map((d) => (
+                {sortedData.map((d) => (
                   <tr key={d.grupo_id} className="hover:bg-gray-50">
                     <td className="px-4 py-2 font-medium text-gray-800">{d.label}</td>
                     <td className="px-4 py-2 text-gray-600">{d.horario.substring(0, 5)}</td>
