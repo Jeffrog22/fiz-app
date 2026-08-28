@@ -52,7 +52,7 @@ const JustificativaModal: React.FC<Props> = ({
   return (
     <div className="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-center justify-center z-50"
       onClick={onClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-sm shadow-xl dark:shadow-black/20 m-4"
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-sm shadow-xl dark:shadow-black/20 m-4 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Justificativa</h3>

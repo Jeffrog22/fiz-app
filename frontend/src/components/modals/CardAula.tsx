@@ -39,6 +39,7 @@ interface TempWheelProps {
 function TempWheel({ value, onChange, min = -10, max = 50, label, alert }: TempWheelProps) {
   const ref = useRef<HTMLDivElement>(null);
   const touchStartY = useRef<number | null>(null);
+  const accumDelta = useRef(0);
 
   const clamp = useCallback((v: number) => {
     const stepped = Math.round(v * 2) / 2;
@@ -54,8 +55,11 @@ function TempWheel({ value, onChange, min = -10, max = 50, label, alert }: TempW
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      if (e.deltaY < 0) onChange(clamp(value + 0.5));
-      else if (e.deltaY > 0) onChange(clamp(value - 0.5));
+      accumDelta.current += e.deltaY;
+      if (Math.abs(accumDelta.current) >= 30) {
+        onChange(clamp(value + (accumDelta.current > 0 ? -0.5 : 0.5)));
+        accumDelta.current = 0;
+      }
     };
 
     const onTouchStart = (e: TouchEvent) => {
@@ -66,7 +70,7 @@ function TempWheel({ value, onChange, min = -10, max = 50, label, alert }: TempW
       if (touchStartY.current === null) return;
       e.preventDefault();
       const dy = touchStartY.current - e.touches[0].clientY;
-      if (Math.abs(dy) >= 15) {
+      if (Math.abs(dy) >= 25) {
         onChange(clamp(value + (dy > 0 ? 0.5 : -0.5)));
         touchStartY.current = e.touches[0].clientY;
       }
@@ -88,20 +92,20 @@ function TempWheel({ value, onChange, min = -10, max = 50, label, alert }: TempW
   }, [value, onChange, clamp]);
 
   return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+    <div className="flex-1 min-w-0">
+      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
         {label}{alert}
       </label>
-      <div ref={ref} className="flex items-center gap-2 mt-1 select-none touch-none">
+      <div ref={ref} className="flex items-center gap-1 mt-1 select-none touch-manipulation">
         <button type="button" onClick={decrement}
-          className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xl font-bold active:bg-gray-200 dark:active:bg-gray-600 transition">
+          className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-base font-bold active:bg-gray-200 dark:active:bg-gray-600 transition">
           −
         </button>
-        <span className="flex-1 text-center text-lg font-mono tabular-nums text-gray-800 dark:text-gray-100">
+        <span className="flex-1 text-center text-base font-mono tabular-nums text-gray-800 dark:text-gray-100">
           {value.toFixed(1)}
         </span>
         <button type="button" onClick={increment}
-          className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xl font-bold active:bg-gray-200 dark:active:bg-gray-600 transition">
+          className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-base font-bold active:bg-gray-200 dark:active:bg-gray-600 transition">
           +
         </button>
       </div>
@@ -336,22 +340,23 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
                 </select>
               </div>
 
-              <TempWheel
-                value={tempExterna}
-                onChange={setTempExterna}
-                min={-10}
-                max={50}
-                label="Temperatura Externa (°C)"
-                alert={tempExterna < 15 && <span className="ml-2 text-xs text-red-500 dark:text-red-400">Frio detectado</span>}
-              />
-
-              <TempWheel
-                value={tempPiscina}
-                onChange={setTempPiscina}
-                min={15}
-                max={40}
-                label="Temperatura Piscina (°C)"
-              />
+              <div className="flex gap-3">
+                <TempWheel
+                  value={tempExterna}
+                  onChange={setTempExterna}
+                  min={-10}
+                  max={50}
+                  label="Externa"
+                  alert={tempExterna < 15 && <span className="ml-2 text-xs text-red-500 dark:text-red-400">Frio detectado</span>}
+                />
+                <TempWheel
+                  value={tempPiscina}
+                  onChange={setTempPiscina}
+                  min={15}
+                  max={40}
+                  label="Piscina"
+                />
+              </div>
 
               <CloroSlider value={cloro} onChange={setCloro} />
 

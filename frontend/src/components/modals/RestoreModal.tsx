@@ -43,7 +43,7 @@ const RestoreModal: React.FC<RestoreModalProps> = ({ open, alunoNome, turmas, pr
 
   return (
     <div className="fixed inset-0 bg-black/30 dark:bg-black/60 flex items-center justify-center z-40" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-black/20 p-6 w-full max-w-sm space-y-4" onClick={e => e.stopPropagation()}>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-black/20 p-6 w-full max-w-sm space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Restaurar Aluno</h3>
         <p className="text-sm text-gray-600 dark:text-gray-400">
           Restaurando: <strong>{alunoNome}</strong>

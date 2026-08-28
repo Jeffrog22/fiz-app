@@ -1,5 +1,19 @@
 # Changelog - Fiz! App
 
+## [v2.69.1] - 2026-08-26
+### Fix
+- **CardAula: TempWheels de temperatura compactos e menos sensíveis**:
+  - Layout flex row lado a lado (Externa | Piscina) em vez de empilhados — ocupa metade da altura vertical
+  - Botões +/− reduzidos de 40px para 32px (`w-8 h-8`), label encurtado (`text-xs`)
+  - Wheel throttle: `accumDelta` só reagir quando deltaY acumulado ≥ 30px (antes reagia a cada tick)
+  - Touch threshold: 15px → 25px (evita acionamento acidental ao rolar o modal)
+  - CSS: `touch-none` → `touch-manipulation` (permite scroll nativo do modal ao arrastar sobre o wheel)
+- **Scroll mobile corrigido em 4 modais** — adicionado `max-h-[90vh] overflow-y-auto` no container:
+  - `TurmaModal` (antes sem scroll — formulário longo ficava inacessível em telas pequenas)
+  - `PlanningModal`
+  - `JustificativaModal`
+  - `RestoreModal`
+
 ## [v2.69.0] - 2026-08-26
 ### Feat
 - **Ordenação por coluna nos grids de Frequência por Aluno e Frequência por Turma**: headers clicáveis com ciclo ASC → DESC → remover, indicador ▲/▼, ordenação numérica para % e string para Nome/Turma/Horário

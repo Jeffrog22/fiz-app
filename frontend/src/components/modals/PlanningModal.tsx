@@ -66,7 +66,7 @@ const PlanningModal: React.FC<Props> = ({ data, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/30 dark:bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-black/20 p-6 w-full max-w-lg space-y-4" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-black/20 p-6 w-full max-w-lg space-y-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">Planejamento — {dataFormatada}</h3>
           <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-lg leading-none">&times;</button>

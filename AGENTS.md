@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-08-26 — fix banner + ordenação relatórios → v2.69.0 -->
+<!-- última-sessão: 2026-08-26 — TempWheel compacto + scroll mobile modais → v2.69.1 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -87,6 +87,41 @@ Regras:
 - `chamadas_log.grupo_id` é TEXT (migration 017) — aceita `jeftq01`, necessário para extrapolação (antes UUID rejeitava)
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
+
+---
+
+## Sessão: 26/08/2026 — TempWheel Compacto + Scroll Mobile Modais → v2.69.1
+
+### O que foi feito
+- **TempWheel compacto** (`CardAula.tsx`): dois TempWheels lado a lado (`flex gap-3`) em vez de empilhados
+  - Botões +/− de 40px para 32px (`w-8 h-8`), label `text-xs`, gap reduzido
+  - Wheel throttle: `accumDelta` ref — só reagir quando `|deltaY| ≥ 30` (antes reagia a cada tick)
+  - Touch threshold: 15px → 25px (evita acionamento acidental)
+  - CSS: `touch-none` → `touch-manipulation` (permite scroll nativo do modal)
+- **Scroll mobile** — `max-h-[90vh] overflow-y-auto` adicionado ao container de 4 modais que não tinham:
+  - `TurmaModal` (alto risco — formulário longo sem scroll)
+  - `PlanningModal`
+  - `JustificativaModal`
+  - `RestoreModal`
+
+### Decisões
+- `touch-manipulation` em vez de `touch-none`: browser gerencia scroll nativo, mas botões +/- continuam responsivos
+- Throttle do wheel com `accumDelta` accumula `deltaY` e só aplica quando ≥ 30 — elimina sensibilidade a micro-scrolls
+- `max-h-[90vh]` padrão em todos os modais (consistente com CardAula, CardBO, AlunoModal, AnotacoesModal)
+- Sem migration (pura UI)
+
+### Arquivos
+- `frontend/src/components/modals/CardAula.tsx` (TempWheel flex row, botões 32px, throttle wheel, threshold touch 25px, touch-manipulation)
+- `frontend/src/components/modals/TurmaModal.tsx` (+max-h-[90vh] overflow-y-auto)
+- `frontend/src/components/modals/PlanningModal.tsx` (+max-h-[90vh] overflow-y-auto)
+- `frontend/src/components/modals/JustificativaModal.tsx` (+max-h-[90vh] overflow-y-auto)
+- `frontend/src/components/modals/RestoreModal.tsx` (+max-h-[90vh] overflow-y-auto)
+- `CHANGELOG.md` (v2.69.1)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Testes: 54/54 passam
 
 ---
 
