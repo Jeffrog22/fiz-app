@@ -1,5 +1,10 @@
 # Changelog - Fiz! App
 
+## [v2.69.2] - 2026-08-26
+### Fix
+- **Export Frequência: campo "Local" sempre mostrava "Piscina Bela Vista"** independente da unidade
+  - `exportacaoService.ts`: mapeamento `TENANT_LOCAL` (tenantId → nome do local), substitui valor hardcoded — ex.: `parque` → `Piscina Parque`, `sao-matheus` → `Piscina São Matheus`
+
 ## [v2.69.1] - 2026-08-26
 ### Fix
 - **CardAula: TempWheels de temperatura compactos e menos sensíveis**:

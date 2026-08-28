@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-08-26 — TempWheel compacto + scroll mobile modais → v2.69.1 -->
+<!-- última-sessão: 2026-08-26 — fix Local hardcoded export freq → v2.69.2 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -87,6 +87,23 @@ Regras:
 - `chamadas_log.grupo_id` é TEXT (migration 017) — aceita `jeftq01`, necessário para extrapolação (antes UUID rejeitava)
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
+
+---
+
+## Sessão: 26/08/2026 — Fix Local hardcoded export freq → v2.69.2
+
+### O que foi feito
+- **Bug**: exportação de frequência para qualquer unidade (Parque, Vila, São Matheus, etc.) sempre exibia "Piscina Bela Vista" no campo "Local" do XLSX
+- **Causa raiz**: `exportacaoService.ts:211` tinha `sheet.getCell('B2').value = 'Piscina Bela Vista'` hardcoded — o `tenantId` já chegava ao service via header mas não era usado para o nome do local
+- **Fix**: novo mapeamento `TENANT_LOCAL` no service, usa `TENANT_LOCAL[tenantId]` no lugar do hardcoded
+
+### Arquivos
+- `backend/src/services/exportacaoService.ts` (+TENANT_LOCAL, linha 211 usa mapping)
+- `CHANGELOG.md` (v2.69.2)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Backend: 0 erros (`tsc --noEmit`)
 
 ---
 

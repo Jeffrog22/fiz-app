@@ -4,6 +4,14 @@ import { AppError } from '../middleware/errorHandler';
 import type { Turma, Aluno, ChamadaLog, Professor } from '../types';
 import { parseDiasFromLabel, gerarDiasLetivos, formatMesAno, sortLabels } from '../utils/chamadaUtils';
 
+const TENANT_LOCAL: Record<string, string> = {
+  'bela-vista': 'Piscina Bela Vista',
+  'sao-matheus': 'Piscina São Matheus',
+  'vila': 'Piscina Vila',
+  'parque': 'Piscina Parque',
+  '3aidade': 'Piscina 3ª Idade',
+};
+
 function somarMinutos(horario: string, minutos: number): string {
   const [h, m] = horario.split(':').map(Number);
   const total = h * 60 + m + minutos;
@@ -208,7 +216,7 @@ export async function gerarFrequenciaXLSX(
       sheet.getRow(2).height = 15;
       sheet.getCell('A2').value = 'Local:';
       sheet.getCell('A2').style = labelStyle;
-      sheet.getCell('B2').value = 'Piscina Bela Vista';
+      sheet.getCell('B2').value = TENANT_LOCAL[tenantId] || `Piscina ${tenantId}`;
       sheet.getCell('B2').style = dataStyle;
       sheet.mergeCells(`D2:${mergeFim}2`);
       sheet.getCell('D2').value = 'SECRETARIA DE ESPORTE E LAZER';
