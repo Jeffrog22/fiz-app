@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-08-26 — fix Local hardcoded export freq → v2.69.2 -->
+<!-- última-sessão: 2026-08-26 — fix alunos excluídos/transferidos no export freq → v2.69.3 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -87,6 +87,29 @@ Regras:
 - `chamadas_log.grupo_id` é TEXT (migration 017) — aceita `jeftq01`, necessário para extrapolação (antes UUID rejeitava)
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
+
+---
+
+## Sessão: 26/08/2026 — Fix alunos excluídos/transferidos no export freq → v2.69.3
+
+### O que foi feito
+- **Bug**: exportação de frequência não incluía alunos excluídos (`ativo = false`) ou transferidos mid-month
+- **Causa raiz dupla**:
+  1. Query de alunos tinha `.eq('ativo', true)` — excluídos nunca entravam no array
+  2. Filtro por turma (`a.turma_id === grupoId`) não considerava histórico — transferidos tinham `turma_id` apontando pra turma nova
+- **Fix**:
+  - Removido `.eq('ativo', true)` — excluídos mantêm `turma_id` preservado, logs existem com `grupo_id = aluno.id`
+  - Adicionada query de `enrollment_period` + mapa `alunoId → Set<grupoId>` (períodos que sobrepõem o mês do relatório)
+  - Filtro reescrito: `a.turma_id === grupoId` OU `enrollmentGrupos.get(a.id)?.has(grupoId)`
+- **Resultado**: aluno excluído dia 10 aparece com P/F/J dos dias 1–10; aluno transferido de jeftq03→jeftq05 dia 15 aparece em ambas as folhas
+
+### Arquivos
+- `backend/src/services/exportacaoService.ts` (remove ativo filter, +enrollment query, +enrollmentGrupos map, reescreve filtro)
+- `CHANGELOG.md` (v2.69.3)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Backend: 0 erros (`tsc --noEmit`)
 
 ---
 

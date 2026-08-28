@@ -93,8 +93,7 @@ export async function gerarFrequenciaXLSX(
   const { data: alunos, error: alunosError } = await supabase
     .from('alunos')
     .select('*')
-    .eq('tenant_id', tenantId)
-    .eq('ativo', true);
+    .eq('tenant_id', tenantId);
 
   if (alunosError) throw new AppError('Erro ao buscar alunos', 500);
 
@@ -128,6 +127,21 @@ export async function gerarFrequenciaXLSX(
     .lte('data', dataFim);
 
   if (eventosError) throw new AppError('Erro ao buscar eventos', 500);
+
+  const { data: enrollments } = await supabase
+    .from('enrollment_period')
+    .select('aluno_id, turma_id, data_inicio, data_fim')
+    .eq('tenant_id', tenantId);
+
+  const enrollmentGrupos = new Map<string, Set<string>>();
+  for (const ep of enrollments || []) {
+    if (!ep.turma_id) continue;
+    const inicio = ep.data_inicio;
+    const fim = ep.data_fim || '9999-12-31';
+    if (fim < dataInicio || inicio > dataFim) continue;
+    if (!enrollmentGrupos.has(ep.aluno_id)) enrollmentGrupos.set(ep.aluno_id, new Set());
+    enrollmentGrupos.get(ep.aluno_id)!.add(ep.turma_id);
+  }
 
   let cardAulaMap = new Map<string, any>();
   const { data: cardAula, error: cardAulaError } = await supabase
@@ -184,7 +198,11 @@ export async function gerarFrequenciaXLSX(
     for (const turma of turmasLabel) {
       const grupoId = turma.grupo_id || turma.id;
       const ultimaColGrupo1 = 6 + diasLetivos.length;
-      const alunosTurma = (alunos || []).filter((a: Aluno) => a.turma_id === grupoId && a.ativo);
+      const alunosTurma = (alunos || []).filter((a: Aluno) => {
+        if (a.turma_id === grupoId) return true;
+        const historico = enrollmentGrupos.get(a.id);
+        return historico?.has(grupoId) ?? false;
+      });
       if (alunosTurma.length === 0) continue;
 
       const sheetName = `${label}-${turma.horario.slice(0, 5)}-${(turma.nivel || 'sem-nivel').replace(/\s+/g, '_')}`.replace(/[/\\?*\[\]:]/g, '-').slice(0, 31);

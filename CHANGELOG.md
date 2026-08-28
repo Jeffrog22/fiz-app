@@ -1,5 +1,12 @@
 # Changelog - Fiz! App
 
+## [v2.69.3] - 2026-08-26
+### Fix
+- **Export Frequência: alunos excluídos e transferidos agora aparecem no relatório**
+  - Removido filtro `.eq('ativo', true)` da query de alunos — excluídos (`ativo = false`) mantêm `turma_id` preservado e agora são incluídos
+  - Adicionada query de `enrollment_period` para reconstruir histórico de turmas — alunos transferidos mid-month aparecem na turma antiga E na nova
+  - Filtro da folha por turma reescrito: inclui aluno se `turma_id === grupoId` OU se tem enrollment ativo com esse `grupoId` no período
+
 ## [v2.69.2] - 2026-08-26
 ### Fix
 - **Export Frequência: campo "Local" sempre mostrava "Piscina Bela Vista"** independente da unidade
