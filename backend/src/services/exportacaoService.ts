@@ -96,6 +96,7 @@ export async function gerarFrequenciaXLSX(
     .eq('tenant_id', tenantId)
     .range(0, 1000000);
 
+  console.log('[EXPORT] alunos encontrados=' + (alunos ? alunos.length : 0));
   if (alunosError) throw new AppError('Erro ao buscar alunos', 500);
 
   const labelsUnicas = sortLabels([...new Set(turmas.map((t: any) => t.label).filter(Boolean))]);
@@ -112,6 +113,7 @@ export async function gerarFrequenciaXLSX(
     .lte('data', dataFim)
     .range(0, 1000000);
 
+  console.log('[EXPORT] logs encontrados=' + (logs ? logs.length : 0));
   if (logsError) throw new AppError('Erro ao buscar chamadas', 500);
 
   const { data: anotacoes, error: anotacoesError } = await supabase
@@ -120,6 +122,7 @@ export async function gerarFrequenciaXLSX(
     .eq('tenant_id', tenantId)
     .range(0, 1000000);
 
+  console.log('[EXPORT] anotacoes encontradas=' + (anotacoes ? anotacoes.length : 0));
   if (anotacoesError) throw new AppError('Erro ao buscar anotações', 500);
 
   const { data: eventos, error: eventosError } = await supabase
@@ -130,6 +133,7 @@ export async function gerarFrequenciaXLSX(
     .lte('data', dataFim)
     .range(0, 1000000);
 
+  console.log('[EXPORT] eventos encontrados=' + (eventos ? eventos.length : 0));
   if (eventosError) throw new AppError('Erro ao buscar eventos', 500);
 
   const { data: enrollments } = await supabase
@@ -137,6 +141,8 @@ export async function gerarFrequenciaXLSX(
     .select('aluno_id, turma_id, data_inicio, data_fim')
     .eq('tenant_id', tenantId)
     .range(0, 1000000);
+
+  console.log('[EXPORT] enrollments encontrados=' + (enrollments ? enrollments.length : 0));
 
   const enrollmentGrupos = new Map<string, Set<string>>();
   const alunoPeriodosPorData = new Map<string, Map<string, string>>(); // aluno_id -> (dataStr -> grupo_id)
@@ -166,6 +172,7 @@ export async function gerarFrequenciaXLSX(
     .gte('data', dataInicio)
     .lte('data', dataFim)
     .range(0, 1000000);
+  console.log('[EXPORT] card_aula encontrados=' + (cardAula ? cardAula.length : 0));
   if (cardAulaError && !cardAulaError.message?.includes('relation') && !cardAulaError.message?.includes('does not exist')) {
     throw new AppError('Erro ao buscar card_aula', 500);
   }
@@ -207,18 +214,22 @@ export async function gerarFrequenciaXLSX(
     'Seg/Ter/Qua/Qui': 'Segunda a Quinta', 'Seg a Sex': 'Segunda a Sexta',
   };
 
+  console.log('[EXPORT] labelsUnicas=' + JSON.stringify(labelsUnicas) + ' turmas=' + turmas.length);
+
   for (const label of labelsUnicas) {
     const turmasLabel = turmas.filter((t: any) => t.label === label).sort((a: any, b: any) => a.horario.localeCompare(b.horario));
     const diasLetivos = gerarDiasLetivos(mes, ano, label);
 
     for (const turma of turmasLabel) {
       const grupoId = turma.grupo_id || turma.id;
+      console.log('[EXPORT] processando turma grupoId=' + grupoId + ' label=' + label + ' horario=' + turma.horario);
       const ultimaColGrupo1 = 6 + diasLetivos.length;
       const alunosTurma = (alunos || []).filter((a: Aluno) => {
         if (a.turma_id === grupoId) return true;
         const historico = enrollmentGrupos.get(a.id);
         return historico?.has(grupoId) ?? false;
       });
+      console.log('[EXPORT] alunosTurma=' + alunosTurma.length + ' diasLetivos=' + diasLetivos.length);
       if (alunosTurma.length === 0) continue;
 
       const sheetName = `${label}-${turma.horario.slice(0, 5)}-${(turma.nivel || 'sem-nivel').replace(/\s+/g, '_')}`.replace(/[/\\?*\[\]:]/g, '-').slice(0, 31);
@@ -479,7 +490,10 @@ export async function gerarFrequenciaXLSX(
     }
   }
 
-  return workbook.xlsx.writeBuffer();
+  console.log('[EXPORT] gerando buffer xlsx...');
+  const buffer = await workbook.xlsx.writeBuffer();
+  console.log('[EXPORT] buffer gerado, tamanho=' + (buffer as any).byteLength);
+  return buffer;
 }
 
 export async function gerarCancelamentosXLSX(
