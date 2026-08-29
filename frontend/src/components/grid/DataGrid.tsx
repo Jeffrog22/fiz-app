@@ -7,7 +7,7 @@ import AnotacoesModal from '../modals/AnotacoesModal';
 import JustificativaModal from '../modals/JustificativaModal';
 import { StickyNote, History, Trash2 } from 'lucide-react';
 
-type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento' | 'ferias' | undefined;
+type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento' | 'ferias' | 'fora_periodo' | undefined;
 
 const STATUS_CYCLE: (PresencaStatus)[] = [
   'presente',
@@ -38,6 +38,7 @@ const STATUS_SYMBOLS: Record<string, string> = {
   reuniao: 'Re',
   evento: 'Ev',
   ferias: 'Férias',
+  fora_periodo: '—',
 };
 
 const TIPO_EVENTO_CORES: Record<string, string> = {
@@ -55,6 +56,16 @@ interface CardAulaRecord {
   cloro_ppm?: number;
 }
 
+interface EnrollmentPeriod {
+  id: string;
+  aluno_id: string;
+  turma_id?: string;
+  data_inicio: string;
+  data_fim?: string;
+  motivo: string;
+  nivel?: string;
+}
+
 interface DataGridProps {
   alunos: Aluno[];
   dias: string[];
@@ -64,6 +75,7 @@ interface DataGridProps {
   eventos?: CalendarioEvento[];
   cardAulaData?: Record<string, Record<number, CardAulaRecord>>;
   turmaGrupoId?: string;
+  enrollmentPeriods?: Record<string, EnrollmentPeriod[]>;
   onTogglePresenca: (alunoId: string, data: string, status: PresencaStatus) => void;
   onUpdateAnotacao: (alunoId: string, data: string, anotacao: string) => void;
   onDateHeaderClick: (data: string) => void;
@@ -99,6 +111,7 @@ const DataGrid: React.FC<DataGridProps> = ({
   alunosComAtestadoAnotacao,
   onNomeDoubleClick,
   onAfastamento,
+  enrollmentPeriods,
 }) => {
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dateHeaderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -154,6 +167,20 @@ const DataGrid: React.FC<DataGridProps> = ({
       if (dataEventos.length > 0) {
         return dataEventos[0].tipo as PresencaStatus;
       }
+
+      // Verificar se aluno estava neste grupo nesta data (via enrollmentPeriods)
+      if (enrollmentPeriods && turmaGrupoId) {
+        const periodos = enrollmentPeriods[alunoId];
+        if (periodos) {
+          const periodoAtivo = periodos.find(
+            (p) => p.turma_id === turmaGrupoId && data >= p.data_inicio && (!p.data_fim || data <= p.data_fim)
+          );
+          if (!periodoAtivo) {
+            return 'fora_periodo';
+          }
+        }
+      }
+
       // 2. Student-level: clique do usuário P/F/J
       const alunoLog = logs[alunoId]?.[data]?.[indiceAtual];
       if (alunoLog?.status !== undefined) {
@@ -166,7 +193,7 @@ const DataGrid: React.FC<DataGridProps> = ({
       }
       return undefined;
     },
-    [logs, eventosPorData, indiceAtual, turmaGrupoId]
+    [logs, eventosPorData, indiceAtual, turmaGrupoId, enrollmentPeriods]
   );
 
   const getOrigem = useCallback(
@@ -492,8 +519,8 @@ const DataGrid: React.FC<DataGridProps> = ({
                         <div className="flex flex-col items-center gap-0.5">
                           <button
                             onClick={() => handleCellClick(aluno.id, dia)}
-                            aria-disabled={futura || isCalendario || bloqueadoParQ}
-                            title={bloqueadoParQ && !status ? 'ParQ pendente — registre o ParQ do aluno' : getTooltipText(aluno.id, dia)}
+                            aria-disabled={futura || isCalendario || bloqueadoParQ || status === 'fora_periodo'}
+                            title={status === 'fora_periodo' ? 'Aluno não estava nesta turma nesta data' : bloqueadoParQ && !status ? 'ParQ pendente — registre o ParQ do aluno' : getTooltipText(aluno.id, dia)}
                             className={`rounded-md font-bold transition-all ${
                               futura
                                 ? 'w-7 h-7 text-xs bg-gray-50 text-gray-200 cursor-not-allowed dark:bg-gray-700 dark:text-gray-600'
@@ -503,6 +530,8 @@ const DataGrid: React.FC<DataGridProps> = ({
                                   : 'w-7 h-7 text-xs bg-gray-100 text-gray-300 cursor-not-allowed dark:bg-gray-700 dark:text-gray-600'
                                 : isCalendario
                                 ? `${STATUS_COLORS[status || '']} ${status === 'ferias' ? 'text-[9px] px-1 py-0.5' : 'w-7 h-7 text-xs'} cursor-default`
+                                : status === 'fora_periodo'
+                                ? 'w-7 h-7 text-xs bg-gray-100 text-gray-300 border border-dashed border-gray-300 cursor-not-allowed opacity-50 dark:bg-gray-700 dark:text-gray-500 dark:border-gray-600'
                                 : status
                                 ? `${STATUS_COLORS[status]} w-7 h-7 text-xs cursor-pointer ${getOrigem(aluno.id, dia) === 'extrapolado' ? 'border border-dashed border-amber-400' : ''}`
                                 : 'w-7 h-7 text-xs bg-gray-100 hover:bg-gray-200 text-gray-400 cursor-pointer dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-500'

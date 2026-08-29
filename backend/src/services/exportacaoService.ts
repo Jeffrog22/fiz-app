@@ -134,6 +134,7 @@ export async function gerarFrequenciaXLSX(
     .eq('tenant_id', tenantId);
 
   const enrollmentGrupos = new Map<string, Set<string>>();
+  const alunoPeriodosPorData = new Map<string, Map<string, string>>(); // aluno_id -> (dataStr -> grupo_id)
   for (const ep of enrollments || []) {
     if (!ep.turma_id) continue;
     const inicio = ep.data_inicio;
@@ -141,6 +142,15 @@ export async function gerarFrequenciaXLSX(
     if (fim < dataInicio || inicio > dataFim) continue;
     if (!enrollmentGrupos.has(ep.aluno_id)) enrollmentGrupos.set(ep.aluno_id, new Set());
     enrollmentGrupos.get(ep.aluno_id)!.add(ep.turma_id);
+
+    // Mapear cada dia do período para o grupo_id
+    const dataIni = new Date(inicio + 'T12:00:00');
+    const dataFimDt = new Date(fim + 'T12:00:00');
+    for (let d = new Date(dataIni); d <= dataFimDt; d.setDate(d.getDate() + 1)) {
+      const dataStr = d.toISOString().split('T')[0];
+      if (!alunoPeriodosPorData.has(ep.aluno_id)) alunoPeriodosPorData.set(ep.aluno_id, new Map());
+      alunoPeriodosPorData.get(ep.aluno_id)!.set(dataStr, ep.turma_id);
+    }
   }
 
   let cardAulaMap = new Map<string, any>();
@@ -311,10 +321,21 @@ export async function gerarFrequenciaXLSX(
           const cell = sheet.getCell(rowNum, col);
           cell.font = { size: 9 };
           cell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+          // Verificar se aluno estava neste grupo nesta data (via enrollment_period)
+          const periodosAluno = alunoPeriodosPorData.get(aluno.id);
+          const grupoValidoNaData = periodosAluno?.get(dataStr);
+          const foraDoPeriodo = grupoValidoNaData && grupoValidoNaData !== grupoId;
+
           const evento = (eventos || []).find((e: any) => e.data === dataStr);
           if (evento) {
             cell.value = '*';
             cell.font = { size: 9, color: { argb: 'FF999999' } };
+          } else if (foraDoPeriodo) {
+            // Aluno não estava neste grupo neste dia - célula cinza/faded
+            cell.value = '';
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F0F0' } };
+            cell.font = { size: 9, color: { argb: 'FFCCCCCC' } };
           } else {
             const logsArr = logs || [];
             let log = logsArr.find((l: ChamadaLog) =>

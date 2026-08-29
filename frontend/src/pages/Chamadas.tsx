@@ -9,7 +9,7 @@ import CardBO from '../components/modals/CardBO';
 import type { Aluno, Turma, Professor, ChamadaLog, AnotacaoAluno, CalendarioEvento } from '../types';
 import { gerarDiasLetivos, hojeMesAno, parseDiasFromLabel } from '../utils/chamadaUtils';
 
-type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento' | 'ferias' | undefined;
+type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento' | 'ferias' | 'fora_periodo' | undefined;
 
 const MAX_UNDO = 20;
 
@@ -65,6 +65,7 @@ const Chamadas: React.FC = () => {
   const [alunosComAnotacao, setAlunosComAnotacao] = useState<Set<string>>(new Set());
   const [alunosComAtestadoAnotacao, setAlunosComAtestadoAnotacao] = useState<Set<string>>(new Set());
   const [cardAulaData, setCardAulaData] = useState<Record<string, Record<number, any>>>({});
+  const [enrollmentPeriods, setEnrollmentPeriods] = useState<Record<string, any[]>>({});
 
   const [limparConfirm, setLimparConfirm] = useState(false);
   const [limparModo, setLimparModo] = useState<'dia' | 'tudo'>('dia');
@@ -209,6 +210,27 @@ const Chamadas: React.FC = () => {
     }
   }, [alunosDaTurma]);
 
+  const carregarEnrollmentPeriods = useCallback(async () => {
+    if (alunosDaTurma.length === 0) {
+      setEnrollmentPeriods({});
+      return;
+    }
+    const ids = alunosDaTurma.map((a) => a.id).join(',');
+    try {
+      const res = await api.get(`/alunos/enrollment?ids=${ids}`);
+      const data = res.data || [];
+      const grouped: Record<string, any[]> = {};
+      for (const ep of data) {
+        if (!grouped[ep.aluno_id]) grouped[ep.aluno_id] = [];
+        grouped[ep.aluno_id].push(ep);
+      }
+      setEnrollmentPeriods(grouped);
+    } catch (err) {
+      console.error('Erro ao carregar enrollment periods', err);
+      setEnrollmentPeriods({});
+    }
+  }, [alunosDaTurma]);
+
   const carregarCardAulaData = useCallback(async () => {
     if (dias.length === 0) return;
     const map: Record<string, Record<number, any>> = {};
@@ -238,6 +260,7 @@ const Chamadas: React.FC = () => {
   useEffect(() => { carregarLogs(); }, [carregarLogs]);
   useEffect(() => { aplicarEventosCalendario(); }, [aplicarEventosCalendario]);
   useEffect(() => { carregarAnotacoes(); }, [carregarAnotacoes]);
+  useEffect(() => { carregarEnrollmentPeriods(); }, [carregarEnrollmentPeriods]);
   useEffect(() => { carregarCardAulaData(); }, [carregarCardAulaData]);
   useEffect(() => { carregarCardAulaData(); }, [indiceAtual]);
 
@@ -908,6 +931,7 @@ const Chamadas: React.FC = () => {
           eventos={eventos}
           cardAulaData={cardAulaData}
           turmaGrupoId={grupoId}
+          enrollmentPeriods={enrollmentPeriods}
           onTogglePresenca={handleTogglePresenca}
           onUpdateAnotacao={handleUpdateAnotacao}
           onDateHeaderClick={handleDateHeaderClick}
