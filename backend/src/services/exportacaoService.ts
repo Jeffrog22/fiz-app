@@ -93,7 +93,8 @@ export async function gerarFrequenciaXLSX(
   const { data: alunos, error: alunosError } = await supabase
     .from('alunos')
     .select('*')
-    .eq('tenant_id', tenantId);
+    .eq('tenant_id', tenantId)
+    .range(0, 1000000);
 
   if (alunosError) throw new AppError('Erro ao buscar alunos', 500);
 
@@ -108,14 +109,16 @@ export async function gerarFrequenciaXLSX(
     .select('*')
     .eq('tenant_id', tenantId)
     .gte('data', dataInicio)
-    .lte('data', dataFim);
+    .lte('data', dataFim)
+    .range(0, 1000000);
 
   if (logsError) throw new AppError('Erro ao buscar chamadas', 500);
 
   const { data: anotacoes, error: anotacoesError } = await supabase
     .from('anotacoes_alunos')
     .select('*')
-    .eq('tenant_id', tenantId);
+    .eq('tenant_id', tenantId)
+    .range(0, 1000000);
 
   if (anotacoesError) throw new AppError('Erro ao buscar anotações', 500);
 
@@ -124,14 +127,16 @@ export async function gerarFrequenciaXLSX(
     .select('data, tipo')
     .eq('tenant_id', tenantId)
     .gte('data', dataInicio)
-    .lte('data', dataFim);
+    .lte('data', dataFim)
+    .range(0, 1000000);
 
   if (eventosError) throw new AppError('Erro ao buscar eventos', 500);
 
   const { data: enrollments } = await supabase
     .from('enrollment_period')
     .select('aluno_id, turma_id, data_inicio, data_fim')
-    .eq('tenant_id', tenantId);
+    .eq('tenant_id', tenantId)
+    .range(0, 1000000);
 
   const enrollmentGrupos = new Map<string, Set<string>>();
   const alunoPeriodosPorData = new Map<string, Map<string, string>>(); // aluno_id -> (dataStr -> grupo_id)
@@ -159,7 +164,8 @@ export async function gerarFrequenciaXLSX(
     .select('data, temperatura_piscina, temperatura_externa, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido')
     .eq('tenant_id', tenantId)
     .gte('data', dataInicio)
-    .lte('data', dataFim);
+    .lte('data', dataFim)
+    .range(0, 1000000);
   if (cardAulaError && !cardAulaError.message?.includes('relation') && !cardAulaError.message?.includes('does not exist')) {
     throw new AppError('Erro ao buscar card_aula', 500);
   }
