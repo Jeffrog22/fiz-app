@@ -44,8 +44,22 @@ const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'availabl
 const [updateMsg, setUpdateMsg] = useState<string | null>(null);
 const [resetando, setResetando] = useState(false);
 
+const [climaLogs, setClimaLogs] = useState<Array<{
+  id: string;
+  tentativas: number;
+  duracao_total_ms: number;
+  sucesso: boolean;
+  cache_hit: boolean;
+  erro: string | null;
+  temperatura: number | null;
+  weather_code: number | null;
+  criado_em: string;
+}>>([]);
+const [climaLogsLoading, setClimaLogsLoading] = useState(false);
+const [climaLogsAutoRefresh, setClimaLogsAutoRefresh] = useState(false);
+
 const navigate = useNavigate();
-const { logout } = useAuth();
+const { logout, isAdmin } = useAuth();
 const { tenantId } = useTenant();
 const { enabled: devEnabled } = useDevLog();
 
@@ -73,6 +87,26 @@ const { enabled: devEnabled } = useDevLog();
       setSubsLoading(false);
     }
   };
+
+  const carregarClimaLogs = useCallback(async () => {
+    setClimaLogsLoading(true);
+    try {
+      const res = await api.get('/chamadas/clima/logs', { params: { limit: 100 } });
+      setClimaLogs(res.data?.logs || []);
+    } catch {
+      setClimaLogs([]);
+    } finally {
+      setClimaLogsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isAdmin && climaLogsAutoRefresh) {
+      carregarClimaLogs();
+      const interval = setInterval(carregarClimaLogs, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isAdmin, climaLogsAutoRefresh, carregarClimaLogs]);
 
   const handleToggleNotif = async () => {
     try {
@@ -666,7 +700,7 @@ const { enabled: devEnabled } = useDevLog();
             </p>
           )}
 
-          {devEnabled && (
+{devEnabled && (
             <div className="mt-6 pt-6 border-t-2 border-red-300 dark:border-red-700">
               <div className="flex items-center gap-3 mb-3">
                 <span className="text-2xl">💀</span>
@@ -686,6 +720,109 @@ const { enabled: devEnabled } = useDevLog();
             </div>
           )}
         </div>
+
+        {/* Logs de Clima (Admin only) */}
+        {isAdmin && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-black/20 p-6 md:col-span-2">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">📊</span>
+              <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Logs de Clima</h2>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              Diagnóstico de tentativas, latência e falhas da API Open-Meteo. Cache: 2h.
+            </p>
+
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <button
+                onClick={carregarClimaLogs}
+                disabled={climaLogsLoading}
+                className="px-3 py-1.5 text-xs bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors disabled:opacity-50"
+              >
+                {climaLogsLoading ? 'Carregando...' : 'Atualizar'}
+              </button>
+              <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={climaLogsAutoRefresh}
+                  onChange={(e) => setClimaLogsAutoRefresh(e.target.checked)}
+                  className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                />
+                Auto-refresh (30s)
+              </label>
+            </div>
+
+            {climaLogs.length === 0 && !climaLogsLoading && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
+                Nenhum log de clima encontrado.
+              </p>
+            )}
+
+            {climaLogs.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs font-medium text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                      <th className="pb-2 pr-4">Data/Hora</th>
+                      <th className="pb-2 pr-4 text-center">Tentativas</th>
+                      <th className="pb-2 pr-4 text-center">Duração (ms)</th>
+                      <th className="pb-2 pr-4 text-center">Status</th>
+                      <th className="pb-2 pr-4 text-center">Cache</th>
+                      <th className="pb-2 pr-4 text-center">Temp (°C)</th>
+                      <th className="pb-2 pr-4 text-center">Código</th>
+                      <th className="pb-2 pr-4">Erro</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {climaLogs.map((log) => (
+                      <tr key={log.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td className="py-2 pr-4 font-mono text-xs">
+                          {new Date(log.criado_em).toLocaleString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                          })}
+                        </td>
+                        <td className="py-2 pr-4 text-center">{log.tentativas}</td>
+                        <td className="py-2 pr-4 text-center font-mono">{log.duracao_total_ms}</td>
+                        <td className="py-2 pr-4 text-center">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                            log.sucesso
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                          }`}>
+                            {log.sucesso ? '✅ OK' : '❌ Falhou'}
+                          </span>
+                        </td>
+                        <td className="py-2 pr-4 text-center">
+                          {log.cache_hit ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                              ✅ Hit
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400">
+                              ❌ Miss
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2 pr-4 text-center">
+                          {log.temperatura != null ? `${log.temperatura.toFixed(1)}°C` : '—'}
+                        </td>
+                        <td className="py-2 pr-4 text-center">
+                          {log.weather_code != null ? log.weather_code : '—'}
+                        </td>
+                        <td className="py-2 pr-4 text-red-500 dark:text-red-400 truncate max-w-xs">
+                          {log.erro || '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <NotificationSettings

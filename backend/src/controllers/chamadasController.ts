@@ -4,6 +4,7 @@ import { supabase } from '../services/supabaseClient';
 import * as chamadasService from '../services/chamadasService';
 import * as cardAulaService from '../services/cardAulaService';
 import * as extrapolarService from '../services/extrapolarService';
+import { AppError } from '../middleware/errorHandler';
 
 export class ChamadasController {
   static async listarPorData(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
@@ -188,9 +189,10 @@ export class ChamadasController {
     }
   }
 
-  static async obterClima(_req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
+  static async obterClima(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const result = await chamadasService.obterClima();
+      const tenantId = req.tenantId!;
+      const result = await chamadasService.obterClima(tenantId);
       res.json(result);
     } catch (error) {
       next(error);
@@ -203,6 +205,35 @@ export class ChamadasController {
       const limit = parseInt(req.query.limit as string) || 50;
       const result = await chamadasService.obterLogsAcesso(tenantId, limit);
       res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async obterLogsClima(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const tenantId = req.tenantId!;
+      const isAdmin = req.professorId === 'admin';
+      const adminKey = req.headers['x-admin-key'] as string | undefined;
+      const validAdminKey = process.env.ADMIN_KEY && adminKey === process.env.ADMIN_KEY;
+
+      if (!isAdmin && !validAdminKey) {
+        res.status(403).json({ error: 'Acesso negado: requer permissão de admin' });
+        return;
+      }
+
+      const limit = parseInt(req.query.limit as string) || 100;
+
+      const { data: logs, error } = await supabase
+        .from('logs_clima')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('criado_em', { ascending: false })
+        .limit(limit);
+
+      if (error) throw new AppError('Erro ao buscar logs de clima', 500);
+
+      res.json({ logs: logs || [] });
     } catch (error) {
       next(error);
     }

@@ -12,6 +12,7 @@ router.get('/periodo', ChamadasController.listarPorPeriodo);
 router.get('/card-aula/daily/:data', ChamadasController.obterCardAula);
 router.get('/card-aula/:data', ChamadasController.obterCardAulaLegado);
 router.get('/logs-acesso', ChamadasController.obterLogsAcesso);
+router.get('/clima/logs', ChamadasController.obterLogsClima);
 router.get('/:data', ChamadasController.listarPorData);
 
 router.post('/', ChamadasController.salvar);

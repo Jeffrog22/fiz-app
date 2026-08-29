@@ -485,8 +485,8 @@ const condicoes: Record<number, string> = {
   95: 'tempestade', 96: 'tempestade com granizo', 99: 'tempestade com granizo',
 };
 
-export async function obterClima(): Promise<any> {
-  const data = await fetchWeather();
+export async function obterClima(tenantId: string): Promise<any> {
+  const data = await fetchWeather(tenantId);
 
   if (!data.ok || !data.raw) {
     return {
