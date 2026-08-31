@@ -138,7 +138,7 @@ export async function gerarFrequenciaXLSX(
 
   const { data: enrollments } = await supabase
     .from('enrollment_period')
-    .select('aluno_id, turma_id, data_inicio, data_fim')
+    .select('aluno_id, turma_id, data_inicio, data_fim, motivo')
     .eq('tenant_id', tenantId)
     .lte('data_inicio', dataFim)
     .or('data_fim.is.null,data_fim.gte.' + dataInicio)
@@ -147,7 +147,7 @@ export async function gerarFrequenciaXLSX(
   console.log('[EXPORT] enrollments encontrados=' + (enrollments ? enrollments.length : 0));
 
   const enrollmentGrupos = new Map<string, Set<string>>();
-  const alunoIntervalos = new Map<string, Array<{ inicio: string; fim: string; turma_id: string }>>();
+  const alunoIntervalos = new Map<string, Array<{ inicio: string; fim: string; turma_id: string; motivo?: string }>>();
   for (const ep of enrollments || []) {
     if (!ep.turma_id) continue;
     if (!enrollmentGrupos.has(ep.aluno_id)) enrollmentGrupos.set(ep.aluno_id, new Set());
@@ -157,6 +157,7 @@ export async function gerarFrequenciaXLSX(
       inicio: ep.data_inicio,
       fim: ep.data_fim || '9999-12-31',
       turma_id: ep.turma_id,
+      motivo: ep.motivo,
     });
   }
 
@@ -427,7 +428,22 @@ export async function gerarFrequenciaXLSX(
         }
 
         const anotCol = sheet.getCell(rowNum, 6 + diasLetivos.length);
-        anotCol.value = [...anotacoesMes, ...justifLinhas].join('|');
+        let motivoSistema = '';
+        const ivsAluno = alunoIntervalos.get(aluno.id) || [];
+        for (const iv of ivsAluno) {
+          if (iv.turma_id !== grupoId || iv.fim === '9999-12-31') continue;
+          if (iv.fim < dataInicio || iv.fim > dataFim) continue;
+          if (iv.motivo === 'exclusao') { motivoSistema = 'Exclusão'; break; }
+          const destino = ivsAluno.find(
+            p => p.turma_id !== grupoId && p.inicio === iv.fim && p.motivo === 'transferencia'
+          );
+          if (destino) { motivoSistema = 'Transferência'; break; }
+        }
+        if (motivoSistema) {
+          anotCol.value = motivoSistema;
+        } else {
+          anotCol.value = [...anotacoesMes, ...justifLinhas].join('|');
+        }
         anotCol.style = { font: { size: 8, italic: true }, alignment: { vertical: 'middle' } };
       });
 
