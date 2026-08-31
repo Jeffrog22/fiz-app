@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-08-26 — fix alunos excluídos/transferidos no export freq → v2.69.3 -->
+<!-- última-sessão: 2026-08-31 — Exclusão/Transferência no export freq → v2.72.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -2134,3 +2134,56 @@ Regras:
 - Frontend: 0 erros (`npm run build` limpo)
 - Testes: 41/41 passam
 
+---
+
+## Sessão: 31/08/2026 — Fix 502 Bad Gateway export freq + Comprimir motivos + Remover linhas Observações → v2.71.3 / v2.71.4
+
+### O que foi feito
+
+**1. Fix 502 Bad Gateway (v2.71.3)**
+- **Bug**: exportação de frequência retornava 502 Bad Gateway no Render
+- **Causa raiz dupla**:
+  1. `alunoPeriodosPorData` iterava dia-a-dia de `data_inicio` até `data_fim`; com `data_fim=NULL` (matrícula ativa), fallback `9999-12-31` causava ~2.9M iterações síncronas por matrícula → OOM/proxy timeout
+  2. `.find()` O(N) em loops O(students × days) → blow-up quadrático
+- **Fix**:
+  - Substituído loop dia-a-dia por interval-based lookup (comparação de strings YYYY-MM-DD, sem iteração)
+  - Query `enrollment_period` filtrada por sobreposição com período do relatório (`lte data_inicio, or data_fim.is.null`)
+  - Pré-indexação de logs, eventos, anotações e justificativas em Maps (elimina `.find()`)
+  - Removido `exportacaoRoutes.ts` (dead code, nunca importado)
+
+**2. Remover linhas Observações + comprimir motivos (v2.71.4)**
+- Removidas 5 linhas vazias com borda abaixo do header "Observações"
+- Justificativas agrupadas por motivo: dias repetidos comprimidos (ex: `4,13-Questão de saúde|6-Atestado`)
+
+### Arquivos
+- `backend/src/services/exportacaoService.ts` (interval lookup, pre-index, remove linhas, comprime motivos)
+- `backend/src/routes/exportacaoRoutes.ts` (deletado — dead code)
+- `CHANGELOG.md` (v2.71.3, v2.71.4)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Backend: 0 erros (`tsc --noEmit`)
+- Testes: 43/43 passam
+
+---
+
+## Sessão: 31/08/2026 — Exclusão/Transferência na coluna Anotações do export freq → v2.72.0
+
+### O que foi feito
+- **Feature**: coluna Anotações agora mostra `Exclusão` ou `Transferência` quando o aluno foi removido ou transferido durante o mês do relatório
+- **Detecção**:
+  - `motivo` adicionado à query de `enrollment_period` (antes só buscava `aluno_id, turma_id, data_inicio, data_fim`)
+  - `motivo` incluído no objeto de intervalo (`alunoIntervalos`)
+  - Detecção inline no ponto de montagem da Anotações:
+    - Periodo fechado (`fim !== '9999-12-31'`) com `data_fim` no mês + `motivo === 'exclusao'` → `Exclusão`
+    - Periodo fechado + periodo novo em outro grupo com `motivo === 'transferencia'` → `Transferência`
+  - Quando detectado, suprime anotações e justificativas do aluno (decisão do usuário: "não importam para o relatório")
+
+### Arquivos
+- `backend/src/services/exportacaoService.ts` (+motivo query, +motivo intervalo, +detecção inline, +lógica Anotações)
+- `CHANGELOG.md` (v2.72.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Backend: 0 erros (`tsc --noEmit`)
+- Testes: 43/43 passam

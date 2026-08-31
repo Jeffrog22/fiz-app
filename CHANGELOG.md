@@ -1,5 +1,27 @@
 # Changelog - Fiz! App
 
+## [v2.72.0] - 2026-08-31
+### Feat
+- **Export Frequência: "Exclusão" / "Transferência" na coluna Anotações**
+  - Query `enrollment_period` agora busca campo `motivo`
+  - Quando aluno foi excluído (`motivo='exclusao'`) ou transferido (periodo fechado + novo periodo em outro grupo com `motivo='transferencia'`), coluna Anotações mostra `Exclusão` ou `Transferência`, suprimindo anotações e justificativas
+
+## [v2.71.4] - 2026-08-31
+### Fix
+- **Export Frequência: linhas pré-dispostas abaixo de Observações removidas**
+  - Removidas 5 linhas vazias com borda abaixo do header "Observações"
+- **Export Frequência: motivos repetidos comprimidos na coluna Anotações**
+  - Justificativas agrupadas por motivo: dias repetidos comprimidos (ex: `4,13-Questão de saúde|6-Atestado` em vez de `4-Questão de saúde|6-Atestado|13-Questão de saúde`)
+
+## [v2.71.3] - 2026-08-31
+### Fix
+- **502 Bad Gateway na exportação frequência** — OOM/explosão O(N²)
+  - Causa raiz: `alunoPeriodosPorData` iterava dia-a-dia de `data_inicio` até `data_fim`; com `data_fim=NULL` (matrícula ativa), fallback `9999-12-31` causava ~2.9M iterações síncronas por matrícula → OOM/proxy timeout
+  - Substituído loop dia-a-dia por interval-based lookup (comparação de strings YYYY-MM-DD, sem iteração)
+  - Query `enrollment_period` filtrada por sobreposição com período do relatório
+  - Pré-indexação de logs, eventos, anotações e justificativas em Maps (elimina `.find()` O(N) em loops O(students × days))
+  - Removido `exportacaoRoutes.ts` (dead code, nunca importado)
+
 ## [v2.69.3] - 2026-08-26
 ### Fix
 - **Export Frequência: alunos excluídos e transferidos agora aparecem no relatório**
