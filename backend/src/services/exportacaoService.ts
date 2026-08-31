@@ -405,17 +405,25 @@ export async function gerarFrequenciaXLSX(
 
         const anotacoesMes = anotacoesByAluno.get(aluno.id) || [];
 
-        const justifDedup = new Set<string>();
-        const justifLinhas: string[] = [];
+        const justifDedup = new Map<string, ChamadaLog>();
         const justifsAluno = [
           ...(justifsByGrupo.get(aluno.id) || []),
           ...(aluno.turma_id ? justifsByGrupo.get(aluno.turma_id) || [] : []),
         ].sort((a: ChamadaLog, b: ChamadaLog) => a.data.localeCompare(b.data));
         for (const j of justifsAluno) {
-          if (justifDedup.has(j.data)) continue;
-          justifDedup.add(j.data);
+          if (!justifDedup.has(j.data)) justifDedup.set(j.data, j);
+        }
+
+        const motivosMap = new Map<string, number[]>();
+        for (const j of justifDedup.values()) {
           const dia = parseInt(j.data.slice(8, 10), 10);
-          justifLinhas.push(j.motivo ? `${dia}-${j.motivo}` : `${dia}`);
+          const motivo = j.motivo || '';
+          if (!motivosMap.has(motivo)) motivosMap.set(motivo, []);
+          motivosMap.get(motivo)!.push(dia);
+        }
+        const justifLinhas: string[] = [];
+        for (const [motivo, dias] of motivosMap) {
+          justifLinhas.push(motivo ? `${dias.join(',')}-${motivo}` : dias.join(','));
         }
 
         const anotCol = sheet.getCell(rowNum, 6 + diasLetivos.length);
@@ -502,10 +510,6 @@ export async function gerarFrequenciaXLSX(
       obsHeader.style = obsHeaderStyle;
       for (let c = 2; c <= ultimaColGrupo1; c++) {
         sheet.getCell(obsHeaderRow, c).style = obsHeaderStyle;
-      }
-      for (let i = 0; i < 5; i++) {
-        sheet.getRow(obsHeaderRow + 1 + i).height = 15;
-        sheet.getCell(obsHeaderRow + 1 + i, 1).border = { top: { style: 'thin', color: { argb: 'FFD9D9D9' } }, bottom: { style: 'thin', color: { argb: 'FFD9D9D9' } } };
       }
     }
   }
