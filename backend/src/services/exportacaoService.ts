@@ -140,28 +140,52 @@ export async function gerarFrequenciaXLSX(
     .from('enrollment_period')
     .select('aluno_id, turma_id, data_inicio, data_fim')
     .eq('tenant_id', tenantId)
+    .lte('data_inicio', dataFim)
+    .or('data_fim.is.null,data_fim.gte.' + dataInicio)
     .range(0, 1000000);
 
   console.log('[EXPORT] enrollments encontrados=' + (enrollments ? enrollments.length : 0));
 
   const enrollmentGrupos = new Map<string, Set<string>>();
-  const alunoPeriodosPorData = new Map<string, Map<string, string>>(); // aluno_id -> (dataStr -> grupo_id)
+  const alunoIntervalos = new Map<string, Array<{ inicio: string; fim: string; turma_id: string }>>();
   for (const ep of enrollments || []) {
     if (!ep.turma_id) continue;
-    const inicio = ep.data_inicio;
-    const fim = ep.data_fim || '9999-12-31';
-    if (fim < dataInicio || inicio > dataFim) continue;
     if (!enrollmentGrupos.has(ep.aluno_id)) enrollmentGrupos.set(ep.aluno_id, new Set());
     enrollmentGrupos.get(ep.aluno_id)!.add(ep.turma_id);
+    if (!alunoIntervalos.has(ep.aluno_id)) alunoIntervalos.set(ep.aluno_id, []);
+    alunoIntervalos.get(ep.aluno_id)!.push({
+      inicio: ep.data_inicio,
+      fim: ep.data_fim || '9999-12-31',
+      turma_id: ep.turma_id,
+    });
+  }
 
-    // Mapear cada dia do período para o grupo_id
-    const dataIni = new Date(inicio + 'T12:00:00');
-    const dataFimDt = new Date(fim + 'T12:00:00');
-    for (let d = new Date(dataIni); d <= dataFimDt; d.setDate(d.getDate() + 1)) {
-      const dataStr = d.toISOString().split('T')[0];
-      if (!alunoPeriodosPorData.has(ep.aluno_id)) alunoPeriodosPorData.set(ep.aluno_id, new Map());
-      alunoPeriodosPorData.get(ep.aluno_id)!.set(dataStr, ep.turma_id);
-    }
+  // Pre-index logs by "data|grupo_id" for O(1) lookup
+  const logsByDataGrupo = new Map<string, ChamadaLog>();
+  for (const l of logs || []) {
+    const key = `${l.data}|${l.grupo_id}`;
+    if (!logsByDataGrupo.has(key)) logsByDataGrupo.set(key, l);
+  }
+
+  // Pre-index eventos by data
+  const eventosByData = new Map<string, any>();
+  for (const e of eventos || []) eventosByData.set(e.data, e);
+
+  // Pre-index anotações by aluno_id (only current month)
+  const anotacoesByAluno = new Map<string, string[]>();
+  for (const a of anotacoes || []) {
+    const d = new Date(a.criado_em);
+    if (isNaN(d.getTime()) || d.getFullYear() !== ano || d.getMonth() !== mes - 1) continue;
+    if (!anotacoesByAluno.has(a.aluno_id)) anotacoesByAluno.set(a.aluno_id, []);
+    anotacoesByAluno.get(a.aluno_id)!.push(a.anotacao);
+  }
+
+  // Pre-index justificativas by grupo_id
+  const justifsByGrupo = new Map<string, ChamadaLog[]>();
+  for (const l of logs || []) {
+    if (l.status !== 'justificado' || l.origem !== 'manual') continue;
+    if (!justifsByGrupo.has(l.grupo_id)) justifsByGrupo.set(l.grupo_id, []);
+    justifsByGrupo.get(l.grupo_id)!.push(l);
   }
 
   let cardAulaMap = new Map<string, any>();
@@ -182,10 +206,16 @@ export async function gerarFrequenciaXLSX(
     }
   }
 
+  // Pre-index climate logs by data (for climaDoDia fallback)
+  const climaLogByData = new Map<string, ChamadaLog>();
+  for (const l of logs || []) {
+    if (l.condicao_clima != null && !climaLogByData.has(l.data)) climaLogByData.set(l.data, l);
+  }
+
   const climaDoDia = (dataStr: string): any => {
     const ca = cardAulaMap.get(dataStr);
     if (ca) return ca;
-    const log = (logs || []).find((l: ChamadaLog) => l.data === dataStr && l.condicao_clima != null);
+    const log = climaLogByData.get(dataStr);
     if (log) {
       const l = log as any;
       return {
@@ -340,11 +370,11 @@ export async function gerarFrequenciaXLSX(
           cell.alignment = { horizontal: 'center', vertical: 'middle' };
 
           // Verificar se aluno estava neste grupo nesta data (via enrollment_period)
-          const periodosAluno = alunoPeriodosPorData.get(aluno.id);
-          const grupoValidoNaData = periodosAluno?.get(dataStr);
-          const foraDoPeriodo = grupoValidoNaData && grupoValidoNaData !== grupoId;
+          const intervalosAluno = alunoIntervalos.get(aluno.id);
+          const epNaData = intervalosAluno?.find(ep => dataStr >= ep.inicio && dataStr <= ep.fim);
+          const foraDoPeriodo = epNaData && epNaData.turma_id !== grupoId;
 
-          const evento = (eventos || []).find((e: any) => e.data === dataStr);
+          const evento = eventosByData.get(dataStr);
           if (evento) {
             cell.value = '*';
             cell.font = { size: 9, color: { argb: 'FF999999' } };
@@ -354,15 +384,8 @@ export async function gerarFrequenciaXLSX(
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F0F0' } };
             cell.font = { size: 9, color: { argb: 'FFCCCCCC' } };
           } else {
-            const logsArr = logs || [];
-            let log = logsArr.find((l: ChamadaLog) =>
-              l.data === dataStr && l.grupo_id === aluno.id
-            );
-            if (!log) {
-              log = logsArr.find((l: ChamadaLog) =>
-                l.data === dataStr && l.grupo_id === aluno.turma_id
-              );
-            }
+            const log = logsByDataGrupo.get(`${dataStr}|${aluno.id}`)
+                      || logsByDataGrupo.get(`${dataStr}|${aluno.turma_id}`);
             if (log && log.status) {
               cell.value = STATUS_MAP[log.status] || '';
               if (cell.value === 'C') {
@@ -380,18 +403,15 @@ export async function gerarFrequenciaXLSX(
           }
         });
 
-        const anotacoesMes = (anotacoes || []).filter((a: any) => {
-          if (a.aluno_id !== aluno.id) return false;
-          const d = new Date(a.criado_em);
-          return !isNaN(d.getTime()) && d.getFullYear() === ano && d.getMonth() === mes - 1;
-        }).map((a: any) => a.anotacao);
+        const anotacoesMes = anotacoesByAluno.get(aluno.id) || [];
 
         const justifDedup = new Set<string>();
         const justifLinhas: string[] = [];
-        const justifs = (logs || [])
-          .filter((l: ChamadaLog) => l.status === 'justificado' && l.origem === 'manual' && (l.grupo_id === aluno.id || l.grupo_id === aluno.turma_id))
-          .sort((a: ChamadaLog, b: ChamadaLog) => a.data.localeCompare(b.data));
-        for (const j of justifs) {
+        const justifsAluno = [
+          ...(justifsByGrupo.get(aluno.id) || []),
+          ...(aluno.turma_id ? justifsByGrupo.get(aluno.turma_id) || [] : []),
+        ].sort((a: ChamadaLog, b: ChamadaLog) => a.data.localeCompare(b.data));
+        for (const j of justifsAluno) {
           if (justifDedup.has(j.data)) continue;
           justifDedup.add(j.data);
           const dia = parseInt(j.data.slice(8, 10), 10);
@@ -425,7 +445,7 @@ export async function gerarFrequenciaXLSX(
         const row = sheet.getRow(rowNum);
         row.height = 15;
         const clima = climaDoDia(dataStr);
-        const evento = (eventos || []).find((e: any) => e.data === dataStr);
+        const evento = eventosByData.get(dataStr);
 
         const [y, m, d] = dataStr.split('-');
         const cellDia = sheet.getCell(rowNum, 1);
