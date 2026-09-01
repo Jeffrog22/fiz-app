@@ -722,19 +722,17 @@ export async function gerarVagasXLSX(tenantId: string): Promise<ExcelJS.Buffer> 
   sheet.getCell(`A${currentRow}`).style = { font: { size: 9, italic: true, color: { argb: 'FF666666' } } };
   currentRow++;
 
-  let totalCap = 0, totalAtivos = 0;
+  let totalCap = 0, totalAtivos = 0, totalVagas = 0, totalExcesso = 0;
   Object.values(gruposPorLabelHorario).forEach((horMap: any) => {
     Object.values(horMap).forEach((turmasArr: any) => {
-      turmasArr.forEach((t: any) => {
-        const cap = t.capacidade || 0;
-        const ocup = ocupacao[t.grupo_id || t.id] || 0;
-        totalCap += cap;
-        totalAtivos += ocup;
-      });
+      const cap = turmasArr.reduce((s: number, t: any) => s + (t.capacidade || 0), 0);
+      const ocup = turmasArr.reduce((s: number, t: any) => s + (ocupacao[t.grupo_id || t.id] || 0), 0);
+      totalCap += cap;
+      totalAtivos += ocup;
+      totalVagas += Math.max(0, cap - ocup);
+      totalExcesso += Math.max(0, ocup - cap);
     });
   });
-  const totalVagas = Math.max(0, totalCap - totalAtivos);
-  const totalExcesso = Math.max(0, totalAtivos - totalCap);
   sheet.getCell(`A${currentRow}`).value = `Totais: Lotação ${totalAtivos}/${totalCap} | Vagas ${totalVagas} | Excesso ${totalExcesso}`;
   sheet.getCell(`A${currentRow}`).style = totStyle;
   currentRow++;
