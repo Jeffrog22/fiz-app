@@ -437,7 +437,7 @@ export async function gerarFrequenciaXLSX(
           const destino = ivsAluno.find(
             p => p.turma_id !== grupoId && p.inicio === iv.fim && p.motivo === 'transferencia'
           );
-          if (destino) { motivoSistema = 'Transferência'; break; }
+          if (destino) { motivoSistema = 'Exclusão/Transferência'; break; }
         }
         if (motivoSistema) {
           anotCol.value = motivoSistema;
