@@ -1,5 +1,16 @@
 # Changelog - Fiz! App
 
+## [v2.73.0] - 2026-09-02
+### Feat
+- **Transferência entre Unidades: fila de intenção + importação de cadastro**
+  - Nova tabela `transferencia_unidade` com snapshot JSONB dos dados do aluno (nome, nascimento, gênero, contato, ParQ, atestado, turma origem)
+  - Backend: service, controller e routes para criar, criar em lote, listar enviadas/recebidas/histórico, aceitar e cancelar transferências
+  - Frontend: página Transferências com 3 abas — **Fila** (selecionar alunos + unidade destino), **Recebidas** (intenções de outras unidades), **Histórico** (processadas)
+  - Modal AceitarTransferenciaModal com cascata Professor→Turma (mesmo padrão do RestoreModal)
+  - Seleção múltipla de alunos na grade + dropdown de unidade destino
+  - Sidebar com link 🔀 Transferências + rota `/transferencias`
+  - Migration 028: `transferencia_unidade` com índices em `tenant_id` e `tenant_destino`, RLS desabilitado
+
 ## [v2.72.0] - 2026-08-31
 ### Feat
 - **Export Frequência: "Exclusão" / "Transferência" na coluna Anotações**

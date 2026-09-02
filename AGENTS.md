@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-08-31 — Exclusão/Transferência no export freq → v2.72.0 -->
+<!-- última-sessão: 2026-09-02 — Transferência entre unidades (fila de intenção) → v2.73.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -2164,6 +2164,54 @@ Regras:
 ### Typecheck
 - Backend: 0 erros (`tsc --noEmit`)
 - Testes: 43/43 passam
+
+---
+
+## Sessão: 02/09/2026 — Transferência entre Unidades (fila de intenção) → v2.73.0
+
+### O que foi feito
+- **Feature**: transferência de alunos entre unidades (unidade origem → unidade destino) via fila de intenção
+- **Migration 028**: tabela `transferencia_unidade` com:
+  - `tenant_id` (origem), `tenant_destino`, `aluno_id`, `dados_aluno` (JSONB snapshot), `turma_sugerida`, `nivel_sugerido`, `motivo`, `status` (pendente|aceita|cancelada), `criado_por`, `respondido_por`
+  - Índices em `(tenant_id, status)` e `(tenant_destino, status)`
+  - RLS desabilitado
+- **Backend**:
+  - `transferenciaService.ts`: criar (snapshot dos dados do aluno + turma origem), criarLote, listarEnviadas, listarRecebidas, listarHistorico, aceitar (cria aluno na destino + enrollment `transferencia_externa`), cancelar, contarPendentes
+  - `transferenciaController.ts`: 7 endpoints
+  - `transferenciaRoutes.ts`: rotas montadas em `/api/transferencias`
+  - `index.ts`: import + mount da rota
+- **Frontend**:
+  - `Transferencias.tsx`: página com 3 abas — **Fila** (grade de alunos com checkboxes + dropdown unidade destino + seção "Enviadas"), **Recebidas** (intenções pendentes de outras unidades), **Histórico** (processadas)
+  - `AceitarTransferenciaModal.tsx`: cascata Professor→Turma (padrão RestoreModal) + preview dos dados do aluno
+  - Sidebar: link 🔀 Transferências
+  - `App.tsx`: rota `/transferencias`
+- **Tipos**: `TransferenciaUnidade` adicionado em ambos `types/index.ts` (backend + frontend)
+- **Decisões**:
+  - UUID do aluno na destino é novo (Supabase gera) — dados copiados via snapshot JSONB
+  - Aluno na origem NÃO é excluído automaticamente — professor da origem decide quando
+  - Sem rejeição — intenção fica na fila até ser aceita
+  - Notificação só via UI (badge na sidebar), sem push
+  - Auth cross-tenant resolvido: origem cria com `tenant_id` própria, destino consulta por `tenant_destino`
+
+### Arquivos
+- `backend/src/migrations/028_create_transferencia_unidade.sql` (novo)
+- `backend/src/types/index.ts` (+TransferenciaUnidade)
+- `backend/src/services/transferenciaService.ts` (novo)
+- `backend/src/controllers/transferenciaController.ts` (novo)
+- `backend/src/routes/transferenciaRoutes.ts` (novo)
+- `backend/src/index.ts` (+import +mount rota)
+- `frontend/src/types/index.ts` (+TransferenciaUnidade)
+- `frontend/src/pages/Transferencias.tsx` (novo)
+- `frontend/src/components/modals/AceitarTransferenciaModal.tsx` (novo)
+- `frontend/src/components/common/Sidebar.tsx` (+link Transferências)
+- `frontend/src/App.tsx` (+rota /transferencias)
+- `CHANGELOG.md` (v2.73.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Backend: 0 erros (`tsc --noEmit`)
+- Testes: 54/54 frontend + 43/43 backend passam
 
 ---
 
