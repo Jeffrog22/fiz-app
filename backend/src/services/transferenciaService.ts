@@ -125,6 +125,17 @@ export async function listarRecebidas(tenantId: string): Promise<any[]> {
   return data || [];
 }
 
+export async function listarFilaGlobal(): Promise<any[]> {
+  const { data, error } = await supabase
+    .from('transferencia_unidade')
+    .select('*')
+    .eq('status', 'pendente')
+    .order('criado_em', { ascending: false });
+
+  if (error) throw new AppError('Erro ao buscar fila global de transferencias', 500);
+  return data || [];
+}
+
 export async function listarHistorico(tenantId: string): Promise<any[]> {
   const { data, error } = await supabase
     .from('transferencia_unidade')

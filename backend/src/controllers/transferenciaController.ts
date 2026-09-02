@@ -40,6 +40,13 @@ export class TransferenciaController {
     } catch (e) { next(e); }
   }
 
+  static async listarFila(req: TenantRequest, res: Response, next: NextFunction) {
+    try {
+      const result = await transferenciaService.listarFilaGlobal();
+      res.json(result);
+    } catch (e) { next(e); }
+  }
+
   static async listarHistorico(req: TenantRequest, res: Response, next: NextFunction) {
     try {
       const result = await transferenciaService.listarHistorico(req.tenantId!);
