@@ -1,5 +1,15 @@
 # Changelog - Fiz! App
 
+## [v2.73.1] - 2026-09-02
+### Fix
+- **Transferências: coluna Nível usa nivel do aluno diretamente**
+  - Removido `nivel_sugerido` (campo redundante) de todos os fluxos — display, backend service, controller e tipos
+  - Removido `turma_nivel` do JSONB `dados_aluno` (snapshot desnecessário)
+  - Fila e Recebidas agora exibem `alunoMap.get(aluno_id).nivel` (lookup direto do array de alunos)
+  - Modal Visualizar: nivel duplicado consolidado em uma única linha
+  - AceitarTransferenciaModal: removido "Nivel sugerido" — nivel vem da turma selecionada no destino
+  - Backend `aceitar()`: nivel agora usa apenas `nivel || null` (turma selecionada)
+
 ## [v2.73.0] - 2026-09-02
 ### Feat
 - **Transferência entre Unidades: fila de intenção + importação de cadastro**

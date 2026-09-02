@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-09-02 — Transferência entre unidades (fila de intenção) → v2.73.0 -->
+<!-- última-sessão: 2026-09-02 — Fix nível transferências + limpar nivel_sugerido → v2.73.1 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -2164,6 +2164,34 @@ Regras:
 ### Typecheck
 - Backend: 0 erros (`tsc --noEmit`)
 - Testes: 43/43 passam
+
+---
+
+## Sessão: 02/09/2026 — Fix nível transferências + limpar nivel_sugerido → v2.73.1
+
+### O que foi feito
+- **Bug**: coluna "Nível" nas abas Fila e Recebidas da página Transferências sempre mostrava `-`
+- **Causa raiz**: `nivel_sugerido` e `dados_aluno.turma_nivel` eram snapshots gravados na criação da transferência, mas frequentemente null (turma/aluno sem nivel). Enquanto isso, o array `alunos` já carregado tinha o `nivel` atualizado
+- **Fix**: coluna agora usa `alunoMap.get(aluno_id).nivel` (lookup direto do array de alunos, sem dependência de snapshot)
+- **Código morto removido**:
+  - `nivel_sugerido`: param de `criar()`, campo no insert, fallback em `aceitar()`, tipo backend/frontend, display no AceitarTransferenciaModal e no modal Visualizar
+  - `turma_nivel`: removido do `dadosAluno` JSONB em `criar()` e do tipo frontend
+  - Modal Visualizar: nivel duplicado (aparecia 2x) consolidado em uma única linha
+- **Backend `aceitar()`**: `nivel || transferencia.nivel_sugerido || null` → `nivel || null` (turma selecionada no destino é a fonte)
+
+### Arquivos
+- `frontend/src/pages/Transferencias.tsx` (+alunoMap, nivel via lookup direto, modal Visualizar limpo)
+- `frontend/src/components/modals/AceitarTransferenciaModal.tsx` (removido "Nivel sugerido" display + fallback)
+- `frontend/src/types/index.ts` (removido nivel_sugerido e turma_nivel)
+- `backend/src/services/transferenciaService.ts` (removido nivelSugerido param, turma_nivel do dadosAluno, nivel_sugerido do insert, fallback do aceitar)
+- `backend/src/controllers/transferenciaController.ts` (removido nivel_sugerido do destructuring)
+- `backend/src/types/index.ts` (removido nivel_sugerido)
+- `CHANGELOG.md` (v2.73.1)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Backend: 0 erros (`tsc --noEmit`)
 
 ---
 

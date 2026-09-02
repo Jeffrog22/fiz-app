@@ -336,7 +336,6 @@ export interface TransferenciaUnidade {
     turma_professor?: string;
   };
   turma_sugerida?: string;
-  nivel_sugerido?: string;
   motivo?: string;
   status: 'pendente' | 'aceita' | 'cancelada';
   criado_por: string;

@@ -9,7 +9,6 @@ export async function criar(
   alunoId: string,
   tenantDestino: string,
   turmaSugerida?: string,
-  nivelSugerido?: string,
   motivo?: string,
 ): Promise<any> {
   if (tenantDestino === tenantId) {
@@ -55,7 +54,6 @@ export async function criar(
     turma_label: turma?.label || null,
     turma_horario: turma?.horario || null,
     turma_professor: professor?.nome || null,
-    turma_nivel: turma?.nivel || null,
   };
 
   const { data, error } = await supabase
@@ -66,7 +64,6 @@ export async function criar(
       aluno_id: alunoId,
       dados_aluno: dadosAluno,
       turma_sugerida: turmaSugerida || aluno.turma_id || null,
-      nivel_sugerido: nivelSugerido || turma?.nivel || aluno.nivel || null,
       motivo: motivo || null,
       criado_por: professorId,
     })
@@ -93,7 +90,7 @@ export async function criarLote(
 
   for (const alunoId of alunoIds) {
     try {
-      await criar(tenantId, professorId, alunoId, tenantDestino, undefined, undefined, motivo);
+      await criar(tenantId, professorId, alunoId, tenantDestino, undefined, motivo);
       criadas++;
     } catch (err: any) {
       erros.push(`${alunoId}: ${err.message}`);
@@ -183,7 +180,7 @@ export async function aceitar(
       par_q_data: dados.par_q_data || null,
       atestado_medico: dados.atestado_medico ?? null,
       data_atestado: dados.data_atestado || null,
-      nivel: nivel || transferencia.nivel_sugerido || null,
+      nivel: nivel || null,
       turma_id: turmaId || null,
       categoria: categoria || null,
     })
@@ -198,7 +195,7 @@ export async function aceitar(
   await iniciarPeriodoService(
     novoAluno.id,
     turmaId || null,
-    nivel || transferencia.nivel_sugerido || null,
+    nivel || null,
     'transferencia_externa',
     tenantId,
   );

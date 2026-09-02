@@ -7,7 +7,7 @@ export class TransferenciaController {
     try {
       const tenantId = req.tenantId!;
       const professorId = req.professorId!;
-      const { aluno_id, tenant_destino, aluno_ids, turma_sugerida, nivel_sugerido, motivo } = req.body;
+      const { aluno_id, tenant_destino, aluno_ids, turma_sugerida, motivo } = req.body;
 
       if (aluno_ids && Array.isArray(aluno_ids)) {
         const result = await transferenciaService.criarLote(
@@ -17,7 +17,7 @@ export class TransferenciaController {
       } else if (aluno_id) {
         const result = await transferenciaService.criar(
           tenantId, professorId, aluno_id, tenant_destino,
-          turma_sugerida, nivel_sugerido, motivo,
+          turma_sugerida, motivo,
         );
         res.json({ criadas: 1, erros: [], transferencia: result });
       } else {

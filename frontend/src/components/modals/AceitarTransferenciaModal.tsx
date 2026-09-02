@@ -61,11 +61,6 @@ const AceitarTransferenciaModal: React.FC<Props> = ({ open, transferencia, turma
           <p className="text-xs text-gray-500 dark:text-gray-500">
             Origem: <strong>{getTenantNome(transferencia.tenant_id)}</strong>
           </p>
-          {transferencia.nivel_sugerido && (
-            <p className="text-xs text-gray-500 dark:text-gray-500">
-              Nivel sugerido: <strong>{transferencia.nivel_sugerido}</strong>
-            </p>
-          )}
           {transferencia.motivo && (
             <p className="text-xs text-gray-500 dark:text-gray-500">
               Motivo: {transferencia.motivo}
@@ -122,7 +117,7 @@ const AceitarTransferenciaModal: React.FC<Props> = ({ open, transferencia, turma
             Cancelar
           </button>
           <button
-            onClick={() => onAceitar(turmaId || undefined, turmaSelecionada?.nivel || transferencia.nivel_sugerido || undefined)}
+            onClick={() => onAceitar(turmaId || undefined, turmaSelecionada?.nivel || undefined)}
             className="text-sm px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
           >
             Aceitar e Cadastrar
