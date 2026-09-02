@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import api from '../utils/api';
 import type { VagasResponse, VagaHorario } from '../types';
+import Transferencias from './Transferencias';
 
 function nivelGroup(nivel: string): string {
   return nivel.replace(/ [AB]$/, '');
@@ -31,6 +32,7 @@ function BarraProgressoVaga({ ativos, capacidade, cor }: { ativos: number; capac
 }
 
 const Vagas: React.FC = () => {
+  const [aba, setAba] = useState<'vagas' | 'transferencias'>('vagas');
   const [data, setData] = useState<VagasResponse | null>(null);
   const [nivel, setNivel] = useState('');
   const [turmaLabel, setTurmaLabel] = useState('');
@@ -153,7 +155,33 @@ const Vagas: React.FC = () => {
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Vagas</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">Carregando...</p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setAba('vagas')}
+            className={`px-4 py-2 text-sm rounded-lg transition ${
+              aba === 'vagas'
+                ? 'bg-primary-600 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
+            }`}
+          >
+            Vagas
+          </button>
+          <button
+            onClick={() => setAba('transferencias')}
+            className={`px-4 py-2 text-sm rounded-lg transition ${
+              aba === 'transferencias'
+                ? 'bg-primary-600 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
+            }`}
+          >
+            Transferências
+          </button>
+        </div>
+        {aba === 'transferencias' ? (
+          <Transferencias />
+        ) : (
+          <p className="text-sm text-gray-500 dark:text-gray-400">Carregando...</p>
+        )}
       </div>
     );
   }
@@ -162,7 +190,34 @@ const Vagas: React.FC = () => {
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Vagas</h1>
 
-      <div className="flex gap-2 flex-wrap items-center">
+      <div className="flex gap-2">
+        <button
+          onClick={() => setAba('vagas')}
+          className={`px-4 py-2 text-sm rounded-lg transition ${
+            aba === 'vagas'
+              ? 'bg-primary-600 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
+          }`}
+        >
+          Vagas
+        </button>
+        <button
+          onClick={() => setAba('transferencias')}
+          className={`px-4 py-2 text-sm rounded-lg transition ${
+            aba === 'transferencias'
+              ? 'bg-primary-600 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
+          }`}
+        >
+          Transferências
+        </button>
+      </div>
+
+      {aba === 'transferencias' ? (
+        <Transferencias />
+      ) : (
+        <>
+          <div className="flex gap-2 flex-wrap items-center">
         <select
           value={nivel}
           onChange={handleNivelChange}
@@ -292,6 +347,8 @@ const Vagas: React.FC = () => {
           )}
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 };

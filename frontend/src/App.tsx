@@ -12,7 +12,6 @@ import Turmas from './pages/Turmas';
 import Chamadas from './pages/Chamadas';
 import Vagas from './pages/Vagas';
 import Exclusoes from './pages/Exclusoes';
-import Transferencias from './pages/Transferencias';
 import Calendario from './pages/Calendario';
 import Relatorios from './pages/Relatorios';
 import Configuracoes from './pages/Configuracoes';
@@ -101,7 +100,6 @@ const AppContent: React.FC = () => {
       <Route path="/chamadas" element={<ProtectedLayout><Chamadas /></ProtectedLayout>} />
       <Route path="/vagas" element={<ProtectedLayout><Vagas /></ProtectedLayout>} />
         <Route path="/exclusoes" element={<ProtectedLayout><Exclusoes /></ProtectedLayout>} />
-        <Route path="/transferencias" element={<ProtectedLayout><Transferencias /></ProtectedLayout>} />
         <Route path="/relatorios" element={<ProtectedLayout><Relatorios /></ProtectedLayout>} />
       <Route path="/calendario" element={<ProtectedLayout><Calendario /></ProtectedLayout>} />
       <Route path="/configuracoes" element={<ProtectedLayout><Configuracoes /></ProtectedLayout>} />
