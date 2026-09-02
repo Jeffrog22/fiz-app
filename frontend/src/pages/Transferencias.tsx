@@ -385,7 +385,7 @@ const Transferencias: React.FC = () => {
                               {t.dados_aluno.turma_professor || '-'}
                             </td>
                             <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                              {t.nivel_sugerido || '-'}
+                              {t.nivel_sugerido || t.dados_aluno.turma_nivel || '-'}
                             </td>
                             <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
                               {getTenantNome(t.tenant_id)}
@@ -473,7 +473,7 @@ const Transferencias: React.FC = () => {
                             {(t.dados_aluno.turma_horario || '').slice(0, 5) || '-'}
                           </td>
                           <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                            {t.nivel_sugerido || '-'}
+                            {t.nivel_sugerido || t.dados_aluno.turma_nivel || '-'}
                           </td>
                           <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
                             {formatDateBR(t.criado_em)}
@@ -591,15 +591,18 @@ const Transferencias: React.FC = () => {
                 {visualizarTarget.dados_aluno.turma_label && <span>Turma: {visualizarTarget.dados_aluno.turma_label}</span>}
                 {visualizarTarget.dados_aluno.turma_horario && <span>Horario: {visualizarTarget.dados_aluno.turma_horario}</span>}
                 {visualizarTarget.dados_aluno.turma_professor && <span>Professor: {visualizarTarget.dados_aluno.turma_professor}</span>}
+                {(visualizarTarget.nivel_sugerido || visualizarTarget.dados_aluno.turma_nivel) && (
+                  <span>Nivel: <strong>{visualizarTarget.nivel_sugerido || visualizarTarget.dados_aluno.turma_nivel}</strong></span>
+                )}
               </div>
               <div className="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-500">
                 <span>Origem: <strong>{getTenantNome(visualizarTarget.tenant_id)}</strong></span>
                 <span>→</span>
                 <span>Destino: <strong>{getTenantNome(visualizarTarget.tenant_destino)}</strong></span>
               </div>
-              {visualizarTarget.nivel_sugerido && (
+              {(visualizarTarget.nivel_sugerido || visualizarTarget.dados_aluno.turma_nivel) && (
                 <p className="text-xs text-gray-500 dark:text-gray-500">
-                  Nivel sugerido: <strong>{visualizarTarget.nivel_sugerido}</strong>
+                  Nivel: <strong>{visualizarTarget.nivel_sugerido || visualizarTarget.dados_aluno.turma_nivel}</strong>
                 </p>
               )}
               {visualizarTarget.motivo && (

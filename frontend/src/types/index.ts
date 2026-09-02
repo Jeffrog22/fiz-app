@@ -360,6 +360,7 @@ export interface TransferenciaUnidade {
     turma_label?: string;
     turma_horario?: string;
     turma_professor?: string;
+    turma_nivel?: string;
   };
   turma_sugerida?: string;
   nivel_sugerido?: string;

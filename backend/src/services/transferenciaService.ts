@@ -29,7 +29,7 @@ export async function criar(
 
   const { data: turma } = await supabase
     .from('turmas')
-    .select('label, horario, professor_id')
+    .select('label, horario, professor_id, nivel')
     .eq('tenant_id', tenantId)
     .eq('grupo_id', aluno.turma_id || '')
     .maybeSingle();
@@ -55,6 +55,7 @@ export async function criar(
     turma_label: turma?.label || null,
     turma_horario: turma?.horario || null,
     turma_professor: professor?.nome || null,
+    turma_nivel: turma?.nivel || null,
   };
 
   const { data, error } = await supabase
@@ -65,7 +66,7 @@ export async function criar(
       aluno_id: alunoId,
       dados_aluno: dadosAluno,
       turma_sugerida: turmaSugerida || aluno.turma_id || null,
-      nivel_sugerido: nivelSugerido || aluno.nivel || null,
+      nivel_sugerido: nivelSugerido || turma?.nivel || aluno.nivel || null,
       motivo: motivo || null,
       criado_por: professorId,
     })
