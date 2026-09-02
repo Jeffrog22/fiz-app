@@ -161,15 +161,15 @@ const Transferencias: React.FC = () => {
 
   const tabs: { key: Aba; label: string; count?: number }[] = [
     { key: 'alunos', label: 'Alunos' },
-    { key: 'fila', label: 'Fila Global', count: filaGlobal.length },
+    { key: 'fila', label: 'Fila', count: filaGlobal.length },
     { key: 'recebidas', label: 'Recebidas', count: recebidas.length },
-    { key: 'historico', label: 'Historico' },
+    { key: 'historico', label: 'Histórico' },
   ];
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
-        Transferencias entre Unidades
+        Transferências entre piscinas
       </h1>
 
       <div className="flex gap-2 flex-wrap">
