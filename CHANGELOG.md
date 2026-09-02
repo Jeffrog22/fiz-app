@@ -2,13 +2,15 @@
 
 ## [v2.73.1] - 2026-09-02
 ### Fix
-- **Transferências: coluna Nível usa nivel do aluno diretamente**
+- **Transferências: coluna Nível usa nivel do aluno + snapshot para cross-tenant**
   - Removido `nivel_sugerido` (campo redundante) de todos os fluxos — display, backend service, controller e tipos
-  - Removido `turma_nivel` do JSONB `dados_aluno` (snapshot desnecessário)
-  - Fila e Recebidas agora exibem `alunoMap.get(aluno_id).nivel` (lookup direto do array de alunos)
-  - Modal Visualizar: nivel duplicado consolidado em uma única linha
+  - Removido `turma_nivel` do JSONB `dados_aluno` — substituído por `nivel` (mais limpo)
+  - Re-adicionado `nivel` ao snapshot `dados_aluno` (exibição read-only para transferências cross-tenant)
+  - Fila e Recebidas: `alunoMap.get(aluno_id).nivel || dados_aluno.nivel` (lookup direto + fallback snapshot)
+  - Modal Visualizar: nivel duplicado consolidado em uma única linha com mesmo fallback
   - AceitarTransferenciaModal: removido "Nivel sugerido" — nivel vem da turma selecionada no destino
-  - Backend `aceitar()`: nivel agora usa apenas `nivel || null` (turma selecionada)
+  - Backend `aceitar()`: nivel agora usa apenas `nivel || null` (turma selecionada é a fonte)
+  - Investigação contato: código está correto (capturado no snapshot + inserido no aceitar). Grid de Alunos não exibe coluna Contato — dado salvo mas não visível no grid (visível no AlunoModal)
 
 ## [v2.73.0] - 2026-09-02
 ### Feat

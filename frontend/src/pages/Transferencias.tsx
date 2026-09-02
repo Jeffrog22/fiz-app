@@ -386,7 +386,7 @@ const Transferencias: React.FC = () => {
                               {t.dados_aluno.turma_professor || '-'}
                             </td>
                             <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                              {alunoMap.get(t.aluno_id)?.nivel || '-'}
+                              {alunoMap.get(t.aluno_id)?.nivel || t.dados_aluno.nivel || '-'}
                             </td>
                             <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
                               {getTenantNome(t.tenant_id)}
@@ -474,7 +474,7 @@ const Transferencias: React.FC = () => {
                             {(t.dados_aluno.turma_horario || '').slice(0, 5) || '-'}
                           </td>
                             <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                              {alunoMap.get(t.aluno_id)?.nivel || '-'}
+                              {alunoMap.get(t.aluno_id)?.nivel || t.dados_aluno.nivel || '-'}
                             </td>
                             <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
                               {formatDateBR(t.criado_em)}
@@ -592,7 +592,9 @@ const Transferencias: React.FC = () => {
                 {visualizarTarget.dados_aluno.turma_label && <span>Turma: {visualizarTarget.dados_aluno.turma_label}</span>}
                 {visualizarTarget.dados_aluno.turma_horario && <span>Horario: {visualizarTarget.dados_aluno.turma_horario}</span>}
                 {visualizarTarget.dados_aluno.turma_professor && <span>Professor: {visualizarTarget.dados_aluno.turma_professor}</span>}
-                {alunoMap.get(visualizarTarget.aluno_id)?.nivel && <span>Nivel: <strong>{alunoMap.get(visualizarTarget.aluno_id)!.nivel}</strong></span>}
+                {(alunoMap.get(visualizarTarget.aluno_id)?.nivel || visualizarTarget.dados_aluno.nivel) && (
+                  <span>Nivel: <strong>{alunoMap.get(visualizarTarget.aluno_id)?.nivel || visualizarTarget.dados_aluno.nivel}</strong></span>
+                )}
               </div>
               <div className="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-500">
                 <span>Origem: <strong>{getTenantNome(visualizarTarget.tenant_id)}</strong></span>

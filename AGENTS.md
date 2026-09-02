@@ -2171,21 +2171,25 @@ Regras:
 
 ### O que foi feito
 - **Bug**: coluna "Nível" nas abas Fila e Recebidas da página Transferências sempre mostrava `-`
-- **Causa raiz**: `nivel_sugerido` e `dados_aluno.turma_nivel` eram snapshots gravados na criação da transferência, mas frequentemente null (turma/aluno sem nivel). Enquanto isso, o array `alunos` já carregado tinha o `nivel` atualizado
-- **Fix**: coluna agora usa `alunoMap.get(aluno_id).nivel` (lookup direto do array de alunos, sem dependência de snapshot)
-- **Código morto removido**:
-  - `nivel_sugerido`: param de `criar()`, campo no insert, fallback em `aceitar()`, tipo backend/frontend, display no AceitarTransferenciaModal e no modal Visualizar
-  - `turma_nivel`: removido do `dadosAluno` JSONB em `criar()` e do tipo frontend
-  - Modal Visualizar: nivel duplicado (aparecia 2x) consolidado em uma única linha
+- **Causa raiz dupla**:
+  1. `nivel_sugerido` e `dados_aluno.turma_nivel` eram snapshots gravados na criação da transferência, mas frequentemente null (turma/aluno sem nivel). Enquanto isso, o array `alunos` já carregado tinha o `nivel` atualizado
+  2. Após v2.73.0 (remoção de `nivel_sugerido`), aba Recebidas ficou sem fallback — `alunoMap` só tem alunos da unidade atual, não cross-tenant
+- **Fix**:
+  - Removido `nivel_sugerido` (param de `criar()`, campo no insert, fallback em `aceitar()`, tipo backend/frontend, display no AceitarTransferenciaModal e no modal Visualizar)
+  - Removido `turma_nivel` do JSONB `dadosAluno` — substituído por `nivel` (nome mais limpo)
+  - Re-adicionado `nivel` ao snapshot `dados_aluno` como campo read-only para exibição cross-tenant
+  - Fila/Recebidas: `alunoMap.get(aluno_id).nivel || dados_aluno.nivel || '-'` (lookup direto + fallback snapshot)
+  - Modal Visualizar: nivel duplicado (aparecia 2x) consolidado em uma única linha com mesmo fallback
 - **Backend `aceitar()`**: `nivel || transferencia.nivel_sugerido || null` → `nivel || null` (turma selecionada no destino é a fonte)
+- **Investigação contato**: código está correto — `contato` é capturado no snapshot (`criar()`) e inserido no `aceitar()`. Grid de Alunos não exibe coluna Contato (visível apenas no AlunoModal)
 
 ### Arquivos
-- `frontend/src/pages/Transferencias.tsx` (+alunoMap, nivel via lookup direto, modal Visualizar limpo)
+- `frontend/src/pages/Transferencias.tsx` (+alunoMap, nivel via lookup direto + fallback dados_aluno.nivel, modal Visualizar limpo)
 - `frontend/src/components/modals/AceitarTransferenciaModal.tsx` (removido "Nivel sugerido" display + fallback)
-- `frontend/src/types/index.ts` (removido nivel_sugerido e turma_nivel)
-- `backend/src/services/transferenciaService.ts` (removido nivelSugerido param, turma_nivel do dadosAluno, nivel_sugerido do insert, fallback do aceitar)
+- `frontend/src/types/index.ts` (removido nivel_sugerido/turma_nivel, adicionado nivel no dados_aluno)
+- `backend/src/services/transferenciaService.ts` (removido nivelSugerido param, nivel no dadosAluno como read-only, fallback do aceitar)
 - `backend/src/controllers/transferenciaController.ts` (removido nivel_sugerido do destructuring)
-- `backend/src/types/index.ts` (removido nivel_sugerido)
+- `backend/src/types/index.ts` (removido nivel_sugerido, adicionado nivel no dados_aluno)
 - `CHANGELOG.md` (v2.73.1)
 - `AGENTS.md` (esta sessão)
 

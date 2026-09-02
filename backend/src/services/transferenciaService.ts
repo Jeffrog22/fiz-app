@@ -54,6 +54,7 @@ export async function criar(
     turma_label: turma?.label || null,
     turma_horario: turma?.horario || null,
     turma_professor: professor?.nome || null,
+    nivel: turma?.nivel || aluno.nivel || null,
   };
 
   const { data, error } = await supabase
