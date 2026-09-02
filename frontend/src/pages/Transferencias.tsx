@@ -30,6 +30,7 @@ const Transferencias: React.FC = () => {
 
   const [aceitarTarget, setAceitarTarget] = useState<TransferenciaUnidade | null>(null);
   const [visualizarTarget, setVisualizarTarget] = useState<TransferenciaUnidade | null>(null);
+  const [soAtivos, setSoAtivos] = useState(true);
 
   const outrosTenants = useMemo(
     () => getAvailableTenants().filter((t) => t.id !== tenantId),
@@ -73,11 +74,16 @@ const Transferencias: React.FC = () => {
     return () => document.removeEventListener('visibilitychange', handler);
   }, [carregar]);
 
+  const alunosAtivos = useMemo(() => {
+    if (!soAtivos) return alunos;
+    return alunos.filter((a) => a.ativo !== false);
+  }, [alunos, soAtivos]);
+
   const alunosFiltrados = useMemo(() => {
-    if (!filtro.trim()) return alunos;
+    if (!filtro.trim()) return alunosAtivos;
     const q = normalizeSearch(filtro);
-    return alunos.filter((a) => normalizeSearch(a.nome).includes(q));
-  }, [alunos, filtro]);
+    return alunosAtivos.filter((a) => normalizeSearch(a.nome).includes(q));
+  }, [alunosAtivos, filtro]);
 
   const toggleSelecionado = (id: string) => {
     setSelecionados((prev) => {
@@ -204,12 +210,23 @@ const Transferencias: React.FC = () => {
           {aba === 'alunos' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between gap-3 flex-wrap">
-                <SearchInput
-                  value={filtro}
-                  onChange={setFiltro}
-                  placeholder="Buscar aluno..."
-                  className="max-w-sm"
-                />
+                <div className="flex items-center gap-3">
+                  <SearchInput
+                    value={filtro}
+                    onChange={setFiltro}
+                    placeholder="Buscar aluno..."
+                    className="max-w-sm"
+                  />
+                  <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 select-none cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={soAtivos}
+                      onChange={(e) => { setSoAtivos(e.target.checked); setSelecionados(new Set()); }}
+                      className="h-4 w-4 text-primary-600 border-gray-300 dark:border-gray-600 rounded"
+                    />
+                    Só ativos
+                  </label>
+                </div>
                 {selecionados.size > 0 && (
                   <div className="flex items-center gap-2">
                     <select
@@ -587,10 +604,10 @@ const Transferencias: React.FC = () => {
                 {calcIdade(visualizarTarget.dados_aluno.data_nascimento) != null && (
                   <span>Idade: {calcIdade(visualizarTarget.dados_aluno.data_nascimento)} anos</span>
                 )}
-                {visualizarTarget.dados_aluno.genero && <span>Genero: {visualizarTarget.dados_aluno.genero}</span>}
+                {visualizarTarget.dados_aluno.genero && <span>Gênero: {visualizarTarget.dados_aluno.genero}</span>}
                 {visualizarTarget.dados_aluno.contato && <span>Contato: {visualizarTarget.dados_aluno.contato}</span>}
                 {visualizarTarget.dados_aluno.turma_label && <span>Turma: {visualizarTarget.dados_aluno.turma_label}</span>}
-                {visualizarTarget.dados_aluno.turma_horario && <span>Horario: {visualizarTarget.dados_aluno.turma_horario}</span>}
+                {visualizarTarget.dados_aluno.turma_horario && <span>Horário: {(visualizarTarget.dados_aluno.turma_horario || '').slice(0, 5)}</span>}
                 {visualizarTarget.dados_aluno.turma_professor && <span>Professor: {visualizarTarget.dados_aluno.turma_professor}</span>}
                 {(alunoMap.get(visualizarTarget.aluno_id)?.nivel || visualizarTarget.dados_aluno.nivel) && (
                   <span>Nivel: <strong>{alunoMap.get(visualizarTarget.aluno_id)?.nivel || visualizarTarget.dados_aluno.nivel}</strong></span>

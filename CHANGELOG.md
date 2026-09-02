@@ -11,6 +11,14 @@
   - AceitarTransferenciaModal: removido "Nivel sugerido" — nivel vem da turma selecionada no destino
   - Backend `aceitar()`: nivel agora usa apenas `nivel || null` (turma selecionada é a fonte)
   - Investigação contato: código está correto (capturado no snapshot + inserido no aceitar). Grid de Alunos não exibe coluna Contato — dado salvo mas não visível no grid (visível no AlunoModal)
+### Feat
+- **Transferências: checkbox "Só ativos" na aba Alunos**
+  - Checkbox marcado por padrão — filtra apenas alunos com `ativo !== false`
+  - Desmarcando, mostra todos os alunos (ativos e inativos)
+  - Limpa seleção ao alternar o checkbox (evita selecionados órfãos)
+- **Modal Visualizar: ajustes de texto**
+  - "Genero" → "Gênero" (acentuação correta)
+  - Horário truncado para HH:MM (padrão do app, antes mostrava HH:MM:SS)
 
 ## [v2.73.0] - 2026-09-02
 ### Feat
