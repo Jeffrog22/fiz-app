@@ -312,7 +312,7 @@ const Transferencias: React.FC = () => {
                           <th className="text-left px-4 py-3">Destino</th>
                           <th className="text-left px-4 py-3">Turma sugerida</th>
                           <th className="text-left px-4 py-3">Data</th>
-                          <th className="text-left px-4 py-3">Acoes</th>
+                          <th className="text-left px-4 py-3">Ações</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -367,13 +367,12 @@ const Transferencias: React.FC = () => {
                         <th className="text-left px-4 py-3">Nivel</th>
                         <th className="text-left px-4 py-3">Origem</th>
                         <th className="text-left px-4 py-3">Destino</th>
-                        <th className="text-left px-4 py-3">Tempo</th>
-                        <th className="text-left px-4 py-3">Acoes</th>
+                        <th className="text-left px-4 py-3">Ações</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                       {filaGlobal.map((t) => {
-                        const isMinha = t.tenant_destino === tenantId;
+                        const isMinha = t.tenant_id === tenantId;
                         return (
                           <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                             <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">
@@ -393,15 +392,12 @@ const Transferencias: React.FC = () => {
                             </td>
                             <td className="px-4 py-3">
                               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                isMinha
+                                t.tenant_destino === tenantId
                                   ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                                   : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
                               }`}>
                                 {getTenantNome(t.tenant_destino)}
                               </span>
-                            </td>
-                            <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
-                              {tempoRelativo(t.criado_em)}
                             </td>
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-1">
@@ -414,14 +410,17 @@ const Transferencias: React.FC = () => {
                                 </button>
                                 {isMinha && (
                                   <button
-                                    onClick={() => setAceitarTarget(t)}
-                                    className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition flex items-center gap-1"
+                                    onClick={() => handleCancelar(t.id)}
+                                    className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30 text-red-400 hover:text-red-600 dark:hover:text-red-300"
+                                    title="Sair da fila"
                                   >
-                                    <Check size={12} />
-                                    Aceitar
+                                    <X size={14} />
                                   </button>
                                 )}
                               </div>
+                            </td>
+                            <td className="px-4 py-3 text-[10px] text-gray-400 dark:text-gray-600">
+                              {tempoRelativo(t.criado_em)}
                             </td>
                           </tr>
                         );
