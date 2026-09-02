@@ -316,3 +316,31 @@ export interface PlanejamentoBloco {
   conteudo?: string;
   criado_em: string;
 }
+
+export interface TransferenciaUnidade {
+  id: string;
+  tenant_id: string;
+  tenant_destino: string;
+  aluno_id: string;
+  dados_aluno: {
+    nome: string;
+    data_nascimento?: string;
+    genero?: string;
+    contato?: string;
+    par_q?: boolean;
+    par_q_data?: string;
+    atestado_medico?: boolean;
+    data_atestado?: string;
+    turma_label?: string;
+    turma_horario?: string;
+    turma_professor?: string;
+  };
+  turma_sugerida?: string;
+  nivel_sugerido?: string;
+  motivo?: string;
+  status: 'pendente' | 'aceita' | 'cancelada';
+  criado_por: string;
+  criado_em: string;
+  respondido_em?: string;
+  respondido_por?: string;
+}
