@@ -1,5 +1,16 @@
 # Changelog - Fiz! App
 
+## [v2.75.1] - 2026-09-02
+### Feat
+- **Export Vagas XLSX: novo layout coluna única (portrait)**
+  - Reescrita completa de `gerarVagasXLSX` para novo template vertical com 6 colunas (A-F)
+  - Layout: header azul por horário (Lotação total) → turmas (nivel, ocup/cap, professor) → Vagas/Excesso inline → separator
+  - Orientação portrait (A4), larguras de coluna fiéis ao template (A=11.14, B=11.14, C=8.43, D=8.43, E=11.29, F=7.29)
+  - Bordas finas em todas as células, bg azul claro (#B4C6E7) no header row
+  - Texto vagas: "1 vaga" / "X vagas" / "-" (plural/singular/vazio)
+- **Export Frequência XLSX: orientação landscape**
+  - Corrigido de portrait para landscape (frequência sempre horizontal)
+
 ## [v2.73.1] - 2026-09-02
 ### Fix
 - **Transferências: coluna Nível usa nivel do aluno + snapshot para cross-tenant**

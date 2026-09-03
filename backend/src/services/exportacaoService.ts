@@ -265,7 +265,7 @@ export async function gerarFrequenciaXLSX(
 
       const sheetName = `${label}-${turma.horario.slice(0, 5)}-${(turma.nivel || 'sem-nivel').replace(/\s+/g, '_')}`.replace(/[/\\?*\[\]:]/g, '-').slice(0, 31);
       const sheet = workbook.addWorksheet(sheetName, {
-        pageSetup: { orientation: 'portrait', paperSize: 9, margins: { left: 0.5, right: 0.5, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 } },
+        pageSetup: { orientation: 'landscape', paperSize: 9, margins: { left: 0.5, right: 0.5, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 } },
       });
 
       const labelStyle: Partial<ExcelJS.Style> = { font: { size: 10 }, alignment: { horizontal: 'right', vertical: 'middle' } };
@@ -699,28 +699,32 @@ export async function gerarVagasXLSX(tenantId: string): Promise<ExcelJS.Buffer> 
   const agora = new Date();
   const ts = `${String(agora.getDate()).padStart(2,'0')}/${String(agora.getMonth()+1).padStart(2,'0')}/${agora.getFullYear()}, ${String(agora.getHours()).padStart(2,'0')}:${String(agora.getMinutes()).padStart(2,'0')}:${String(agora.getSeconds()).padStart(2,'0')}`;
 
-  const labelStyle: Partial<ExcelJS.Style> = { font: { bold: true, size: 10 } };
-  const dataStyle: Partial<ExcelJS.Style> = { font: { size: 10, color: { argb: 'FF333333' } }, alignment: { vertical: 'middle' } };
-  const numberStyle: Partial<ExcelJS.Style> = { font: { size: 10 }, alignment: { horizontal: 'center', vertical: 'middle' } };
-  const totStyle: Partial<ExcelJS.Style> = { font: { bold: true, size: 10, color: { argb: 'FF1F4E79' } } };
-  const vagasStyle: Partial<ExcelJS.Style> = { font: { size: 10, color: { argb: 'FF006600' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
-  const excessoStyle: Partial<ExcelJS.Style> = { font: { size: 10, color: { argb: 'FFCC0000' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
+  const BLUE_FILL: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB4C6E7' } };
+  const THIN_BORDER: Partial<ExcelJS.Borders> = {
+    top: { style: 'thin' },
+    bottom: { style: 'thin' },
+    left: { style: 'thin' },
+    right: { style: 'thin' },
+  };
 
-  const colWidths = [10.7, 6.3, 8.7, 2, 2.4, 10.7, 6.3, 8.7, 2, 2.4, 10.7, 6.3, 8.7, 2];
-  const colKeys = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N'];
+  sheet.columns = [
+    { width: 11.14 },
+    { width: 11.14 },
+    { width: 8.43 },
+    { width: 8.43 },
+    { width: 11.29 },
+    { width: 7.29 },
+  ];
 
-  sheet.columns = colWidths.map((w, i) => ({ key: `col${i}`, width: w }));
+  let r = 1;
 
-  let currentRow = 1;
+  sheet.getCell(`A${r}`).value = 'Relatório de Vagas';
+  sheet.getCell(`A${r}`).style = { font: { bold: true, size: 14 }, alignment: { horizontal: 'left', vertical: 'middle' } };
+  r++;
 
-  const titleCell = sheet.getCell(`A${currentRow}`);
-  titleCell.value = 'Relatório de Vagas';
-  titleCell.style = { font: { bold: true, size: 14 }, alignment: { horizontal: 'left', vertical: 'middle' } };
-  currentRow++;
-
-  sheet.getCell(`A${currentRow}`).value = `Gerado em ${ts}`;
-  sheet.getCell(`A${currentRow}`).style = { font: { size: 9, italic: true, color: { argb: 'FF666666' } } };
-  currentRow++;
+  sheet.getCell(`A${r}`).value = `Gerado em ${ts}`;
+  sheet.getCell(`A${r}`).style = { font: { size: 9, italic: true, color: { argb: 'FF666666' } } };
+  r++;
 
   let totalCap = 0, totalAtivos = 0, totalVagas = 0, totalExcesso = 0;
   Object.values(gruposPorLabelHorario).forEach((horMap: any) => {
@@ -733,87 +737,95 @@ export async function gerarVagasXLSX(tenantId: string): Promise<ExcelJS.Buffer> 
       totalExcesso += Math.max(0, ocup - cap);
     });
   });
-  sheet.getCell(`A${currentRow}`).value = `Totais: Lotação ${totalAtivos}/${totalCap} | Vagas ${totalVagas} | Excesso ${totalExcesso}`;
-  sheet.getCell(`A${currentRow}`).style = totStyle;
-  currentRow++;
-  currentRow++;
+  sheet.getCell(`A${r}`).value = `Totais: Lotação ${totalAtivos}/${totalCap} | Vagas ${totalVagas} | Excesso ${totalExcesso}`;
+  sheet.getCell(`A${r}`).style = { font: { bold: true, size: 10, color: { argb: 'FF1F4E79' } } };
+  r++;
+  r++;
+
+  const vagasTexto = (n: number) => n === 0 ? '-' : n === 1 ? '1 vaga' : `${n} vagas`;
+
+  const applyBorderRow = (row: number) => {
+    for (let c = 1; c <= 6; c++) {
+      sheet.getRow(row).getCell(c).border = THIN_BORDER;
+    }
+  };
 
   const labels = sortLabels(Object.keys(gruposPorLabelHorario));
   for (const label of labels) {
     const horarios = Object.keys(gruposPorLabelHorario[label]).sort();
-    const horariosComTurmas = horarios.map((h) => ({ horario: h, turmas: gruposPorLabelHorario[label][h] }));
 
-    for (let bloco = 0; bloco < horariosComTurmas.length; bloco += 3) {
-      const chunk = horariosComTurmas.slice(bloco, bloco + 3);
+    for (const hor of horarios) {
+      const turmasBloco = gruposPorLabelHorario[label][hor];
+      const capTotal = turmasBloco.reduce((s: number, t: any) => s + (t.capacidade || 0), 0);
+      const ocupTotal = turmasBloco.reduce((s: number, t: any) => s + (ocupacao[t.grupo_id || t.id] || 0), 0);
+      const vagasTotal = Math.max(0, capTotal - ocupTotal);
+      const excessoTotal = Math.max(0, ocupTotal - capTotal);
 
-      chunk.forEach((item: any, ci: number) => {
-        const colBase = ci * 5;
-        const cFn = (idx: number) => colKeys[colBase + idx] || '';
-        sheet.getCell(`${cFn(0)}${currentRow}`).value = item.horario.slice(0, 5);
-        sheet.getCell(`${cFn(0)}${currentRow}`).style = labelStyle;
-        sheet.getCell(`${cFn(1)}${currentRow}`).value = label;
-        sheet.getCell(`${cFn(1)}${currentRow}`).style = labelStyle;
-      });
-      currentRow++;
+      const hr = sheet.getRow(r);
+      hr.getCell(1).value = hor.slice(0, 5);
+      hr.getCell(1).style = { font: { bold: true, size: 10 }, alignment: { horizontal: 'right' }, fill: BLUE_FILL };
+      hr.getCell(2).value = label;
+      hr.getCell(2).style = { font: { bold: true, size: 10 }, alignment: { horizontal: 'center' }, fill: BLUE_FILL };
+      hr.getCell(3).value = vagasTexto(vagasTotal);
+      hr.getCell(3).style = { font: { italic: true, size: 10, color: { argb: 'FF8DB4E2' } }, alignment: { horizontal: 'left' }, fill: BLUE_FILL };
+      hr.getCell(4).value = null;
+      (hr.getCell(4) as any).style = { fill: BLUE_FILL };
+      hr.getCell(5).value = 'Lotação:';
+      hr.getCell(5).style = { font: { bold: true, size: 10, color: { argb: 'FF1F4E79' } }, alignment: { horizontal: 'right' }, fill: BLUE_FILL };
+      hr.getCell(6).value = `${ocupTotal}/${capTotal}`;
+      hr.getCell(6).style = { font: { size: 10 }, alignment: { horizontal: 'center', vertical: 'middle' }, fill: BLUE_FILL };
+      applyBorderRow(r);
+      r++;
 
-      const maxRows = Math.max(...chunk.map((item: any) => item.turmas.length));
+      for (let ti = 0; ti < turmasBloco.length; ti++) {
+        const t = turmasBloco[ti];
+        const cap = t.capacidade || 0;
+        const ocup = ocupacao[t.grupo_id || t.id] || 0;
+        const profNome = profMap.get(t.professor_id) || '---';
 
-      for (let ri = 0; ri < maxRows; ri++) {
-        chunk.forEach((item: any, ci: number) => {
-          const colBase = ci * 5;
-          const cFn = (idx: number) => colKeys[colBase + idx] || '';
-          const t = item.turmas[ri];
-          if (t) {
-            const cap = t.capacidade || 0;
-            const ocup = ocupacao[t.grupo_id || t.id] || 0;
-            const profNome = profMap.get(t.professor_id) || '---';
-            sheet.getCell(`${cFn(0)}${currentRow}`).value = `${t.nivel || '---'}:`;
-            sheet.getCell(`${cFn(0)}${currentRow}`).style = dataStyle;
-            sheet.getCell(`${cFn(1)}${currentRow}`).value = `${ocup}/${cap}`;
-            sheet.getCell(`${cFn(1)}${currentRow}`).style = numberStyle;
-            sheet.getCell(`${cFn(2)}${currentRow}`).value = profNome;
-            sheet.getCell(`${cFn(2)}${currentRow}`).style = { font: { size: 9, color: { argb: 'FF666666' } } };
-          }
-        });
-        currentRow++;
+        const tr = sheet.getRow(r);
+        tr.getCell(1).value = `${t.nivel || '---'}:`;
+        tr.getCell(1).style = { font: { size: 10, color: { argb: 'FF333333' } }, alignment: { horizontal: 'right', vertical: 'middle' } };
+        tr.getCell(2).value = `${ocup}/${cap}`;
+        tr.getCell(2).style = { font: { size: 10 }, alignment: { horizontal: 'center', vertical: 'middle' } };
+        tr.getCell(3).value = profNome;
+        tr.getCell(3).style = { font: { size: 9, color: { argb: 'FF666666' } }, alignment: { horizontal: 'left' } };
+        tr.getCell(4).value = null;
+
+        if (ti === 0) {
+          tr.getCell(5).value = 'Vagas:';
+          tr.getCell(5).style = { font: { size: 10, color: { argb: 'FF006600' } }, alignment: { horizontal: 'right' } };
+          tr.getCell(6).value = vagasTotal;
+          tr.getCell(6).style = { font: { size: 10, color: { argb: 'FF006600' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
+        } else if (ti === turmasBloco.length - 1) {
+          tr.getCell(5).value = 'Excesso:';
+          tr.getCell(5).style = { font: { size: 10, color: { argb: 'FFCC0000' } }, alignment: { horizontal: 'right' } };
+          tr.getCell(6).value = excessoTotal;
+          tr.getCell(6).style = { font: { size: 10, color: { argb: 'FFCC0000' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
+        }
+        applyBorderRow(r);
+        r++;
       }
 
-      chunk.forEach((item: any, ci: number) => {
-        const colBase = ci * 5;
-        const cFn = (idx: number) => colKeys[colBase + idx] || '';
-        const capTotal = item.turmas.reduce((s: number, t: any) => s + (t.capacidade || 0), 0);
-        const ocupTotal = item.turmas.reduce((s: number, t: any) => s + (ocupacao[t.grupo_id || t.id] || 0), 0);
+      if (turmasBloco.length === 1) {
+        const er = sheet.getRow(r);
+        er.getCell(1).value = null;
+        er.getCell(2).value = null;
+        er.getCell(3).value = null;
+        er.getCell(4).value = null;
+        er.getCell(5).value = 'Excesso:';
+        er.getCell(5).style = { font: { size: 10, color: { argb: 'FFCC0000' } }, alignment: { horizontal: 'right' } };
+        er.getCell(6).value = excessoTotal;
+        er.getCell(6).style = { font: { size: 10, color: { argb: 'FFCC0000' } }, alignment: { horizontal: 'center', vertical: 'middle' } };
+        applyBorderRow(r);
+        r++;
+      }
 
-        sheet.getCell(`${cFn(0)}${currentRow}`).value = 'Lotação:';
-        sheet.getCell(`${cFn(0)}${currentRow}`).style = { font: { bold: true, size: 10, color: { argb: 'FF1F4E79' } } };
-        sheet.getCell(`${cFn(1)}${currentRow}`).value = `${ocupTotal}/${capTotal}`;
-        sheet.getCell(`${cFn(1)}${currentRow}`).style = numberStyle;
-      });
-      currentRow++;
-
-      chunk.forEach((item: any, ci: number) => {
-        const colBase = ci * 5;
-        const cFn = (idx: number) => colKeys[colBase + idx] || '';
-        const capTotal = item.turmas.reduce((s: number, t: any) => s + (t.capacidade || 0), 0);
-        const ocupTotal = item.turmas.reduce((s: number, t: any) => s + (ocupacao[t.grupo_id || t.id] || 0), 0);
-        const vagasTotal = Math.max(0, capTotal - ocupTotal);
-        const excessoTotal = Math.max(0, ocupTotal - capTotal);
-
-        sheet.getCell(`${cFn(0)}${currentRow}`).value = 'Vagas:';
-        sheet.getCell(`${cFn(0)}${currentRow}`).style = { font: { size: 10, color: { argb: 'FF006600' } } };
-        sheet.getCell(`${cFn(1)}${currentRow}`).value = vagasTotal;
-        sheet.getCell(`${cFn(1)}${currentRow}`).style = vagasStyle;
-        sheet.getCell(`${cFn(2)}${currentRow}`).value = 'Excesso:';
-        sheet.getCell(`${cFn(2)}${currentRow}`).style = { font: { size: 10, color: { argb: 'FFCC0000' } } };
-        sheet.getCell(`${cFn(3)}${currentRow}`).value = excessoTotal;
-        sheet.getCell(`${cFn(3)}${currentRow}`).style = excessoStyle;
-      });
-      currentRow++;
-      currentRow++;
+      r++;
     }
   }
 
-  sheet.pageSetup = { orientation: 'landscape', paperSize: 9, fitToPage: true, fitToWidth: 1, margins: { left: 0.5, right: 0.5, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 } };
+  sheet.pageSetup = { orientation: 'portrait', paperSize: 9, margins: { left: 0.51, right: 0.51, top: 0.79, bottom: 0.79, header: 0.31, footer: 0.31 } };
 
   return workbook.xlsx.writeBuffer();
 }

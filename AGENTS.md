@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-09-02 — Fix nível transferências + checkbox só ativos + ajustes modal → v2.73.1 -->
+<!-- última-sessão: 2026-09-02 — Export Vagas novo layout portrait + Fix orientação Frequência → v2.75.1 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -87,6 +87,33 @@ Regras:
 - `chamadas_log.grupo_id` é TEXT (migration 017) — aceita `jeftq01`, necessário para extrapolação (antes UUID rejeitava)
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
+
+---
+
+## Sessão: 02/09/2026 — Export Vagas novo layout portrait + Fix orientação Frequência → v2.75.1
+
+### O que foi feito
+- **Export Vagas XLSX**: `gerarVagasXLSX` reescrita com novo layout coluna única (portrait), fiel ao template `relatorioVagas.xlsx`
+  - Layout: header azul por horário (Lotação total) → turmas (nivel, ocup/cap, professor) → Vagas/Excesso inline → separator
+  - 6 colunas (A-F) com larguras do template (A=11.14, B=11.14, C=8.43, D=8.43, E=11.29, F=7.29)
+  - Orientação portrait (A4), bordas thin em todas as células, bg azul claro (#B4C6E7) no header
+  - Texto vagas: "1 vaga" / "X vagas" / "-" (plural/singular/vazio)
+  - 1ª turma row: E="Vagas:", F=vagas_total; última row: E="Excesso:", F=excesso_total
+  - Se 1 turma: row extra vazia para Excesso
+- **Export Frequência XLSX**: orientação corrigida de `portrait` → `landscape` (frequência sempre horizontal)
+
+### Decisões
+- Bg azul `FFB4C6E7` em vez de theme-based `{ theme: 3, tint: 0.80 }` — portável entre versões do Excel
+- Sem merged cells (template não usa)
+- Sem fitToPage (template não usa)
+
+### Arquivos
+- `backend/src/services/exportacaoService.ts` (gerarVagasXLSX reescrita + fix orientação frequência)
+- `CHANGELOG.md` (v2.75.1)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Backend: 0 erros (`tsc --noEmit`)
 
 ---
 
