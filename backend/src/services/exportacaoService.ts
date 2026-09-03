@@ -767,7 +767,7 @@ export async function gerarVagasXLSX(tenantId: string): Promise<ExcelJS.Buffer> 
       hr.getCell(2).value = label;
       hr.getCell(2).style = { font: { bold: true, size: 10 }, alignment: { horizontal: 'center' }, fill: BLUE_FILL };
       hr.getCell(3).value = vagasTexto(vagasTotal);
-      hr.getCell(3).style = { font: { italic: true, size: 10, color: { argb: 'FF8DB4E2' } }, alignment: { horizontal: 'left' }, fill: BLUE_FILL };
+      hr.getCell(3).style = { font: { italic: true, size: 10, color: { argb: 'FF666666' } }, alignment: { horizontal: 'center' }, fill: BLUE_FILL };
       hr.getCell(4).value = null;
       (hr.getCell(4) as any).style = { fill: BLUE_FILL };
       hr.getCell(5).value = 'Lotação:';
