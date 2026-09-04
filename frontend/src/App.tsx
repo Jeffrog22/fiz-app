@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext';
 import { DevProvider } from './context/DevContext';
 import { useDevLog } from './hooks/useDevLog';
 import { usePushNotifications } from './hooks/usePushNotifications';
+import api from './utils/api';
 import Login from './pages/Login';
 import Home from './pages/Home';
 import Alunos from './pages/Alunos';
@@ -25,8 +26,22 @@ import { useAuth } from './hooks/useAuth';
 const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(() => window.innerWidth < 768);
+  const [aceitesNaoVistos, setAceitesNaoVistos] = React.useState(0);
   const { enabled: devEnabled, addConsoleLine } = useDevLog();
   const origConsole = useRef<Record<string, (...args: unknown[]) => void>>({});
+
+  React.useEffect(() => {
+    if (!isAuthenticated) return;
+    const carregarAceites = async () => {
+      try {
+        const res = await api.get('/transferencias/aceites/nao-vistos');
+        setAceitesNaoVistos(res.data.count || 0);
+      } catch { /* ignore */ }
+    };
+    carregarAceites();
+    const interval = setInterval(carregarAceites, 30000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!devEnabled) return;
@@ -65,7 +80,7 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
       <UpdateBanner />
       <TopBar />
       <div className="flex flex-1">
-        <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(v => !v)} />
+        <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(v => !v)} aceitesNaoVistos={aceitesNaoVistos} />
         <main className="flex-1 p-6 overflow-auto">
           {children}
         </main>

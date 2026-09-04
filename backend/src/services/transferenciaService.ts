@@ -2,6 +2,8 @@ import { supabase } from './supabaseClient';
 import { AppError } from '../middleware/errorHandler';
 import { calcularCategoria } from '../utils/categoria';
 import { iniciarPeriodoService } from './enrollmentService';
+import { criarNotificacaoAceite } from './notificacoesAceiteService';
+import { enviarNotificacaoCustom } from './notificationScheduler';
 
 export async function criar(
   tenantId: string,
@@ -215,6 +217,39 @@ export async function aceitar(
     console.error('[transferencia/aceitar] Erro ao atualizar status:', updateError);
   }
 
+  const TENANT_NOMES: Record<string, string> = {
+    'bela-vista': 'Bela Vista',
+    'sao-matheus': 'São Matheus',
+    'vila': 'Vila',
+    'parque': 'Parque',
+    '3aidade': '3ª Idade',
+  };
+
+  const { data: professorDestino } = await supabase
+    .from('professores')
+    .select('nome')
+    .eq('id', professorId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+
+  await criarNotificacaoAceite({
+    tenantId: transferencia.tenant_id,
+    transferenciaId: id,
+    alunoId: transferencia.aluno_id,
+    alunoNome: dados.nome,
+    unidadeDestino: TENANT_NOMES[tenantId] || tenantId,
+    professorDestino: professorDestino?.nome || null,
+    grupoId: turmaId || undefined,
+  });
+
+  enviarNotificacaoPushAceite(
+    transferencia.tenant_id,
+    dados.nome,
+    TENANT_NOMES[tenantId] || tenantId,
+    professorDestino?.nome || null,
+    id,
+  );
+
   return { transferencia, novoAluno };
 }
 
@@ -257,4 +292,42 @@ export async function contarPendentesRecebidas(tenantId: string): Promise<number
 
   if (error) return 0;
   return count || 0;
+}
+
+async function enviarNotificacaoPushAceite(
+  tenantOrigem: string,
+  alunoNome: string,
+  unidadeDestino: string,
+  professorDestino: string | null,
+  transferenciaId: string,
+) {
+  try {
+    const { data: professors } = await supabase
+      .from('professores')
+      .select('id')
+      .eq('tenant_id', tenantOrigem);
+
+    if (!professors || professors.length === 0) return;
+
+    const professorIds = professors.map((p) => p.id);
+
+    const { data: subscriptions } = await supabase
+      .from('notificacoes_subscriptions')
+      .select('endpoint, p256dh, auth, professor_id')
+      .in('professor_id', professorIds);
+
+    if (!subscriptions || subscriptions.length === 0) return;
+
+    const corpo = professorDestino
+      ? `${alunoNome} foi aceito(a) por ${professorDestino} em ${unidadeDestino}`
+      : `${alunoNome} foi aceito(a) em ${unidadeDestino}`;
+
+    await enviarNotificacaoCustom(subscriptions, {
+      title: '🎓 Transferência Aceita',
+      body: corpo,
+      url: `/alunos?aceite=${transferenciaId}`,
+    });
+  } catch (err: any) {
+    console.error('[transferencia/enviarPush] Erro ao enviar push:', err.message);
+  }
 }

@@ -370,3 +370,16 @@ export interface TransferenciaUnidade {
   respondido_em?: string;
   respondido_por?: string;
 }
+
+export interface NotificacaoAceite {
+  id: string;
+  tenant_id: string;
+  transferencia_id: string;
+  aluno_id: string;
+  aluno_nome: string;
+  unidade_destino: string;
+  professor_destino: string | null;
+  grupo_id: string | null;
+  lida: boolean;
+  criado_em: string;
+}

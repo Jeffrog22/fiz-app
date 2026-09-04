@@ -132,3 +132,37 @@ export function startNotificationScheduler() {
   processarNotificacoes();
   setInterval(processarNotificacoes, 60 * 1000);
 }
+
+export async function enviarNotificacaoCustom(
+  subscriptions: Array<{ endpoint: string; p256dh: string; auth: string }>,
+  payload: { title: string; body: string; url: string },
+) {
+  ensureInitialized();
+  if (!initialized) return;
+
+  const json = JSON.stringify({
+    title: payload.title,
+    body: payload.body,
+    icon: '/favicon.ico',
+    data: { url: payload.url },
+  });
+
+  for (const sub of subscriptions) {
+    try {
+      await webpush.sendNotification(
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+        json,
+      );
+    } catch (err: any) {
+      if (err.statusCode === 410 || err.statusCode === 404) {
+        console.info(`[notifications] Removendo subscription inválida: ${sub.endpoint}`);
+        await supabase
+          .from('notificacoes_subscriptions')
+          .delete()
+          .eq('endpoint', sub.endpoint);
+      } else {
+        console.error(`[notifications] Erro ao enviar push custom: ${err.message}`);
+      }
+    }
+  }
+}

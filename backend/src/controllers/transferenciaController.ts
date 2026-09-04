@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { TenantRequest } from '../types';
 import * as transferenciaService from '../services/transferenciaService';
+import * as notificacoesAceiteService from '../services/notificacoesAceiteService';
 
 export class TransferenciaController {
   static async criar(req: TenantRequest, res: Response, next: NextFunction) {
@@ -77,6 +78,28 @@ export class TransferenciaController {
     try {
       const count = await transferenciaService.contarPendentesRecebidas(req.tenantId!);
       res.json({ count });
+    } catch (e) { next(e); }
+  }
+
+  static async listarAceitesNaoVistos(req: TenantRequest, res: Response, next: NextFunction) {
+    try {
+      const aceites = await notificacoesAceiteService.listarNaoVistas(req.tenantId!);
+      res.json({ count: aceites.length, aceites });
+    } catch (e) { next(e); }
+  }
+
+  static async marcarAceiteVisto(req: TenantRequest, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      await notificacoesAceiteService.marcarComoVista(id, req.tenantId!);
+      res.json({ ok: true });
+    } catch (e) { next(e); }
+  }
+
+  static async marcarTodosAceitesVistos(req: TenantRequest, res: Response, next: NextFunction) {
+    try {
+      await notificacoesAceiteService.marcarTodasComoVistas(req.tenantId!);
+      res.json({ ok: true });
     } catch (e) { next(e); }
   }
 }

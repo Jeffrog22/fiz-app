@@ -25,9 +25,10 @@ const configLinks: SidebarLink[] = [
 interface Props {
   collapsed: boolean;
   onToggle: () => void;
+  aceitesNaoVistos?: number;
 }
 
-const Sidebar: React.FC<Props> = ({ collapsed, onToggle }) => {
+const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0 }) => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const touchStartX = React.useRef(0);
   const touchStartY = React.useRef(0);
@@ -108,6 +109,16 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle }) => {
             >
               {link.label}
             </span>
+            {link.to === '/alunos' && aceitesNaoVistos > 0 && (
+              <span
+                className={`bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center flex-shrink-0 ${
+                  collapsed ? 'absolute mt-[-10px] mr-[-10px]' : 'ml-auto'
+                }`}
+                title={`${aceitesNaoVistos} aluno(s) aceito(s) em outra unidade`}
+              >
+                {aceitesNaoVistos}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

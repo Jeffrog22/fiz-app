@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
 import AlunoModal from '../components/modals/AlunoModal';
 import SearchInput from '../components/SearchInput';
-import type { Aluno, Professor, SavePayload } from '../types';
+import type { Aluno, Professor, SavePayload, NotificacaoAceite } from '../types';
 import { calcIdade, calcIdadeDoAno, calcCategoria, normalizeSearch, sortTurmas, formatarNomeMobile, formatDateBR } from '../utils/formatters';
 import { Pencil, Unlink, Trash2 } from 'lucide-react';
 
@@ -53,6 +53,7 @@ const Alunos: React.FC = () => {
     erros: string[];
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [aceiteNotif, setAceiteNotif] = useState<NotificacaoAceite | null>(null);
 
   const professorMap = new Map(professores.map((p) => [p.id, p.nome]));
 
@@ -114,6 +115,22 @@ const Alunos: React.FC = () => {
   const janelaAberta = rematriculaJanela
     ? hojeLocal() >= rematriculaJanela.inicio && hojeLocal() <= rematriculaJanela.fim
     : false;
+
+  useEffect(() => {
+    const aceiteId = searchParams.get('aceite');
+    if (!aceiteId) return;
+    const carregarAceite = async () => {
+      try {
+        const res = await api.get('/transferencias/aceites/nao-vistos');
+        const found = res.data.aceites?.find((a: NotificacaoAceite) => a.transferencia_id === aceiteId);
+        if (found) {
+          setAceiteNotif(found);
+          await api.post(`/transferencias/aceites/${found.id}/lido`);
+        }
+      } catch { /* ignore */ }
+    };
+    carregarAceite();
+  }, [searchParams]);
 
   const getFilterValue = (a: any, col: string): string => {
     switch (col) {
@@ -419,6 +436,21 @@ const Alunos: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      {aceiteNotif && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3 flex items-center gap-3">
+          <span className="text-xl flex-shrink-0">{'\uD83C\uDF93'}</span>
+          <p className="text-sm text-amber-800 dark:text-amber-200 flex-1">
+            O aluno <strong>{aceiteNotif.aluno_nome}</strong> foi aceito em <strong>{aceiteNotif.unidade_destino}</strong> e já pode ser excluído desta unidade.
+          </p>
+          <button
+            onClick={() => setAceiteNotif(null)}
+            className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 text-xs font-medium flex-shrink-0"
+          >
+            Dispensar
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Alunos</h1>
         <div className="flex gap-2">
@@ -695,7 +727,11 @@ const Alunos: React.FC = () => {
                 const categoria = calcCategoria(calcIdadeDoAno(a.data_nascimento));
                 const profNome = a.turma?.professor_id ? professorMap.get(a.turma.professor_id) : null;
                 return (
-                  <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <tr key={a.id} className={`hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                    aceiteNotif?.aluno_id === a.id
+                      ? 'bg-amber-50 dark:bg-amber-900/20'
+                      : ''
+                  }`}>
                     {(modoAlocacao || modoTransferencia || modoRematricula) && (
                       <td className="px-2 py-2">
                         <input
@@ -707,10 +743,17 @@ const Alunos: React.FC = () => {
                       </td>
                     )}
                     <td
-                      className="px-3 py-2 font-medium text-primary-600 dark:text-primary-400 cursor-pointer hover:text-primary-800 dark:hover:text-primary-200"
-                      title="clique para editar"
+                      className={`px-3 py-2 font-medium cursor-pointer hover:text-primary-800 dark:hover:text-primary-200 ${
+                        aceiteNotif?.aluno_id === a.id
+                          ? 'text-amber-700 dark:text-amber-300'
+                          : 'text-primary-600 dark:text-primary-400'
+                      }`}
+                      title={aceiteNotif?.aluno_id === a.id ? 'Aluno aceito em outra unidade — pode ser excluído' : 'clique para editar'}
                       onClick={() => { setEditando(a); setModalOpen(true); }}
                     >
+                      {aceiteNotif?.aluno_id === a.id && (
+                        <span className="mr-1">{'\uD83C\uDF93'}</span>
+                      )}
                       <span className="sm:hidden">{formatarNomeMobile(a.nome, alunosNomes)}</span>
                       <span className="hidden sm:inline">{a.nome}</span>
                     </td>
