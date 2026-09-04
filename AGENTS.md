@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-09-02 — Export Vagas novo layout portrait + Fix orientação Frequência → v2.75.1 -->
+<!-- última-sessão: 2026-09-04 — CardBO: campo "Qtd. dias" para ausência multi-dia → v2.78.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -87,6 +87,37 @@ Regras:
 - `chamadas_log.grupo_id` é TEXT (migration 017) — aceita `jeftq01`, necessário para extrapolação (antes UUID rejeitava)
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
+
+---
+
+## Sessão: 04/09/2026 — CardBO: campo "Qtd. dias" para ausência multi-dia → v2.78.0
+
+### O que foi feito
+- **Bug/limitação**: CardBO só aceitava registrar 1 dia por vez — professor com atestado de 2+ dias precisava logar e preencher para cada dia
+- **Solução**: novo campo "Qtd. de dias (afastamento)" no CardBO
+  - Visível apenas para tipos pessoais (`via_2`): Médico pessoal, Médico trabalho, Particular, Reunião, Secretaria
+  - Quando preenchido (≥ 1), propaga cancelamento para os dias subsequentes que batem com os dias da label da turma
+  - Backend itera de `data` até `data + dias - 1`, usa `parseDiasFromLabel(label)` para filtrar apenas dias úteis da turma
+  - Warning visual no modal mostra "O cancelamento será aplicado nos próximos N dias úteis da turma"
+  - Reset do campo ao trocar de tipo ou alternar Pessoal/Geral
+- **Exemplo**: professor com label "Ter/Qui" e atestado 2 dias a partir de 01/09 (terça) → cancela 01/09 (terça) e pula 02/09 (quarta, não é dia da label)
+
+### Decisões
+- Campo só para `via_2` (Pessoal) — `via_1` (Geral) ignora o campo
+- Não verifica feriados/pontes — cancela todos os dias da label no período
+- `compromete_dia` sempre implicitly true quando `dias >= 1` (cancela o dia inteiro, não só a aula atual)
+- Sem migration (não toca no banco)
+
+### Arquivos
+- `frontend/src/components/modals/CardBO.tsx` (+diasInput state, +input numérico, +dias no payload, +warning multi-dia, +reset)
+- `backend/src/controllers/chamadasController.ts` (+dias do req.body)
+- `backend/src/services/chamadasService.ts` (+dias param, +loop de iteração com parseDiasFromLabel)
+- `CHANGELOG.md` (v2.78.0)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck
+- Frontend: 0 erros (`npm run build` limpo)
+- Backend: 0 erros (`tsc --noEmit`)
 
 ---
 

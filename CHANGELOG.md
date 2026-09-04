@@ -1,5 +1,14 @@
 # Changelog - Fiz! App
 
+## [v2.78.0] - 2026-09-04
+### Feat
+- **CardBO: campo "Qtd. dias" para ausência multi-dia do professor**
+  - Campo numérico visível apenas para tipos pessoais (Médico pessoal, Médico trabalho, Particular, Reunião, Secretaria)
+  - Quando preenchido (≥ 1), propaga cancelamento para os dias subsequentes que batem com os dias da label da turma
+  - Backend itera de `data` até `data + dias - 1`, filtrando por `parseDiasFromLabel(label)`
+  - Warning visual atualizado mostrando quantos dias serão cancelados
+  - Reset do campo ao trocar de tipo ou alternar Pessoal/Geral
+
 ## [v2.75.1] - 2026-09-02
 ### Feat
 - **Export Vagas XLSX: novo layout coluna única (portrait)**
