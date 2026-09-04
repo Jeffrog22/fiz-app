@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { AppError } from '../middleware/errorHandler';
 import { registrarOperacao } from '../utils/logEngine';
+import { parseDiasFromLabel } from '../utils/chamadaUtils';
 import { getClimaSugestao, getTempPiscinaSugestao, getCloroSugestao, getSugestaoFinal, isFaixaEtariaMaior16 } from '../utils/climateEngine';
 
 async function extrapolarPorLabel(
@@ -318,6 +319,48 @@ export async function extrapolarCancelamentoPessoal(
   tipoSelect?: string,
 ): Promise<{ message: string; count: number }> {
   return extrapolarPorLabel(tenantId, data, grupoId, indiceAula, 'cancelado', motivo, false, professorId, !comprometeDia, tipoOcorrencia, tipoSelect);
+}
+
+export async function extrapolarCancelamentoPessoalMultiLabel(
+  tenantId: string,
+  data: string,
+  dias: number,
+  indiceAula: number,
+  comprometeDia: boolean,
+  professorId: string,
+  motivo?: string,
+  tipoOcorrencia?: string,
+  tipoSelect?: string,
+): Promise<{ message: string; count: number }> {
+  const { data: turmas, error } = await supabase
+    .from('turmas')
+    .select('grupo_id, label')
+    .eq('tenant_id', tenantId)
+    .eq('professor_id', professorId);
+
+  if (error) throw new AppError('Erro ao buscar turmas do professor', 500);
+  if (!turmas || turmas.length === 0) return { message: 'Nenhuma turma encontrada', count: 0 };
+
+  const inicio = new Date(data + 'T12:00');
+  inicio.setHours(0, 0, 0, 0);
+  let count = 0;
+
+  for (let i = 0; i < dias; i++) {
+    const d = new Date(inicio);
+    d.setDate(d.getDate() + i);
+    const diaSemana = d.getDay();
+    const dataStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+    for (const turma of turmas) {
+      const diasLabel = parseDiasFromLabel(turma.label || '');
+      if (diasLabel.includes(diaSemana)) {
+        await extrapolarCancelamentoPessoal(tenantId, dataStr, turma.grupo_id, indiceAula, comprometeDia, professorId, motivo, tipoOcorrencia, tipoSelect);
+        count++;
+      }
+    }
+  }
+
+  return { message: `${count} turmas canceladas em ${dias} dias`, count };
 }
 
 export async function extrapolarCancelamentoGeral(
