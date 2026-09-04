@@ -16,6 +16,7 @@ const CANCELAMENTO_TIPOS = new Set([
   'Reunião',
   'Secretaria',
   'Raios e Trovões',
+  'Atestado / Afastamento',
 ]);
 
 const TIPOS_PESSOAIS = [
@@ -24,6 +25,7 @@ const TIPOS_PESSOAIS = [
   'Particular',
   'Reunião',
   'Secretaria',
+  'Atestado / Afastamento',
 ];
 
 const TIPOS_GERAIS = [
@@ -65,7 +67,7 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId })
         compromete_dia: comprometeDia || undefined,
         cancelar_aula: cancelarAula || undefined,
         grupo_id: grupoId,
-        dias: isPessoal && CANCELAMENTO_TIPOS.has(tipo) && diasInput ? parseInt(diasInput) : undefined,
+        dias: tipo === 'Atestado / Afastamento' && diasInput ? parseInt(diasInput) : undefined,
       });
       onClose();
     } catch (err) {
@@ -127,7 +129,7 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId })
             </select>
           </div>
 
-          {isPessoal && CANCELAMENTO_TIPOS.has(tipo) && (
+          {isPessoal && tipo === 'Atestado / Afastamento' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Qtd. de dias (afastamento)</label>
               <input type="number" min="1" max="30" value={diasInput}
@@ -158,7 +160,7 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId })
             <div className="p-2 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded text-xs text-red-600 dark:text-red-400 space-y-1">
               <p>Este tipo de ocorrência irá <strong>cancelar a aula</strong> na matriz de chamada.</p>
               {comprometeDia && <p>O cancelamento será aplicado em todas as aulas do dia.</p>}
-              {diasInput && parseInt(diasInput) >= 2 && (
+              {tipo === 'Atestado / Afastamento' && diasInput && parseInt(diasInput) >= 2 && (
                 <p>O cancelamento será aplicado nos próximos <strong>{diasInput} dias</strong> úteis da turma.</p>
               )}
               <p className="text-red-500 dark:text-red-400">
