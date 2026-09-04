@@ -39,6 +39,7 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId })
   const [descricao, setDescricao] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [cancelarAula, setCancelarAula] = useState(false);
+  const [diasInput, setDiasInput] = useState('');
 
   if (!aberto) return null;
 
@@ -64,6 +65,7 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId })
         compromete_dia: comprometeDia || undefined,
         cancelar_aula: cancelarAula || undefined,
         grupo_id: grupoId,
+        dias: isPessoal && CANCELAMENTO_TIPOS.has(tipo) && diasInput ? parseInt(diasInput) : undefined,
       });
       onClose();
     } catch (err) {
@@ -117,13 +119,26 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId })
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo</label>
-            <select value={tipo} onChange={(e) => { setTipo(e.target.value); setCancelarAula(false); }}
+            <select value={tipo} onChange={(e) => { setTipo(e.target.value); setCancelarAula(false); setDiasInput(''); }}
               className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded p-2 mt-1 text-sm">
               {tipos.map((t) => (
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>
           </div>
+
+          {isPessoal && CANCELAMENTO_TIPOS.has(tipo) && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Qtd. de dias (afastamento)</label>
+              <input type="number" min="1" max="30" value={diasInput}
+                onChange={(e) => setDiasInput(e.target.value)}
+                placeholder="1"
+                className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded p-2 mt-1 text-sm" />
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+                Dias úteis da turma. Deixe vazio para cancelar apenas este dia.
+              </p>
+            </div>
+          )}
 
           {tipo === 'Manutenção/Incidente' && (
             <div className="flex items-center gap-2">
@@ -143,6 +158,9 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId })
             <div className="p-2 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded text-xs text-red-600 dark:text-red-400 space-y-1">
               <p>Este tipo de ocorrência irá <strong>cancelar a aula</strong> na matriz de chamada.</p>
               {comprometeDia && <p>O cancelamento será aplicado em todas as aulas do dia.</p>}
+              {diasInput && parseInt(diasInput) >= 2 && (
+                <p>O cancelamento será aplicado nos próximos <strong>{diasInput} dias</strong> úteis da turma.</p>
+              )}
               <p className="text-red-500 dark:text-red-400">
                 {via === 'via_2'
                   ? 'Apenas as turmas deste professor serão afetadas (via_2).'

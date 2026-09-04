@@ -3,6 +3,7 @@ import { ChamadaLog } from '../types';
 import { AppError } from '../middleware/errorHandler';
 import { fetchWeather } from '../utils/weather';
 import { registrarOperacao } from '../utils/logEngine';
+import { parseDiasFromLabel } from '../utils/chamadaUtils';
 import * as extrapolarService from './extrapolarService';
 
 export async function listarPorData(data: string, tenantId: string): Promise<any[]> {
@@ -394,6 +395,7 @@ export async function salvarCardBO(
   professorId?: string,
   grupoId?: string,
   cancelarAula?: boolean,
+  dias?: number,
 ): Promise<void> {
   if (!data) throw new AppError('Campo data e obrigatorio', 400);
 
@@ -414,7 +416,35 @@ export async function salvarCardBO(
 
   if (via === 'via_2') {
     if (!professorId) throw new AppError('Professor ID obrigatorio para via_2', 400);
-    await extrapolarService.extrapolarCancelamentoPessoal(tenantId, data, grupoId, aulaIdx, !!compromete_dia, professorId, tMotivo, tipo_ocorrencia, 'pessoal');
+
+    if (dias && dias >= 1) {
+      const { data: sourceTurma } = await supabase
+        .from('turmas')
+        .select('label')
+        .eq('grupo_id', grupoId)
+        .eq('tenant_id', tenantId)
+        .maybeSingle();
+
+      if (sourceTurma?.label) {
+        const diasSemana = parseDiasFromLabel(sourceTurma.label);
+        const inicio = new Date(data + 'T12:00');
+        inicio.setHours(0, 0, 0, 0);
+
+        for (let i = 0; i < dias; i++) {
+          const d = new Date(inicio);
+          d.setDate(d.getDate() + i);
+          const diaSemana = d.getDay();
+          if (diasSemana.includes(diaSemana)) {
+            const dataStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            await extrapolarService.extrapolarCancelamentoPessoal(tenantId, dataStr, grupoId, aulaIdx, !!compromete_dia, professorId, tMotivo, tipo_ocorrencia, 'pessoal');
+          }
+        }
+      } else {
+        await extrapolarService.extrapolarCancelamentoPessoal(tenantId, data, grupoId, aulaIdx, !!compromete_dia, professorId, tMotivo, tipo_ocorrencia, 'pessoal');
+      }
+    } else {
+      await extrapolarService.extrapolarCancelamentoPessoal(tenantId, data, grupoId, aulaIdx, !!compromete_dia, professorId, tMotivo, tipo_ocorrencia, 'pessoal');
+    }
   } else {
     await extrapolarService.extrapolarCancelamentoGeral(tenantId, data, grupoId, aulaIdx, !!compromete_dia, tMotivo, tipo_ocorrencia, 'geral');
   }
@@ -423,7 +453,7 @@ export async function salvarCardBO(
     tenant_id: tenantId,
     tabela: 'chamadas_log',
     operacao: 'cancelamento',
-    dados: { data, indice_aula: aulaIdx, tipo_ocorrencia, via, compromete_dia },
+    dados: { data, indice_aula: aulaIdx, tipo_ocorrencia, via, compromete_dia, dias },
   });
 }
 
