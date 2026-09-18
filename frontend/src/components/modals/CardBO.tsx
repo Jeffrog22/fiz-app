@@ -42,7 +42,6 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, b
   const [tipo, setTipo] = useState(TIPOS_PESSOAIS[0]);
   const [descricao, setDescricao] = useState('');
   const [salvando, setSalvando] = useState(false);
-  const [cancelando, setCancelando] = useState(false);
   const [cancelarAula, setCancelarAula] = useState(false);
   const [diasInput, setDiasInput] = useState('');
 
@@ -82,7 +81,6 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, b
 
   const handleCancelarBO = async () => {
     if (!boExistente) return;
-    setCancelando(true);
     try {
       await api.delete('/chamadas/card-bo', {
         data: { data, indice_aula: indiceAula, grupo_id: grupoId },
@@ -90,8 +88,6 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, b
       onClose();
     } catch (err) {
       console.error(err);
-    } finally {
-      setCancelando(false);
     }
   };
 
@@ -107,22 +103,15 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, b
         </p>
 
         {boExistente && (
-          <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-amber-700 dark:text-amber-400">BO registrado</span>
-              <span className="text-[10px] text-amber-600 dark:text-amber-500">
-                {boExistente.tipo_select === 'geral' ? 'Geral' : 'Pessoal'}
-              </span>
-            </div>
-            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-              {boExistente.tipo_ocorrencia}
-            </p>
-            {boExistente.motivo && (
-              <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">{boExistente.motivo}</p>
-            )}
-            <button onClick={handleCancelarBO} disabled={cancelando}
-              className="mt-3 w-full px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded hover:bg-red-100 dark:hover:bg-red-900/50 disabled:opacity-50">
-              {cancelando ? 'Cancelando...' : 'Cancelar este BO'}
+          <div className="flex items-center gap-2 mb-4 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded text-xs">
+            <span className="text-amber-700 dark:text-amber-400 truncate">
+              BO: {boExistente.tipo_ocorrencia}{boExistente.motivo ? ` — ${boExistente.motivo}` : ''}
+            </span>
+            <button onClick={handleCancelarBO} title="Limpar BO"
+              className="ml-auto shrink-0 text-gray-400 hover:text-red-500 dark:hover:text-red-400 p-0.5">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           </div>
         )}
