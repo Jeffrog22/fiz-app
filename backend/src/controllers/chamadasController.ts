@@ -153,6 +153,17 @@ export class ChamadasController {
     }
   }
 
+  static async cancelarCardBO(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const tenantId = req.tenantId!;
+      const { data, indice_aula, grupo_id } = req.body;
+      const result = await chamadasService.cancelarBO(tenantId, data, indice_aula, grupo_id);
+      res.json({ ok: true, count: result.count });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async registrarLogAcesso(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const tenantId = req.tenantId!;

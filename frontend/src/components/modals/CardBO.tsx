@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import api from '../../utils/api';
+import type { ChamadaLog } from '../../types';
 
 interface Props {
   aberto: boolean;
@@ -7,6 +8,7 @@ interface Props {
   data: string;
   indiceAula: number;
   grupoId: string;
+  boExistente?: ChamadaLog | null;
 }
 
 const CANCELAMENTO_TIPOS = new Set([
@@ -34,12 +36,13 @@ const TIPOS_GERAIS = [
   'Reunião',
 ];
 
-const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId }) => {
+const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, boExistente }) => {
   const [isPessoal, setIsPessoal] = useState(true);
   const [comprometeDia, setComprometeDia] = useState(false);
   const [tipo, setTipo] = useState(TIPOS_PESSOAIS[0]);
   const [descricao, setDescricao] = useState('');
   const [salvando, setSalvando] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
   const [cancelarAula, setCancelarAula] = useState(false);
   const [diasInput, setDiasInput] = useState('');
 
@@ -77,6 +80,21 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId })
     }
   };
 
+  const handleCancelarBO = async () => {
+    if (!boExistente) return;
+    setCancelando(true);
+    try {
+      await api.delete('/chamadas/card-bo', {
+        data: { data, indice_aula: indiceAula, grupo_id: grupoId },
+      });
+      onClose();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCancelando(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md shadow-xl dark:shadow-black/20 max-h-[90vh] overflow-y-auto">
@@ -87,6 +105,28 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId })
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
           {new Date(data + 'T12:00').toLocaleDateString('pt-BR')} - Aula {indiceAula + 1}
         </p>
+
+        {boExistente && (
+          <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-amber-700 dark:text-amber-400">BO registrado</span>
+              <span className="text-[10px] text-amber-600 dark:text-amber-500">
+                {boExistente.tipo_select === 'geral' ? 'Geral' : 'Pessoal'}
+              </span>
+            </div>
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+              {boExistente.tipo_ocorrencia}
+            </p>
+            {boExistente.motivo && (
+              <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">{boExistente.motivo}</p>
+            )}
+            <button onClick={handleCancelarBO} disabled={cancelando}
+              className="mt-3 w-full px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded hover:bg-red-100 dark:hover:bg-red-900/50 disabled:opacity-50">
+              {cancelando ? 'Cancelando...' : 'Cancelar este BO'}
+            </button>
+          </div>
+        )}
+
         <div className="space-y-4">
 
           <div className="flex items-center gap-2">

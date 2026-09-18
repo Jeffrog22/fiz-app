@@ -433,6 +433,77 @@ export async function salvarCardBO(
   });
 }
 
+export async function cancelarBO(
+  tenantId: string,
+  data: string,
+  indice_aula: number,
+  grupoId: string,
+): Promise<{ count: number }> {
+  const { data: sourceTurma, error: srcError } = await supabase
+    .from('turmas')
+    .select('label, professor_id')
+    .eq('grupo_id', grupoId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+
+  if (srcError) throw new AppError('Erro ao buscar turma origem', 500);
+  if (!sourceTurma) throw new AppError('Turma não encontrada', 404);
+
+  const { data: allTurmas } = await supabase
+    .from('turmas')
+    .select('grupo_id, professor_id')
+    .eq('tenant_id', tenantId)
+    .eq('label', sourceTurma.label)
+    .order('professor_id')
+    .order('horario');
+
+  const turmasDoLabel = allTurmas || [];
+
+  const { data: logFonte } = await supabase
+    .from('chamadas_log')
+    .select('tipo_select, tipo_ocorrencia, motivo')
+    .eq('tenant_id', tenantId)
+    .eq('data', data)
+    .eq('indice_aula', indice_aula)
+    .eq('grupo_id', grupoId)
+    .maybeSingle();
+
+  const tipoSelect = logFonte?.tipo_select || 'pessoal';
+
+  let grupoIdsAfetados: string[];
+  if (tipoSelect === 'pessoal') {
+    grupoIdsAfetados = turmasDoLabel
+      .filter((t) => t.professor_id === sourceTurma.professor_id)
+      .map((t) => t.grupo_id);
+  } else {
+    grupoIdsAfetados = turmasDoLabel.map((t) => t.grupo_id);
+  }
+
+  const { data: deletados, error: delError } = await supabase
+    .from('chamadas_log')
+    .delete()
+    .eq('tenant_id', tenantId)
+    .eq('data', data)
+    .in('grupo_id', grupoIdsAfetados)
+    .eq('origem', 'extrapolado')
+    .eq('status', 'cancelado')
+    .not('tipo_ocorrencia', 'is', null)
+    .select('id');
+
+  if (delError) throw new AppError('Erro ao cancelar BO', 500);
+
+  const count = deletados?.length || 0;
+
+  registrarOperacao({
+    tenant_id: tenantId,
+    tabela: 'chamadas_log',
+    operacao: 'cancelamento',
+    dados: { data, indice_aula, grupo_id: grupoId, tipo_select: tipoSelect, registros_removidos: count },
+  });
+
+  return { count };
+}
+
 export async function registrarLogAcesso(tenantId: string, professorId?: string, ip?: string): Promise<void> {
   const { data: professor } = await supabase
     .from('professores')

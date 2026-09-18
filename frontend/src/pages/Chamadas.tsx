@@ -1002,6 +1002,11 @@ const Chamadas: React.FC = () => {
         data={dateHeaderClickData}
         indiceAula={indiceAtual}
         grupoId={grupoId}
+        boExistente={grupoId && dateHeaderClickData
+          ? (logs[grupoId]?.[dateHeaderClickData]?.[indiceAtual]?.tipo_ocorrencia
+            ? logs[grupoId][dateHeaderClickData][indiceAtual]
+            : null)
+          : null}
       />
     </div>
   );
