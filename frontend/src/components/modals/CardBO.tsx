@@ -44,6 +44,7 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, b
   const [salvando, setSalvando] = useState(false);
   const [cancelarAula, setCancelarAula] = useState(false);
   const [diasInput, setDiasInput] = useState('');
+  const [erro, setErro] = useState('');
 
   if (!aberto) return null;
 
@@ -51,6 +52,7 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, b
     setIsPessoal(v);
     setTipo(v ? TIPOS_PESSOAIS[0] : TIPOS_GERAIS[0]);
     setCancelarAula(false);
+    setErro('');
   };
 
   const tipos = isPessoal ? TIPOS_PESSOAIS : TIPOS_GERAIS;
@@ -59,6 +61,7 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, b
 
   const handleSalvar = async () => {
     setSalvando(true);
+    setErro('');
     try {
       await api.post('/chamadas/card-bo', {
         data,
@@ -72,8 +75,9 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, b
         dias: tipo === 'Atestado / Afastamento' && diasInput ? parseInt(diasInput) : undefined,
       });
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setErro(err?.response?.data?.message || err?.response?.data?.error || 'Erro ao salvar o BO — tente novamente.');
     } finally {
       setSalvando(false);
     }
@@ -150,7 +154,7 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, b
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo</label>
-            <select value={tipo} onChange={(e) => { setTipo(e.target.value); setCancelarAula(false); setDiasInput(''); }}
+            <select value={tipo} onChange={(e) => { setTipo(e.target.value); setCancelarAula(false); setDiasInput(''); setErro(''); }}
               className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded p-2 mt-1 text-sm">
               {tipos.map((t) => (
                 <option key={t} value={t}>{t}</option>
@@ -206,6 +210,11 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, b
               rows={3} className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded p-2 mt-1 text-sm resize-none" />
           </div>
         </div>
+        {erro && (
+          <div className="mt-4 px-3 py-2 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded text-xs text-red-600 dark:text-red-400">
+            {erro}
+          </div>
+        )}
         <div className="flex justify-end gap-2 mt-6">
           <button onClick={onClose}
             className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancelar</button>

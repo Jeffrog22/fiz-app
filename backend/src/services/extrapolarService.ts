@@ -20,6 +20,7 @@ async function extrapolarPorLabel(
   condicaoClima?: string,
   sensacoes?: string[],
   cloroPpm?: number,
+  forcar?: boolean,
 ): Promise<{ message: string; count: number }> {
   if (!data) throw new AppError('Campo data é obrigatório', 400);
 
@@ -212,36 +213,38 @@ async function extrapolarPorLabel(
     return { message: 'Nenhum índice precisou de extrapolação', count: 0 };
   }
 
-  const comBO = new Set<string>();
-  const { data: existentesBO } = await supabase
-    .from('chamadas_log')
-    .select('grupo_id, indice_aula')
-    .eq('tenant_id', tenantId)
-    .eq('data', data)
-    .not('tipo_ocorrencia', 'is', null);
-  for (const r of existentesBO || []) {
-    comBO.add(`${r.grupo_id}|${r.indice_aula}`);
-  }
-  logsCriados = logsCriados.filter((l) => !comBO.has(`${l.grupo_id}|${l.indice_aula}`));
+  if (!forcar) {
+    const comBO = new Set<string>();
+    const { data: existentesBO } = await supabase
+      .from('chamadas_log')
+      .select('grupo_id, indice_aula')
+      .eq('tenant_id', tenantId)
+      .eq('data', data)
+      .not('tipo_ocorrencia', 'is', null);
+    for (const r of existentesBO || []) {
+      comBO.add(`${r.grupo_id}|${r.indice_aula}`);
+    }
+    logsCriados = logsCriados.filter((l) => !comBO.has(`${l.grupo_id}|${l.indice_aula}`));
 
-  if (logsCriados.length === 0) {
-    return { message: 'Registros já possuem CardBO — extrapolação ignorada', count: 0 };
-  }
+    if (logsCriados.length === 0) {
+      return { message: 'Registros já possuem CardBO — extrapolação ignorada', count: 0 };
+    }
 
-  const manualKeys = new Set<string>();
-  const { data: existingManual } = await supabase
-    .from('chamadas_log')
-    .select('grupo_id, indice_aula')
-    .eq('tenant_id', tenantId)
-    .eq('data', data)
-    .eq('origem', 'manual');
-  for (const r of existingManual || []) {
-    manualKeys.add(`${r.grupo_id}|${r.indice_aula}`);
-  }
-  const antesFiltro = logsCriados.length;
-  logsCriados = logsCriados.filter((l) => !manualKeys.has(`${l.grupo_id}|${l.indice_aula}`));
-  if (logsCriados.length < antesFiltro) {
-    console.log(`[extrapolarPorLabel] Ignorados ${antesFiltro - logsCriados.length} logs que possuem origem manual`);
+    const manualKeys = new Set<string>();
+    const { data: existingManual } = await supabase
+      .from('chamadas_log')
+      .select('grupo_id, indice_aula')
+      .eq('tenant_id', tenantId)
+      .eq('data', data)
+      .eq('origem', 'manual');
+    for (const r of existingManual || []) {
+      manualKeys.add(`${r.grupo_id}|${r.indice_aula}`);
+    }
+    const antesFiltro = logsCriados.length;
+    logsCriados = logsCriados.filter((l) => !manualKeys.has(`${l.grupo_id}|${l.indice_aula}`));
+    if (logsCriados.length < antesFiltro) {
+      console.log(`[extrapolarPorLabel] Ignorados ${antesFiltro - logsCriados.length} logs que possuem origem manual`);
+    }
   }
 
   const BATCH_SIZE = 100;
@@ -317,8 +320,9 @@ export async function extrapolarCancelamentoPessoal(
   motivo?: string,
   tipoOcorrencia?: string,
   tipoSelect?: string,
+  forcar?: boolean,
 ): Promise<{ message: string; count: number }> {
-  return extrapolarPorLabel(tenantId, data, grupoId, indiceAula, 'cancelado', motivo, false, professorId, !comprometeDia, tipoOcorrencia, tipoSelect);
+  return extrapolarPorLabel(tenantId, data, grupoId, indiceAula, 'cancelado', motivo, false, professorId, !comprometeDia, tipoOcorrencia, tipoSelect, undefined, undefined, undefined, undefined, forcar);
 }
 
 export async function extrapolarCancelamentoPessoalMultiLabel(
@@ -331,6 +335,7 @@ export async function extrapolarCancelamentoPessoalMultiLabel(
   motivo?: string,
   tipoOcorrencia?: string,
   tipoSelect?: string,
+  forcar?: boolean,
 ): Promise<{ message: string; count: number }> {
   const { data: turmas, error } = await supabase
     .from('turmas')
@@ -354,7 +359,7 @@ export async function extrapolarCancelamentoPessoalMultiLabel(
     for (const turma of turmas) {
       const diasLabel = parseDiasFromLabel(turma.label || '');
       if (diasLabel.includes(diaSemana)) {
-        await extrapolarCancelamentoPessoal(tenantId, dataStr, turma.grupo_id, indiceAula, comprometeDia, professorId, motivo, tipoOcorrencia, tipoSelect);
+        await extrapolarCancelamentoPessoal(tenantId, dataStr, turma.grupo_id, indiceAula, comprometeDia, professorId, motivo, tipoOcorrencia, tipoSelect, forcar);
         count++;
       }
     }

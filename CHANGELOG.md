@@ -1,5 +1,13 @@
 # Changelog - Fiz! App
 
+## [v2.81.2] - 2026-09-29
+### Fix
+- **CardBO "Atestado / Afastamento" não cancelava e não propagava (regressão da v2.80.0)**
+  - `'Atestado / Afastamento'` adicionado ao `CANCELAMENTO_TIPOS` do backend (`chamadasService.ts`): o tipo só existia no frontend, então `salvarCardBO` caía em metadados puros e retornava antes de qualquer extrapolação — nenhum cancelamento e nenhuma propagação dos "Qtd. dias"
+  - Novo parâmetro `forcar` em `extrapolarPorLabel` / `extrapolarCancelamentoPessoal(MultiLabel)`: o afastamento explícito do professor (via_2) agora sobrescreve logs com `origem: 'manual'` ou `tipo_ocorrencia` já preenchido — corrige o caso em que o log diário do dia já tinha sido registrado por outro professor (dia 22 permanecia sem "C")
+  - CardBO: feedback de erro visível no modal (antes apenas `console.error` silencioso)
+- **Teste de regressão** `backend/src/services/__tests__/cardBO_afastamento.test.ts` (Supabase mockado): cancela e sobrescreve o log manual do dia 22, propaga para 24/09 (label Ter/Qui), ignora 23 e 25/09 e não afeta turmas de outros professores (via_2)
+
 ## [v2.78.0] - 2026-09-04
 ### Feat
 - **CardBO: campo "Qtd. dias" para ausência multi-dia do professor**

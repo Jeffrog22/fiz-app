@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-09-04 — CardBO: campo "Qtd. dias" para ausência multi-dia → v2.78.0 -->
+<!-- última-sessão: 2026-09-29 — Fix CardBO "Atestado / Afastamento" não cancelava (tipo faltando no backend) → v2.81.2 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -87,6 +87,39 @@ Regras:
 - `chamadas_log.grupo_id` é TEXT (migration 017) — aceita `jeftq01`, necessário para extrapolação (antes UUID rejeitava)
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
+
+---
+
+## Sessão: 29/09/2026 — Fix CardBO "Atestado / Afastamento": não cancelava nem propagava → v2.81.2
+
+### O que foi feito
+- **Teste prático reportado**: professora registrou afastamento pessoal de 4 dias a partir do dia 22 com tipo `Atestado / Afastamento` — nada foi cancelado e nada propagou; o log diário do dia 22 já tinha sido feito por outro professor
+- **Causa raiz 1 (regressão da v2.80.0, commit `9bc10b5`)**: `'Atestado / Afastamento'` foi adicionado só no frontend (`CardBO.tsx`); o `CANCELAMENTO_TIPOS` do backend (`chamadasService.ts`) continuou sem esse tipo → `salvarCardBO` via `isCancelamento=false` para `salvarMetadadosBO` e retornava **antes** de chamar qualquer extrapolação. Ou seja: a feature "Qtd. dias" (v2.78.0/v2.79.0) estava **código morto** — o único tipo com o campo de dias era justamente o único que o backend ignorava
+- **Causa raiz 2**: `extrapolarPorLabel` descarta logs com `origem='manual'` (chamada diária do outro professor) ou com `tipo_ocorrencia` já preenchido (resíduo da tentativa falha) para o mesmo `(grupo_id, indice_aula)` naquela data — mesmo com a causa 1 corrigida, o dia 22 continuaria sem "C"
+- **Correções**:
+  - `'Atestado / Afastamento'` adicionado ao `CANCELAMENTO_TIPOS` do backend (+ comentário de manutenção para manter sincronia com o frontend)
+  - Novo parâmetro opcional `forcar?: boolean` em `extrapolarPorLabel`, `extrapolarCancelamentoPessoal` e `extrapolarCancelamentoPessoalMultiLabel` — quando true, pula os filtros `comBO` e `manualKeys`; `salvarCardBO` passa `forcar=true` em **ambos** os caminhos `via_2` (com e sem `dias`)
+  - O `upsert onConflict` já sobrescreve só as colunas enviadas (`status`, `motivo`, `tipo_ocorrencia`, `tipo_select`, `origem`) e preserva as colunas de clima do card do dia
+  - `CardBO.tsx`: estado `erro` + alerta vermelho no modal quando o POST falha (antes só `console.error` silencioso); limpo ao trocar tipo/alternar Pessoal-Geral
+- **Teste de regressão permanente** `backend/src/services/__tests__/cardBO_afastamento.test.ts` (Supabase mockado via `jest.mock` de `supabaseClient` + `logEngine`): 4 casos — compromete a aula (índice único, sobrescreve log manual, propaga 22→24/09 no label Ter/Qui, ignora 23/25, não toca turma de outro professor), compromete o dia (índices 0..N), sem `dias` (só o dia informado) e tipo desconhecido (só metadados)
+
+### Decisões
+- Override (`forcar`) vale para **todo** cancelamento pessoal `via_2` (com ou sem multi-dia), não só para `Atestado / Afastamento` — afastamento explícito do professor sempre sobrescreve a chamada existente
+- Campo "Qtd. dias" permanece **visível só** para `Atestado / Afastamento` (escopo atual da UI, v2.80.0) — decisão do usuário
+- Feedback de erro no modal: incluído (decisão do usuário)
+- Não alterado: `indiceAula` fora do range de outros labels do professor continua sendo pulado silenciosamente (`extrapolarService.ts`, `if (idx >= maxIndices) continue`) — limitação de design da v2.79.0
+
+### Arquivos
+- `backend/src/services/chamadasService.ts` (+tipo no CANCELAMENTO_TIPOS, +forcar nos 2 caminhos via_2)
+- `backend/src/services/extrapolarService.ts` (+forcar em 3 assinaturas, filtros em bloco `if (!forcar)`)
+- `frontend/src/components/modals/CardBO.tsx` (+estado erro + alerta)
+- `backend/src/services/__tests__/cardBO_afastamento.test.ts` (novo — teste de regressão)
+- `CHANGELOG.md` (v2.81.2)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Backend: 0 erros (`tsc --noEmit`) · 47/47 testes passam (43 + 4 novos)
+- Frontend: 0 erros (`npm run build` limpo) · 54/54 testes passam
 
 ---
 

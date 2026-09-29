@@ -335,6 +335,7 @@ export async function salvarCardAula(
   });
 }
 
+// Mantido em sincronia com CANCELAMENTO_TIPOS de frontend/src/components/modals/CardBO.tsx
 const CANCELAMENTO_TIPOS = new Set([
   'Médico pessoal',
   'Médico trabalho',
@@ -342,6 +343,7 @@ const CANCELAMENTO_TIPOS = new Set([
   'Reunião',
   'Secretaria',
   'Raios e Trovões',
+  'Atestado / Afastamento',
 ]);
 
 async function salvarMetadadosBO(
@@ -421,9 +423,9 @@ export async function salvarCardBO(
     if (!professorId) throw new AppError('Professor ID obrigatorio para via_2', 400);
 
     if (dias && dias >= 1) {
-      await extrapolarService.extrapolarCancelamentoPessoalMultiLabel(tenantId, data, dias, aulaIdx, !!compromete_dia, professorId, tMotivo, tipo_ocorrencia, 'pessoal');
+      await extrapolarService.extrapolarCancelamentoPessoalMultiLabel(tenantId, data, dias, aulaIdx, !!compromete_dia, professorId, tMotivo, tipo_ocorrencia, 'pessoal', true);
     } else {
-      await extrapolarService.extrapolarCancelamentoPessoal(tenantId, data, grupoId, aulaIdx, !!compromete_dia, professorId, tMotivo, tipo_ocorrencia, 'pessoal');
+      await extrapolarService.extrapolarCancelamentoPessoal(tenantId, data, grupoId, aulaIdx, !!compromete_dia, professorId, tMotivo, tipo_ocorrencia, 'pessoal', true);
     }
   } else {
     await extrapolarService.extrapolarCancelamentoGeral(tenantId, data, grupoId, aulaIdx, !!compromete_dia, tMotivo, tipo_ocorrencia, 'geral');
