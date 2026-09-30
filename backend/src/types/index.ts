@@ -344,3 +344,9 @@ export interface TransferenciaUnidade {
   respondido_em?: string;
   respondido_por?: string;
 }
+
+export interface AppSetting {
+  key: string;
+  value: Record<string, unknown>;
+  atualizado_em: string;
+}

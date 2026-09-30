@@ -1,5 +1,44 @@
 # Changelog - Fiz! App
 
+## [v2.83.0] - 2026-09-29
+### Feat
+- **Alunos: arraste de colunas no mobile (modo dev) com larguras salvas globalmente**
+  - Handles de redimensionamento nas bordas das colunas da tabela de Alunos, ativos **somente em viewport mobile (≤767px) e com "Modo Dev" ligado** (`DevContext.enabled`) — desktop e usuários sem modo dev não veem handles
+  - Arraste via Pointer Events (`setPointerCapture` + `touch-action: none`): funciona com toque e mouse; larguras mínimas 48px (Ações 64px); 1º arraste mede as colunas atuais no DOM para semear a configuração
+  - Larguras salvas no **backend global** (`app_settings`, sem `tenant_id`): valem para **todos os usuários mobile, em qualquer dispositivo e qualquer unidade** (leitura aplicada com `table-layout: fixed` + `<colgroup>` + `truncate` nas células); edição continua restrita ao modo dev
+  - Botão "↺ Larguras padrão" (somente modo dev + mobile) restaura o layout automático (`PUT {}`)
+  - Migration `030_create_app_settings.sql` (tabela global `app_settings` — **executar no Supabase**) + endpoints `GET/PUT /api/app-settings/:key` (allowlist de keys, auth) + `appSettingsService`
+  - Novo hook `useIsMobile` (`matchMedia '(max-width: 767px)'` com listener de mudança)
+### Testes
+- `appSettingsService.test.ts` (novo, Supabase mockado): get inexistente → null, upsert roundtrip, sobrescrita e isolamento entre chaves
+### Notas
+- Em build de produção o Modo Dev só ativa com `VITE_ALLOW_DEV_MODE=true` no build do Cloudflare; sem a flag (ou sem a migration executada) o app segue exatamente como antes (layout automático)
+
+## [v2.82.0] - 2026-09-29
+### Feat
+- **CardBO: afastamento multi-dia cancela todas as turmas do professor (todos os labels)**
+  - `extrapolarCancelamentoPessoalMultiLabel` agora percorre **todas** as turmas do professor em **todos** os labels: cada dia da janela é testado com `parseDiasFromLabel` de cada label — professor com label "Ter/Qui" e "Qua/Sex" afastado 4 dias cancela 22, 23 e 24/09
+  - No modo multi-dia o "Escopo" é ignorado (sempre todos os índices da turma): radio `Compromete a aula/dia` fica desabilitado no modal quando "Qtd. dias" ≥ 1, com explicação
+  - Aviso vermelho do CardBO mostra o intervalo e o alcance: "Afastamento de 4 dias — de 22/09 a 25/09: todas as turmas do professor serão canceladas nesse período"
+  - Label sem aula na janela não é pulado por causa do índice de origem (índice fora da faixa do label destino é ignorado — o modo multi-dia usa todos os índices)
+- **Cancelamento via_2 agora sobrescreve presença já marcada (linhas por aluno)**
+  - `extrapolarPorLabel` cria, quando `forcar && status='cancelado'`, uma linha de `chamadas_log` por aluno (`grupo_id` = UUID) além da linha da turma — célula com P marcado vira "C" na hora (o merge do `carregarLogs` passou a priorizar `status='cancelado'` do servidor)
+  - via_1 (Geral/Manutenção) segue **sem** linhas por aluno (só a turma)
+  - `cancelarBO` (botão X "Limpar BO") remove no dia: linha de turma + linhas por aluno (turmas do professor + alunos vinculados), usando `tipo_select`/`tipo_ocorrencia` lidos **antes** do delete
+- **Relatórios e exports sem contagem dupla das novas linhas por aluno**
+  - `frequenciaAluno` e `frequenciaTurma`: ignoram linhas `status='cancelado'` com `grupo_id` UUID (a linha da turma já distribui o cancelamento entre os alunos da turma)
+  - Dashboard `cancelamentos`: `total` e `registros` contam apenas linhas cujo `grupo_id` é turma conhecida (linhas por aluno ficam de fora)
+  - Export Cancelamentos XLSX: linhas filtradas por turma conhecida (`logsFiltrados`)
+### Fix
+- **Botão "Limpar" agora limpa de verdade: presença + motivo + ocorrência**
+  - `Limpar este dia` / `Limpar tudo` enviam `motivo: null` nos alunos e, na linha da turma do dia/início focado, `status + motivo + tipo_ocorrencia + tipo_select: null` — nome do aluno deixa de ficar azul (anotação órfã) e o chip "BO de Cancelamento" some
+  - X "Limpar justificativa" também envia `motivo: null`
+  - Escopo: turma atual apenas (labels vizinhas são limpas ao navegar até elas)
+  - Undo "Desfazer" restaura motivo e a linha da turma (snapshot `turmaAntiga`/`turmasAntigas` por data)
+  - Texto de confirmação: "limpar os registros (presença, motivo e ocorrência)"
+### Testes
+- `cardBO_afastamento.test.ts` +5 casos: linhas por aluno (via_2), via_1 sem linhas por aluno, label diferente do professor com índice de origem fora da faixa, `cancelarBO` removendo linhas por aluno e `frequenciaAluno` sem duplicação (mock ganhou `in`/`gte`/`lte`, delete com retorno e tabelas `alunos`/`professores`)
+
 ## [v2.81.2] - 2026-09-29
 ### Fix
 - **CardBO "Atestado / Afastamento" não cancelava e não propagava (regressão da v2.80.0)**

@@ -6,10 +6,30 @@ import SearchInput from '../components/SearchInput';
 import type { Aluno, Professor, SavePayload, NotificacaoAceite } from '../types';
 import { calcIdade, calcIdadeDoAno, calcCategoria, normalizeSearch, sortTurmas, formatarNomeMobile, formatDateBR } from '../utils/formatters';
 import { Pencil, Unlink, Trash2 } from 'lucide-react';
+import useIsMobile from '../hooks/useIsMobile';
+import { useDevLog } from '../hooks/useDevLog';
 
 interface SortRule {
   column: string;
   dir: 'asc' | 'desc';
+}
+
+const COLS_CFG_KEY = 'alunos_colunas_mobile';
+const COLUNAS_CFG = ['nome', 'nivel', 'turma', 'horario', 'professor', 'idade', 'categoria', 'genero', 'acoes'] as const;
+type ColunaCfg = (typeof COLUNAS_CFG)[number];
+type LargurasCols = Record<ColunaCfg, number>;
+const MIN_LARGURA = 48;
+const MIN_LARGURA_ACOES = 64;
+
+function largurasValidas(v: unknown): LargurasCols | null {
+  if (!v || typeof v !== 'object') return null;
+  const out: Partial<LargurasCols> = {};
+  for (const c of COLUNAS_CFG) {
+    const n = (v as Record<string, unknown>)[c];
+    if (typeof n !== 'number' || !isFinite(n)) return null;
+    out[c] = n;
+  }
+  return out as LargurasCols;
 }
 
 const Alunos: React.FC = () => {
@@ -54,6 +74,26 @@ const Alunos: React.FC = () => {
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [aceiteNotif, setAceiteNotif] = useState<NotificacaoAceite | null>(null);
+
+  const isMobile = useIsMobile();
+  const { enabled: devEnabled } = useDevLog();
+  const [largurasCols, setLargurasCols] = useState<LargurasCols | null>(null);
+  const resizeRef = useRef<{ key: ColunaCfg; startX: number; startW: number; base: LargurasCols } | null>(null);
+
+  useEffect(() => {
+    if (!isMobile) return;
+    let ativo = true;
+    (async () => {
+      try {
+        const res = await api.get(`/app-settings/${COLS_CFG_KEY}`);
+        const validas = largurasValidas(res.data?.value);
+        if (ativo && validas) setLargurasCols(validas);
+      } catch {
+        // sem config salva — mantém o layout automático
+      }
+    })();
+    return () => { ativo = false; };
+  }, [isMobile]);
 
   const professorMap = new Map(professores.map((p) => [p.id, p.nome]));
 
@@ -208,6 +248,73 @@ const Alunos: React.FC = () => {
     modoAlocacao ||
     modoTransferencia ||
     modoRematricula;
+
+  const editandoCols = isMobile && devEnabled;
+  const fixarLayout = isMobile && largurasCols !== null;
+  const temCheckbox = modoAlocacao || modoTransferencia || modoRematricula;
+
+  const salvarLarguras = async (novas: LargurasCols) => {
+    try {
+      await api.put(`/app-settings/${COLS_CFG_KEY}`, { value: novas });
+    } catch (e) {
+      console.error('Erro ao salvar larguras das colunas:', e);
+    }
+  };
+
+  const restaurarLarguras = async () => {
+    setLargurasCols(null);
+    try {
+      await api.put(`/app-settings/${COLS_CFG_KEY}`, { value: {} });
+    } catch (e) {
+      console.error('Erro ao restaurar larguras das colunas:', e);
+    }
+  };
+
+  const minLargura = (key: ColunaCfg) => (key === 'acoes' ? MIN_LARGURA_ACOES : MIN_LARGURA);
+
+  const iniciarResize = (e: React.PointerEvent<HTMLDivElement>, key: ColunaCfg) => {
+    if (!editandoCols) return;
+    e.preventDefault();
+    const th = e.currentTarget.closest('th') as HTMLElement | null;
+    const tr = th?.parentElement as HTMLElement | null;
+    const base: LargurasCols = { ...(largurasCols ?? ({} as LargurasCols)) };
+    if (!largurasCols && tr) {
+      const filhos = Array.from(tr.children) as HTMLElement[];
+      const inicio = temCheckbox ? 1 : 0;
+      filhos.slice(inicio).forEach((el, i) => {
+        const c = COLUNAS_CFG[i];
+        if (c) base[c] = Math.round(el.getBoundingClientRect().width);
+      });
+    }
+    const startW = base[key] ?? Math.round(th?.getBoundingClientRect().width ?? MIN_LARGURA);
+    base[key] = startW;
+    resizeRef.current = { key, startX: e.clientX, startW, base };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const moverResize = (e: React.PointerEvent<HTMLDivElement>) => {
+    const st = resizeRef.current;
+    if (!st) return;
+    const novo = Math.max(minLargura(st.key), Math.round(st.startW + (e.clientX - st.startX)));
+    const validas = largurasValidas({ ...st.base, [st.key]: novo });
+    if (validas) setLargurasCols(validas);
+  };
+
+  const encerrarResize = (e: React.PointerEvent<HTMLDivElement>) => {
+    const st = resizeRef.current;
+    if (!st) return;
+    resizeRef.current = null;
+    const novo = Math.max(minLargura(st.key), Math.round(st.startW + (e.clientX - st.startX)));
+    if (novo === Math.round(st.startW)) return;
+    const finais = largurasValidas({ ...st.base, [st.key]: novo });
+    if (!finais) return;
+    setLargurasCols(finais);
+    void salvarLarguras(finais);
+  };
+
+  const cancelarResize = () => {
+    resizeRef.current = null;
+  };
 
   const handleSave = async ({ data, acao }: SavePayload) => {
     try {
@@ -405,8 +512,23 @@ const Alunos: React.FC = () => {
     </button>
   );
 
+  const colResizeHandle = (key: ColunaCfg) =>
+    editandoCols ? (
+      <div
+        className="absolute top-0 right-0 h-full w-4 cursor-col-resize touch-none select-none z-10 hover:bg-primary-400/30 active:bg-primary-500/50"
+        title="Arraste para redimensionar a coluna"
+        onPointerDown={(e) => iniciarResize(e, key)}
+        onPointerMove={moverResize}
+        onPointerUp={encerrarResize}
+        onPointerCancel={cancelarResize}
+      />
+    ) : null;
+
+  const thFixo = fixarLayout || editandoCols ? `relative${fixarLayout ? ' overflow-hidden' : ''}` : '';
+  const tdTrunc = fixarLayout ? 'truncate' : '';
+
   const thFilter = (col: string, label: string) => (
-    <th className="px-3 py-2 align-top">
+    <th className={`px-3 py-2 align-top ${thFixo}`}>
       <div className="flex flex-col gap-1">
         {thSort(col, label)}
         <select
@@ -431,6 +553,7 @@ const Alunos: React.FC = () => {
           ))}
         </select>
       </div>
+      {colResizeHandle(col as ColunaCfg)}
     </th>
   );
 
@@ -537,6 +660,16 @@ const Alunos: React.FC = () => {
           placeholder="Buscar por nome, nível, turma, horário ou professor..."
           className="flex-1 max-w-md"
         />
+        {editandoCols && (
+          <button
+            type="button"
+            onClick={restaurarLarguras}
+            className="text-xs text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 whitespace-nowrap border border-gray-200 dark:border-gray-700 rounded px-2 py-1"
+            title="Restaurar a largura padrão das colunas (volta ao layout automático)"
+          >
+            ↺ Larguras padrão
+          </button>
+        )}
         <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
           {processed.length}
           {temFiltro ? ` de ${alunos.length} ` : ' '}
@@ -697,10 +830,29 @@ const Alunos: React.FC = () => {
         <p className="text-sm text-gray-500 dark:text-gray-400">Carregando...</p>
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
-          <table className="w-full text-sm">
+          <table
+            className="w-full text-sm"
+            style={
+              fixarLayout && largurasCols
+                ? {
+                    tableLayout: 'fixed',
+                    width: `${(temCheckbox ? 32 : 0) + COLUNAS_CFG.reduce((s, c) => s + largurasCols[c], 0)}px`,
+                    minWidth: '100%',
+                  }
+                : undefined
+            }
+          >
+            {fixarLayout && largurasCols && (
+              <colgroup>
+                {temCheckbox && <col style={{ width: '32px' }} />}
+                {COLUNAS_CFG.map((c) => (
+                  <col key={c} style={{ width: `${largurasCols[c]}px` }} />
+                ))}
+              </colgroup>
+            )}
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                {(modoAlocacao || modoTransferencia || modoRematricula) && (
+                {temCheckbox && (
                   <th className="w-8 px-2 py-2">
                     <input
                       type="checkbox"
@@ -710,15 +862,15 @@ const Alunos: React.FC = () => {
                     />
                   </th>
                 )}
-                <th className="text-left px-3 py-2">{thSort('nome', 'Nome')}</th>
+                <th className={`text-left px-3 py-2 ${thFixo}`}>{thSort('nome', 'Nome')}{colResizeHandle('nome')}</th>
                 {thFilter('nivel', 'Nível')}
                 {thFilter('turma', 'Turma')}
                 {thFilter('horario', 'Horário')}
-                <th className="text-left px-3 py-2">{thSort('professor', 'Professor')}</th>
-                <th className="text-left px-3 py-2">{thSort('idade', 'Idade')}</th>
+                <th className={`text-left px-3 py-2 ${thFixo}`}>{thSort('professor', 'Professor')}{colResizeHandle('professor')}</th>
+                <th className={`text-left px-3 py-2 ${thFixo}`}>{thSort('idade', 'Idade')}{colResizeHandle('idade')}</th>
                 {thFilter('categoria', 'Categoria')}
-                <th className="text-left px-3 py-2">{thSort('genero', 'Gênero')}</th>
-                <th className="text-right px-3 py-2 font-medium text-gray-500 dark:text-gray-400">Ações</th>
+                <th className={`text-left px-3 py-2 ${thFixo}`}>{thSort('genero', 'Gênero')}{colResizeHandle('genero')}</th>
+                <th className={`text-right px-3 py-2 font-medium text-gray-500 dark:text-gray-400 ${thFixo}`}>Ações{colResizeHandle('acoes')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -743,7 +895,7 @@ const Alunos: React.FC = () => {
                       </td>
                     )}
                     <td
-                      className={`px-3 py-2 font-medium cursor-pointer hover:text-primary-800 dark:hover:text-primary-200 ${
+                      className={`px-3 py-2 font-medium cursor-pointer hover:text-primary-800 dark:hover:text-primary-200 ${tdTrunc} ${
                         aceiteNotif?.aluno_id === a.id
                           ? 'text-amber-700 dark:text-amber-300'
                           : 'text-primary-600 dark:text-primary-400'
@@ -757,18 +909,18 @@ const Alunos: React.FC = () => {
                       <span className="sm:hidden">{formatarNomeMobile(a.nome, alunosNomes)}</span>
                       <span className="hidden sm:inline">{a.nome}</span>
                     </td>
-                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{a.turma?.nivel || a.nivel || '-'}</td>
-                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{a.turma?.label || '-'}</td>
-                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{(a.turma?.horario || '-').substring(0, 5)}</td>
-                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{profNome || '-'}</td>
-                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{idade !== null ? idade : '-'}</td>
-                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{categoria || '-'}</td>
-                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400">
+                    <td className={`px-3 py-2 text-gray-600 dark:text-gray-400 ${tdTrunc}`}>{a.turma?.nivel || a.nivel || '-'}</td>
+                    <td className={`px-3 py-2 text-gray-600 dark:text-gray-400 ${tdTrunc}`}>{a.turma?.label || '-'}</td>
+                    <td className={`px-3 py-2 text-gray-600 dark:text-gray-400 ${tdTrunc}`}>{(a.turma?.horario || '-').substring(0, 5)}</td>
+                    <td className={`px-3 py-2 text-gray-600 dark:text-gray-400 ${tdTrunc}`}>{profNome || '-'}</td>
+                    <td className={`px-3 py-2 text-gray-600 dark:text-gray-400 ${tdTrunc}`}>{idade !== null ? idade : '-'}</td>
+                    <td className={`px-3 py-2 text-gray-600 dark:text-gray-400 ${tdTrunc}`}>{categoria || '-'}</td>
+                    <td className={`px-3 py-2 text-gray-600 dark:text-gray-400 ${tdTrunc}`}>
                       {a.genero
                         ? a.genero.charAt(0).toUpperCase() + a.genero.slice(1).replace('-', ' ')
                         : '-'}
                     </td>
-                    <td className="px-3 py-2 text-right whitespace-nowrap">
+                    <td className={`px-3 py-2 text-right whitespace-nowrap ${tdTrunc}`}>
                       <button onClick={() => { setEditando(a); setModalOpen(true); }}
                         className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 ml-1 inline-flex items-center align-middle" title="Editar"><Pencil size={16} /></button>
                       {a.turma_id && (

@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-09-29 — Fix CardBO "Atestado / Afastamento" não cancelava (tipo faltando no backend) → v2.81.2 -->
+<!-- última-sessão: 2026-09-29 — Arraste de colunas Alunos (mobile + modo dev) com larguras salvas globalmente em app_settings → v2.83.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -87,6 +87,96 @@ Regras:
 - `chamadas_log.grupo_id` é TEXT (migration 017) — aceita `jeftq01`, necessário para extrapolação (antes UUID rejeitava)
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
+- Migration 030 (`app_settings` — tabela global key/JSONB **sem tenant_id**) **pendente execução no Supabase**; sem ela, `GET/PUT /app-settings/:key` retorna 500 e o grid de Alunos segue com layout automático (degradação silenciosa)
+
+---
+
+## Sessão: 29/09/2026 — Arraste de colunas no Alunos (mobile + modo dev) com larguras globais → v2.83.0
+
+### O que foi feito
+- **Requisito**: arrastar colunas da tabela de Alunos **somente no mobile** e **somente com Modo Dev ligado**; larguras novas viram **padrão salvo para mobile, independente de dispositivo e tenant** (decisões aprovadas: gate = checkbox Modo Dev do `DevContext`; persistência = backend global; aplicação = todos os usuários mobile)
+- **Frontend**
+  - Novo `hooks/useIsMobile.ts`: `matchMedia('(max-width: 767px)')` com listener de mudança (primeiro uso de matchMedia no projeto; sidebar ainda usa `innerWidth < 768` no mount)
+  - `Alunos.tsx`: constantes `COLS_CFG_KEY = 'alunos_colunas_mobile'` + `COLUNAS_CFG` (9 colunas) + validação estrita `largurasValidas exige todas as chaves numéricas; estado `largurasCols` carregado no mount via `GET /app-settings/alunos_colunas_mobile` (só quando mobile; erro/sem linha → silêncio, layout automático)
+  - **Aplicar** (`fixarLayout = isMobile && largurasCols`): `<table style={{tableLayout:'fixed', width: somaPx, minWidth:'100%'}}>` + `<colgroup>` (checkbox condicional fixo em 32px) + `truncate` nos `<td>` e `relative overflow-hidden` nos `<th>`; wrapper `overflow-x-auto` já existente faz o scroll — desktop nunca muda
+  - **Editar** (`editandoCols = isMobile && devEnabled`): handle de 16px na borda direita de cada `<th>` com **Pointer Events** (`setPointerCapture`, `touch-none`, `preventDefault` no pointerdown); 1º arraste mede os `<th>` no DOM e semeia as larguras; clamp 48px (Ações 64px); `pointerup` salva via `PUT` só se a largura mudou; `pointercancel` só limpa o ref
+  - Botão "↺ Larguras padrão" (só modo dev + mobile) na linha da busca: `setLargurasCols(null)` + `PUT { value: {} }` → volta ao auto-layout
+  - Handles usam `editandoCols`/`fixarLayout` independentes: sem config salva o 1º arraste já parte das larguras medidas e persiste
+- **Backend**
+  - Migration `030_create_app_settings.sql`: tabela global `app_settings (key TEXT PK, value JSONB, atualizado_em)` **sem tenant_id**, RLS desabilitado — **pendente de execução manual no Supabase**
+  - `services/appSettingsService.ts`: `getAppSetting` (`maybeSingle` → `value ?? null`) e `saveAppSetting` (upsert `onConflict: 'key'`)
+  - `controllers/appSettingsController.ts` + `routes/appSettingsRoutes.ts`: `GET/PUT /api/app-settings/:key` com `authMiddleware`, **allowlist** `['alunos_colunas_mobile']` (404 para chave desconhecida), valida `value` objeto (400)
+  - `index.ts`: import + `app.use('/api/app-settings', appSettingsRoutes)` (cai sob `tenantMiddleware`, service ignora tenant)
+- **Decisões**
+  - Larguras são **globais** (sem `tenant_id`, sem `professor_id`) — as 4 unidades e todos os aparelhos leem o mesmo preset mobile
+  - Quem **vê**: todos os usuários mobile; quem **edita**: só modo dev — padrão de usuário, edição de ferramenta dev
+  - Validação estrita no load: config incompleta/ inválida → ignora (auto-layout) em vez de quebrar a tabela
+  - Desktop (≥768px) ignora `largurasCols` por completo (`fixarLayout` exige `isMobile`)
+  - Sem `table-layout`/`truncate` fora do modo fixo — zero mudança visual para quem não usa o recurso
+- **Arquivos**
+  - `backend/src/migrations/030_create_app_settings.sql` (novo)
+  - `backend/src/services/appSettingsService.ts` (novo), `backend/src/controllers/appSettingsController.ts` (novo), `backend/src/routes/appSettingsRoutes.ts` (novo)
+  - `backend/src/index.ts` (+mount), `backend/src/types/index.ts` (+`AppSetting`)
+  - `backend/src/services/__tests__/appSettingsService.test.ts` (novo — 4 casos, supabase mockado)
+  - `frontend/src/hooks/useIsMobile.ts` (novo)
+  - `frontend/src/pages/Alunos.tsx` (+carga/salvamento, +colgroup/fixed/truncate, +handles, +botão restaurar)
+  - `CHANGELOG.md` (v2.83.0), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Backend: 0 erros (`tsc --noEmit`) · 56/56 testes passam (52 + 4 novos)
+- Frontend: 0 erros (`tsc --noEmit` + `npm run build` limpo) · 54/54 testes passam
+
+### Pendências / riscos conhecidos
+- **Executar migration 030 no Supabase** (senão GET/PUT de config dá 500 e o recurso fica inerte — comportamento atual preservado)
+- Build PROD (Cloudflare): Modo Dev exige `VITE_ALLOW_DEV_MODE=true` — sem a flag, handles nunca aparecem no app publicado
+- No meio 640–767px os nomes completos (`sm:inline`) aparecem com `truncate` nas colunas estreitas — esperado
+
+---
+
+## Sessão: 29/09/2026 — Afastamento multi-dia todas as turmas + Limpar limpa de verdade + Linhas de cancelamento por aluno → v2.82.0
+
+### O que foi feito
+- **Escopo aprovado pelo usuário (4 decisões, mesma rodada/commit):** (1) Limpar **limpa** `motivo`; (2) Limpar **remove** a ocorrência/BO; (3) cancelamento via_2 **sobrescreve** P já marcado — opção completa (linhas por aluno + ajuste de 4 leitores de relatório + `cancelarBO` apagando as linhas por aluno); (4) executa o escopo aprovado ("Qtd. dias" = todas as turmas do professor) junto
+- **CardBO multi-dia → todos os labels do professor (v2.82.0)**
+  - `extrapolarService.extrapolarCancelamentoPessoalMultiLabel`: lista as turmas do professor (todos labels) e, para cada dia da janela `data..data+dias-1`, cancela os labels cujo `parseDiasFromLabel` inclui o dia da semana — professor com "Ter/Qui" + "Qua/Sex" afastado 4 dias cancela 22, 23 **e** 24/09
+  - Assinatura simplificada: `(tenantId, data, dias, professorId, motivo?, tipoOcorrencia?, tipoSelect?, forcar?)` — chamada interna com `indiceAula=0` + `comprometeDia=true` (todos os índices), então o índice de origem fora da faixa do label destino não impede o cancelamento (limitação conhecida `idx >= maxIndices` só atinge o caminho de índice único)
+  - `CardBO.tsx`: `diasQtd`/`multiDia` → radio Escopo desabilitado + nota "Ignorado com Qtd. dias preenchido — o afastamento cobre todas as turmas do professor"; aviso vermelho com intervalo de datas ("de 22/09 a 25/09"); helper do campo reescrito ("Dias corridos a partir da data da ocorrência, apenas os dias de aula do label")
+- **Linhas de cancelamento por aluno (via_2)**
+  - `extrapolarPorLabel`: bloco antes do BATCH — quando `forcar && status==='cancelado'`, busca alunos por `turma_id IN (turmas do batch)` e empilha clones `{...log, grupo_id: alunoId}` — célula marcada com P passa a exibir "C" **sem F5**
+  - `carregarLogs` (Chamadas.tsx): merge agora aceita do servidor `log.status === 'cancelado'` mesmo quando o log local é manual (anteriormente o P manual local prevalecia até recarregar)
+  - via_1 permanece só turma (sem clones) — decisão mantida
+  - `cancelarBO` (chamadasService): lê `tipo_select/tipo_ocorrencia` **antes** do delete (corrige bug: sempre caía no fallback `pessoal`), calcula `turmaIds` (pessoal → todas as turmas do professor em todos os labels; geral → label; sempre inclui a turma origem), busca alunos `.in('turma_id', turmaIds)` e apaga extras `.in('grupo_id', turmaIds ∪ alunoIds)` + `origem='extrapolado'` + `status='cancelado'` + `tipo_ocorrencia` (igual ao conhecido)
+- **Sem contagem dupla (4 leitores ajustados)**
+  - `relatoriosService.frequenciaAluno`/`frequenciaTurma`: `if (status==='cancelado' && UUID_RE.test(grupo_id)) continue` — a linha da turma já distribui o cancelamento
+  - `relatoriosService.cancelamentos`: `total` filtrado por `turmaMap.has(grupo_id)` + `continue` no loop (linhas por aluno fora do dashboard)
+  - `exportacaoService.gerarCancelamentosXLSX`: `logsFiltrados` por turma conhecida
+- **Limpar limpa de verdade (Chamadas.tsx)**
+  - `handleLimparDia`/`handleLimparTudo`: payloads com `motivo: null` nos alunos + payload extra da **linha da turma** `{status, motivo, tipo_ocorrencia, tipo_select: null}` (enviado só se a linha local existia) — e deleta a linha local da turma; `handleLimparJustificativa` +`motivo: null`
+  - Undo: `UndoAction` ganhou `motivoAntigo`/`motivos` no batch, snapshot `turmaAntiga` (dia) e `turmasAntigas` (tudo) + `turmaGrupoId`; `handleDesfazer` restaura status+motivo dos alunos, a linha da turma (ou deleta se não existia antes) e no case `presenca` restaura motivo (usado pelo X de justificativa)
+  - Texto de confirmação: "limpar os registros (presença, motivo e ocorrência)"
+  - Escopo confirmado: **turma atual apenas** (labels vizinhas limpadas ao navegar)
+- **Testes** `cardBO_afastamento.test.ts`: mock ganhou `in/gte/lte`, delete com `.select()` retornando linhas removidas e tabelas `alunos`/`professores`; 5 casos novos (linhas por aluno via_2; via_1 sem linhas por aluno preservando log manual; outro label com índice de origem fora da faixa; `cancelarBO` removendo turma+alunos no dia mantendo 24/09 e `count===5`; `frequenciaAluno` conta cancelamento 1x com turma+aluno)
+
+### Decisões
+- Override (`forcar`) segue exclusivo do via_2; via_1 (manutenção) continua sem sobrescrever log manual e sem linhas por aluno
+- Multi-dia ignora Escopo por completo (backend não usa `compromete_dia` nesse caminho) — UI desabilita o rádio para não induzir a erro
+- Relatórios contam o cancelamento **pela linha da turma** (linhas por aluno ignoradas) — evita duplicação e não depende dos alunos correntes da turma
+- `cancelarBO` limita-se ao dia do BO (propagação em outros dias é limpa ao navegar até eles) — escopo de "Limpar BO" por dia, como já era
+- Conhecida e aceita: alunos transferidos mantêm linhas por aluno órfãs (fora do escopo do Limpar); `idx >= maxIndices` continua pulando no caminho de índice único
+
+### Arquivos
+- `backend/src/services/extrapolarService.ts` (multiLabel reescrita + expansão por aluno antes do BATCH)
+- `backend/src/services/chamadasService.ts` (`cancelarBO` reescrito)
+- `backend/src/services/relatoriosService.ts` (2 skips + cancelamentos)
+- `backend/src/services/exportacaoService.ts` (`logsFiltrados`)
+- `frontend/src/components/modals/CardBO.tsx` (Escopo desabilitado + aviso com intervalo)
+- `frontend/src/pages/Chamadas.tsx` (UndoAction, carregarLogs, limpar dia/tudo/justificativa, desfazer, confirmação)
+- `backend/src/services/__tests__/cardBO_afastamento.test.ts` (mock + 5 casos)
+- `CHANGELOG.md` (v2.82.0), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Backend: 0 erros (`tsc --noEmit`) · 52/52 testes passam (47 + 5 novos)
+- Frontend: 0 erros (`npm run build` limpo) · 54/54 testes passam
 
 ---
 
