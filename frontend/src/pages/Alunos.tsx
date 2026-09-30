@@ -2,10 +2,12 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
 import AlunoModal from '../components/modals/AlunoModal';
+import ImpressaoListaModal from '../components/modals/ImpressaoListaModal';
 import SearchInput from '../components/SearchInput';
 import type { Aluno, Professor, SavePayload, NotificacaoAceite } from '../types';
 import { calcIdade, calcIdadeDoAno, calcCategoria, normalizeSearch, sortTurmas, formatarNomeMobile, formatDateBR } from '../utils/formatters';
-import { Pencil, Unlink, Trash2 } from 'lucide-react';
+import { Pencil, Unlink, Trash2, Printer } from 'lucide-react';
+import { getTenantId, getTenantNome } from '../utils/tenant';
 import useIsMobile from '../hooks/useIsMobile';
 import { useDevLog } from '../hooks/useDevLog';
 
@@ -55,6 +57,7 @@ const Alunos: React.FC = () => {
   const [rematriculaJanela, setRematriculaJanela] = useState<{ inicio: string; fim: string } | null>(null);
   const [lastSession, setLastSession] = useState({ genero: '', turmaId: '', professorId: '', nivel: '' });
   const [resetCounter, setResetCounter] = useState(0);
+  const [imprimindo, setImprimindo] = useState(false);
 
   const hojeLocal = () => {
     const d = new Date();
@@ -178,12 +181,13 @@ const Alunos: React.FC = () => {
       case 'categoria': return calcCategoria(calcIdadeDoAno(a.data_nascimento)) || '-';
       case 'turma': return a.turma?.label || '-';
       case 'horario': return (a.turma?.horario || '-').substring(0, 5);
+      case 'professor': return professorMap.get(a.turma?.professor_id) || '-';
       default: return '';
     }
   };
 
   const uniqueValues = useMemo(() => {
-    const cols = ['nivel', 'categoria', 'turma', 'horario'];
+    const cols = ['nivel', 'categoria', 'turma', 'horario', 'professor'];
     const result: Record<string, string[]> = {};
     for (const col of cols) {
       const set = new Set<string>();
@@ -248,6 +252,23 @@ const Alunos: React.FC = () => {
     modoAlocacao ||
     modoTransferencia ||
     modoRematricula;
+
+  const ROTULOS_FILTRO: Record<string, string> = {
+    nivel: 'Nível',
+    categoria: 'Categoria',
+    turma: 'Turma',
+    horario: 'Horário',
+    professor: 'Professor',
+  };
+  const filtrosResumo = [
+    ...Object.entries(columnFilters)
+      .filter(([, v]) => v)
+      .map(([col, val]) => `${ROTULOS_FILTRO[col] || col}: ${val}`),
+    filtro ? `Busca: "${filtro}"` : '',
+    modoAlocacao ? 'Modo: Alocação' : '',
+    modoTransferencia ? 'Modo: Transferência' : '',
+    modoRematricula ? 'Modo: Rematrículas' : '',
+  ].filter(Boolean).join(' · ');
 
   const editandoCols = isMobile && devEnabled;
   const fixarLayout = isMobile && largurasCols !== null;
@@ -629,6 +650,15 @@ const Alunos: React.FC = () => {
           >
             {modoRematricula ? 'Sair das Rematrículas' : 'Rematrículas'}
           </button>
+          <button
+            type="button"
+            onClick={() => setImprimindo(true)}
+            className="px-4 py-2 text-sm bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            title="Imprimir ou baixar a lista dos alunos exibidos com os filtros atuais"
+          >
+            <Printer size={14} className="inline-block mr-1 -mt-0.5" />
+            Imprimir
+          </button>
           <input
             ref={fileInputRef}
             type="file"
@@ -866,7 +896,7 @@ const Alunos: React.FC = () => {
                 {thFilter('nivel', 'Nível')}
                 {thFilter('turma', 'Turma')}
                 {thFilter('horario', 'Horário')}
-                <th className={`text-left px-3 py-2 ${thFixo}`}>{thSort('professor', 'Professor')}{colResizeHandle('professor')}</th>
+                {thFilter('professor', 'Professor')}
                 <th className={`text-left px-3 py-2 ${thFixo}`}>{thSort('idade', 'Idade')}{colResizeHandle('idade')}</th>
                 {thFilter('categoria', 'Categoria')}
                 <th className={`text-left px-3 py-2 ${thFixo}`}>{thSort('genero', 'Gênero')}{colResizeHandle('genero')}</th>
@@ -1031,6 +1061,15 @@ const Alunos: React.FC = () => {
         onClose={() => { setModalOpen(false); setEditando(null); }}
         lastSession={lastSession}
         resetCounter={resetCounter}
+      />
+
+      <ImpressaoListaModal
+        aberto={imprimindo}
+        onClose={() => setImprimindo(false)}
+        alunos={processed}
+        professorMap={professorMap}
+        filtrosResumo={filtrosResumo}
+        unidade={getTenantNome(getTenantId())}
       />
 
       {importResult && (

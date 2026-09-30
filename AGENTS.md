@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-09-29 — Arraste de colunas Alunos (mobile + modo dev) com larguras salvas globalmente em app_settings → v2.83.0 -->
+<!-- última-sessão: 2026-09-29 — Lista de impressão Alunos (print/PDF + XLSX + filtro Professor por coluna) → v2.84.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -87,7 +87,44 @@ Regras:
 - `chamadas_log.grupo_id` é TEXT (migration 017) — aceita `jeftq01`, necessário para extrapolação (antes UUID rejeitava)
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
-- Migration 030 (`app_settings` — tabela global key/JSONB **sem tenant_id**) **pendente execução no Supabase**; sem ela, `GET/PUT /app-settings/:key` retorna 500 e o grid de Alunos segue com layout automático (degradação silenciosa)
+- Migration 030 (`app_settings` — tabela global key/JSONB **sem tenant_id**) **executada em produção** (confirmada em 29/09/2026); `VITE_ALLOW_DEV_MODE=true` configurado no build do Cloudflare — handles de coluna (v2.83.0) ativos em produção
+
+---
+
+## Sessão: 29/09/2026 — Alunos: lista de impressão (papel/PDF + XLSX) + filtro Professor por coluna → v2.84.0
+
+### O que foi feito
+- **Botão "🖨️ Imprimir" na toolbar de Alunos** (ao lado de Importar CSV) abre `ImpressaoListaModal` com os alunos **exatamente como o grid exibe** (WYSIWYG — herda `processed`, ou seja, busca textual, filtros de coluna e modos Alocação/Transferência/Rematrículas ativos)
+- **Colunas selecionáveis** (checkboxes, ordem fixa): Nome, Whatsapp, Data Nasc., Idade, Categoria, Gênero, Nível, Turma, Horário, Professor; coluna `#` de numeração sempre emitida; "Nome" é obrigatória (não pode desmarcar o último); default = só Nome
+- **Preview + cabeçalho do modal**: Unidade (via `getTenantNome(getTenantId())`), Turma/Professor/Horário quando únicos, resumo `filtrosResumo` (colunas + busca + modos), Emissão (data BR) e total de alunos; ESC/backdrop fecham
+- **Imprimir / Salvar PDF**: `window.print()` — cópia da tabela renderizada via `createPortal(..., document.body)` com classe `print-alunos` + `body.print-lista` enquanto o modal está aberto; **primeiro `@media print` do projeto** em `index.css`: `body.print-lista > *:not(.print-alunos) { display:none }` (paginação natural, sem truque de visibility/absolute que quebraria em multi-página), tudo preto/branco, bordas pretas, `@page { margin: 1.5cm }`
+- **Baixar XLSX**: `POST /api/exportar/lista-alunos` (tenantMiddleware + authMiddleware) recebe `{ titulo, subtitulo[], colunas[{key,label}], linhas[] }` e devolve a planilha — mesmas linhas/colunas do print (print, PDF e XLSX idênticos, decidido pelo usuário)
+- **`gerarListaAlunosXLSX`** (ExcelJS): título bold, subtítulos cinza, header com fill `FFDDEBF7` + bold, `#` + colunas, bordas thin em tudo, larguras automáticas (máx 45); valida `colunas`/`linhas` (400 se vazio); filename `fiz_lista_alunos_AAAA-MM-DD.xlsx`
+- **Filtro por coluna Professor** (faltava — coluna só era ordenável, busca textual era o único filtro): `thFilter('professor', 'Professor')` no header (posições preservadas: nome→nivel→turma→horario→professor→idade→categoria→genero→acoes) + `getFilterValue case 'professor'` (nome via `professorMap`, `-` sem turma) + `uniqueValues cols` com `'professor'`; herdados pelo modal de impressão
+
+### Decisões
+- Escopo das colunas = mesmos dados da tabela de Alunos (sem colunas novas de dados) — ordem fixa, sem reordenar
+- WYSIWYG total: o XLSX recebe o `processed` do frontend (não recalcula filtros no backend) para print/PDF/XLSX serem idênticos
+- `document.body` (portal direto, sem wrapper) + seletor `body.print-lista > *:not(.print-alunos)` — esconde `#root` inteiro no print sem sumir com a cópia
+- Botão visível em mobile e desktop (sem gate de modo dev); modal usa padrão dos modais existentes (z-40, `max-h-[90vh]`, dark mode)
+- Sem migration; rota nova `/api/exportar/lista-alunos` segue o padrão inline das demais exportações (headers + `res.send(buffer)`)
+
+### Arquivos
+- `frontend/src/components/modals/ImpressaoListaModal.tsx` (novo — estado colunas, preview, window.print, POST XLSX, portal de impressão)
+- `frontend/src/pages/Alunos.tsx` (+import, +state `imprimindo`, +`ROTULOS_FILTRO`/`filtrosResumo`, +botão Imprimir na toolbar, +`thFilter('professor')`, +render do modal)
+- `frontend/src/index.css` (`@page` + primeiro `@media print`)
+- `backend/src/services/exportacaoService.ts` (+`ListaAlunosInput` +`gerarListaAlunosXLSX`)
+- `backend/src/controllers/exportacaoController.ts` (+`exportarListaAlunos`)
+- `backend/src/index.ts` (+rota `POST /api/exportar/lista-alunos`)
+- `CHANGELOG.md` (v2.84.0)
+
+### Typecheck / Testes
+- Backend: 0 erros (`tsc --noEmit`) · 56/56 testes passam
+- Frontend: 0 erros (`tsc --noEmit` + `npm run build` limpo) · 54/54 testes passam (`npm test`)
+- Obs.: rodar testes do frontend com `npm test` (vitest) — `npx jest` baixa um jest solto e falha com "Must use import to load ES Module"
+
+### Pendências / riscos conhecidos
+- **Migration 030 executada** e **`VITE_ALLOW_DEV_MODE=true` configurado** (confirmados pelo usuário em 29/09/2026) — nenhum pendência aberta desta sessão
 
 ---
 

@@ -831,3 +831,73 @@ export async function gerarVagasXLSX(tenantId: string): Promise<ExcelJS.Buffer> 
 
   return workbook.xlsx.writeBuffer();
 }
+
+export interface ListaAlunosInput {
+  titulo: string;
+  subtitulo: string[];
+  colunas: { key: string; label: string }[];
+  linhas: Record<string, string>[];
+}
+
+export async function gerarListaAlunosXLSX(input: ListaAlunosInput): Promise<ExcelJS.Buffer> {
+  const { titulo, subtitulo, colunas, linhas } = input;
+
+  if (!Array.isArray(colunas) || colunas.length === 0) {
+    throw new AppError('colunas é obrigatório', 400);
+  }
+  if (!Array.isArray(linhas)) {
+    throw new AppError('linhas é obrigatório', 400);
+  }
+
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Lista');
+  const totalCols = colunas.length + 1;
+
+  const borda = {
+    top: { style: 'thin' as const },
+    left: { style: 'thin' as const },
+    bottom: { style: 'thin' as const },
+    right: { style: 'thin' as const },
+  };
+
+  sheet.mergeCells(1, 1, 1, totalCols);
+  const tituloCell = sheet.getCell(1, 1);
+  tituloCell.value = titulo || 'Lista de Alunos';
+  tituloCell.font = { bold: true, size: 14 };
+
+  const linhasBase = Array.isArray(subtitulo) ? subtitulo.filter((l) => typeof l === 'string' && l.trim()) : [];
+  linhasBase.forEach((linha, i) => {
+    sheet.mergeCells(2 + i, 1, 2 + i, totalCols);
+    const c = sheet.getCell(2 + i, 1);
+    c.value = linha;
+    c.font = { size: 10, color: { argb: 'FF555555' } };
+  });
+
+  const headerRowIdx = 2 + linhasBase.length + 1;
+  const header = sheet.getRow(headerRowIdx);
+  header.values = ['#', ...colunas.map((c) => c.label)];
+  header.eachCell((cell) => {
+    cell.font = { bold: true };
+    cell.border = borda;
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDDEBF7' } };
+    cell.alignment = { vertical: 'middle' };
+  });
+
+  linhas.forEach((linha, i) => {
+    const row = sheet.getRow(headerRowIdx + 1 + i);
+    row.values = [i + 1, ...colunas.map((c) => String(linha[c.key] ?? ''))];
+    row.eachCell((cell) => {
+      cell.border = borda;
+      cell.alignment = { vertical: 'middle' };
+    });
+  });
+
+  const larguraColuna = (c: { key: string; label: string }): number => {
+    const conteudo = linhas.reduce((max, l) => Math.max(max, String(l[c.key] ?? '').length), 0);
+    return Math.min(45, Math.max(c.label.length + 4, conteudo + 4));
+  };
+  sheet.getColumn(1).width = 6;
+  colunas.forEach((c, i) => { sheet.getColumn(i + 2).width = larguraColuna(c); });
+
+  return await workbook.xlsx.writeBuffer();
+}

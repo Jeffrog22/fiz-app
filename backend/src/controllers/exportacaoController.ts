@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { TenantRequest } from '../types';
-import { gerarFrequenciaXLSX, gerarVagasXLSX, gerarCancelamentosXLSX } from '../services/exportacaoService';
+import { gerarFrequenciaXLSX, gerarVagasXLSX, gerarCancelamentosXLSX, gerarListaAlunosXLSX } from '../services/exportacaoService';
 
 export class ExportacaoController {
   static async exportarFrequencia(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
@@ -57,6 +57,38 @@ export class ExportacaoController {
         tipo_select || undefined,
       );
       const filename = `fiz_cancelamentos_${ano}.xlsx`;
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(buffer);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async exportarListaAlunos(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { titulo, subtitulo, colunas, linhas } = req.body;
+
+      if (!Array.isArray(colunas) || colunas.length === 0) {
+        res.status(400).json({ error: 'colunas é obrigatório' });
+        return;
+      }
+      if (!Array.isArray(linhas)) {
+        res.status(400).json({ error: 'linhas é obrigatório' });
+        return;
+      }
+
+      const buffer = await gerarListaAlunosXLSX({
+        titulo: typeof titulo === 'string' && titulo ? titulo : 'Lista de Alunos',
+        subtitulo: Array.isArray(subtitulo) ? subtitulo : [],
+        colunas,
+        linhas,
+      });
+
+      const agora = new Date();
+      const data = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`;
+      const filename = `fiz_lista_alunos_${data}.xlsx`;
 
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

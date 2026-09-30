@@ -1,5 +1,26 @@
 # Changelog - Fiz! App
 
+## [v2.84.0] - 2026-09-29
+### Feat
+- **Alunos: lista de impressão (papel/PDF) + download XLSX**
+  - Novo botão "🖨️ Imprimir" na toolbar de Alunos abre modal `ImpressaoListaModal` com a lista **exatamente como exibida no grid** (WYSIWYG: herda busca, filtros de coluna e modos ativos)
+  - Colunas selecionáveis por checkbox (ordem fixa): Nome, Whatsapp, Data Nasc., Idade, Categoria, Gênero, Nível, Turma, Horário, Professor — coluna `#` de numeração sempre emitida; "Nome" é a única obrigatória
+  - Preview da tabela no modal + cabeçalho com Unidade, Turma/Professor/Horário (quando únicos), Filtros ativos, Emissão (data) e total de alunos
+  - **Imprimir / Salvar PDF**: `window.print()` com cópia renderizada via portal em `<body class="print-lista">` + CSS `@media print` (esconde todo o app, força preto/branco, bordas pretas, `@page margin 1.5cm`) — paginação natural em múltiplas páginas
+  - **Baixar XLSX**: novo `POST /api/exportar/lista-alunos` (auth+tenant) com `{ titulo, subtitulo[], colunas[{key,label}], linhas[] }` — mesmas linhas/colunas do print (print, PDF e XLSX idênticos); ExcelJS com título, subtítulos, header com fill, bordas e larguras automáticas
+- **Alunos: filtro por coluna Professor** (faltava — a coluna só era ordenável): `thFilter('professor', 'Professor')` no header + opção em `getFilterValue`/`uniqueValues` (nome do professor via `professorMap`, `-` sem turma); o resumo dos filtros ativos acompanha o modal de impressão
+### Arquivos
+- `frontend/src/components/modals/ImpressaoListaModal.tsx` (novo)
+- `frontend/src/pages/Alunos.tsx` (botão Imprimir, `filtrosResumo`, filtro Professor no header, render do modal)
+- `frontend/src/index.css` (primeiro bloco `@media print` do projeto + `@page`)
+- `backend/src/services/exportacaoService.ts` (+`gerarListaAlunosXLSX`)
+- `backend/src/controllers/exportacaoController.ts` (+`exportarListaAlunos`)
+- `backend/src/index.ts` (+rota `POST /api/exportar/lista-alunos`)
+### Testes
+- Backend: `tsc --noEmit` 0 erros · 56/56 passam · Frontend: `tsc --noEmit` 0 erros · build limpo · 54/54 passam
+### Notas
+- Migration 030 (`app_settings`) executada no Supabase e `VITE_ALLOW_DEV_MODE=true` configurado no build (itens que eram pendentes da v2.83.0) — arraste de colunas agora plenamente ativo em produção
+
 ## [v2.83.0] - 2026-09-29
 ### Feat
 - **Alunos: arraste de colunas no mobile (modo dev) com larguras salvas globalmente**
