@@ -1,5 +1,21 @@
 # Changelog - Fiz! App
 
+## [v2.85.1] - 2026-09-30
+### Fix
+- **Redimensionamento de colunas (Alunos) agora funciona em paisagem no celular**
+  - Causa raiz: o gate do recurso era `isMobile = matchMedia('(max-width: 767px)')` — em paisagem o viewport passa de 767px (ex.: 844px), o gate desligava e handles + botão "↺ Larguras padrão" sumiam mesmo com Modo Dev ligado
+  - Novo hook `useIsTouchDevice` (`matchMedia('(pointer: coarse)')` com listener) substitui `useIsMobile` (deletado, era usado só por este recurso) — detecção por dispositivo touch, independente de orientação; desktop com mouse continua fora; tablet passa a valer (Modo Dev obrigatório)
+  - `editandoCols = isTouch && devEnabled` · `fixarLayout = isTouch && largurasCols !== null` — layout fixo também estável ao girar o celular
+- **Handle de resize visível em touch**
+  - Antes: fundo só no `hover` (inexistente no celular) — sem pista onde arrastar; agora fundo sutil permanente + indicador `⋮⋮` quando em modo dev
+- **Arraste robusto em navegadores mobile**
+  - `pointermove`/`pointerup`/`pointercancel` movidos do JSX para `window` durante o drag (padrão do CloroSlider) — funciona mesmo se `setPointerCapture` falhar; cleanup no unmount
+### Testes
+- 58/58 passam (vitest) · `tsc --noEmit` 0 erros · `npm run build` limpo
+### Notas
+- Backend inalterado; sem migration
+- Diagnóstico: Modo Dev estava ligado corretamente (checkbox marcado no login do celular) — só o gate por largura falhava em paisagem
+
 ## [v2.85.0] - 2026-09-30
 ### Feat
 - **Banner de atualização: botão discreto "ver novidades" com síntese do que mudou**

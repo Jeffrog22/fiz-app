@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-09-30 — Banner: botão discreto "ver novidades" + modal síntese do CHANGELOG (changelog.json autogerado) → v2.85.0 -->
+<!-- última-sessão: 2026-09-30 — Fix gate resize colunas (paisagem) + handle visível + drag em window → v2.85.1 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -88,6 +88,37 @@ Regras:
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
 - Migration 030 (`app_settings` — tabela global key/JSONB **sem tenant_id**) **executada em produção** (confirmada em 29/09/2026); `VITE_ALLOW_DEV_MODE=true` configurado no build do Cloudflare — handles de coluna (v2.83.0) ativos em produção
+
+---
+
+## Sessão: 30/09/2026 — Fix gate resize colunas (paisagem) + handle visível + drag em window → v2.85.1
+
+### O que foi feito
+- **Bug reportado**: celular com Modo Dev ligado, edição de colunas **não funcionou** — investigação (2 rodadas de perguntas) fechou a causa raiz: o usuário testou em **paisagem**, onde `isMobile = matchMedia('(max-width: 767px)')` é `false` (viewport ~844px) → `editandoCols` desligado → sem handles e sem o botão "↺ Larguras padrão" (o Modo Dev em si estava correto — checkbox marcado no login do celular)
+- **Gate por touch** (abordagem aprovada pelo usuário: "Gate por touch + UX completa"):
+  - Novo `frontend/src/hooks/useIsTouchDevice.ts`: `matchMedia('(pointer: coarse)')` com listener (par do padrão `useIsMobile`) — celular em retrato **e** paisagem; desktop com mouse (`pointer: fine`) fica de fora; tablet passa a valer (Modo Dev obrigatório)
+  - `Alunos.tsx`: `editandoCols = isTouch && devEnabled` · `fixarLayout = isTouch && largurasCols !== null` · effect de load com `[isTouch]` — layout fixo estável ao girar o aparelho
+  - `useIsMobile.ts` **deletado** (único uso era este recurso)
+- **Handle visível em touch**: `colResizeHandle` ganhou fundo sutil permanente (`bg-primary-400/25` + hover/active) e indicador `⋮⋮` — antes o fundo era só `hover` (invisível no celular)
+- **Arraste robusto (padrão CloroSlider)**: `pointermove`/`pointerup`/`pointercancel` saíram do JSX e passam a ser registrados em `window` durante o drag (`iniciarResize` + `limparListenersResize`, cleanup também no unmount via `useEffect`) — funciona mesmo se `setPointerCapture` falhar (iOS); `moverResize`/`encerrarResize`/`cancelarResize` viraram `aplicarResize(clientX)`/`finalizarResize(clientX)`
+
+### Decisões
+- Gate = dispositivo touch (`pointer: coarse`) em vez de largura — a spec original "≤767px" não cobria orientação; desktop segue travado porque exige **Modo Dev +** touch
+- Tablet ganha o recurso (aceito — sem sentido excluir, Modo Dev é requisito)
+- Handle com indicador visual permanente em vez de depender de hover (touch não tem hover)
+- Listeners em `window` durante o drag em vez de confiar só em `setPointerCapture` — mesmo padrão já usado pelo CloroSlider
+
+### Arquivos
+- `frontend/src/hooks/useIsTouchDevice.ts` (novo)
+- `frontend/src/hooks/useIsMobile.ts` (deletado)
+- `frontend/src/pages/Alunos.tsx` (gate touch, handle visível, drag via window + cleanup unmount)
+- `CHANGELOG.md` (v2.85.1)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Frontend: 0 erros (`tsc --noEmit`) · 58/58 testes (vitest) · `npm run build` limpo
+- Backend inalterado (sem verificação backend); sem migration
+- Teste manual pendente do usuário: celular em **retrato e paisagem** — handles devem aparecer nos dois, com botão "↺ Larguras padrão" visível
 
 ---
 

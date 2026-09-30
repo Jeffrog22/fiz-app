@@ -8,7 +8,7 @@ import type { Aluno, Professor, SavePayload, NotificacaoAceite } from '../types'
 import { calcIdade, calcIdadeDoAno, calcCategoria, normalizeSearch, sortTurmas, formatarNomeMobile, formatDateBR } from '../utils/formatters';
 import { Pencil, Unlink, Trash2, Printer } from 'lucide-react';
 import { getTenantId, getTenantNome } from '../utils/tenant';
-import useIsMobile from '../hooks/useIsMobile';
+import useIsTouchDevice from '../hooks/useIsTouchDevice';
 import { useDevLog } from '../hooks/useDevLog';
 
 interface SortRule {
@@ -78,13 +78,14 @@ const Alunos: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [aceiteNotif, setAceiteNotif] = useState<NotificacaoAceite | null>(null);
 
-  const isMobile = useIsMobile();
+  const isTouch = useIsTouchDevice();
   const { enabled: devEnabled } = useDevLog();
   const [largurasCols, setLargurasCols] = useState<LargurasCols | null>(null);
   const resizeRef = useRef<{ key: ColunaCfg; startX: number; startW: number; base: LargurasCols } | null>(null);
+  const resizeListenersRef = useRef<{ move: (e: PointerEvent) => void; up: (e: PointerEvent) => void; cancel: () => void } | null>(null);
 
   useEffect(() => {
-    if (!isMobile) return;
+    if (!isTouch) return;
     let ativo = true;
     (async () => {
       try {
@@ -96,7 +97,7 @@ const Alunos: React.FC = () => {
       }
     })();
     return () => { ativo = false; };
-  }, [isMobile]);
+  }, [isTouch]);
 
   const professorMap = new Map(professores.map((p) => [p.id, p.nome]));
 
@@ -270,8 +271,8 @@ const Alunos: React.FC = () => {
     modoRematricula ? 'Modo: Rematrículas' : '',
   ].filter(Boolean).join(' · ');
 
-  const editandoCols = isMobile && devEnabled;
-  const fixarLayout = isMobile && largurasCols !== null;
+  const editandoCols = isTouch && devEnabled;
+  const fixarLayout = isTouch && largurasCols !== null;
   const temCheckbox = modoAlocacao || modoTransferencia || modoRematricula;
 
   const salvarLarguras = async (novas: LargurasCols) => {
@@ -293,9 +294,40 @@ const Alunos: React.FC = () => {
 
   const minLargura = (key: ColunaCfg) => (key === 'acoes' ? MIN_LARGURA_ACOES : MIN_LARGURA);
 
+  const limparListenersResize = () => {
+    const l = resizeListenersRef.current;
+    if (!l) return;
+    window.removeEventListener('pointermove', l.move);
+    window.removeEventListener('pointerup', l.up);
+    window.removeEventListener('pointercancel', l.cancel);
+    resizeListenersRef.current = null;
+  };
+
+  const aplicarResize = (clientX: number) => {
+    const st = resizeRef.current;
+    if (!st) return;
+    const novo = Math.max(minLargura(st.key), Math.round(st.startW + (clientX - st.startX)));
+    const validas = largurasValidas({ ...st.base, [st.key]: novo });
+    if (validas) setLargurasCols(validas);
+  };
+
+  const finalizarResize = (clientX: number) => {
+    const st = resizeRef.current;
+    limparListenersResize();
+    if (!st) return;
+    resizeRef.current = null;
+    const novo = Math.max(minLargura(st.key), Math.round(st.startW + (clientX - st.startX)));
+    if (novo === Math.round(st.startW)) return;
+    const finais = largurasValidas({ ...st.base, [st.key]: novo });
+    if (!finais) return;
+    setLargurasCols(finais);
+    void salvarLarguras(finais);
+  };
+
   const iniciarResize = (e: React.PointerEvent<HTMLDivElement>, key: ColunaCfg) => {
     if (!editandoCols) return;
     e.preventDefault();
+    limparListenersResize();
     const th = e.currentTarget.closest('th') as HTMLElement | null;
     const tr = th?.parentElement as HTMLElement | null;
     const base: LargurasCols = { ...(largurasCols ?? ({} as LargurasCols)) };
@@ -310,32 +342,25 @@ const Alunos: React.FC = () => {
     const startW = base[key] ?? Math.round(th?.getBoundingClientRect().width ?? MIN_LARGURA);
     base[key] = startW;
     resizeRef.current = { key, startX: e.clientX, startW, base };
-    e.currentTarget.setPointerCapture(e.pointerId);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // setPointerCapture pode falhar em alguns navegadores mobile —
+      // os listeners no window (abaixo) cobrem o arraste de qualquer forma
+    }
+    const move = (ev: PointerEvent) => aplicarResize(ev.clientX);
+    const up = (ev: PointerEvent) => finalizarResize(ev.clientX);
+    const cancel = () => {
+      limparListenersResize();
+      resizeRef.current = null;
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', cancel);
+    resizeListenersRef.current = { move, up, cancel };
   };
 
-  const moverResize = (e: React.PointerEvent<HTMLDivElement>) => {
-    const st = resizeRef.current;
-    if (!st) return;
-    const novo = Math.max(minLargura(st.key), Math.round(st.startW + (e.clientX - st.startX)));
-    const validas = largurasValidas({ ...st.base, [st.key]: novo });
-    if (validas) setLargurasCols(validas);
-  };
-
-  const encerrarResize = (e: React.PointerEvent<HTMLDivElement>) => {
-    const st = resizeRef.current;
-    if (!st) return;
-    resizeRef.current = null;
-    const novo = Math.max(minLargura(st.key), Math.round(st.startW + (e.clientX - st.startX)));
-    if (novo === Math.round(st.startW)) return;
-    const finais = largurasValidas({ ...st.base, [st.key]: novo });
-    if (!finais) return;
-    setLargurasCols(finais);
-    void salvarLarguras(finais);
-  };
-
-  const cancelarResize = () => {
-    resizeRef.current = null;
-  };
+  useEffect(() => () => limparListenersResize(), []);
 
   const handleSave = async ({ data, acao }: SavePayload) => {
     try {
@@ -536,13 +561,12 @@ const Alunos: React.FC = () => {
   const colResizeHandle = (key: ColunaCfg) =>
     editandoCols ? (
       <div
-        className="absolute top-0 right-0 h-full w-4 cursor-col-resize touch-none select-none z-10 hover:bg-primary-400/30 active:bg-primary-500/50"
+        className="absolute top-0 right-0 h-full w-4 cursor-col-resize touch-none select-none z-10 flex items-center justify-center bg-primary-400/25 hover:bg-primary-400/40 active:bg-primary-500/50 rounded-sm"
         title="Arraste para redimensionar a coluna"
         onPointerDown={(e) => iniciarResize(e, key)}
-        onPointerMove={moverResize}
-        onPointerUp={encerrarResize}
-        onPointerCancel={cancelarResize}
-      />
+      >
+        <span className="text-primary-700/80 dark:text-primary-200/80 text-[9px] leading-none pointer-events-none">⋮⋮</span>
+      </div>
     ) : null;
 
   const thFixo = fixarLayout || editandoCols ? `relative${fixarLayout ? ' overflow-hidden' : ''}` : '';
