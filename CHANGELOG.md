@@ -1,5 +1,22 @@
 # Changelog - Fiz! App
 
+## [v2.85.0] - 2026-09-30
+### Feat
+- **Banner de atualização: botão discreto "ver novidades" com síntese do que mudou**
+  - Ao lado de "Atualizar agora" no alerta âmbar, link pequeno `ver novidades` abre o modal `ReleaseNotesModal` (opcional — não altera o fluxo de atualizar/dispensar)
+  - Modal mostra **"Novidades desde a sua versão"** (versões > `__APP_VERSION__`, com selo "nova") e **"Versões anteriores"** colapsadas (`<details>`) — para quem quiser saber mais
+  - Conteúdo: versão + data + seções (Feat/Fix/...) com títulos e sub-bullets — síntese automática do CHANGELOG, sem manutenção duplicada
+  - Fetch lazy (`/changelog.json` só carrega no clique), ESC/backdrop fecham, dark mode, estados de loading/erro
+- **`changelog.json` autogerado no build**
+  - Novo plugin `changelogJsonPlugin` no `vite.config.ts` parseia `CHANGELOG.md` (últimas 30 versões) → `dist/changelog.json` `{ version, versions: [{version, date, secoes[{titulo, itens[{titulo, detalhes[]}]}]}] }`
+  - Parser tolerante em `frontend/src/utils/changelog.ts` (`## [vX] - data` / `### Seção` / `- **título**` + sub-bullets; bullets simples viram itens; seção default "Alterações")
+  - Frescor mesmo padrão do version.json: `NetworkOnly` no SW para `/changelog.json` + fora do precache + `Cache-Control: no-cache` no `_headers`
+### Testes
+- `changelog.test.ts` (novo, vitest): fixture cobrindo versões/seções/títulos/detalhes/limite + leitura do CHANGELOG real do repo com invariantes estruturais — 58/58 passam
+### Notas
+- Backend inalterado; sem migration
+- Frontend: `tsc --noEmit` 0 erros · build limpo · `dist/changelog.json` gerado (30 versões) · precache 6 entradas sem os JSONs
+
 ## [v2.84.0] - 2026-09-29
 ### Feat
 - **Alunos: lista de impressão (papel/PDF) + download XLSX**

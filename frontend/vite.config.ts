@@ -5,6 +5,7 @@ import { execSync } from 'child_process';
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { parseChangelog } from './src/utils/changelog';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -41,6 +42,29 @@ function versionJsonPlugin(): Plugin {
       writeFileSync(
         resolve(outDir, 'version.json'),
         JSON.stringify({ version: appVersion }, null, 2),
+        'utf-8',
+      );
+    },
+  };
+}
+
+function changelogJsonPlugin(): Plugin {
+  return {
+    name: 'write-changelog-json',
+    apply: 'build',
+    closeBundle() {
+      const outDir = resolve(__dirname, 'dist');
+      mkdirSync(outDir, { recursive: true });
+      let versions: unknown[] = [];
+      try {
+        const md = readFileSync(resolve(__dirname, '..', 'CHANGELOG.md'), 'utf-8');
+        versions = parseChangelog(md, 30);
+      } catch {
+        // CHANGELOG indisponível — gera lista vazia (modal mostra aviso)
+      }
+      writeFileSync(
+        resolve(outDir, 'changelog.json'),
+        JSON.stringify({ version: appVersion, versions }, null, 2),
         'utf-8',
       );
     },
@@ -93,6 +117,7 @@ export default defineConfig({
       },
     }),
     versionJsonPlugin(),
+    changelogJsonPlugin(),
   ],
   define: {
     __APP_VERSION__: JSON.stringify(appVersion),

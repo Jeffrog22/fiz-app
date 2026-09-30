@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-09-29 — Lista de impressão Alunos (print/PDF + XLSX + filtro Professor por coluna) → v2.84.0 -->
+<!-- última-sessão: 2026-09-30 — Banner: botão discreto "ver novidades" + modal síntese do CHANGELOG (changelog.json autogerado) → v2.85.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -88,6 +88,40 @@ Regras:
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
 - Migration 030 (`app_settings` — tabela global key/JSONB **sem tenant_id**) **executada em produção** (confirmada em 29/09/2026); `VITE_ALLOW_DEV_MODE=true` configurado no build do Cloudflare — handles de coluna (v2.83.0) ativos em produção
+
+---
+
+## Sessão: 30/09/2026 — Banner "ver novidades": modal com síntese do CHANGELOG → v2.85.0
+
+### O que foi feito
+- **Requisito**: no alerta âmbar "Nova versão disponível", um botão discreto e **opcional** ("caso a pessoa queira saber") que abra modal com síntese do que foi alterado
+- **Botão no `UpdateBanner`**: link `ver novidades` (`text-xs underline text-white/80`) entre o texto e "Atualizar agora" — fluxo atualizar/dispensar intacto; modal é irmão do banner num fragmento (fechar o banner fecha o modal)
+- **`ReleaseNotesModal`** (`components/common/`): fetch lazy de `/changelog.json` (`no-store`) só no 1º clique; header "Seu app: vX · Última versão: vY"; bloco **"Novidades desde a sua versão"** (versões > `__APP_VERSION__` via `compararVersoes`, selo verde "nova") + **"Versões anteriores (N)"** colapsadas em `<details>`; estados loading/erro; ESC/backdrop; dark mode; padrão z-40 `max-h-[90vh]`
+- **Fonte de dados**: `changelogJsonPlugin` no `vite.config.ts` (par do `versionJsonPlugin`) parseia `CHANGELOG.md` no build → `dist/changelog.json` `{ version, versions }` com últimas **30** versões — CHANGELOG.md continua sendo a única fonte (zero manutenção duplicada)
+- **Parser** `frontend/src/utils/changelog.ts` (`parseChangelog` + `buscarChangelog`): `## [vX.Y.Z] - data` inicia versão, `### Seção` inicia seção, `- **título**` ou `- texto` viram item, `  - sub` vira detalhe do item corrente, bullets sem `###` caem na seção default "Alterações"; regex só aceita data no formato ISO
+- **Frescor** (padrão version.json): SW `NetworkOnly` para `/version.json || /changelog.json` + filtro de ambos do precache + `/changelog.json` com `Cache-Control: no-cache` no `public/_headers` — nota antiga nunca é servida por SW velho
+- **Testes** `changelog.test.ts` (vitest): fixture cobrindo versão+data, seções, item bold com detalhes, item simples, limite de versões + teste que lê o CHANGELOG real do repo (`existsSync` em `cwd`/`cwd/..` — `import.meta.url` não é `file:` no jsdom) com invariantes estruturais (versão semver, data ISO, ≥1 seção com itens)
+
+### Decisões
+- Síntese = os próprios bullets do CHANGELOG (títulos + sub-bullets), parseados — não criar arquivo de notas paralelo
+- JSON estático de build em vez de endpoint de backend (mesmo precedente do version.json; sem migration, sem tocar no backend)
+- Escopo do botão = só o banner (card "Atualizações" de Configurações não ganhou botão — não pedido)
+- `changelog.json` limitado a 30 versões para manter o payload leve
+
+### Arquivos
+- `frontend/src/utils/changelog.ts` (novo — tipos, `parseChangelog`, `buscarChangelog`)
+- `frontend/src/utils/__tests__/changelog.test.ts` (novo — 4 casos)
+- `frontend/vite.config.ts` (+`changelogJsonPlugin`)
+- `frontend/src/sw.ts` (NetworkOnly p/ changelog.json + filtro no precache)
+- `frontend/public/_headers` (+`/changelog.json` no-cache)
+- `frontend/src/components/common/ReleaseNotesModal.tsx` (novo)
+- `frontend/src/components/common/UpdateBanner.tsx` (+botão +estado +render modal)
+- `CHANGELOG.md` (v2.85.0)
+
+### Typecheck / Testes
+- Frontend: 0 erros (`tsc --noEmit`) · 58/58 testes (54 + 4 novos) · `npm run build` limpo
+- Artefatos: `dist/changelog.json` (30 versões, 1ª = v2.84.0), precache 6 entradas sem os JSONs, rota NetworkOnly presente no `dist/sw.js`, `dist/_headers` com no-cache
+- Backend inalterado (não rodou verificação backend)
 
 ---
 

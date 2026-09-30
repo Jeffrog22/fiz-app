@@ -6,10 +6,10 @@ import { NetworkFirst, NetworkOnly, CacheFirst } from 'workbox-strategies';
 
 declare const self: ServiceWorkerGlobalScope;
 
-// version.json nunca deve ser servido pelo SW — sempre vir do servidor,
-// senão o precache antigo serve a versão velha e o banner de atualização nunca dispara
+// version.json e changelog.json nunca devem ser servidos pelo SW — sempre vir do
+// servidor, senão o precache antigo serve dados velhos e banner/síntese ficam defasados
 registerRoute(
-  ({ url }) => url.pathname === '/version.json',
+  ({ url }) => url.pathname === '/version.json' || url.pathname === '/changelog.json',
   new NetworkOnly(),
 );
 
@@ -24,7 +24,7 @@ registerRoute(
 precacheAndRoute(
   self.__WB_MANIFEST.filter((entry) => {
     const url = typeof entry === 'string' ? entry : entry.url;
-    return !url.includes('version.json');
+    return !url.includes('version.json') && !url.includes('changelog.json');
   }),
 );
 
