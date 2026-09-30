@@ -79,6 +79,7 @@ export async function frequenciaAluno(
 
   for (const log of logs) {
     const s = log.status;
+    if (s === 'cancelado' && UUID_RE.test(log.grupo_id)) continue;
     const targets: string[] = [];
 
     if (UUID_RE.test(log.grupo_id)) {
@@ -176,6 +177,7 @@ export async function frequenciaTurma(
   const aggr = new Map<string, { presente: number; falta: number; justificado: number; cancelado: number }>();
 
   for (const log of logs) {
+    if (log.status === 'cancelado' && UUID_RE.test(log.grupo_id)) continue;
     let turmaId: string | null | undefined;
     if (UUID_RE.test(log.grupo_id)) {
       turmaId = turmaFromAluno.get(log.grupo_id) || null;
@@ -325,12 +327,13 @@ export async function cancelamentos(
   const turmaMap = new Map((turmasRes.data || []).map((t: any) => [t.grupo_id, t]));
   const profMap = new Map((profsRes.data || []).map((p: any) => [p.id, p.nome]));
 
-  const total = (data || []).length;
+  const total = (data || []).filter((item) => turmaMap.has(item.grupo_id)).length;
   const porMotivoMap = new Map<string, number>();
   const porMesMap = new Map<number, number>();
   const registros: CancelamentoRegistro[] = [];
 
   for (const item of data || []) {
+    if (!turmaMap.has(item.grupo_id)) continue;
     const motivo = item.motivo || item.tipo_ocorrencia || 'outro';
     porMotivoMap.set(motivo, (porMotivoMap.get(motivo) || 0) + 1);
     const m = new Date(item.data).getMonth() + 1;

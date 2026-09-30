@@ -58,6 +58,14 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, b
   const tipos = isPessoal ? TIPOS_PESSOAIS : TIPOS_GERAIS;
   const isCancelamento = CANCELAMENTO_TIPOS.has(tipo) || (tipo === 'Manutenção/Incidente' && cancelarAula);
   const via = isPessoal ? 'via_2' : 'via_1';
+  const diasQtd = tipo === 'Atestado / Afastamento' && diasInput ? parseInt(diasInput) : 0;
+  const multiDia = isPessoal && diasQtd >= 1;
+
+  const formatarData = (offset: number) => {
+    const d = new Date(data + 'T12:00');
+    d.setDate(d.getDate() + offset);
+    return d.toLocaleDateString('pt-BR');
+  };
 
   const handleSalvar = async () => {
     setSalvando(true);
@@ -72,7 +80,7 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, b
         compromete_dia: comprometeDia || undefined,
         cancelar_aula: cancelarAula || undefined,
         grupo_id: grupoId,
-        dias: tipo === 'Atestado / Afastamento' && diasInput ? parseInt(diasInput) : undefined,
+        dias: multiDia ? diasQtd : undefined,
       });
       onClose();
     } catch (err: any) {
@@ -134,22 +142,29 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, b
             </span>
           </div>
 
-          <div>
+          <div className={multiDia ? 'opacity-50' : ''}>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Escopo</label>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                 <input type="radio" name="compromete" checked={!comprometeDia}
                   onChange={() => setComprometeDia(false)}
+                  disabled={multiDia}
                   className="w-4 h-4 text-primary-600 border-gray-300 dark:border-gray-600" />
                 Compromete a aula
               </label>
               <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                 <input type="radio" name="compromete" checked={comprometeDia}
                   onChange={() => setComprometeDia(true)}
+                  disabled={multiDia}
                   className="w-4 h-4 text-primary-600 border-gray-300 dark:border-gray-600" />
                 Compromete o dia
               </label>
             </div>
+            {multiDia && (
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+                Ignorado com Qtd. dias preenchido — o afastamento cobre todas as turmas do professor.
+              </p>
+            )}
           </div>
 
           <div>
@@ -170,7 +185,7 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, b
                 placeholder="1"
                 className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded p-2 mt-1 text-sm" />
               <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
-                Dias úteis da turma. Deixe vazio para cancelar apenas este dia.
+                Dias corridos a partir da data da ocorrência (apenas os dias de aula do label). Deixe vazio para cancelar apenas este dia.
               </p>
             </div>
           )}
@@ -192,9 +207,13 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, b
           {isCancelamento && (
             <div className="p-2 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded text-xs text-red-600 dark:text-red-400 space-y-1">
               <p>Este tipo de ocorrência irá <strong>cancelar a aula</strong> na matriz de chamada.</p>
-              {comprometeDia && <p>O cancelamento será aplicado em todas as aulas do dia.</p>}
-              {tipo === 'Atestado / Afastamento' && diasInput && parseInt(diasInput) >= 2 && (
-                <p>O cancelamento será aplicado nos próximos <strong>{diasInput} dias</strong> úteis da turma.</p>
+              {comprometeDia && !multiDia && <p>O cancelamento será aplicado em todas as aulas do dia.</p>}
+              {multiDia && (
+                <p>
+                  Afastamento de <strong>{diasQtd} {diasQtd === 1 ? 'dia' : 'dias'}</strong> — de{' '}
+                  <strong>{formatarData(0)}</strong> a <strong>{formatarData(diasQtd - 1)}</strong>: todas as
+                  turmas do professor serão canceladas nesse período.
+                </p>
               )}
               <p className="text-red-500 dark:text-red-400">
                 {via === 'via_2'

@@ -583,7 +583,9 @@ export async function gerarCancelamentosXLSX(
 
   const { data: logs } = await logsQuery.order('data', { ascending: true });
 
-  if (!logs || logs.length === 0) throw new AppError('Nenhum cancelamento encontrado no período', 404);
+  const logsFiltrados = (logs || []).filter((l: any) => turmaMap.has(l.grupo_id));
+
+  if (logsFiltrados.length === 0) throw new AppError('Nenhum cancelamento encontrado no período', 404);
 
   const headerStyle: Partial<ExcelJS.Style> = {
     font: { bold: true, size: 10, color: { argb: 'FFFFFFFF' } },
@@ -614,7 +616,7 @@ export async function gerarCancelamentosXLSX(
     cell.style = headerStyle;
   });
 
-  logs.forEach((log: any, idx: number) => {
+  logsFiltrados.forEach((log: any, idx: number) => {
     const rowNum = 2 + idx;
     const row = sheet.getRow(rowNum);
     row.height = 16;

@@ -20,7 +20,16 @@ interface UndoAction {
   indice?: number;
   statusAntigo?: PresencaStatus;
   motivoAntigo?: string;
-  batch?: Array<{ alunoId: string; statusAntigo?: PresencaStatus; statuses?: Record<string, PresencaStatus> }>;
+  batch?: Array<{
+    alunoId: string;
+    statusAntigo?: PresencaStatus;
+    motivoAntigo?: string;
+    statuses?: Record<string, PresencaStatus>;
+    motivos?: Record<string, string | undefined>;
+  }>;
+  turmaAntiga?: { status?: PresencaStatus; motivo?: string; tipo_ocorrencia?: string; tipo_select?: string } | null;
+  turmasAntigas?: Record<string, { status?: PresencaStatus; motivo?: string; tipo_ocorrencia?: string; tipo_select?: string } | null>;
+  turmaGrupoId?: string;
 }
 
 function getSessionState(key: string, fallback: string): string {
@@ -166,7 +175,7 @@ const Chamadas: React.FC = () => {
             for (const [indice, log] of Object.entries(indices)) {
               const idx = Number(indice);
               const localLog = merged[grupoId][data][idx];
-              if (!localLog || localLog.origem !== 'manual') {
+              if (!localLog || localLog.origem !== 'manual' || log.status === 'cancelado') {
                 merged[grupoId][data][idx] = log;
               }
             }
@@ -510,7 +519,9 @@ const Chamadas: React.FC = () => {
     if (logAtual?.status !== 'justificado') return;
 
     undoStack.current.push({
-      type: 'presenca', alunoId, data, indice: indiceAtual, statusAntigo: 'justificado' as PresencaStatus,
+      type: 'presenca', alunoId, data, indice: indiceAtual,
+      statusAntigo: 'justificado' as PresencaStatus,
+      motivoAntigo: logAtual.motivo,
     });
     if (undoStack.current.length > MAX_UNDO) undoStack.current.shift();
     setUndoCount((c) => c + 1);
@@ -528,7 +539,7 @@ const Chamadas: React.FC = () => {
 
     agendarSalvamento([{
       grupo_id: alunoId, data, indice_aula: indiceAtual,
-      status: null, origem: 'manual',
+      status: null, motivo: null, origem: 'manual',
     }]);
   }, [logs, indiceAtual, agendarSalvamento]);
 
@@ -549,6 +560,7 @@ const Chamadas: React.FC = () => {
           grupo_id: action.alunoId, data: action.data,
           indice_aula: idx,
           status: action.statusAntigo || null, origem: 'manual',
+          ...(action.motivoAntigo !== undefined ? { motivo: action.motivoAntigo || null } : {}),
         }];
         setLogs((prev) => {
           const next = { ...prev };
@@ -559,7 +571,17 @@ const Chamadas: React.FC = () => {
               id: '', tenant_id: '', data: action.data!, grupo_id: action.alunoId!,
               indice_aula: idx, status: action.statusAntigo, origem: 'manual',
               criado_em: new Date().toISOString(),
-            };
+              ...(action.motivoAntigo !== undefined ? { motivo: action.motivoAntigo } : {}),
+            } as ChamadaLog;
+          } else if (action.motivoAntigo !== undefined && action.motivoAntigo !== null) {
+            next[action.alunoId!][action.data!][idx] = {
+              ...next[action.alunoId!][action.data!][idx],
+              id: next[action.alunoId!][action.data!][idx]?.id || '',
+              tenant_id: '', data: action.data!, grupo_id: action.alunoId!,
+              indice_aula: idx, origem: 'manual', status: null,
+              motivo: action.motivoAntigo,
+              criado_em: new Date().toISOString(),
+            } as unknown as ChamadaLog;
           } else {
             delete next[action.alunoId!][action.data!][idx];
             if (Object.keys(next[action.alunoId!][action.data!]).length === 0) {
@@ -595,11 +617,22 @@ const Chamadas: React.FC = () => {
       case 'limpar_dia': {
         if (!action.batch || !action.data) return;
         const idx = action.indice ?? indiceAtual;
-        const payload = action.batch.map((b) => ({
+        const payload: any[] = action.batch.map((b) => ({
           grupo_id: b.alunoId, data: action.data,
           indice_aula: idx,
-          status: b.statusAntigo || null, origem: 'manual',
+          status: b.statusAntigo || null,
+          motivo: b.motivoAntigo || null,
+          origem: 'manual',
         }));
+        if (action.turmaGrupoId && action.turmaAntiga) {
+          payload.push({
+            grupo_id: action.turmaGrupoId, data: action.data, indice_aula: idx,
+            status: action.turmaAntiga.status ?? null,
+            motivo: action.turmaAntiga.motivo ?? null,
+            tipo_ocorrencia: action.turmaAntiga.tipo_ocorrencia ?? null,
+            tipo_select: action.turmaAntiga.tipo_select ?? null,
+          });
+        }
         setLogs((prev) => {
           const next = { ...prev };
           for (const b of action.batch!) {
@@ -610,11 +643,43 @@ const Chamadas: React.FC = () => {
                 id: '', tenant_id: '', data: action.data!, grupo_id: b.alunoId,
                 indice_aula: idx, status: b.statusAntigo, origem: 'manual',
                 criado_em: new Date().toISOString(),
-              };
+                ...(b.motivoAntigo !== undefined ? { motivo: b.motivoAntigo } : {}),
+              } as ChamadaLog;
+            } else if (b.motivoAntigo) {
+              next[b.alunoId][action.data!][idx] = {
+                ...next[b.alunoId][action.data!][idx],
+                id: next[b.alunoId][action.data!][idx]?.id || '',
+                tenant_id: '', data: action.data!, grupo_id: b.alunoId,
+                indice_aula: idx, origem: 'manual', status: null,
+                motivo: b.motivoAntigo,
+                criado_em: new Date().toISOString(),
+              } as unknown as ChamadaLog;
             } else {
               delete next[b.alunoId][action.data!][idx];
               if (Object.keys(next[b.alunoId][action.data!]).length === 0) {
                 delete next[b.alunoId][action.data!];
+              }
+            }
+          }
+          if (action.turmaGrupoId) {
+            if (!next[action.turmaGrupoId]) next[action.turmaGrupoId] = {};
+            if (!next[action.turmaGrupoId][action.data!]) next[action.turmaGrupoId][action.data!] = {};
+            if (action.turmaAntiga) {
+              next[action.turmaGrupoId][action.data!][idx] = {
+                ...next[action.turmaGrupoId][action.data!][idx],
+                id: next[action.turmaGrupoId][action.data!][idx]?.id || '',
+                tenant_id: '', data: action.data!, grupo_id: action.turmaGrupoId,
+                indice_aula: idx, origem: 'manual',
+                status: action.turmaAntiga.status ?? null,
+                motivo: action.turmaAntiga.motivo ?? null,
+                tipo_ocorrencia: action.turmaAntiga.tipo_ocorrencia,
+                tipo_select: action.turmaAntiga.tipo_select,
+                criado_em: new Date().toISOString(),
+              } as ChamadaLog;
+            } else {
+              delete next[action.turmaGrupoId][action.data!][idx];
+              if (Object.keys(next[action.turmaGrupoId][action.data!]).length === 0) {
+                delete next[action.turmaGrupoId][action.data!];
               }
             }
           }
@@ -633,7 +698,21 @@ const Chamadas: React.FC = () => {
             payload.push({
               grupo_id: b.alunoId, data,
               indice_aula: idx,
-              status: status || null, origem: 'manual',
+              status: status || null,
+              motivo: b.motivos?.[data] || null,
+              origem: 'manual',
+            });
+          }
+        }
+        if (action.turmaGrupoId && action.turmasAntigas) {
+          for (const [data, turma] of Object.entries(action.turmasAntigas)) {
+            if (!turma) continue;
+            payload.push({
+              grupo_id: action.turmaGrupoId, data, indice_aula: idx,
+              status: turma.status ?? null,
+              motivo: turma.motivo ?? null,
+              tipo_ocorrencia: turma.tipo_ocorrencia ?? null,
+              tipo_select: turma.tipo_select ?? null,
             });
           }
         }
@@ -642,6 +721,7 @@ const Chamadas: React.FC = () => {
           for (const b of action.batch!) {
             if (!b.statuses) continue;
             for (const [data, statusAntigo] of Object.entries(b.statuses)) {
+              const motivoAntigo = b.motivos?.[data];
               if (!next[b.alunoId]) next[b.alunoId] = {};
               if (!next[b.alunoId][data]) next[b.alunoId][data] = {};
               if (statusAntigo) {
@@ -649,11 +729,45 @@ const Chamadas: React.FC = () => {
                   id: '', tenant_id: '', data, grupo_id: b.alunoId,
                   indice_aula: idx, status: statusAntigo, origem: 'manual',
                   criado_em: new Date().toISOString(),
-                };
+                  ...(motivoAntigo !== undefined ? { motivo: motivoAntigo } : {}),
+                } as ChamadaLog;
+              } else if (motivoAntigo) {
+                next[b.alunoId][data][idx] = {
+                  ...next[b.alunoId][data][idx],
+                  id: next[b.alunoId][data][idx]?.id || '',
+                  tenant_id: '', data, grupo_id: b.alunoId,
+                  indice_aula: idx, origem: 'manual', status: null,
+                  motivo: motivoAntigo,
+                  criado_em: new Date().toISOString(),
+                } as unknown as ChamadaLog;
               } else {
                 delete next[b.alunoId][data][idx];
                 if (Object.keys(next[b.alunoId][data]).length === 0) {
                   delete next[b.alunoId][data];
+                }
+              }
+            }
+          }
+          if (action.turmaGrupoId && action.turmasAntigas) {
+            if (!next[action.turmaGrupoId]) next[action.turmaGrupoId] = {};
+            for (const [data, turma] of Object.entries(action.turmasAntigas)) {
+              if (!next[action.turmaGrupoId][data]) next[action.turmaGrupoId][data] = {};
+              if (turma) {
+                next[action.turmaGrupoId][data][idx] = {
+                  ...next[action.turmaGrupoId][data][idx],
+                  id: next[action.turmaGrupoId][data][idx]?.id || '',
+                  tenant_id: '', data, grupo_id: action.turmaGrupoId,
+                  indice_aula: idx, origem: 'manual',
+                  status: turma.status ?? null,
+                  motivo: turma.motivo ?? null,
+                  tipo_ocorrencia: turma.tipo_ocorrencia,
+                  tipo_select: turma.tipo_select,
+                  criado_em: new Date().toISOString(),
+                } as ChamadaLog;
+              } else {
+                delete next[action.turmaGrupoId][data][idx];
+                if (Object.keys(next[action.turmaGrupoId][data]).length === 0) {
+                  delete next[action.turmaGrupoId][data];
                 }
               }
             }
@@ -716,19 +830,36 @@ const Chamadas: React.FC = () => {
   const handleLimparDia = useCallback(async () => {
     if (alunosDaTurma.length === 0 || dias.length === 0) return;
     const data = dateHeaderClickData || dias[0];
+    const turmaLog = logs[grupoId]?.[data]?.[indiceAtual];
     const batch = alunosDaTurma.map((a) => ({
       alunoId: a.id,
       statusAntigo: logs[a.id]?.[data]?.[indiceAtual]?.status,
+      motivoAntigo: logs[a.id]?.[data]?.[indiceAtual]?.motivo,
     }));
-    undoStack.current.push({ type: 'limpar_dia', data, indice: indiceAtual, batch });
+    undoStack.current.push({
+      type: 'limpar_dia', data, indice: indiceAtual, batch,
+      turmaGrupoId: grupoId,
+      turmaAntiga: turmaLog ? {
+        status: turmaLog.status,
+        motivo: turmaLog.motivo,
+        tipo_ocorrencia: turmaLog.tipo_ocorrencia,
+        tipo_select: turmaLog.tipo_select,
+      } : null,
+    });
     if (undoStack.current.length > MAX_UNDO) undoStack.current.shift();
     setUndoCount((c) => c + 1);
 
-    const payload = batch.map((b) => ({
+    const payload: any[] = batch.map((b) => ({
       grupo_id: b.alunoId, data,
       indice_aula: indiceAtual,
-      status: null, origem: 'manual',
+      status: null, motivo: null, origem: 'manual',
     }));
+    if (turmaLog) {
+      payload.push({
+        grupo_id: grupoId, data, indice_aula: indiceAtual,
+        status: null, motivo: null, tipo_ocorrencia: null, tipo_select: null,
+      });
+    }
     setLogs((prev) => {
       const next = { ...prev };
       for (const b of batch) {
@@ -739,6 +870,12 @@ const Chamadas: React.FC = () => {
           }
         }
       }
+      if (next[grupoId]?.[data]?.[indiceAtual]) {
+        delete next[grupoId][data][indiceAtual];
+        if (Object.keys(next[grupoId][data]).length === 0) {
+          delete next[grupoId][data];
+        }
+      }
       return next;
     });
     filaSalvamento.current.push(...payload);
@@ -746,18 +883,30 @@ const Chamadas: React.FC = () => {
     await processarFila();
     await carregarLogs();
     setLimparConfirm(false);
-  }, [alunosDaTurma, dias, dateHeaderClickData, indiceAtual, logs, processarFila, carregarLogs]);
+  }, [alunosDaTurma, dias, dateHeaderClickData, indiceAtual, logs, grupoId, processarFila, carregarLogs]);
 
   const handleLimparTudo = useCallback(async () => {
     if (alunosDaTurma.length === 0 || dias.length === 0) return;
     const batch = alunosDaTurma.map((a) => {
       const statuses: Record<string, PresencaStatus> = {};
+      const motivos: Record<string, string | undefined> = {};
       for (const d of dias) {
         statuses[d] = logs[a.id]?.[d]?.[indiceAtual]?.status;
+        motivos[d] = logs[a.id]?.[d]?.[indiceAtual]?.motivo;
       }
-      return { alunoId: a.id, statuses };
+      return { alunoId: a.id, statuses, motivos };
     });
-    undoStack.current.push({ type: 'limpar_tudo', indice: indiceAtual, batch });
+    const turmasAntigas: Record<string, { status?: PresencaStatus; motivo?: string; tipo_ocorrencia?: string; tipo_select?: string } | null> = {};
+    for (const d of dias) {
+      const turmaLog = logs[grupoId]?.[d]?.[indiceAtual];
+      turmasAntigas[d] = turmaLog ? {
+        status: turmaLog.status,
+        motivo: turmaLog.motivo,
+        tipo_ocorrencia: turmaLog.tipo_ocorrencia,
+        tipo_select: turmaLog.tipo_select,
+      } : null;
+    }
+    undoStack.current.push({ type: 'limpar_tudo', indice: indiceAtual, batch, turmaGrupoId: grupoId, turmasAntigas });
     if (undoStack.current.length > MAX_UNDO) undoStack.current.shift();
     setUndoCount((c) => c + 1);
 
@@ -767,7 +916,15 @@ const Chamadas: React.FC = () => {
         payload.push({
           grupo_id: b.alunoId, data: d,
           indice_aula: indiceAtual,
-          status: null, origem: 'manual',
+          status: null, motivo: null, origem: 'manual',
+        });
+      }
+    }
+    for (const d of dias) {
+      if (turmasAntigas[d]) {
+        payload.push({
+          grupo_id: grupoId, data: d, indice_aula: indiceAtual,
+          status: null, motivo: null, tipo_ocorrencia: null, tipo_select: null,
         });
       }
     }
@@ -783,6 +940,14 @@ const Chamadas: React.FC = () => {
           }
         }
       }
+      for (const d of dias) {
+        if (next[grupoId]?.[d]?.[indiceAtual]) {
+          delete next[grupoId][d][indiceAtual];
+          if (Object.keys(next[grupoId][d]).length === 0) {
+            delete next[grupoId][d];
+          }
+        }
+      }
       return next;
     });
     filaSalvamento.current.push(...payload);
@@ -790,7 +955,7 @@ const Chamadas: React.FC = () => {
     await processarFila();
     await carregarLogs();
     setLimparConfirm(false);
-  }, [alunosDaTurma, dias, indiceAtual, logs, processarFila, carregarLogs]);
+  }, [alunosDaTurma, dias, indiceAtual, logs, grupoId, processarFila, carregarLogs]);
 
   useEffect(() => {
     if (!limparDropdownOpen) return;
@@ -956,9 +1121,9 @@ const Chamadas: React.FC = () => {
             </h3>
             <p className="text-sm text-gray-600 mb-4 dark:text-gray-400">
               {limparModo === 'tudo' ? (
-                <>Deseja limpar todas as presenças de <strong>{alunosDaTurma.length} alunos</strong> em <strong>{dias.length} dias</strong> no índice de aula <strong>{indiceAtual + 1}</strong>?</>
+                <>Deseja limpar os registros (presença, motivo e ocorrência) de <strong>{alunosDaTurma.length} alunos</strong> em <strong>{dias.length} dias</strong> no índice de aula <strong>{indiceAtual + 1}</strong>?</>
               ) : (
-                <>Deseja limpar as presenças de <strong>{alunosDaTurma.length} alunos</strong> no dia <strong>{new Date((dateHeaderClickData || dias[0]) + 'T12:00:00').toLocaleDateString('pt-BR')}</strong> (índice <strong>{indiceAtual + 1}</strong>)?</>
+                <>Deseja limpar os registros (presença, motivo e ocorrência) de <strong>{alunosDaTurma.length} alunos</strong> no dia <strong>{new Date((dateHeaderClickData || dias[0]) + 'T12:00:00').toLocaleDateString('pt-BR')}</strong> (índice <strong>{indiceAtual + 1}</strong>)?</>
               )}
             </p>
             <div className="flex justify-end gap-2">

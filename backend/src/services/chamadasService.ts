@@ -423,7 +423,7 @@ export async function salvarCardBO(
     if (!professorId) throw new AppError('Professor ID obrigatorio para via_2', 400);
 
     if (dias && dias >= 1) {
-      await extrapolarService.extrapolarCancelamentoPessoalMultiLabel(tenantId, data, dias, aulaIdx, !!compromete_dia, professorId, tMotivo, tipo_ocorrencia, 'pessoal', true);
+      await extrapolarService.extrapolarCancelamentoPessoalMultiLabel(tenantId, data, dias, professorId, tMotivo, tipo_ocorrencia, 'pessoal', true);
     } else {
       await extrapolarService.extrapolarCancelamentoPessoal(tenantId, data, grupoId, aulaIdx, !!compromete_dia, professorId, tMotivo, tipo_ocorrencia, 'pessoal', true);
     }
@@ -445,6 +445,52 @@ export async function cancelarBO(
   indice_aula: number,
   grupoId: string,
 ): Promise<{ count: number }> {
+  const { data: logFonte } = await supabase
+    .from('chamadas_log')
+    .select('tipo_select, tipo_ocorrencia')
+    .eq('tenant_id', tenantId)
+    .eq('data', data)
+    .eq('indice_aula', indice_aula)
+    .eq('grupo_id', grupoId)
+    .maybeSingle();
+
+  const { data: sourceTurma } = await supabase
+    .from('turmas')
+    .select('label, professor_id')
+    .eq('grupo_id', grupoId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+
+  const tipoSelect = logFonte?.tipo_select || 'pessoal';
+  const tipoOcorrencia = logFonte?.tipo_ocorrencia || null;
+
+  let turmaIds: string[] = [];
+  if (sourceTurma) {
+    if (tipoSelect === 'pessoal') {
+      const { data: turmasProf } = await supabase
+        .from('turmas')
+        .select('grupo_id')
+        .eq('tenant_id', tenantId)
+        .eq('professor_id', sourceTurma.professor_id || '');
+      turmaIds = (turmasProf || []).map((t) => t.grupo_id);
+    } else {
+      const { data: turmasLabel } = await supabase
+        .from('turmas')
+        .select('grupo_id')
+        .eq('tenant_id', tenantId)
+        .eq('label', sourceTurma.label);
+      turmaIds = (turmasLabel || []).map((t) => t.grupo_id);
+    }
+  }
+  if (!turmaIds.includes(grupoId)) turmaIds = [grupoId, ...turmaIds];
+
+  const { data: alunos } = await supabase
+    .from('alunos')
+    .select('id, turma_id')
+    .eq('tenant_id', tenantId)
+    .in('turma_id', turmaIds);
+  const alunoIds = (alunos || []).map((a) => a.id);
+
   const { data: deletados, error: delError } = await supabase
     .from('chamadas_log')
     .delete()
@@ -459,55 +505,28 @@ export async function cancelarBO(
 
   const count = deletados?.length || 0;
 
-  const { data: logFonte } = await supabase
-    .from('chamadas_log')
-    .select('tipo_select')
-    .eq('tenant_id', tenantId)
-    .eq('data', data)
-    .eq('indice_aula', indice_aula)
-    .eq('grupo_id', grupoId)
-    .maybeSingle();
-
   if (count > 0) {
-    const { data: sourceTurma } = await supabase
-      .from('turmas')
-      .select('label, professor_id')
-      .eq('grupo_id', grupoId)
+    let extrasQuery = supabase
+      .from('chamadas_log')
+      .delete()
       .eq('tenant_id', tenantId)
-      .maybeSingle();
+      .eq('data', data)
+      .in('grupo_id', [...turmaIds, ...alunoIds])
+      .eq('origem', 'extrapolado')
+      .eq('status', 'cancelado')
+      .not('tipo_ocorrencia', 'is', null);
+    if (tipoOcorrencia) extrasQuery = extrasQuery.eq('tipo_ocorrencia', tipoOcorrencia);
 
-    if (sourceTurma) {
-      const { data: allTurmas } = await supabase
-        .from('turmas')
-        .select('grupo_id, professor_id')
-        .eq('tenant_id', tenantId)
-        .eq('label', sourceTurma.label);
+    const { data: extras } = await extrasQuery.select('id');
 
-      const tipoSelect = logFonte?.tipo_select || 'pessoal';
-      const grupoIds = (allTurmas || [])
-        .filter((t) => tipoSelect === 'pessoal' ? t.professor_id === sourceTurma.professor_id : true)
-        .map((t) => t.grupo_id);
-
-      const { data: extras } = await supabase
-        .from('chamadas_log')
-        .delete()
-        .eq('tenant_id', tenantId)
-        .eq('data', data)
-        .in('grupo_id', grupoIds)
-        .eq('origem', 'extrapolado')
-        .eq('status', 'cancelado')
-        .not('tipo_ocorrencia', 'is', null)
-        .select('id');
-
-      if (extras && extras.length > 0) {
-        registrarOperacao({
-          tenant_id: tenantId,
-          tabela: 'chamadas_log',
-          operacao: 'cancelamento',
-          dados: { data, indice_aula, grupo_id: grupoId, tipo_select: tipoSelect, registros_removidos: count + extras.length },
-        });
-        return { count: count + extras.length };
-      }
+    if (extras && extras.length > 0) {
+      registrarOperacao({
+        tenant_id: tenantId,
+        tabela: 'chamadas_log',
+        operacao: 'cancelamento',
+        dados: { data, indice_aula, grupo_id: grupoId, tipo_select: tipoSelect, registros_removidos: count + extras.length },
+      });
+      return { count: count + extras.length };
     }
   }
 

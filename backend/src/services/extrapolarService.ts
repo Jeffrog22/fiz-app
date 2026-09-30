@@ -247,6 +247,35 @@ async function extrapolarPorLabel(
     }
   }
 
+  if (forcar && status === 'cancelado' && logsCriados.length > 0) {
+    const turmaIds = [...new Set(logsCriados.map((l) => l.grupo_id))];
+    const { data: alunos, error: alunosError } = await supabase
+      .from('alunos')
+      .select('id, turma_id')
+      .eq('tenant_id', tenantId)
+      .in('turma_id', turmaIds);
+
+    if (alunosError) {
+      console.error('[extrapolarPorLabel] Erro ao buscar alunos para cancelamento por aluno:', alunosError.message);
+    } else if (alunos && alunos.length > 0) {
+      const porTurma = new Map<string, string[]>();
+      for (const a of alunos) {
+        if (!a.turma_id) continue;
+        if (!porTurma.has(a.turma_id)) porTurma.set(a.turma_id, []);
+        porTurma.get(a.turma_id)!.push(a.id);
+      }
+      const porAluno: any[] = [];
+      for (const log of logsCriados) {
+        const ids = porTurma.get(log.grupo_id);
+        if (!ids) continue;
+        for (const alunoId of ids) {
+          porAluno.push({ ...log, grupo_id: alunoId });
+        }
+      }
+      logsCriados.push(...porAluno);
+    }
+  }
+
   const BATCH_SIZE = 100;
   for (let i = 0; i < logsCriados.length; i += BATCH_SIZE) {
     const batch = logsCriados.slice(i, i + BATCH_SIZE);
@@ -329,8 +358,6 @@ export async function extrapolarCancelamentoPessoalMultiLabel(
   tenantId: string,
   data: string,
   dias: number,
-  indiceAula: number,
-  comprometeDia: boolean,
   professorId: string,
   motivo?: string,
   tipoOcorrencia?: string,
@@ -359,7 +386,7 @@ export async function extrapolarCancelamentoPessoalMultiLabel(
     for (const turma of turmas) {
       const diasLabel = parseDiasFromLabel(turma.label || '');
       if (diasLabel.includes(diaSemana)) {
-        await extrapolarCancelamentoPessoal(tenantId, dataStr, turma.grupo_id, indiceAula, comprometeDia, professorId, motivo, tipoOcorrencia, tipoSelect, forcar);
+        await extrapolarCancelamentoPessoal(tenantId, dataStr, turma.grupo_id, 0, true, professorId, motivo, tipoOcorrencia, tipoSelect, forcar);
         count++;
       }
     }
