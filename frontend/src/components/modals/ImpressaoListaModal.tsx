@@ -27,7 +27,6 @@ interface ImpressaoListaModalProps {
   onClose: () => void;
   alunos: any[];
   professorMap: Map<string, string>;
-  filtrosResumo: string;
   unidade: string;
 }
 
@@ -47,7 +46,6 @@ const ImpressaoListaModal: React.FC<ImpressaoListaModalProps> = ({
   onClose,
   alunos,
   professorMap,
-  filtrosResumo,
   unidade,
 }) => {
   const [colunasSel, setColunasSel] = useState<string[]>(['nome']);
@@ -98,7 +96,6 @@ const ImpressaoListaModal: React.FC<ImpressaoListaModalProps> = ({
     turmas.length === 1 ? `Turma: ${turmas[0]}` : '',
     professores.length === 1 ? `Professor: ${professores[0]}` : '',
     horarios.length === 1 ? `Horário: ${horarios[0]}` : '',
-    filtrosResumo ? `Filtros: ${filtrosResumo}` : '',
     `Emissão: ${formatDateBR(new Date().toISOString())} · ${alunos.length} aluno${alunos.length !== 1 ? 's' : ''}`,
   ].filter(Boolean);
 
@@ -139,19 +136,17 @@ const ImpressaoListaModal: React.FC<ImpressaoListaModalProps> = ({
   };
 
   const Tabela = () => (
-    <table className="w-full text-sm border-collapse">
+    <table className="text-sm border-collapse">
       <thead>
         <tr>
-          <th className="border border-gray-300 px-2 py-1 text-left w-10">#</th>
           {colunas.map((c) => (
             <th key={c.key} className="border border-gray-300 px-2 py-1 text-left whitespace-nowrap">{c.label}</th>
           ))}
         </tr>
       </thead>
       <tbody>
-        {alunos.map((a, i) => (
+        {alunos.map((a) => (
           <tr key={a.id}>
-            <td className="border border-gray-300 px-2 py-1 text-center">{i + 1}</td>
             {colunas.map((c) => (
               <td key={c.key} className="border border-gray-300 px-2 py-1">{valor(a, c.key)}</td>
             ))}
@@ -191,7 +186,6 @@ const ImpressaoListaModal: React.FC<ImpressaoListaModalProps> = ({
 
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
             {alunos.length} aluno{alunos.length !== 1 ? 's' : ''}
-            {filtrosResumo ? ` · ${filtrosResumo}` : ''}
           </p>
 
           <fieldset className="mb-3">

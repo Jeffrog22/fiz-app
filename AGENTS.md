@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-10-01 — Sair desliga Modo Dev + propagação do CardAula volta ao grid (status null não mascara mais turma) + ciclo próprio + fora_periodo bloqueado + export paridade + retroativo persistido/feedback → v2.86.0 -->
+<!-- última-sessão: 2026-10-01 — Impressão da lista: sem linha Filtros, sem numerador #, tabela com largura natural → v2.86.1 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -88,6 +88,34 @@ Regras:
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
 - Migration 030 (`app_settings` — tabela global key/JSONB **sem tenant_id**) **executada em produção** (confirmada em 29/09/2026); `VITE_ALLOW_DEV_MODE=true` configurado no build do Cloudflare — handles de coluna (v2.83.0) ativos em produção
+
+---
+
+## Sessão: 01/10/2026 — Impressão da lista: sem Filtros, sem numerador #, tabela com largura natural → v2.86.1
+
+### O que foi feito
+- **Escopo pedido**: no modal de impressão da lista de Alunos, retirar da impressão (1) a informação de filtro utilizado e (2) a coluna de numerador `#`; e passar a exibir as colunas em modo justificado ao conteúdo (sem grande distanciamento entre as informações) — decisão do usuário: **largura natural da tabela** (remover `w-full`) e remover a linha Filtros **de tudo** (impressão, XLSX e modal)
+- `ImpressaoListaModal.tsx`:
+  - Removida a linha `Filtros: ...` da `linhasContexto` (deixa de ir para o portal de impressão **e** para o subtítulo do XLSX) e do cabeçalho do modal
+  - Prop `filtrosResumo` removida (interface + destructure)
+  - `Tabela`: removidos `<th>#`/`<td>{i+1}</td>` e a classe `w-full` → colunas com a largura do próprio conteúdo (bordas juntas, sem espaço esticado); `alunos.map` perdeu o índice `i` (ficou sem uso)
+- `Alunos.tsx`: removidos o memo `filtrosResumo` e o objeto `ROTULOS_FILTRO` (órfãos) + a prop no `<ImpressaoListaModal>`
+- Continua impresso: Unidade, Turma/Professor/Horário (quando únicos) e Emissão · nº de alunos; preview do modal = impressão (WYSIWYG); XLSX = mesmas colunas/linhas de antes (nunca teve `#`)
+
+### Decisões
+- "Modo justificado" = **largura natural da tabela** (espaçamento zero entre conteúdo das colunas) em vez de `text-align: justify` ou alinhamento por tipo (3 opções apresentadas; usuário escolheu largura natural)
+- Filtros saem de **tudo**, não só do papel (usuário) — `filtrosResumo`/`ROTULOS_FILTRO` deletados em vez de mantidos ociosos
+- Sem mudança de backend/CSS de impressão
+
+### Arquivos
+- `frontend/src/components/modals/ImpressaoListaModal.tsx` (sem Filtros, sem `#`, sem `w-full`, prop removida)
+- `frontend/src/pages/Alunos.tsx` (sem `filtrosResumo`/`ROTULOS_FILTRO`, sem prop)
+- `CHANGELOG.md` (v2.86.1), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Frontend: 0 erros (`tsc --noEmit`) · 58/58 testes (vitest) · `npm run build` limpo
+- Backend inalterado; sem migration
+- Teste manual pendente do usuário: pré-visualizar impressão com poucas colunas e com todas
 
 ---
 

@@ -1,5 +1,16 @@
 # Changelog - Fiz! App
 
+## [v2.86.1] - 2026-10-01
+### Fix
+- **Impressão da lista de Alunos: menos informação, mais compacta**
+  - Linha **"Filtros: ..."** removida de todo o fluxo de impressão: portal de impressão/PDF, subtítulo do XLSX e cabeçalho do modal (`filtrosResumo` e `ROTULOS_FILTRO` removidos de `Alunos.tsx` — ficariam órfãos); Unidade/Turma/Professor/Horário/Emissão continuam
+  - **Coluna numerador `#`** removida da tabela (some do preview e do papel; o XLSX nunca teve)
+  - Tabela sai de `w-full` → **largura natural do conteúdo** — colunas encostadas no conteúdo, sem grandes espaçamentos entre informações na página (preview do modal = impressão)
+### Testes
+- Frontend: `tsc --noEmit` 0 erros · 58/58 passam (vitest) · `npm run build` limpo
+### Notas
+- Backend inalterado (o payload do XLSX já não recebia a coluna `#`; o subtítulo agora vem de `linhasContexto` sem a linha Filtros); sem migration
+
 ## [v2.86.0] - 2026-10-01
 ### Feat
 - **Sair desliga o Modo Dev**

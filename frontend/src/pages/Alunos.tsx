@@ -254,23 +254,6 @@ const Alunos: React.FC = () => {
     modoTransferencia ||
     modoRematricula;
 
-  const ROTULOS_FILTRO: Record<string, string> = {
-    nivel: 'Nível',
-    categoria: 'Categoria',
-    turma: 'Turma',
-    horario: 'Horário',
-    professor: 'Professor',
-  };
-  const filtrosResumo = [
-    ...Object.entries(columnFilters)
-      .filter(([, v]) => v)
-      .map(([col, val]) => `${ROTULOS_FILTRO[col] || col}: ${val}`),
-    filtro ? `Busca: "${filtro}"` : '',
-    modoAlocacao ? 'Modo: Alocação' : '',
-    modoTransferencia ? 'Modo: Transferência' : '',
-    modoRematricula ? 'Modo: Rematrículas' : '',
-  ].filter(Boolean).join(' · ');
-
   const editandoCols = isTouch && devEnabled;
   const fixarLayout = isTouch && largurasCols !== null;
   const temCheckbox = modoAlocacao || modoTransferencia || modoRematricula;
@@ -1092,7 +1075,6 @@ const Alunos: React.FC = () => {
         onClose={() => setImprimindo(false)}
         alunos={processed}
         professorMap={professorMap}
-        filtrosResumo={filtrosResumo}
         unidade={getTenantNome(getTenantId())}
       />
 
