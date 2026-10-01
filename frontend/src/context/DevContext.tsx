@@ -84,6 +84,12 @@ export const DevProvider: React.FC<DevProviderProps> = ({ children }) => {
     localStorage.setItem('dev_mode', enabled.toString());
   }, [enabled]);
 
+  useEffect(() => {
+    const handleLogout = () => setEnabled(false);
+    window.addEventListener('auth:logout', handleLogout);
+    return () => window.removeEventListener('auth:logout', handleLogout);
+  }, []);
+
   const toggle = useCallback(() => {
     setEnabled((prev) => !prev);
   }, []);

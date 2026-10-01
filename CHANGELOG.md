@@ -1,5 +1,30 @@
 # Changelog - Fiz! App
 
+## [v2.86.0] - 2026-10-01
+### Feat
+- **Sair desliga o Modo Dev**
+  - `logout()` (Sair, HARD RESET e troca de unidade) despacha evento `auth:logout`; `DevContext` escuta e desliga o modo — antes o `dev_mode` ficava no `localStorage` para sempre e o checkbox voltava marcado no próximo login
+### Fix
+- **Propagação do CardAula volta a exibir no grid (célula vazia mascarava o status da turma)**
+  - Causa raiz: linhas aluno-level com `status=null, origem='manual'` (criadas por Desfazer/ciclagem de cliques) tinham prioridade em `getStatus` sobre o fallback da turma — 14 células de 23/09 (bela-vista, Jefferson 15:15/16:00) e 30 linhas no Parque (8 datas) ficavam vazias mesmo com a linha da turma `justificado`/`cancelado` existente
+  - `getStatus`: linha aluno só vence se tiver `status` truthy; `null` cai no fallback da turma — resolve **sem SQL de limpeza** (as linhas null existentes ficam inofensivas); Limpar dia/tudo continua esvaziando (anula também a linha da turma)
+- **Ciclo de clique usa o status próprio do aluno**
+  - Antes: célula com linha manual null podia reenviar `status:null` sem efeito visível; agora linha manual null → próximo clique = `presente`
+- **Clique em `fora_periodo` é bloqueado**
+  - Células de aluno fora do período na data aceitavam clique + POST mas a marca nunca exibia (`getStatus` retorna `fora_periodo` antes de ler logs) — "aceita mas não permanece"; agora clique bloqueado com o mesmo tooltip da célula `—`
+- **Export Frequência (XLSX) com paridade ao grid**
+  - Linha aluno com `status` null mascarava o fallback da turma no lookup (`exportacaoService.ts`) — linha aluno só vence se tiver status; senão usa a linha da turma
+- **Inserção em data passada: persistência + feedback + fuso local**
+  - `retroativo` agora é persistido em `sessionStorage` (mesmo padrão de label/professor/mês/ano) — deixa de zerar a cada visita à página
+  - Data passada com retroativo desligado mostra tooltip "Ative o Lançamento retroativo para marcar esta data" + `cursor: not-allowed` (antes o clique era ignorado silenciosamente)
+  - Guarda passa a usar `isDataPassada()` (data local) em vez de `toISOString()` — após 21h BRT o dia atual deixava de ser tratado como passado
+### Testes
+- Frontend: `tsc --noEmit` 0 erros · 58/58 passam (vitest) · `npm run build` limpo
+- Backend: `tsc --noEmit` 0 erros · 56/56 passam (jest)
+### Notas
+- Sem migration; relatórios backend inafetados (contam a linha da turma separadamente)
+- Opcional (dados): Alana (`62151830`) tem período de 03/09 sem `turma_id` → célula `—` permanece; SQL sugerido: `UPDATE enrollment_period SET turma_id='jefqs05' WHERE aluno_id='62151830-e6d5-4c2b-a0e5-eefcc347f927' AND data_inicio='2026-09-03' AND (turma_id IS NULL OR turma_id='');`
+
 ## [v2.85.1] - 2026-09-30
 ### Fix
 - **Redimensionamento de colunas (Alunos) agora funciona em paisagem no celular**

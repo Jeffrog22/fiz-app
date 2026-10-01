@@ -172,6 +172,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       isAuthenticated: false,
       loading: false,
     });
+    window.dispatchEvent(new CustomEvent('auth:logout'));
   }, []);
 
   return (

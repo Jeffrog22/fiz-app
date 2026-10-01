@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useMemo } from 'react';
 import type { ChamadaLog, Aluno, Turma, CalendarioEvento } from '../../types';
 import api from '../../utils/api';
 import { formatarNomeMobile } from '../../utils/formatters';
-import { isDataFutura } from '../../utils/chamadaUtils';
+import { isDataFutura, isDataPassada } from '../../utils/chamadaUtils';
 import AnotacoesModal from '../modals/AnotacoesModal';
 import JustificativaModal from '../modals/JustificativaModal';
 import { StickyNote, History, Trash2 } from 'lucide-react';
@@ -88,6 +88,7 @@ interface DataGridProps {
   onClearJustificativa?: (alunoId: string, data: string) => void;
   onNomeDoubleClick?: (aluno: Aluno) => void;
   onAfastamento?: (alunoId: string, dias: number) => void;
+  retroativo?: boolean;
 }
 
 const DataGrid: React.FC<DataGridProps> = ({
@@ -112,6 +113,7 @@ const DataGrid: React.FC<DataGridProps> = ({
   onNomeDoubleClick,
   onAfastamento,
   enrollmentPeriods,
+  retroativo = false,
 }) => {
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dateHeaderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -182,8 +184,9 @@ const DataGrid: React.FC<DataGridProps> = ({
       }
 
       // 2. Student-level: clique do usuário P/F/J
+      // status null (célula limpa) cai no fallback da turma — vira status da turma
       const alunoLog = logs[alunoId]?.[data]?.[indiceAtual];
-      if (alunoLog?.status !== undefined) {
+      if (alunoLog?.status) {
         return alunoLog.status as PresencaStatus;
       }
       // 3. Turma-level: fallback propagado por CardAula/CardBO/extrapolação
@@ -341,7 +344,7 @@ const DataGrid: React.FC<DataGridProps> = ({
     (alunoId: string, data: string) => {
       if (isDataFutura(data)) return;
       const current = getStatus(alunoId, data);
-      if (current === 'feriado' || current === 'ponte' || current === 'reuniao' || current === 'evento' || current === 'ferias' || current === 'cancelado') return;
+      if (current === 'feriado' || current === 'ponte' || current === 'reuniao' || current === 'evento' || current === 'ferias' || current === 'cancelado' || current === 'fora_periodo') return;
       // Bloqueia toggle se aluno tem atestado vencido
       const aluno = alunos.find((a) => a.id === alunoId);
       if (aluno && atestadoProximoVencer(aluno)) {
@@ -352,8 +355,8 @@ const DataGrid: React.FC<DataGridProps> = ({
       if (aluno && semParQ(aluno)) return;
       const studentLogEntry = logs[alunoId]?.[data]?.[indiceAtual];
       const isManual = studentLogEntry?.origem === 'manual';
-      if (isManual) {
-        const currentIndex = STATUS_CYCLE.indexOf(current);
+      if (isManual && studentLogEntry?.status) {
+        const currentIndex = STATUS_CYCLE.indexOf(studentLogEntry.status);
         const nextStatus = STATUS_CYCLE[(currentIndex + 1) % STATUS_CYCLE.length];
         onTogglePresenca(alunoId, data, nextStatus);
       } else {
@@ -514,13 +517,15 @@ const DataGrid: React.FC<DataGridProps> = ({
                     const futura = isDataFutura(dia);
                     const isCalendario = status === 'feriado' || status === 'ponte' || status === 'reuniao' || status === 'evento' || status === 'ferias' || status === 'cancelado';
                     const bloqueadoParQ = semParQ(aluno);
+                    const retroBloqueia = !retroativo && isDataPassada(dia) && !isCalendario && status !== 'fora_periodo' && !bloqueadoParQ;
                     return (
                       <td key={dia} className="px-2 py-1 text-center border-r border-gray-100 dark:border-gray-800">
                         <div className="flex flex-col items-center gap-0.5">
                           <button
                             onClick={() => handleCellClick(aluno.id, dia)}
-                            aria-disabled={futura || isCalendario || bloqueadoParQ || status === 'fora_periodo'}
-                            title={status === 'fora_periodo' ? 'Aluno não estava nesta turma nesta data' : bloqueadoParQ && !status ? 'ParQ pendente — registre o ParQ do aluno' : getTooltipText(aluno.id, dia)}
+                            aria-disabled={futura || isCalendario || bloqueadoParQ || status === 'fora_periodo' || retroBloqueia}
+                            title={status === 'fora_periodo' ? 'Aluno não estava nesta turma nesta data' : retroBloqueia ? 'Ative o Lançamento retroativo para marcar esta data' : bloqueadoParQ && !status ? 'ParQ pendente — registre o ParQ do aluno' : getTooltipText(aluno.id, dia)}
+                            style={retroBloqueia ? { cursor: 'not-allowed' } : undefined}
                             className={`rounded-md font-bold transition-all ${
                               futura
                                 ? 'w-7 h-7 text-xs bg-gray-50 text-gray-200 cursor-not-allowed dark:bg-gray-700 dark:text-gray-600'

@@ -385,8 +385,10 @@ export async function gerarFrequenciaXLSX(
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F0F0' } };
             cell.font = { size: 9, color: { argb: 'FFCCCCCC' } };
           } else {
-            const log = logsByDataGrupo.get(`${dataStr}|${aluno.id}`)
-                      || logsByDataGrupo.get(`${dataStr}|${aluno.turma_id}`);
+            const logAluno = logsByDataGrupo.get(`${dataStr}|${aluno.id}`);
+            const log = logAluno && logAluno.status
+              ? logAluno
+              : logsByDataGrupo.get(`${dataStr}|${aluno.turma_id}`);
             if (log && log.status) {
               cell.value = STATUS_MAP[log.status] || '';
               if (cell.value === 'C') {

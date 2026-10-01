@@ -7,7 +7,7 @@ import GridPagination from '../components/grid/GridPagination';
 import CardAula from '../components/modals/CardAula';
 import CardBO from '../components/modals/CardBO';
 import type { Aluno, Turma, Professor, ChamadaLog, AnotacaoAluno, CalendarioEvento } from '../types';
-import { gerarDiasLetivos, hojeMesAno, parseDiasFromLabel } from '../utils/chamadaUtils';
+import { gerarDiasLetivos, hojeMesAno, parseDiasFromLabel, isDataPassada } from '../utils/chamadaUtils';
 
 type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento' | 'ferias' | 'fora_periodo' | undefined;
 
@@ -61,7 +61,7 @@ const Chamadas: React.FC = () => {
 
   const [mes, setMes] = useState(getSessionNumber('chamadas_mes', mesInicial));
   const [ano, setAno] = useState(getSessionNumber('chamadas_ano', anoInicial));
-  const [retroativo, setRetroativo] = useState(false);
+  const [retroativo, setRetroativo] = useState(getSessionState('chamadas_retroativo', 'false') === 'true');
   const [labelSelecionada, setLabelSelecionada] = useState(getSessionState('chamadas_label', ''));
   const [professorId, setProfessorId] = useState(getSessionState('chamadas_professorId', ''));
 
@@ -286,8 +286,9 @@ const Chamadas: React.FC = () => {
       sessionStorage.setItem('chamadas_indice', String(indiceAtual));
       sessionStorage.setItem('chamadas_mes', String(mes));
       sessionStorage.setItem('chamadas_ano', String(ano));
+      sessionStorage.setItem('chamadas_retroativo', String(retroativo));
     } catch { /* quota exceeded, ignore */ }
-  }, [labelSelecionada, professorId, indiceAtual, mes, ano]);
+  }, [labelSelecionada, professorId, indiceAtual, mes, ano, retroativo]);
 
   useEffect(() => {
     if (isInitialMount.current) {
@@ -326,6 +327,7 @@ const Chamadas: React.FC = () => {
       sessionStorage.removeItem('chamadas_indice');
       sessionStorage.removeItem('chamadas_mes');
       sessionStorage.removeItem('chamadas_ano');
+      sessionStorage.removeItem('chamadas_retroativo');
     } catch { /* ignore */ }
   };
 
@@ -358,8 +360,7 @@ const Chamadas: React.FC = () => {
 
   const handleTogglePresenca = useCallback(
     (alunoId: string, data: string, status: PresencaStatus) => {
-      const hoje = new Date().toISOString().split('T')[0];
-      if (!retroativo && data < hoje) return;
+      if (!retroativo && isDataPassada(data)) return;
 
       const currentStatus = logs[alunoId]?.[data]?.[indiceAtual]?.status;
       undoStack.current.push({ type: 'presenca', alunoId, data, indice: indiceAtual, statusAntigo: currentStatus });
@@ -1097,6 +1098,7 @@ const Chamadas: React.FC = () => {
           cardAulaData={cardAulaData}
           turmaGrupoId={grupoId}
           enrollmentPeriods={enrollmentPeriods}
+          retroativo={retroativo}
           onTogglePresenca={handleTogglePresenca}
           onUpdateAnotacao={handleUpdateAnotacao}
           onDateHeaderClick={handleDateHeaderClick}

@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-09-30 — Fix gate resize colunas (paisagem) + handle visível + drag em window → v2.85.1 -->
+<!-- última-sessão: 2026-10-01 — Sair desliga Modo Dev + propagação do CardAula volta ao grid (status null não mascara mais turma) + ciclo próprio + fora_periodo bloqueado + export paridade + retroativo persistido/feedback → v2.86.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -88,6 +88,47 @@ Regras:
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
 - Migration 030 (`app_settings` — tabela global key/JSONB **sem tenant_id**) **executada em produção** (confirmada em 29/09/2026); `VITE_ALLOW_DEV_MODE=true` configurado no build do Cloudflare — handles de coluna (v2.83.0) ativos em produção
+
+---
+
+## Sessão: 01/10/2026 — Sair desliga Modo Dev + Fix célula vazia mascarando propagação do CardAula → v2.86.0
+
+### O que foi feito
+- **Requisito 1 — 'sair' desmarca Modo Dev** (escopo decidido: qualquer logout): `AuthContext.logout()` despacha `window.dispatchEvent(new CustomEvent('auth:logout'))`; `DevContext` ganhou `useEffect` escutando o evento → `setEnabled(false)` (o effect existente persiste `'false'` no `localStorage.dev_mode`). Cobre Sair (TopBar), HARD RESET e troca de unidade; caminho de sessão expirada não chama `logout()` (fora de escopo)
+- **Requisito 2 — 23/09 Jefferson (15:15/16:00) célula vazia / sem propagação** (diagnóstico verificado por leitura REST no Supabase):
+  - A propagação **existia no banco**: linhas turma `jefqs04`/`jefqs05` `status='justificado'` (chuvisco) criadas em 23/09; mascaradas por **14 linhas aluno** `status=null, origem='manual'` (criadas 26/09 — origem provável: `handleDesfazer` envia `status:null` quando `statusAntigo` é undefined, Chamadas.tsx; e/ou ciclagem de clique)
+  - **Fix**: `getStatus` (DataGrid.tsx) — linha aluno só vence se `alunoLog?.status` for truthy; `null` cai no fallback da turma (antes: `!== undefined` dava prioridade ao null, v2.48.6). Resolve **sem SQL de limpeza** — as linhas null existentes ficam inofensivas; anotações (motivo sem status) também deixam de esconder o status da turma; Limpar dia/tudo continua esvaziando porque anula a linha da turma também
+- **Mesmo problema em outras unidades**: Parque tem **30 linhas null-manual em 8 datas** (01,02,07,09,11,16,17,22/09), 6 com turma extrapolada no mesmo dia → resolvido pelo mesmo fix; São Matheus 0; Vila sem chamadas no mês
+- **"Inserção manual não permanece" — 3 causas**:
+  1. **Guarda retroativo silenciosa** (`!retroativo && data < hoje` → return): fix duplo — `retroativo` persistido em `sessionStorage` (`chamadas_retroativo`, init via `getSessionState`, limpo no `limparFiltros`) e feedback no grid: célula de data passada com retroativo desligado ganha `title="Ative o Lançamento retroativo para marcar esta data"` + `cursor:not-allowed` (prop nova `retroativo` no DataGrid)
+  2. **Guarda usava UTC** (`toISOString()`): após 21h BRT o dia atual virava "passado" → trocado por `isDataPassada()` (data local, já existia em `chamadaUtils`)
+  3. **`fora_periodo` aceitava clique invisível**: `getStatus` retorna `fora_periodo` ANTES de ler logs → marca gravada mas nunca exibia (caso Alana `62151830`, período de 03/09 com `turma_id=''`) → `'fora_periodo'` adicionado aos status bloqueados em `handleCellClick`
+- **Ciclo de clique**: `handleCellClick` passa a ciclar pelo **status próprio** da linha manual (`studentLogEntry.status`) em vez do status efetivo — linha manual null → próximo clique = `presente` (antes podia reenviar `null` sem efeito); `isManual` sem status cai no mesmo ramo
+- **Export Frequência (XLSX) — paridade**: `exportacaoService.ts` lookup `logsByDataGrupo.get(aluno.id) || get(aluno.turma_id)` — linha aluno null vencia e mascarava a turma → linha aluno só vence se tiver `status`, senão fallback da turma
+- **Verificações de suporte**: duplicatas em `chamadas_log` = **0** (unique constraint íntegra); PostgREST **não** trunca (parque 1679 linhas → `Content-Range: 0-1678/1679`); `par_q=True` e sem atestado nos 15 alunos (sem bloqueio); relatórios backend não são afetados (contam a linha da turma separadamente)
+
+### Decisões
+- Prioridade "null mascara turma" revertida parcialmente (v2.48.6) — a regra nova "sem status próprio → status da turma" é a semântica correta; a consequência aceita é que limpar uma célula individual sobre um status da turma volta a mostrar o status da turma (Limpar dia/tudo continua esvaziando de verdade)
+- Retroativo: **manter a guarda + persistir em sessionStorage + feedback** (decisão do usuário) — não remover
+- Escopo do logout: **qualquer saída via `logout()`** (decisão do usuário) — não só o botão Sair
+- Sem limpeza SQL das linhas null (tornam-se inócuas); SQL opcional para o período da Alana documentado no CHANGELOG
+
+### Arquivos
+- `frontend/src/context/AuthContext.tsx` (+evento `auth:logout` no `logout`)
+- `frontend/src/context/DevContext.tsx` (+listener → `setEnabled(false)`)
+- `frontend/src/components/grid/DataGrid.tsx` (getStatus truthy, ciclo próprio, bloqueia `fora_periodo`, prop `retroativo`, tooltip/cursor data passada, import `isDataPassada`)
+- `frontend/src/pages/Chamadas.tsx` (retroativo em sessionStorage init/effect/limparFiltros, guarda via `isDataPassada`, passa `retroativo` ao DataGrid)
+- `backend/src/services/exportacaoService.ts` (lookup com fallback de status)
+- `CHANGELOG.md` (v2.86.0), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Frontend: 0 erros (`tsc --noEmit`) · 58/58 testes (vitest) · `npm run build` limpo
+- Backend: 0 erros (`tsc --noEmit`) · 56/56 testes (jest)
+- Sem migration
+
+### Pendências / riscos conhecidos
+- **Opcional**: corrigir `enrollment_period` da Alana no Supabase (SQL no CHANGELOG) — com o fix, o clique dela é bloqueado em vez de invisível, mas a célula segue `—` até o dado ser corrigido
+- Linhas null antigas permanecem no banco (inofensivas); se um dia a prioridade voltar a ser `!== undefined`, elas voltariam a mascarar
 
 ---
 
