@@ -97,37 +97,11 @@ export class ChamadasController {
             console.error('[salvarCardAula] Erro ao extrapolar justificativa:', extError);
           }
         } else if (status_sugerido === 'AULA_NORMAL') {
-          // Cleanup: remove extrapolated logs for all turmas in this label at this indice
+          // Cleanup: remove logs climáticos extrapolados (cancelado/justificado) de todas
+          // as turmas do label em TODOS os índices — antes só o índice salvo era limpo.
           try {
-            const { data: turmaOrigem } = await supabase
-              .from('turmas')
-              .select('label')
-              .eq('grupo_id', grupo_id)
-              .eq('tenant_id', tenantId)
-              .maybeSingle();
-
-            if (turmaOrigem?.label) {
-              const { data: turmasLabel } = await supabase
-                .from('turmas')
-                .select('grupo_id')
-                .eq('tenant_id', tenantId)
-                .eq('label', turmaOrigem.label);
-
-              const grupoIds = (turmasLabel || []).map((t: any) => t.grupo_id);
-              if (grupoIds.length > 0) {
-                const idx = indice_aula ?? 0;
-                  await supabase
-                    .from('chamadas_log')
-                    .delete()
-                    .eq('tenant_id', tenantId)
-                    .eq('data', data)
-                    .eq('indice_aula', idx)
-                    .in('grupo_id', grupoIds)
-                    .eq('origem', 'extrapolado')
-                    .is('tipo_ocorrencia', null);
-                console.log('[salvarCardAula] Logs extrapolados limpos para label:', turmaOrigem.label, 'indice:', idx);
-              }
-            }
+            const removidos = await chamadasService.limparExtrapolacaoNormal(tenantId, data, grupo_id);
+            console.log('[salvarCardAula] Logs extrapolados limpos:', removidos);
           } catch (err) {
             console.error('[salvarCardAula] Erro ao limpar logs extrapolados:', err);
           }

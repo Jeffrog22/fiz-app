@@ -8,6 +8,7 @@ import CardAula from '../components/modals/CardAula';
 import CardBO from '../components/modals/CardBO';
 import type { Aluno, Turma, Professor, ChamadaLog, AnotacaoAluno, CalendarioEvento } from '../types';
 import { gerarDiasLetivos, hojeMesAno, parseDiasFromLabel, isDataPassada } from '../utils/chamadaUtils';
+import { mesclarLogsServidor, type LogsIndex } from '../utils/logsMerge';
 
 type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento' | 'ferias' | 'fora_periodo' | undefined;
 
@@ -166,23 +167,7 @@ const Chamadas: React.FC = () => {
         if (!indexed[key][log.data]) indexed[key][log.data] = {};
         indexed[key][log.data][log.indice_aula] = log;
       }
-      setLogs((prev) => {
-        const merged = { ...prev };
-        for (const [grupoId, datas] of Object.entries(indexed)) {
-          if (!merged[grupoId]) merged[grupoId] = {};
-          for (const [data, indices] of Object.entries(datas)) {
-            if (!merged[grupoId][data]) merged[grupoId][data] = {};
-            for (const [indice, log] of Object.entries(indices)) {
-              const idx = Number(indice);
-              const localLog = merged[grupoId][data][idx];
-              if (!localLog || localLog.origem !== 'manual' || log.status === 'cancelado') {
-                merged[grupoId][data][idx] = log;
-              }
-            }
-          }
-        }
-        return merged;
-      });
+      setLogs((prev) => mesclarLogsServidor(prev, indexed));
     } catch (err) {
       console.error('Erro ao carregar chamadas', err);
     }

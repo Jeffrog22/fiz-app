@@ -1,5 +1,17 @@
 # Changelog - Fiz! App
 
+## [v2.87.1] - 2026-10-03
+### Fix
+- **CardAula "Aula Normal" não limpava o "C" propagado por cloro/temperatura (duas causas)**
+  - **Backend — limpeza parcial**: ao salvar CardAula com `AULA_NORMAL`, a exclusão dos logs extrapolados filtrava `indice_aula` único, mas o cancelamento climático grava `cancelado` em **todos os índices** das turmas do label → as demais turmas/índices mantinham "C". Nova `chamadasService.limparExtrapolacaoNormal(tenantId, data, grupoId)` remove em **todos os índices**, com `.in('status', ['cancelado','justificado'])` (não apaga mais extrapolação de presença `presente`), mantendo `origem='extrapolado'` + `tipo_ocorrencia IS NULL` (BOs e clones por aluno intactos)
+  - **Frontend — cache local**: `carregarLogs` só percorria o que o servidor devolvia; linhas apagadas no banco **nunca saíam do estado local** → célula continuava "C" e `handleCellClick` bloqueava o clique. Merge extraído para `utils/logsMerge.ts` (`mesclarLogsServidor`): base = servidor; entrada local ausente do servidor só é mantida se `origem === 'manual'` (escrita otimista pendente)
+  - Por que "Falta Justificada" funcionava: lá o servidor **atualiza** a linha (chave existe → overwrite), enquanto `AULA_NORMAL` **deleta** (chave some → local órfão ficava)
+### Testes
+- Backend: `tsc --noEmit` 0 erros · 63/63 passam (+3 `limpar_extrapolacao.test.ts`)
+- Frontend: `tsc --noEmit` 0 erros · 63/63 passam (+5 `logsMerge.test.ts`) · `npm run build` limpo
+### Notas
+- Sem migration; sem mudança de API (mesmo endpoint `POST /chamadas/card-aula`)
+
 ## [v2.87.0] - 2026-10-03
 ### Feat
 - **Export Frequência: bloco "Observações" lista os BOs do mês**

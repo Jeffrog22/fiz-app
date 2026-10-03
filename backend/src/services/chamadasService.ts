@@ -335,6 +335,61 @@ export async function salvarCardAula(
   });
 }
 
+// Limpa os logs climáticos extrapolados quando o CardAula volta para AULA_NORMAL.
+// Escopo igual ao do cancelamento climático (extrapolarPorLabel): todas as turmas do
+// label e TODOS os índices — antes só o índice salvo era limpo e as demais turmas
+// continuavam com "C" no grid.
+export async function limparExtrapolacaoNormal(
+  tenantId: string,
+  data: string,
+  grupoId: string,
+): Promise<number> {
+  const { data: turmaOrigem } = await supabase
+    .from('turmas')
+    .select('label')
+    .eq('grupo_id', grupoId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+
+  if (!turmaOrigem?.label) return 0;
+
+  const { data: turmasLabel } = await supabase
+    .from('turmas')
+    .select('grupo_id')
+    .eq('tenant_id', tenantId)
+    .eq('label', turmaOrigem.label);
+
+  const grupoIds = (turmasLabel || []).map((t: any) => t.grupo_id).filter(Boolean);
+  if (grupoIds.length === 0) return 0;
+
+  const { data: removidos, error } = await supabase
+    .from('chamadas_log')
+    .delete()
+    .eq('tenant_id', tenantId)
+    .eq('data', data)
+    .in('grupo_id', grupoIds)
+    .eq('origem', 'extrapolado')
+    .in('status', ['cancelado', 'justificado'])
+    .is('tipo_ocorrencia', null)
+    .select('id');
+
+  if (error) {
+    console.error('[limparExtrapolacaoNormal] Erro ao limpar logs extrapolados:', error.message);
+    return 0;
+  }
+
+  const count = removidos?.length || 0;
+  if (count > 0) {
+    registrarOperacao({
+      tenant_id: tenantId,
+      tabela: 'chamadas_log',
+      operacao: 'limpeza_extrapolacao',
+      dados: { data, label: turmaOrigem.label, total: count },
+    });
+  }
+  return count;
+}
+
 // Mantido em sincronia com CANCELAMENTO_TIPOS de frontend/src/components/modals/CardBO.tsx
 const CANCELAMENTO_TIPOS = new Set([
   'Médico pessoal',

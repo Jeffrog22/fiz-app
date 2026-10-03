@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-10-03 — Export Frequência: bloco Observações com BOs do mês (dd - tipo: motivo) → v2.87.0 -->
+<!-- última-sessão: 2026-10-03 — Fix CardAula Aula Normal não limpava "C" climático (limpeza todos os índices + merge de logs descarta linhas órfãs) → v2.87.1 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -88,6 +88,32 @@ Regras:
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
 - Migration 030 (`app_settings` — tabela global key/JSONB **sem tenant_id**) **executada em produção** (confirmada em 29/09/2026); `VITE_ALLOW_DEV_MODE=true` configurado no build do Cloudflare — handles de coluna (v2.83.0) ativos em produção
+
+---
+
+## Sessão: 03/10/2026 — Fix CardAula "Aula Normal" não limpava o "C" climático → v2.87.1
+
+### O que foi feito
+- **Bug**: no grid de Chamadas, depois que o CardAula (cancelamento por cloro/temperatura) recebia um novo registro com status **Aula Normal** (célula deveria ficar vazia), a célula continuava exibindo `C` e o clique era bloqueado (`handleCellClick` retorna em `cancelado`). Com **Falta Justificada** funcionava — chave era *atualizada* no servidor; com Aula Normal a chave é *deletada*
+- **Causa 1 — backend** (`chamadasController.ts`, ramo `AULA_NORMAL`): a exclusão filtrava `.eq('indice_aula', idx)`, mas o cancelamento climático (`extrapolarCancelamento` → `extrapolarPorLabel` com `apenasIndiceUnico=false`) grava `cancelado` em **todos os índices** das turmas do label → só o índice salvo era limpo
+  - Nova função **`chamadasService.limparExtrapolacaoNormal(tenantId, data, grupoId)`**: busca o label da turma, pega todas as turmas do label e deleta **sem filtro de índice**, mantendo `origem='extrapolado'` + `tipo_ocorrencia IS NULL`, e **adicionando** `.in('status', ['cancelado','justificado'])` — assim não apaga mais extrapolação de presença (`presente`, criada por `extrapolarPresenca`); registra operação `limpeza_extrapolacao` (novo valor no union `Operacao` de `logEngine.ts`) só quando remove algo
+- **Causa 2 — frontend** (`Chamadas.tsx`, `carregarLogs`): o merge só iterava o que o servidor devolvia → linha apagada no banco **nunca saía do estado local** (cache órfão)
+  - Merge extraído para função pura **`frontend/src/utils/logsMerge.ts` → `mesclarLogsServidor(prev, doServidor)`**: base = servidor; entrada local **ausente** do servidor só é mantida se `origem === 'manual'` (todas as escritas otimistas do grid usam `origem:'manual'` — toggle, justificativa, afastamento, limpar, desfazer); linhas `extrapolado`/`calendario` órfãs são descartadas
+  - Regras anteriores preservadas: local `manual` não é sobrescrito pelo servidor, exceto quando o servidor traz `status==='cancelado'`; bonus: o novo merge reconstrói os objetos aninhados (o antigo fazia `{...prev}` e mutava o estado anterior)
+- **Testes novos**: `backend/src/services/__tests__/limpar_extrapolacao.test.ts` (3 casos — remove em todos os índices do label; preserva BO/manual/presença-extrapolada/ outro label; turma sem label no-op) e `frontend/src/utils/__tests__/logsMerge.test.ts` (5 casos — descarta órfão extrapolado, mantém manual pendente, prioridade manual vs cancelado, entra com linhas novas, não muta o estado)
+
+### Arquivos
+- `backend/src/services/chamadasService.ts` (+`limparExtrapolacaoNormal`)
+- `backend/src/controllers/chamadasController.ts` (ramo AULA_NORMAL delega ao service)
+- `backend/src/utils/logEngine.ts` (+`'limpeza_extrapolacao'` em `Operacao`)
+- `frontend/src/utils/logsMerge.ts` (novo), `frontend/src/pages/Chamadas.tsx` (usa o helper)
+- `backend/src/services/__tests__/limpar_extrapolacao.test.ts` (novo), `frontend/src/utils/__tests__/logsMerge.test.ts` (novo)
+- `CHANGELOG.md` (v2.87.1), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Backend: 0 erros (`tsc --noEmit`) · 63/63 (60 + 3 novos)
+- Frontend: 0 erros (`tsc --noEmit`) · 63/63 (58 + 5 novos) · `npm run build` limpo
+- Sem migration
 
 ---
 
