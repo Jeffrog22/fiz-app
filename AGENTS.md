@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-10-01 — Impressão da lista: sem linha Filtros, sem numerador #, tabela com largura natural → v2.86.1 -->
+<!-- última-sessão: 2026-10-03 — Export Frequência: bloco Observações com BOs do mês (dd - tipo: motivo) → v2.87.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -88,6 +88,33 @@ Regras:
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
 - Migration 030 (`app_settings` — tabela global key/JSONB **sem tenant_id**) **executada em produção** (confirmada em 29/09/2026); `VITE_ALLOW_DEV_MODE=true` configurado no build do Cloudflare — handles de coluna (v2.83.0) ativos em produção
+
+---
+
+## Sessão: 03/10/2026 — Export Frequência: bloco "Observações" com BOs do mês → v2.87.0
+
+### O que foi feito
+- **Escopo pedido**: em Configurações → Exportar → Frequência, o bloco **"Observações"** do rodapé de cada folha (turma) passa a anotar os motivos de CardBO do mês solicitado no formato `dd - tipo: motivo`
+- `backend/src/services/exportacaoService.ts`:
+  - Novo helper puro **`montarLinhasBO(logs, grupoId)`**: filtra logs do mês com `grupo_id === turma da folha` e `tipo_ocorrencia` (cobre metadados BO `status=null` e linhas de cancelamento; clones por UUID de aluno ficam de fora), **dedupe por `data|tipo|motivo`** (cancelamento gera 1 linha por índice de aula), ordena por data asc e formata `${dia} - ${tipo}${': ' + motivo || ''}` (dia sem zero à esquerda, mesmo padrão da coluna Anotações)
+  - Render: linhas em `sheet.getCell(obsHeaderRow + 1 + i, 1)` com font size 9, esquerda (transborda pelas colunas vazias, sem `mergeCells`); sem BO no mês → nenhuma linha (bloco continua vazio, como desde a v2.71.4)
+  - **Sem query nova**: `logs` do export já é `select('*')` do mês inteiro (traz `tipo_ocorrencia`, `motivo`, `grupo_id`, `data`)
+- **Teste** `backend/src/services/__tests__/exportacao_bo.test.ts` (novo, 4 casos): formatação `dd - tipo: motivo` + fallback sem motivo, dedupe multi-índice (mantendo descrições diferentes), ordenação por data, ignorar logs de outra turma/UUID de aluno/sem tipo
+
+### Decisões (perguntas feitas ao usuário)
+- Local = bloco **"Observações" do rodapé** (e não a coluna "Anotações" por aluno) — decisão do usuário
+- Texto = **`dd - tipo: motivo`** (fallback só `dd - tipo`) — decisão do usuário
+- Escopo = **só a turma da folha** (`grupo_id`) — decisão do usuário; BO "Geral" aparece em cada folha das turmas que ele cancelou
+- Ressalvas aceitas: BO antigo gravado sem `grupo_id` não aparece
+
+### Arquivos
+- `backend/src/services/exportacaoService.ts` (+`montarLinhasBO`, +render no bloco Observações)
+- `backend/src/services/__tests__/exportacao_bo.test.ts` (novo — 4 casos)
+- `CHANGELOG.md` (v2.87.0), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Backend: 0 erros (`tsc --noEmit`) · 60/60 testes passam (56 + 4 novos, jest)
+- Frontend inalterado (não rodou verificação frontend); sem migration
 
 ---
 

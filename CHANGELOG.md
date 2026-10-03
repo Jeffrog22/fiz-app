@@ -1,5 +1,18 @@
 # Changelog - Fiz! App
 
+## [v2.87.0] - 2026-10-03
+### Feat
+- **Export Frequência: bloco "Observações" lista os BOs do mês**
+  - O bloco "Observações" do rodapé de cada folha (turma) agora recebe uma linha por CardBO do mês solicitado, no formato `dd - tipo: motivo` (ex.: `5 - Manutenção/Incidente: vazamento no filtro`); sem descrição, só `dd - tipo`
+  - Fonte: próprios `chamadas_log` do mês (`tipo_ocorrencia` + `motivo`) — nenhuma query nova
+  - Escopo: apenas a turma da folha (`grupo_id`) — cobre metadados BO (`status=null`) e linhas de cancelamento; clones por UUID de aluno ficam de fora
+  - Dedupe por `data + tipo + motivo` (um cancelamento gera N linhas, uma por índice de aula) e ordenação por data ascendente
+  - Sem BO no mês → nenhuma linha (bloco continua vazio, como hoje)
+### Testes
+- Backend: `tsc --noEmit` 0 erros · 60/60 passam (jest, +4 novos `exportacao_bo.test.ts`)
+### Notas
+- Frontend inalterado; sem migration
+
 ## [v2.86.1] - 2026-10-01
 ### Fix
 - **Impressão da lista de Alunos: menos informação, mais compacta**

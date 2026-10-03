@@ -53,6 +53,25 @@ function colLetter(n: number): string {
   return s;
 }
 
+// Linhas do bloco "Observações": BOs (CardBO) do mês da turma, formato "dd - tipo: motivo"
+export function montarLinhasBO(logs: ChamadaLog[], grupoId: string): string[] {
+  const vistos = new Set<string>();
+  const linhas: Array<{ data: string; texto: string }> = [];
+  for (const l of logs) {
+    if (l.grupo_id !== grupoId || !l.tipo_ocorrencia) continue;
+    const chave = `${l.data}|${l.tipo_ocorrencia}|${l.motivo || ''}`;
+    if (vistos.has(chave)) continue;
+    vistos.add(chave);
+    const dia = parseInt(l.data.slice(8, 10), 10);
+    linhas.push({
+      data: l.data,
+      texto: l.motivo ? `${dia} - ${l.tipo_ocorrencia}: ${l.motivo}` : `${dia} - ${l.tipo_ocorrencia}`,
+    });
+  }
+  linhas.sort((a, b) => a.data.localeCompare(b.data));
+  return linhas.map((l) => l.texto);
+}
+
 export async function gerarFrequenciaXLSX(
   tenantId: string,
   professorId: string,
@@ -529,6 +548,14 @@ export async function gerarFrequenciaXLSX(
       for (let c = 2; c <= ultimaColGrupo1; c++) {
         sheet.getCell(obsHeaderRow, c).style = obsHeaderStyle;
       }
+
+      const linhasBO = montarLinhasBO(logs || [], grupoId);
+      linhasBO.forEach((texto, i) => {
+        const cell = sheet.getCell(obsHeaderRow + 1 + i, 1);
+        cell.value = texto;
+        cell.font = { size: 9 };
+        cell.alignment = { horizontal: 'left', vertical: 'middle' };
+      });
     }
   }
 
