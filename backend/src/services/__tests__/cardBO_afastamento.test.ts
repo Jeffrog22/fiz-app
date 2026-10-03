@@ -283,3 +283,26 @@ describe('frequenciaAluno — linhas por aluno não duplicam o cancelamento (v2.
     expect(a2.total_aulas).toBe(0);
   });
 });
+
+describe('salvarCardBO — persiste tipo_select no metadado (novo)', () => {
+  it('via_2 grava tipo_select=pessoal (atualiza linha existente)', async () => {
+    await salvarCardBO('t1', '2026-09-22', 0, 'via_2', 'Manutenção/Incidente', 'vazamento no filtro', false, 'jeff', 'jeftq01');
+
+    const row = find('2026-09-22', 'jeftq01');
+    expect(row).toBeDefined();
+    expect(row!.tipo_ocorrencia).toBe('Manutenção/Incidente');
+    expect(row!.motivo).toBe('vazamento no filtro');
+    expect(row!.tipo_select).toBe('pessoal');
+    expect(row!.status).toBe('presente'); // linha pré-existente: só metadados atualizados
+  });
+
+  it('via_1 grava tipo_select=geral (insert em linha nova)', async () => {
+    await salvarCardBO('t1', '2026-09-22', 2, 'via_1', 'Manutenção/Incidente', 'portão quebrado', false, 'jeff', 'jeftq01');
+
+    const row = find('2026-09-22', 'jeftq01', 2);
+    expect(row).toBeDefined();
+    expect(row!.tipo_select).toBe('geral');
+    expect(row!.status).toBeNull();
+    expect(row!.origem).toBe('manual');
+  });
+});

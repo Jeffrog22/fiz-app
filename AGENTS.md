@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-10-03 — Fix CardAula Aula Normal não limpava "C" climático (limpeza todos os índices + merge de logs descarta linhas órfãs) → v2.87.1 -->
+<!-- última-sessão: 2026-10-03 — Export Frequência Observações: sufixo ";Pessoal/Professor" + salvarMetadadosBO persiste tipo_select → v2.88.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -88,6 +88,34 @@ Regras:
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
 - Migration 030 (`app_settings` — tabela global key/JSONB **sem tenant_id**) **executada em produção** (confirmada em 29/09/2026); `VITE_ALLOW_DEV_MODE=true` configurado no build do Cloudflare — handles de coluna (v2.83.0) ativos em produção
+
+---
+
+## Sessão: 03/10/2026 — Export Observações: sufixo ";Pessoal/Professor" + persistir tipo_select → v2.88.0
+
+### O que foi feito
+- **Pedido**: no bloco "Observações" do export de Frequência, quando o BO foi marcado como Pessoal/Professor, anotar o escopo no texto — ex.: `5 - Manutenção/Incidente: vazamento no filtro;Pessoal/Professor`
+- **Achado (sem ele o sufixo nunca apareceria)**: `salvarMetadadosBO` (caminho de BOs que **não** cancelam a aula, ex.: `Manutenção/Incidente` sem o checkbox) gravava só `tipo_ocorrencia` + `motivo` — **`tipo_select` nunca era salvo** aí; só os cancelamentos extrapolados (`extrapolarService`) levavam o campo. O `via` já chegava pelo controller
+- **Backend**
+  - `salvarMetadadosBO(..., tipoSelect?: 'pessoal'|'geral')`: persiste `tipo_select` no `insert` **e** no `update` (`tipoSelect ?? null` — BOs antigos/sem via ficam null)
+  - `salvarCardBO`: deriva `tipoSelect = via === 'via_2' ? 'pessoal' : 'geral'` e repassa no ramo `if (!isCancelamento || !grupoId)`
+- **Export** (`montarLinhasBO`): anexa `;Pessoal/Professor` quando `tipo_select === 'pessoal'`; `Geral`/ausente → sem sufixo; `tipo_select` entrou na chave de dedupe (BOs pessoal/geral do mesmo dia não colapsam); ordenação por data mantida
+- **Testes novos** (+4): `exportacao_bo.test.ts` (sufixo só em pessoal, sem sufixo para geral/antigo; dedupe com tipo_select diferente) e `cardBO_afastamento.test.ts` (via_2 → `pessoal` atualizando linha existente; via_1 → `geral` em insert novo com `status: null`)
+
+### Decisões (perguntas feitas ao usuário)
+- Sufixo **só para Pessoal/Professor** (Geral fica sem) — decisão do usuário
+- **BOs antigos** (`tipo_select` nulo) ficam sem sufixo, só novos — decisão do usuário
+- Escopo da anotação: só o bloco Observações do export Frequência (grid/modal do app não mudam)
+
+### Arquivos
+- `backend/src/services/chamadasService.ts` (`salvarMetadadosBO` +tipoSelect, `salvarCardBO` deriva e repassa)
+- `backend/src/services/exportacaoService.ts` (`montarLinhasBO` sufixo + dedupe)
+- `backend/src/services/__tests__/exportacao_bo.test.ts` (+2), `backend/src/services/__tests__/cardBO_afastamento.test.ts` (+2)
+- `CHANGELOG.md` (v2.88.0), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Backend: 0 erros (`tsc --noEmit`) · 67/67 (63 + 4 novos)
+- Frontend inalterado: `npm run build` limpo; sem migration
 
 ---
 

@@ -408,6 +408,7 @@ async function salvarMetadadosBO(
   tipo_ocorrencia: string,
   motivo: string,
   grupoId?: string,
+  tipoSelect?: 'pessoal' | 'geral',
 ): Promise<void> {
   const { data: existente } = await supabase
     .from('chamadas_log')
@@ -421,7 +422,7 @@ async function salvarMetadadosBO(
   if (existente && existente.length > 0) {
     const { error } = await supabase
       .from('chamadas_log')
-      .update({ tipo_ocorrencia, motivo })
+      .update({ tipo_ocorrencia, motivo, tipo_select: tipoSelect ?? null })
       .eq('tenant_id', tenantId)
       .eq('data', data)
       .eq('indice_aula', indice_aula)
@@ -437,6 +438,7 @@ async function salvarMetadadosBO(
         grupo_id: grupoId || null,
         tipo_ocorrencia,
         motivo,
+        tipo_select: tipoSelect ?? null,
         origem: 'manual',
         status: null,
       });
@@ -462,9 +464,10 @@ export async function salvarCardBO(
   const aulaIdx = indice_aula ?? 0;
   const tMotivo = motivo || '';
   const isCancelamento = CANCELAMENTO_TIPOS.has(tipo_ocorrencia) || cancelarAula === true;
+  const tipoSelect: 'pessoal' | 'geral' = via === 'via_2' ? 'pessoal' : 'geral';
 
   if (!isCancelamento || !grupoId) {
-    await salvarMetadadosBO(tenantId, data, aulaIdx, tipo_ocorrencia, tMotivo, grupoId);
+    await salvarMetadadosBO(tenantId, data, aulaIdx, tipo_ocorrencia, tMotivo, grupoId, tipoSelect);
     registrarOperacao({
       tenant_id: tenantId,
       tabela: 'chamadas_log',

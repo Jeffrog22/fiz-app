@@ -1,5 +1,17 @@
 # Changelog - Fiz! App
 
+## [v2.88.0] - 2026-10-03
+### Feat
+- **Export Frequência — Observações anota escopo Pessoal/Professor do BO**: linha de BO com `tipo_select='pessoal'` ganha o sufixo `;Pessoal/Professor` (ex.: `5 - Manutenção/Incidente: vazamento no filtro;Pessoal/Professor`)
+  - **Backend (persistência)**: `salvarMetadadosBO` agora grava `tipo_select` (insert **e** update) — antes só os cancelamentos extrapolados levavam o campo; BOs que **não** cancelam a aula (ex.: `Manutenção/Incidente` sem o checkbox) perdiam o escopo escolhido no CardBO. `salvarCardBO` deriva `pessoal`/`geral` da `via` (via_2/via_1)
+  - **Export**: `montarLinhasBO` anexa o sufixo apenas para `tipo_select='pessoal'`; `Geral` e linhas antigas sem `tipo_select` ficam sem sufixo; `tipo_select` entrou na chave de dedupe (BOs pessoal/geral do mesmo dia não colapsam)
+### Testes
+- Backend: `tsc --noEmit` 0 erros · 67/67 passam (+2 `exportacao_bo` sufixo/dedupe, +2 `cardBO` persistência via_2/via_1)
+- Frontend inalterado: `npm run build` limpo
+### Notas
+- Sem migration (`chamadas_log.tipo_select` já existe); sem mudança de API — `via` já era enviada pelo CardBO
+- BOs antigos (coluna nula) continuam sem sufixo (decisão do usuário)
+
 ## [v2.87.1] - 2026-10-03
 ### Fix
 - **CardAula "Aula Normal" não limpava o "C" propagado por cloro/temperatura (duas causas)**

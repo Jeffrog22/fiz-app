@@ -56,4 +56,29 @@ describe('montarLinhasBO', () => {
     ];
     expect(montarLinhasBO(logs, 'jeftq03')).toEqual([]);
   });
+
+  it('anexa ";Pessoal/Professor" só para tipo_select=pessoal (novo)', () => {
+    const logs = [
+      log({ data: '2026-09-05', grupo_id: 'jeftq03', tipo_ocorrencia: 'Manutenção/Incidente', motivo: 'vazamento no filtro', tipo_select: 'pessoal' }),
+      log({ data: '2026-09-06', grupo_id: 'jeftq03', tipo_ocorrencia: 'Manutenção/Incidente', motivo: 'portão quebrado', tipo_select: 'geral' }),
+      log({ data: '2026-09-07', grupo_id: 'jeftq03', tipo_ocorrencia: 'Reunião', motivo: 'conselho' }),
+    ];
+    expect(montarLinhasBO(logs, 'jeftq03')).toEqual([
+      '5 - Manutenção/Incidente: vazamento no filtro;Pessoal/Professor',
+      '6 - Manutenção/Incidente: portão quebrado',
+      '7 - Reunião: conselho',
+    ]);
+  });
+
+  it('dedupe considera tipo_select (pessoal e geral do mesmo dia não colapsam)', () => {
+    const logs = [
+      log({ data: '2026-09-10', grupo_id: 'jeftq03', indice_aula: 0, tipo_ocorrencia: 'Manutenção/Incidente', motivo: 'vazamento', tipo_select: 'pessoal' }),
+      log({ data: '2026-09-10', grupo_id: 'jeftq03', indice_aula: 1, tipo_ocorrencia: 'Manutenção/Incidente', motivo: 'vazamento', tipo_select: 'geral' }),
+      log({ data: '2026-09-10', grupo_id: 'jeftq03', indice_aula: 2, tipo_ocorrencia: 'Manutenção/Incidente', motivo: 'vazamento', tipo_select: 'pessoal' }),
+    ];
+    expect(montarLinhasBO(logs, 'jeftq03')).toEqual([
+      '10 - Manutenção/Incidente: vazamento;Pessoal/Professor',
+      '10 - Manutenção/Incidente: vazamento',
+    ]);
+  });
 });

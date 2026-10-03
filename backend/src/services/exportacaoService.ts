@@ -54,19 +54,19 @@ function colLetter(n: number): string {
 }
 
 // Linhas do bloco "Observações": BOs (CardBO) do mês da turma, formato "dd - tipo: motivo"
+// BO com escopo Pessoal/Professor (tipo_select='pessoal') recebe o sufixo ";Pessoal/Professor"
 export function montarLinhasBO(logs: ChamadaLog[], grupoId: string): string[] {
   const vistos = new Set<string>();
   const linhas: Array<{ data: string; texto: string }> = [];
   for (const l of logs) {
     if (l.grupo_id !== grupoId || !l.tipo_ocorrencia) continue;
-    const chave = `${l.data}|${l.tipo_ocorrencia}|${l.motivo || ''}`;
+    const chave = `${l.data}|${l.tipo_ocorrencia}|${l.motivo || ''}|${l.tipo_select || ''}`;
     if (vistos.has(chave)) continue;
     vistos.add(chave);
     const dia = parseInt(l.data.slice(8, 10), 10);
-    linhas.push({
-      data: l.data,
-      texto: l.motivo ? `${dia} - ${l.tipo_ocorrencia}: ${l.motivo}` : `${dia} - ${l.tipo_ocorrencia}`,
-    });
+    const base = l.motivo ? `${dia} - ${l.tipo_ocorrencia}: ${l.motivo}` : `${dia} - ${l.tipo_ocorrencia}`;
+    const sufixo = l.tipo_select === 'pessoal' ? ';Pessoal/Professor' : '';
+    linhas.push({ data: l.data, texto: `${base}${sufixo}` });
   }
   linhas.sort((a, b) => a.data.localeCompare(b.data));
   return linhas.map((l) => l.texto);
