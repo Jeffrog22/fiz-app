@@ -1,5 +1,16 @@
 # Changelog - Fiz! App
 
+## [v2.90.0] - 2026-10-05
+### Feat
+- **Configurações → badge "Última alteração" com "ver detalhes"**: no card 🔄 Atualizações, ao lado de "Versão atual", um badge (pill `rounded-full`) mostra a **primeira entrada do `changelog.json`** (ex.: `Última alteração: v2.89.0 · 05/10/2026`) com link **"ver detalhes"** que abre o `ReleaseNotesModal` já existente (mesmo modal do "ver novidades" do banner — "Novidades desde a sua versão" + anteriores)
+  - Badge busca `buscarChangelog()` no mount; sem `changelog.json` (ex.: dev) ou em erro, **não renderiza** (sem ruído)
+  - Fetch é o mesmo no-store/SW NetworkOnly — sempre fresco, sem cache velho
+### Testes
+- Frontend: `tsc --noEmit` 0 erros · 63/63 passam · `npm run build` limpo (`dist/changelog.json` com 30 versões, 1ª = v2.89.0)
+### Notas
+- Sem migration e sem mudança de backend; componente novo nenhum (reutiliza `ReleaseNotesModal`)
+- Sem comparativo nova-vs-atual no badge (decisão do usuário) — isso continua no botão "Verificar atualizações" e no banner
+
 ## [v2.89.0] - 2026-10-05
 ### Feat
 - **Nome no documento nos XLSX (campo "Professor" dos relatórios)**: novo `professores.nome_documento` — o nome formal (ex.: "Eduarda Carvas") impresso nos documentos, sem afetar o nome de login/interface ("Duda")

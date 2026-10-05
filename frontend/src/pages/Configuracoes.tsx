@@ -10,6 +10,8 @@ import NotificationSettings from '../components/notifications/NotificationSettin
 import api from '../utils/api';
 import { sortLabels } from '../utils/chamadaUtils';
 import { buscarUltimaVersao, compararVersoes } from '../utils/version';
+import { buscarChangelog } from '../utils/changelog';
+import ReleaseNotesModal from '../components/common/ReleaseNotesModal';
 
 type AbaExport = 'vagas' | 'frequencia' | 'cancelamentos';
 
@@ -46,6 +48,8 @@ const [tipoSelect, setTipoSelect] = useState('todos');
 const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'latest'>('idle');
 const [updateMsg, setUpdateMsg] = useState<string | null>(null);
 const [resetando, setResetando] = useState(false);
+const [ultimaVersao, setUltimaVersao] = useState<{ version: string; date?: string } | null>(null);
+const [notasAbertas, setNotasAbertas] = useState(false);
 
 const [climaLogs, setClimaLogs] = useState<Array<{
   id: string;
@@ -70,6 +74,17 @@ const { enabled: devEnabled } = useDevLog();
     api.get('/professores').then((res) => {
       setProfessores(res.data || []);
     }).catch(() => {});
+  }, []);
+
+  // Última alteração (1ª entrada do CHANGELOG) para o badge do card Atualizações.
+  // Sem changelog.json (ex.: dev) o badge simplesmente não aparece.
+  useEffect(() => {
+    buscarChangelog()
+      .then((versoes) => {
+        const ultima = versoes && versoes.length > 0 ? versoes[0] : null;
+        setUltimaVersao(ultima ? { version: ultima.version, date: ultima.date } : null);
+      })
+      .catch(() => setUltimaVersao(null));
   }, []);
 
   useEffect(() => {
@@ -732,8 +747,28 @@ const { enabled: devEnabled } = useDevLog();
             <span className="text-3xl">🔄</span>
             <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Atualizações</h2>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-            Versão atual: <strong>{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'}</strong>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 flex flex-wrap items-center gap-2">
+            <span>
+              Versão atual: <strong>{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'}</strong>
+            </span>
+            {ultimaVersao && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300">
+                Última alteração: {ultimaVersao.version}
+                {ultimaVersao.date && (
+                  <span className="text-[10px] font-normal opacity-70">
+                    · {ultimaVersao.date.split('-').reverse().join('/')}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setNotasAbertas(true)}
+                  className="underline text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 transition-colors"
+                  title="Ver o que foi alterado na última atualização"
+                >
+                  ver detalhes
+                </button>
+              </span>
+            )}
           </p>
           <div className="flex flex-wrap gap-2">
             <button
@@ -898,6 +933,8 @@ const { enabled: devEnabled } = useDevLog();
           }).catch(() => {});
         }}
       />
+
+      <ReleaseNotesModal aberto={notasAbertas} onClose={() => setNotasAbertas(false)} />
     </div>
   );
 };

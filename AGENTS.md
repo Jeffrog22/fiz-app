@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-10-05 — Nome no documento (professores.nome_documento) nos XLSX → v2.89.0 -->
+<!-- última-sessão: 2026-10-05 — Badge "Última alteração" + ver detalhes no card Atualizações → v2.90.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -89,6 +89,28 @@ Regras:
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
 - Migration 030 (`app_settings` — tabela global key/JSONB **sem tenant_id**) **executada em produção** (confirmada em 29/09/2026); `VITE_ALLOW_DEV_MODE=true` configurado no build do Cloudflare — handles de coluna (v2.83.0) ativos em produção
 - Migration 031 (`professores.nome_documento` — nome formal dos documentos) **pendente de execução no Supabase**; até rodar, os exports continuam com o nome de login (fallback no `buscarProfessoresDocumento`) mas o **PATCH /professores/:id dá erro** (coluna inexistente)
+
+---
+
+## Sessão: 05/10/2026 — Badge "Última alteração" + "ver detalhes" no card Atualizações → v2.90.0
+
+### O que foi feito
+- **Pedido**: em Configurações, badge novo com **"ver detalhes"** da última alteração
+- **Decisões (perguntas feitas ao usuário)**: badge mostra **só a última versão** (primeira entrada do CHANGELOG, sem comparativo nova-vs-atual) · "ver detalhes" abre o **`ReleaseNotesModal` existente** (não um modal novo) · fica no **card 🔄 Atualizações**
+- **`Configuracoes.tsx`** (único arquivo alterado):
+  - Imports: `buscarChangelog` (`utils/changelog`) + `ReleaseNotesModal`
+  - Estados: `ultimaVersao {version, date} | null` e `notasAbertas`; effect no mount faz `buscarChangelog()` e guarda `versoes[0]` (erro/sem JSON → `null` → **badge não renderiza**, ex.: dev sem `dist/changelog.json`)
+  - Badge: na linha de "Versão atual" (`flex flex-wrap items-center gap-2`), pill `rounded-full` padrão primary com `Última alteração: vX.Y.Z` + data (`dd/mm/aaaa`, quando houver) + link **"ver detalhes"** (`underline`, `title` explicativo, mesmo estilo do "ver novidades" do `UpdateBanner`) → `setNotasAbertas(true)`
+  - Modal renderizado no fim da página como irmão do `NotificationSettings` (padrão do banner: `<ReleaseNotesModal aberto onClose />`)
+- **Reuso**: modal já traz "Novidades desde a sua versão" + "Versões anteriores (N)" e busca lazy `/changelog.json` (no-store + SW NetworkOnly + `_headers` no-cache — badge e modal nunca servem nota velha)
+
+### Arquivos
+- `frontend/src/pages/Configuracoes.tsx` (imports, +2 states, effect de carga, badge, render do modal)
+- `CHANGELOG.md` (v2.90.0), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Frontend: 0 erros (`tsc --noEmit`) · 63/63 (vitest) · `npm run build` limpo — `dist/changelog.json` com 30 versões (1ª v2.89.0 na época do build; após este commit passa a ser v2.90.0)
+- Backend inalterado; sem migration; sem mudança de API
 
 ---
 
