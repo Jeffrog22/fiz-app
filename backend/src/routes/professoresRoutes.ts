@@ -8,5 +8,6 @@ const router = Router();
 router.use(tenantMiddleware, authMiddleware);
 
 router.get('/', ProfessoresController.listar);
+router.patch('/:id', ProfessoresController.atualizar);
 
 export default router;

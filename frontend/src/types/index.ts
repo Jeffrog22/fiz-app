@@ -4,6 +4,7 @@ export interface Professor {
   id: string;
   tenant_id: string;
   nome: string;
+  nome_documento?: string | null;
   hash: string;
   criado_em: string;
 }

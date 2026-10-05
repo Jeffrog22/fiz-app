@@ -100,6 +100,8 @@ const Alunos: React.FC = () => {
   }, [isTouch]);
 
   const professorMap = new Map(professores.map((p) => [p.id, p.nome]));
+  // Versão para DOCUMENTOS (print/PDF/XLSX da lista): prioriza o nome formal
+  const professorMapDoc = new Map(professores.map((p) => [p.id, p.nome_documento?.trim() || p.nome]));
 
   const turmasPorProfessor = useMemo(() =>
     professorAlocar
@@ -1074,7 +1076,7 @@ const Alunos: React.FC = () => {
         aberto={imprimindo}
         onClose={() => setImprimindo(false)}
         alunos={processed}
-        professorMap={professorMap}
+        professorMap={professorMapDoc}
         unidade={getTenantNome(getTenantId())}
       />
 

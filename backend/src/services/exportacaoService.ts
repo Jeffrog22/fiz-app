@@ -53,6 +53,14 @@ function colLetter(n: number): string {
   return s;
 }
 
+// Map id → nome para DOCUMENTOS (XLSX/print): prioriza nome_documento (nome formal, ex.: "Eduarda Carvas"),
+// com fallback para professores.nome (nome de login/interface). UI (grids/filtros/TopBar) não usa este helper.
+export function montarProfMap(
+  professores: Array<{ id: string; nome: string; nome_documento?: string | null }> | null | undefined,
+): Map<string, string> {
+  return new Map((professores || []).map((p) => [p.id, p.nome_documento?.trim() || p.nome]));
+}
+
 // Linhas do bloco "Observações": BOs (CardBO) do mês da turma, formato "dd - tipo: motivo"
 // BO com escopo Pessoal/Professor (tipo_select='pessoal') recebe o sufixo ";Pessoal/Professor"
 export function montarLinhasBO(logs: ChamadaLog[], grupoId: string): string[] {
@@ -72,6 +80,28 @@ export function montarLinhasBO(logs: ChamadaLog[], grupoId: string): string[] {
   return linhas.map((l) => l.texto);
 }
 
+// Busca professores do tenant para os DOCUMENTOS (com nome_documento).
+// Se a migration 031 ainda não rodou (coluna inexistente), cai para select sem
+// nome_documento — documentos continuam com o nome de login em vez de erro 500.
+export async function buscarProfessoresDocumento(tenantId: string): Promise<Array<{ id: string; nome: string; nome_documento?: string | null }>> {
+  let data: any = null;
+  let error: any = null;
+  ({ data, error } = await supabase
+    .from('professores')
+    .select('id, nome, nome_documento')
+    .eq('tenant_id', tenantId));
+  if (error && String(error.message || '').includes('nome_documento')) {
+    const retry = await supabase
+      .from('professores')
+      .select('id, nome')
+      .eq('tenant_id', tenantId);
+    data = retry.data;
+    error = retry.error;
+  }
+  if (error) throw new AppError('Erro ao buscar professores', 500);
+  return (data || []) as Array<{ id: string; nome: string; nome_documento?: string | null }>;
+}
+
 export async function gerarFrequenciaXLSX(
   tenantId: string,
   professorId: string,
@@ -83,12 +113,7 @@ export async function gerarFrequenciaXLSX(
   workbook.creator = 'Fiz! App';
   workbook.created = new Date();
 
-  const { data: professores, error: profError } = await supabase
-    .from('professores')
-    .select('id, nome')
-    .eq('tenant_id', tenantId);
-  if (profError) throw new AppError('Erro ao buscar professores', 500);
-  const profMap = new Map((professores || []).map((p: any) => [p.id, p.nome]));
+  const profMap = montarProfMap(await buscarProfessoresDocumento(tenantId));
 
   console.log('[EXPORT] professorId=' + JSON.stringify(professorId) + ' tenantId=' + tenantId + ' label=' + label);
 
@@ -577,11 +602,7 @@ export async function gerarCancelamentosXLSX(
     views: [{ state: 'normal', zoomScale: 90 }],
   });
 
-  const { data: professores } = await supabase
-    .from('professores')
-    .select('id, nome')
-    .eq('tenant_id', tenantId);
-  const profMap = new Map((professores || []).map((p: any) => [p.id, p.nome]));
+  const profMap = montarProfMap(await buscarProfessoresDocumento(tenantId));
 
   const { data: turmas } = await supabase
     .from('turmas')
@@ -690,12 +711,7 @@ export async function gerarVagasXLSX(tenantId: string): Promise<ExcelJS.Buffer> 
     views: [{ state: 'normal', zoomScale: 90 }],
   });
 
-  const { data: professores, error: profError } = await supabase
-    .from('professores')
-    .select('id, nome')
-    .eq('tenant_id', tenantId);
-  if (profError) throw new AppError('Erro ao buscar professores', 500);
-  const profMap = new Map((professores || []).map((p: any) => [p.id, p.nome]));
+  const profMap = montarProfMap(await buscarProfessoresDocumento(tenantId));
 
   const { data: turmas, error: turmasError } = await supabase
     .from('turmas')

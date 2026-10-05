@@ -32,10 +32,13 @@ const Configuracoes: React.FC = () => {
   const [subscriptions, setSubscriptions] = useState<{ id: string; endpoint: string; criado_em: string }[]>([]);
   const [subsLoading, setSubsLoading] = useState(false);
 
-  const [professores, setProfessores] = useState<{ id: string; nome: string; hash: string }[]>([]);
+  const [professores, setProfessores] = useState<{ id: string; nome: string; nome_documento?: string | null; hash: string }[]>([]);
   const [professorId, setProfessorId] = useState('');
   const [labels, setLabels] = useState<string[]>([]);
   const [label, setLabel] = useState('');
+  const [nomeDocInput, setNomeDocInput] = useState('');
+  const [nomeDocSalvando, setNomeDocSalvando] = useState(false);
+  const [nomeDocMsg, setNomeDocMsg] = useState<string | null>(null);
 const [mes, setMes] = useState(new Date().getMonth() + 1);
 const [ano, setAno] = useState(new Date().getFullYear());
 const [tipoSelect, setTipoSelect] = useState('todos');
@@ -134,6 +137,32 @@ const { enabled: devEnabled } = useDevLog();
       setLabel(sortLabels(uniqueLabels)[0] || '');
     }).catch(() => {});
   }, [professorId]);
+
+  // Nome no documento: pré-carrega ao trocar o professor selecionado
+  // (depende só de professorId para não apagar a mensagem de sucesso ao salvar)
+  useEffect(() => {
+    const prof = professores.find((p) => p.id === professorId);
+    setNomeDocInput(prof?.nome_documento || '');
+    setNomeDocMsg(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [professorId]);
+
+  const salvarNomeDocumento = async () => {
+    if (!professorId || nomeDocSalvando) return;
+    setNomeDocSalvando(true);
+    setNomeDocMsg(null);
+    try {
+      await api.patch(`/professores/${professorId}`, { nome_documento: nomeDocInput.trim() || null });
+      setProfessores((prev) => prev.map((p) => (
+        p.id === professorId ? { ...p, nome_documento: nomeDocInput.trim() || null } : p
+      )));
+      setNomeDocMsg('Nome salvo — vale para todas as exportações.');
+    } catch (e: any) {
+      setNomeDocMsg(e?.response?.data?.error || 'Erro ao salvar nome.');
+    } finally {
+      setNomeDocSalvando(false);
+    }
+  };
 
   const exportar = useCallback(async () => {
     setExportando(true);
@@ -469,6 +498,41 @@ const { enabled: devEnabled } = useDevLog();
                     ))}
                   </select>
                 </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  Nome no documento (cabeçalho das planilhas)
+                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="text"
+                    value={nomeDocInput}
+                    onChange={(e) => setNomeDocInput(e.target.value)}
+                    maxLength={80}
+                    disabled={!professorId}
+                    placeholder={
+                      professorId
+                        ? professores.find((p) => p.id === professorId)?.nome || 'Nome do professor'
+                        : 'Primeiro selecione professor'
+                    }
+                    className="flex-1 min-w-[220px] border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 disabled:opacity-40"
+                  />
+                  <button
+                    onClick={salvarNomeDocumento}
+                    disabled={!professorId || nomeDocSalvando}
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-sm text-gray-700 dark:text-gray-300 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {nomeDocSalvando ? 'Salvando...' : 'Salvar nome'}
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                  Usado onde o documento exige o nome formal (ex.: Frequência, Vagas, Cancelamentos, Lista de Alunos). Deixe vazio para usar o nome de login.
+                </p>
+                {nomeDocMsg && (
+                  <p className={`mt-1 text-xs ${nomeDocMsg.includes('Erro') ? 'text-red-500' : 'text-green-600 dark:text-green-400'}`}>
+                    {nomeDocMsg}
+                  </p>
+                )}
               </div>
               <button
                 onClick={exportar}

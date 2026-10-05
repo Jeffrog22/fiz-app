@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-10-03 — Export Frequência Observações: sufixo ";Pessoal/Professor" + salvarMetadadosBO persiste tipo_select → v2.88.0 -->
+<!-- última-sessão: 2026-10-05 — Nome no documento (professores.nome_documento) nos XLSX → v2.89.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -88,6 +88,45 @@ Regras:
 - PostgREST free plan tem `max-rows` = 1000 — `.limit()` não ultrapassa. Usar `.range(0, 1000000)` + configurar `max-rows` no Supabase Dashboard (Project Settings → API)
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
 - Migration 030 (`app_settings` — tabela global key/JSONB **sem tenant_id**) **executada em produção** (confirmada em 29/09/2026); `VITE_ALLOW_DEV_MODE=true` configurado no build do Cloudflare — handles de coluna (v2.83.0) ativos em produção
+- Migration 031 (`professores.nome_documento` — nome formal dos documentos) **pendente de execução no Supabase**; até rodar, os exports continuam com o nome de login (fallback no `buscarProfessoresDocumento`) mas o **PATCH /professores/:id dá erro** (coluna inexistente)
+
+---
+
+## Sessão: 05/10/2026 — Nome no documento nos XLSX (`professores.nome_documento`) → v2.89.0
+
+### O que foi feito
+- **Pedido**: Duda (login/apelido cadastrado no primeiro acesso) queria que o campo "Professor:" do export Frequência mostrasse o nome formal **"Eduarda Carvas"** — documento, não interface
+- **Solução**: nova coluna **`professores.nome_documento`** (nullable) + campo editável na própria aba de exportação
+  - **Migration 031** (`backend/src/migrations/031_add_professores_nome_documento.sql`): `ALTER TABLE professores ADD COLUMN IF NOT EXISTS nome_documento TEXT` — **pendente de executar no Supabase**
+  - **Backend**: `GET /professores` passa a retornar `nome_documento`; novo **`PATCH /professores/:id`** (`professoresRoutes.ts`) atualiza **apenas** `nome_documento` (trim, aceita `string|null`, máx 80 chars, vazio → grava `null`); permissão: `req.professorId === id || === 'admin'`, senão **403**
+  - **Export**: helper puro **`montarProfMap(professores)`** (`p.id → nome_documento?.trim() || nome`) + **`buscarProfessoresDocumento(tenantId)`** (busca com `nome_documento`, **retry sem a coluna** se a migration 031 ainda não rodou — export nunca dá 500 por isso) usados nos 3 pontos — Frequência (célula `B3`), Cancelamentos e Vagas
+  - **Lista de Alunos**: `Alunos.tsx` ganhou `professorMapDoc` (`nome_documento || nome`) passado ao `ImpressaoListaModal` (print/PDF/XLSX = documento); o `professorMap` do grid/filtros continua com `p.nome`
+  - **UI** (`Configuracoes.tsx`, aba Frequência): input **"Nome no documento"** + botão "Salvar nome" — pré-carrega ao trocar o professor no select, placeholder = nome de login, nota "vale para todas as exportações", mensagem de sucesso/erro própria (`nomeDocMsg`, depende só de `professorId` para não ser apagada pelo update de estado)
+- **Interface intacta**: TopBar, filtros, dropdowns, dashboards (`relatoriosService`) e grids seguem exibindo `professores.nome` — `nome_documento` só entra em documento
+
+### Decisões (perguntas feitas ao usuário)
+- Onde configurar: **campo salvo na aba Exportar** (não perfil dedicado, não campo temporário, não renomear o banco)
+- Escopo: **todos os XLSX** (Frequência, Vagas, Cancelamentos, Lista de Alunos)
+- Exibição UI: **só nos documentos** (interface continua "Duda")
+- `professores.nome` permanece imutável no app (é a chave de login por nome + `UNIQUE(tenant_id, nome)`)
+
+### Arquivos
+- `backend/src/migrations/031_add_professores_nome_documento.sql` (novo)
+- `backend/src/types/index.ts` + `frontend/src/types/index.ts` (`Professor.nome_documento?`)
+- `backend/src/controllers/professoresController.ts` (+`atualizar`, select com `nome_documento`)
+- `backend/src/routes/professoresRoutes.ts` (+`PATCH /:id`)
+- `backend/src/services/exportacaoService.ts` (+`montarProfMap`, 3 selects/`profMap` atualizados)
+- `frontend/src/pages/Configuracoes.tsx` (+estados/effect/`salvarNomeDocumento`, +input na aba Frequência)
+- `frontend/src/pages/Alunos.tsx` (+`professorMapDoc`, prop no modal)
+- `backend/src/services/__tests__/professores_nome_documento.test.ts` (novo — 11 casos)
+- `CHANGELOG.md` (v2.89.0), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Backend: 0 erros (`tsc --noEmit`) · 78/78 (67 + 11 novos, jest)
+- Frontend: 0 erros (`tsc --noEmit`) · 63/63 (vitest) · `npm run build` limpo
+
+### Pendências
+- **Executar migration 031 no Supabase** (recomendado; até rodar os exports seguem funcionando com o nome de login, e o campo "Nome no documento" dá erro ao salvar)
 
 ---
 

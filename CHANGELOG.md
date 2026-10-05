@@ -1,5 +1,20 @@
 # Changelog - Fiz! App
 
+## [v2.89.0] - 2026-10-05
+### Feat
+- **Nome no documento nos XLSX (campo "Professor" dos relatórios)**: novo `professores.nome_documento` — o nome formal (ex.: "Eduarda Carvas") impresso nos documentos, sem afetar o nome de login/interface ("Duda")
+  - **Migration 031**: `ALTER TABLE professores ADD COLUMN IF NOT EXISTS nome_documento TEXT` (nullable, sem UNIQUE) — **executar no Supabase**
+  - **Backend**: `GET /professores` retorna `nome_documento`; novo `PATCH /professores/:id` atualiza **só** `nome_documento` (trim, `string|null`, máx 80 chars; próprio professor ou `admin`, 403 caso contrário)
+  - **Export**: helper puro **`montarProfMap()`** (prioriza `nome_documento?.trim() || nome`) + **`buscarProfessoresDocumento(tenantId)`** usados nos 3 pontos — Frequência (célula `B3`), Cancelamentos e Vagas passam a imprimir o nome formal; a busca **tolera a migration 031 ainda não executada** (erro de coluna inexistente → retry sem `nome_documento` → nome de login, sem 500 no export)
+  - **Lista de Alunos (print/PDF/XLSX)**: `Alunos.tsx` monta `professorMapDoc` (`nome_documento || nome`) e passa ao `ImpressaoListaModal`; grid/filtros continuam com `p.nome`
+  - **UI**: na Configurações → Exportar → Frequência, input "Nome no documento" + "Salvar nome" (pré-carrega ao trocar o professor, placeholder = nome de login, nota de que vale para todas as exportações)
+### Testes
+- Backend: `tsc --noEmit` 0 erros · 78/78 passam (+11 `professores_nome_documento.test.ts`: montarProfMap fallback/trim, PATCH 204/403/400/admin/limpar e busca com/sim sem migration 031)
+- Frontend: `tsc --noEmit` 0 erros · 63/63 passam · `npm run build` limpo
+### Notas
+- `professores.nome` segue imutável: login por nome, JWT, TopBar, filtros, dashboards (`relatoriosService`) e grids continuam mostrando o apelido — `nome_documento` só entra onde há documento
+- Vazio/null → comportamento anterior (nome de login); decisões do usuário: campo salvo na aba Exportar, vale para todos os XLSX, UI não muda
+
 ## [v2.88.0] - 2026-10-03
 ### Feat
 - **Export Frequência — Observações anota escopo Pessoal/Professor do BO**: linha de BO com `tipo_select='pessoal'` ganha o sufixo `;Pessoal/Professor` (ex.: `5 - Manutenção/Incidente: vazamento no filtro;Pessoal/Professor`)
