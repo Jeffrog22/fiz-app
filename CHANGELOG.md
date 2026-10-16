@@ -1,5 +1,26 @@
 # Changelog - Fiz! App
 
+## [v2.91.0] - 2026-10-16
+### Feat
+- **Tour guiado de boas-vindas (react-joyride)**: tour sequencial pelas principais telas, ativado automaticamente na **primeira vez** que cada professor abre o app (flag `tutorial_tour_<tenant>_<professor>` no localStorage — quem já usava o app vê o tour 1x ao atualizar)
+  - 9 passos: boas-vindas → menu lateral (spotlight) → Chamadas (P/F/J) → CardAula (2 cliques na data) → CardBO → Alunos → Relatórios → Configurações → conclusão; passos de página **navegam sozinhos** para a rota antes de aparecerem
+  - **Mobile (<768px)**: todos os passos viram cards centralizados (sem spotlight ancorado); desktop usa spotlight no menu lateral
+  - Botão **"Pular"** em todo passo (também ✕ e ESC encerram); fim/pular marca o tour como visto
+  - **Reativação**: botão "🚀 Fazer tour de boas-vindas" no novo card Ajuda & Tutorial de Configurações
+- **Guia de novidades por versão**: após atualizar, quem já fez o tour vê um mini-tour curto (2 passos) se houver entradas em `NOVIDADES_POR_VERSAO` entre a última versão vista e a atual — versão vista persistida por professor (`tutorial_versao_<tenant>_<professor>`); entrada inicial cobre a própria v2.91.0 (Central de Ajuda + Tour)
+- **Central de Ajuda (modal carrossel)**: novo `AjudaModal` acessível por **❓ Ajuda no menu lateral** (ao lado de Configurações) e pelo card Ajuda & Tutorial
+  - **Tela inicial**: busca em tempo real (reutiliza `SearchInput` + `normalizeSearch`) sobre títulos, tags e textos de slides → resultados "Tópico › Slide" abrem o carrossel **naquele slide**; grade de 10 tópicos; **8 perguntas frequentes** em acordeão
+  - **Carrossel**: título + "X de N" + pontos de progresso + slide (texto + caixa "💡 Dica") + Anterior/Próximo/Concluir; swipe lateral no celular; ESC/backdrop fecham; padrão dos modais existentes (z-50, max-h-[90vh], dark mode)
+  - Conteúdo estático em `frontend/src/data/ajuda.ts` (fácil de editar): Primeiros passos, Chamadas, CardAula, CardBO, Alunos, Turmas, Vagas+Transferências, Relatórios, Calendário, Configurações
+- **Configurações**: novo card **❓ Ajuda & Tutorial** (Central de Ajuda + Fazer tour); link ❓ Ajuda na sidebar (seção secundária); attrs `data-tour` nos links da sidebar para o spotlight
+### Testes
+- Frontend: `tsc --noEmit` 0 erros · 77/77 passam (+14: `tutorialStorage.test.ts` 3 — flag por professor/tenant, versão; `ajuda.test.ts` 11 — invariantes dos tópicos/FAQ/tour, buscarAjuda vazia/título/slide/tag/sem acento/limite 30) · `npm run build` limpo
+### Notas
+- Sem migration e sem mudança de backend — 100% frontend (localStorage + dados estáticos)
+- Dep nova: `react-joyride@3.2.0` (MIT, ~30KB); tooltip custom com Tailwind + dark mode
+- Eventos window `abrir-ajuda` e `tutorial:iniciar` (mesmo padrão de `auth:logout`) conectam Sidebar/Configurações ↔ ProtectedLayout
+- Ainda no planejamento (fora do escopo): gerar vídeos explicativos em PT com Gemini Notebook/NotebookLM a partir do conteúdo de `ajuda.ts` + prints
+
 ## [v2.90.1] - 2026-10-15
 ### Fix
 - **CardAula "Aula Normal" em aula posterior não esvazia mais as aulas anteriores** (regressão da limpeza cross-índice da v2.87.1): registrar o log climático da aula 1 (ex.: água fria → "J" extrapolado para as turmas do label) e depois salvar a aula 4/5 como **Aula Normal** (caixas vazias) apagava o "J"/"C" da aula 1 e o grid regressava para vazio nas aulas anteriores

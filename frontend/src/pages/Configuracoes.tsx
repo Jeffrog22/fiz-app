@@ -741,6 +741,32 @@ const { enabled: devEnabled } = useDevLog();
           </div>
         </div>
 
+        {/* Ajuda & Tutorial */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-black/20 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-3xl">❓</span>
+            <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Ajuda & Tutorial</h2>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Abra a Central de Ajuda para ver passo a passo de cada funcionalidade e perguntas
+            frequentes, ou refaça o tour de boas-vindas.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent('abrir-ajuda'))}
+              className="px-3 py-1.5 text-xs bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
+            >
+              ❓ Central de Ajuda
+            </button>
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent('tutorial:iniciar'))}
+              className="px-3 py-1.5 text-xs bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
+            >
+              🚀 Fazer tour de boas-vindas
+            </button>
+          </div>
+        </div>
+
         {/* Atualizações */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-black/20 p-6">
           <div className="flex items-center gap-3 mb-4">

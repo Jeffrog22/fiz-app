@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-10-15 — Fix CardAula "Aula Normal" em aula posterior não limpa mais aulas anteriores (card governante) → v2.90.1 -->
+<!-- última-sessão: 2026-10-16 — Tour guiado (react-joyride) + Central de Ajuda (modal carrossel com busca/FAQ) + guia de novidades por versão → v2.91.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -34,7 +34,7 @@ Regras:
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v2.67.5
+- **Versão atual:** v2.91.0
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Build Cloudflare:** `git fetch --tags --unshallow` é necessário no build command para `git describe --tags` funcionar (clone shallow sem tags)
@@ -89,6 +89,51 @@ Regras:
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
 - Migration 030 (`app_settings` — tabela global key/JSONB **sem tenant_id**) **executada em produção** (confirmada em 29/09/2026); `VITE_ALLOW_DEV_MODE=true` configurado no build do Cloudflare — handles de coluna (v2.83.0) ativos em produção
 - Migration 031 (`professores.nome_documento` — nome formal dos documentos) **pendente de execução no Supabase**; até rodar, os exports continuam com o nome de login (fallback no `buscarProfessoresDocumento`) mas o **PATCH /professores/:id dá erro** (coluna inexistente)
+
+---
+
+## Sessão: 16/10/2026 — Tour guiado de boas-vindas + Central de Ajuda (modal com busca/carrossel/FAQ) → v2.91.0
+
+### O que foi feito
+- **Pedido original**: (1) tutorial ativável em Configurações que explique as funcionalidades em sequência; (2) sugestões de plataformas para vídeos explicativos (respondido: Gemini Notebook/NotebookLM formato "Explicativo" para PT; alternativas HeyGen/ScreenDub/CapCut). Decisões do usuário (4 perguntas): **react-joyride** · **todo mundo vê 1x** (flag nunca-vista) · **mini-tour de novidades curado por versão + ReleaseNotesModal** · **Ajuda em modal**
+- **Tour guiado** (`TourGuiado.tsx` + `hooks/useTutorial.ts` + `data/tourSteps.ts`)
+  - Auto-start em `ProtectedLayout` (~900ms após mount): sem flag `tutorial_tour_<tenant>_<professor>` no localStorage → tour de boas-vindas (9 passos: boas-vindas → sidebar spotlight → Chamadas → CardAula → CardBO → Alunos → Relatórios → Configurações → fim); flags por tenant+professor (padrão `${tenant}_professor` já existente)
+  - Passos com `route` navegam via `useNavigate` no `onEvent` (STEP_BEFORE/TOUR_START); spotlight só em elementos persistentes (`[data-tour="sidebar"]`); **mobile (<767px, matchMedia) força `placement: 'center'` + `target: 'body'` em todos os passos**
+  - Joyride v3: `Joyride` **named export** (sem default), `onEvent` (não `callback`), locale PT-BR, `closeButtonAction: 'skip'`, `overlayClickAction: false`, tooltip **custom component** com Tailwind/dark mode (padrão visual dos modais); "Pular"/✕/ESC encerram → `marcarTourVisto` + grava versão atual
+  - **Guia de novidades**: `passosNovidades(ultima, atual)` coleta entradas de `NOVIDADES_POR_VERSAO` com versão `> ultima && <= atual` (usa `compararVersoes`) → mini-tour 1x após atualizar; entrada inicial = v2.91.0 (2 passos sobre a própria feature); **"Fazer tour" manual** (evento `tutorial:iniciar`) reinicia sem checar flag
+- **Central de Ajuda** (`AjudaModal.tsx` + `data/ajuda.ts`)
+  - Acesso: **❓ Ajuda na sidebar** (botão na seção secundária, dispara evento `abrir-ajuda` escutado no `ProtectedLayout` — mesmo padrão de `auth:logout`) + **card ❓ Ajuda & Tutorial** em Configurações
+  - Tela 1: `SearchInput` com busca em tempo real via helper puro **`buscarAjuda(query)`** (normalizeSearch sobre título+tags+títulos/textos de slides → resultados "Tópico › Slide" abrem o carrossel no slide certo) + grid de 10 tópicos + 8 FAQs em acordeão `<details>`-style
+  - Tela 2: carrossel (header "X de N", dots clicáveis, slide com "💡 Dica", Anterior/Próximo/Concluir), **swipe lateral** no celular (threshold 50px, mesmo padrão da sidebar), ESC+backdrop, z-50/max-h-[90vh]/dark mode
+  - Conteúdo estático PT-BR: Primeiros passos, Chamadas (6 slides), CardAula, CardBO, Alunos, Turmas, Vagas+Transferências, Relatórios, Calendário, Configurações — fácil de editar, base futura pros vídeos NotebookLM
+- **Wiring**: `App.tsx` (ProtectedLayout monta `<TourGuiado />` + `<AjudaModal />` + listener `abrir-ajuda`); `Sidebar.tsx` (+`data-tour="sidebar"` no aside, +`data-tour="nav-<rota>"` nos NavLinks, +botão Ajuda); `Configuracoes.tsx` (+card Ajuda & Tutorial entre Acessibilidade e Atualizações)
+
+### Decisões
+- Flag "nunca viu" em vez de hook no fluxo de primeiro acesso: professores atuais também veem o tour 1x ao lançar (decisão do usuário: "todo mundo uma vez")
+- Novidades = mapa curado `versão → passos` no código (2-4 passos por release grande) + ReleaseNotesModal continua para o changelog completo ("ambos")
+- Mobile: cards centralizados em vez de spotlight (tooltip não corta em tela pequena; sidebar começa recolhida)
+- Overlay do Joyride com clique desabilitado (`overlayClickAction: false`) — fim só por Pular/✕/ESC/Concluir, evita perda acidental
+- Sem lib de carrossel: AjudaModal é 100% custom (reusa SearchInput, segue padrão de modal dos existentes)
+
+### Arquivos
+- `frontend/package.json` (+`react-joyride@3.2.0`)
+- `frontend/src/utils/tutorialStorage.ts` (novo — chaves localStorage por tenant+professor)
+- `frontend/src/hooks/useTutorial.ts` (novo — auto-start, novidades, iniciar/finalizar, navegarParaPasso)
+- `frontend/src/data/tourSteps.ts` (novo — `TOUR_BOAS_VINDAS` 9 passos + `NOVIDADES_POR_VERSAO` v2.91.0)
+- `frontend/src/data/ajuda.ts` (novo — 10 tópicos, 8 FAQ, `buscarAjuda`)
+- `frontend/src/components/common/TourGuiado.tsx` (novo — Joyride + tooltip custom PT-BR)
+- `frontend/src/components/common/AjudaModal.tsx` (novo — busca + grid + carrossel + FAQ)
+- `frontend/src/App.tsx` (+montagem +listener), `frontend/src/components/common/Sidebar.tsx` (+Ajuda +data-tour), `frontend/src/pages/Configuracoes.tsx` (+card)
+- `frontend/src/utils/__tests__/tutorialStorage.test.ts` (novo — 3), `frontend/src/data/__tests__/ajuda.test.ts` (novo — 11)
+- `CHANGELOG.md` (v2.91.0), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Frontend: 0 erros (`tsc --noEmit`) · 77/77 (63 + 14 novos, vitest) · `npm run build` limpo
+- Backend inalterado; sem migration; sem mudança de API
+
+### Pendências / próximos passos
+- **Vídeos explicativos** (pergunta 2 do usuário, ainda em aberto): usar o conteúdo de `ajuda.ts` + prints das telas como fontes no **Gemini Notebook/NotebookLM → Resumo em Vídeo formato "Explicativo"** (único formato com narração em PT; Cinematográfico/Curto são só inglês); alternativas com gravação de tela real: HeyGen, ScreenDub, Tutorial.ai ou CapCut (grátis)
+- Teste manual do usuário: abrir o app "limpo" (outro navegador/perfil) para ver o tour auto; celular retrato/paisagem (cards centralizados + swipe no carrossel); busca da Ajuda com e sem acento
 
 ---
 

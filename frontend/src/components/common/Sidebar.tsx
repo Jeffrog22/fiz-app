@@ -67,6 +67,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0 })
 
   return (
     <aside
+      data-tour="sidebar"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       className={`bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-r dark:border-gray-800 min-h-[calc(100vh-57px)] flex flex-col py-4 transition-all duration-300 ease-in-out overflow-hidden ${
@@ -91,6 +92,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0 })
           <NavLink
             key={link.to}
             to={link.to}
+            data-tour={`nav-${link.to.replace('/', '')}`}
             className={({ isActive }) =>
               `flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors whitespace-nowrap ${
                 collapsed ? 'justify-center' : ''
@@ -128,6 +130,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0 })
           <NavLink
             key={link.to}
             to={link.to}
+            data-tour={`nav-${link.to.replace('/', '')}`}
             className={({ isActive }) =>
               `flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors whitespace-nowrap ${
                 collapsed ? 'justify-center' : ''
@@ -148,6 +151,24 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0 })
             </span>
           </NavLink>
         ))}
+        <button
+          type="button"
+          data-tour="nav-ajuda"
+          onClick={() => window.dispatchEvent(new CustomEvent('abrir-ajuda'))}
+          title="Ajuda"
+          className={`flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors whitespace-nowrap w-full text-left ${
+            collapsed ? 'justify-center' : ''
+          } text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200`}
+        >
+          <span className="text-lg flex-shrink-0">❓</span>
+          <span
+            className={`transition-all duration-300 ${
+              collapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'
+            }`}
+          >
+            Ajuda
+          </span>
+        </button>
       </nav>
 
       {deferredPrompt && (

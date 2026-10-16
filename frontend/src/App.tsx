@@ -20,6 +20,8 @@ import TopBar from './components/common/TopBar';
 import Sidebar from './components/common/Sidebar';
 import ConnectionBanner from './components/common/ConnectionBanner';
 import UpdateBanner from './components/common/UpdateBanner';
+import TourGuiado from './components/common/TourGuiado';
+import AjudaModal from './components/common/AjudaModal';
 import DevPanel from './components/dev/DevPanel';
 import { useAuth } from './hooks/useAuth';
 
@@ -27,8 +29,15 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const { isAuthenticated, loading } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(() => window.innerWidth < 768);
   const [aceitesNaoVistos, setAceitesNaoVistos] = React.useState(0);
+  const [ajudaAberta, setAjudaAberta] = React.useState(false);
   const { enabled: devEnabled, addConsoleLine } = useDevLog();
   const origConsole = useRef<Record<string, (...args: unknown[]) => void>>({});
+
+  React.useEffect(() => {
+    const abrirAjuda = () => setAjudaAberta(true);
+    window.addEventListener('abrir-ajuda', abrirAjuda);
+    return () => window.removeEventListener('abrir-ajuda', abrirAjuda);
+  }, []);
 
   React.useEffect(() => {
     if (!isAuthenticated) return;
@@ -86,6 +95,8 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
         </main>
       </div>
       {devEnabled && <DevPanel />}
+      <TourGuiado />
+      <AjudaModal aberto={ajudaAberta} onClose={() => setAjudaAberta(false)} />
     </div>
   );
 };
