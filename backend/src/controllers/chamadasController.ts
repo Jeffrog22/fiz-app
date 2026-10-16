@@ -97,10 +97,11 @@ export class ChamadasController {
             console.error('[salvarCardAula] Erro ao extrapolar justificativa:', extError);
           }
         } else if (status_sugerido === 'AULA_NORMAL') {
-          // Cleanup: remove logs climáticos extrapolados (cancelado/justificado) de todas
-          // as turmas do label em TODOS os índices — antes só o índice salvo era limpo.
+          // Cleanup: remove logs climáticos extrapolados (cancelado/justificado) das turmas
+          // do label cujo card governante é este (AULA_NORMAL) — aulas anteriores com card
+          // climático próprio (ex.: J propagado pela aula 1) são preservadas.
           try {
-            const removidos = await chamadasService.limparExtrapolacaoNormal(tenantId, data, grupo_id);
+            const removidos = await chamadasService.limparExtrapolacaoNormal(tenantId, data, grupo_id, indice_aula || 0);
             console.log('[salvarCardAula] Logs extrapolados limpos:', removidos);
           } catch (err) {
             console.error('[salvarCardAula] Erro ao limpar logs extrapolados:', err);

@@ -336,13 +336,19 @@ export async function salvarCardAula(
 }
 
 // Limpa os logs climáticos extrapolados quando o CardAula volta para AULA_NORMAL.
-// Escopo igual ao do cancelamento climático (extrapolarPorLabel): todas as turmas do
-// label e TODOS os índices — antes só o índice salvo era limpo e as demais turmas
-// continuavam com "C" no grid.
+// Cada linha é decidida pelo "card governante" (último card_aula com indice <= o da
+// linha — mesma semântica de propagação do CardAula e da migration 020):
+//  - governante AULA_CANCELADA/FALTA_JUSTIFICADA => protegido (estado de outra aula);
+//  - governante AULA_NORMAL/ausente => removido.
+// Assim, marcar a aula 4 como NORMAL limpa as aulas 4+ sem apagar o "J"/"C" que a aula 1
+// propagou para as aulas 1-3, e sem reintroduzir o bug da v2.87.1: se o próprio card da
+// aula 1 virou NORMAL, ele governa todos os índices e tudo é limpo.
+// Fallback: se card_aula não puder ser lido, limpa apenas indice_aula >= indiceAula.
 export async function limparExtrapolacaoNormal(
   tenantId: string,
   data: string,
   grupoId: string,
+  indiceAula = 0,
 ): Promise<number> {
   const { data: turmaOrigem } = await supabase
     .from('turmas')
@@ -362,6 +368,51 @@ export async function limparExtrapolacaoNormal(
   const grupoIds = (turmasLabel || []).map((t: any) => t.grupo_id).filter(Boolean);
   if (grupoIds.length === 0) return 0;
 
+  const { data: cards, error: cardsError } = await supabase
+    .from('card_aula')
+    .select('indice_aula, status_sugerido')
+    .eq('tenant_id', tenantId)
+    .eq('data', data);
+
+  const { data: candidatas, error: selError } = await supabase
+    .from('chamadas_log')
+    .select('indice_aula')
+    .eq('tenant_id', tenantId)
+    .eq('data', data)
+    .in('grupo_id', grupoIds)
+    .eq('origem', 'extrapolado')
+    .in('status', ['cancelado', 'justificado'])
+    .is('tipo_ocorrencia', null);
+
+  if (selError) {
+    console.error('[limparExtrapolacaoNormal] Erro ao buscar logs extrapolados:', selError.message);
+    return 0;
+  }
+
+  const indices: number[] = Array.from(
+    new Set((candidatas || []).map((c: any) => Number(c.indice_aula))),
+  ).sort((a, b) => a - b);
+  if (indices.length === 0) return 0;
+
+  const cardsOrdenados = (cardsError ? [] : (cards || []))
+    .map((c: any) => ({ idx: Number(c.indice_aula), status: (c.status_sugerido ?? null) as string | null }))
+    .filter((c: any) => Number.isFinite(c.idx))
+    .sort((a, b) => a.idx - b.idx);
+
+  const CLIMATICOS = new Set(['AULA_CANCELADA', 'FALTA_JUSTIFICADA']);
+
+  const indicesALimpar = indices.filter((idx) => {
+    if (cardsError) return idx >= indiceAula;
+    let governante: string | null = null;
+    for (const c of cardsOrdenados) {
+      if (c.idx > idx) break;
+      governante = c.status;
+    }
+    return !(governante && CLIMATICOS.has(governante));
+  });
+
+  if (indicesALimpar.length === 0) return 0;
+
   const { data: removidos, error } = await supabase
     .from('chamadas_log')
     .delete()
@@ -371,6 +422,7 @@ export async function limparExtrapolacaoNormal(
     .eq('origem', 'extrapolado')
     .in('status', ['cancelado', 'justificado'])
     .is('tipo_ocorrencia', null)
+    .in('indice_aula', indicesALimpar)
     .select('id');
 
   if (error) {
@@ -384,7 +436,7 @@ export async function limparExtrapolacaoNormal(
       tenant_id: tenantId,
       tabela: 'chamadas_log',
       operacao: 'limpeza_extrapolacao',
-      dados: { data, label: turmaOrigem.label, total: count },
+      dados: { data, label: turmaOrigem.label, total: count, indice_aula: indiceAula, indices_limpos: indicesALimpar },
     });
   }
   return count;

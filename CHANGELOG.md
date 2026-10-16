@@ -1,5 +1,20 @@
 # Changelog - Fiz! App
 
+## [v2.90.1] - 2026-10-15
+### Fix
+- **CardAula "Aula Normal" em aula posterior não esvazia mais as aulas anteriores** (regressão da limpeza cross-índice da v2.87.1): registrar o log climático da aula 1 (ex.: água fria → "J" extrapolado para as turmas do label) e depois salvar a aula 4/5 como **Aula Normal** (caixas vazias) apagava o "J"/"C" da aula 1 e o grid regressava para vazio nas aulas anteriores
+  - **Causa**: `limparExtrapolacaoNormal` (disparada pelo ramo `AULA_NORMAL` de `salvarCardAula`) deletava `origem='extrapolado'` + `status IN ('cancelado','justificado')` em **todos os índices** do label sem distinguir de qual card aquela linha veio
+  - **Correção**: cada linha passa a ser decidida pelo **card governante** — o último `card_aula` com `indice <= indice_aula` da linha (mesma semântica de propagação já usada pelo CardAula e pela migration 020): governante `AULA_CANCELADA`/`FALTA_JUSTIFICADA` → **protegido** (estado de outra aula); governante `AULA_NORMAL`/ausente → removido. Assim a aula 4 Normal limpa só as aulas 4+ e preserva o que a aula 1 propagou para as aulas 1-3
+  - **Regressão v2.87.1 preservada**: se o próprio card da aula 1 virou NORMAL, ele governa todos os índices → tudo é limpo (inclusive índices anteriores); bônus: um card climático **posterior** (ex.: aula 5 com J) também deixa de ser apagado pela limpeza da aula 4
+  - **Fallback**: se `card_aula` não puder ser lido (tabela inexistente), limpa apenas `indice_aula >= índice do card` (comportamento protetor)
+  - `limparExtrapolacaoNormal(tenantId, data, grupoId, indiceAula?)` ganhou o 4º parâmetro; delete agora filtra `.in('indice_aula', [...])` (índices calculados) e o log de auditoria registra `indice_aula` + `indices_limpos`
+### Testes
+- Backend: `tsc --noEmit` 0 erros · 81/81 passam (+3 em `limpar_extrapolacao.test.ts`: aula 1 J sobrevive à Normal da aula 4; regressão v2.87.1 limpa todos os índices com card único; aula 5 J sobrevive à limpeza da aula 4; mock ganhou tabela `card_aula`)
+- Frontend: `tsc --noEmit` 0 erros (nenhum arquivo alterado — `salvar`/grid nunca deletam cross-índice)
+### Notas
+- Sem migration e sem mudança de API/UI; só o escopo da limpeza climática mudou
+- Limitações conhecidas (aceitas): `card_aula` é global por `(tenant, data, indice)` — dois labels no mesmo dia compartilham cards; e um card cancel que sobrescreveu linha de card anterior mantém o status antigo nos índices protegidos (sem re-derivação — exigiria re-extrapolação com limite superior)
+
 ## [v2.90.0] - 2026-10-05
 ### Feat
 - **Configurações → badge "Última alteração" com "ver detalhes"**: no card 🔄 Atualizações, ao lado de "Versão atual", um badge (pill `rounded-full`) mostra a **primeira entrada do `changelog.json`** (ex.: `Última alteração: v2.89.0 · 05/10/2026`) com link **"ver detalhes"** que abre o `ReleaseNotesModal` já existente (mesmo modal do "ver novidades" do banner — "Novidades desde a sua versão" + anteriores)

@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-10-05 — Badge "Última alteração" + ver detalhes no card Atualizações → v2.90.0 -->
+<!-- última-sessão: 2026-10-15 — Fix CardAula "Aula Normal" em aula posterior não limpa mais aulas anteriores (card governante) → v2.90.1 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -89,6 +89,38 @@ Regras:
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
 - Migration 030 (`app_settings` — tabela global key/JSONB **sem tenant_id**) **executada em produção** (confirmada em 29/09/2026); `VITE_ALLOW_DEV_MODE=true` configurado no build do Cloudflare — handles de coluna (v2.83.0) ativos em produção
 - Migration 031 (`professores.nome_documento` — nome formal dos documentos) **pendente de execução no Supabase**; até rodar, os exports continuam com o nome de login (fallback no `buscarProfessoresDocumento`) mas o **PATCH /professores/:id dá erro** (coluna inexistente)
+
+---
+
+## Sessão: 15/10/2026 — Fix CardAula "Aula Normal" em aula posterior limpava as aulas anteriores (card governante) → v2.90.1
+
+### O que foi feito
+- **Bug relatado**: registrar o log climático da **aula 1** (água fria → "J" extrapolado corretamente para as turmas do label) e depois salvar a **aula 4/5** como **Aula Normal** (caixas vazias) fazia o grid **regredir para vazio nas aulas anteriores** — a aula 1 perdia o "J"
+- **Causa raiz**: o único caminho que apaga linha de outro índice é `limparExtrapolacaoNormal` (`chamadasService.ts`), disparado pelo ramo `AULA_NORMAL` de `salvarCardAula` (`chamadasController.ts:99-108`); o `delete` varria **todos os índices** do label (filtro `indice_aula` removido de propósito na v2.87.1 para limpar o "C") sem distinguir de qual `card_aula` aquela linha veio. Caminhos descartados: `salvar` (POST /chamadas) só faz upsert e nunca deleta; o clique na célula grava apenas `(UUID do aluno, indiceAtual)`
+- **Correção — regra de card governante** (`limparExtrapolacaoNormal(tenantId, data, grupoId, indiceAula?)`): para cada índice candidato, o **governante** é o último `card_aula` com `indice <= indice_aula` da linha (mesma semântica de propagação do CardAula — fallback "Propagado da Aula X" em `CardAula.tsx:211-225` — e da migration 020):
+  - governante `AULA_CANCELADA`/`FALTA_JUSTIFICADA` → **protegido** (estado de outra aula)
+  - governante `AULA_NORMAL`/ausente → removido (`.in('indice_aula', [índices])`, calculado em JS após `select('indice_aula')`)
+  - **Fallback**: se a query de `card_aula` der erro (tabela inexistente) → limpa só `indice_aula >= indiceAula` (protetor)
+  - Auditoria `limpeza_extrapolacao` agora registra `indice_aula` + `indices_limpos`
+- **Resultado**: aula 4 Normal limpa só as aulas 4+ e preserva o que a aula 1 propagou (aulas 1-3 mantêm "J"); **regressão v2.87.1 preservada** (card da aula 1 virou NORMAL → governa todos os índices → tudo limpo, inclusive anteriores); bônus: card climático **posterior** (aula 5 com J) também deixa de ser apagado pela limpeza da aula 4
+- **Controller**: `chamadasController.ts` passa `indice_aula || 0` como 4º argumento (só usado no fallback)
+
+### Decisões
+- Escopo: **só backend** — `salvar`/grid/merge do frontend nunca apagam cross-índice, nenhum ajuste de UI
+- Regra de card governante (e não `.gte('indice_aula')` puro): `gte` sozinho reintroduziria parte do bug da v2.87.1 quando o cancel foi registrado em índice > 0 (linhas "C" retroescritas nos índices anteriores sobrariam)
+- Sem mudança de propagação (`extrapolarCancelamento` continua escrevendo todos os índices) — preservado para não alterar necessidades anteriores
+- Limitações conhecidas (aceitas, anotadas no CHANGELOG): `card_aula` é global por `(tenant, data, indice)` (sem `label`) → dois labels no mesmo dia compartilham cards; card cancel que sobrescreveu linha de card anterior mantém o status antigo nos índices protegidos (sem re-derivação)
+
+### Arquivos
+- `backend/src/services/chamadasService.ts` (`limparExtrapolacaoNormal` reescrita: card_aula + select de candidatas + filtro por governante + delete por índices)
+- `backend/src/controllers/chamadasController.ts` (passa `indice_aula || 0`, comentário do ramo `AULA_NORMAL`)
+- `backend/src/services/__tests__/limpar_extrapolacao.test.ts` (mock ganhou `card_aula` + reset no `beforeEach` + 3 casos novos)
+- `CHANGELOG.md` (v2.90.1), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Backend: 0 erros (`tsc --noEmit`) · 81/81 (78 + 3 novos, jest)
+- Frontend: 0 erros (`tsc --noEmit`) — inalterado
+- Sem migration
 
 ---
 

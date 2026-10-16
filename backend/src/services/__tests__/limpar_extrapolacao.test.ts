@@ -1,6 +1,6 @@
 jest.mock('../supabaseClient', () => {
   type Row = Record<string, any>;
-  const store: Record<string, Row[]> = { turmas: [], chamadas_log: [] };
+  const store: Record<string, Row[]> = { turmas: [], chamadas_log: [], card_aula: [] };
 
   const match = (row: Row, f: any): boolean => {
     if (f.type === 'eq') return row[f.col] === f.val;
@@ -59,6 +59,7 @@ const DATA = '2026-09-22';
 const row = (p: Partial<any>) => ({ tenant_id: 't1', data: DATA, tipo_ocorrencia: null, ...p });
 
 beforeEach(() => {
+  store.card_aula = [];
   store.turmas = [
     { tenant_id: 't1', grupo_id: 'jeftq01', label: 'Ter/Qui', professor_id: 'jeff', horario: '07:00' },
     { tenant_id: 't1', grupo_id: 'jeftq02', label: 'Ter/Qui', professor_id: 'jeff', horario: '08:00' },
@@ -105,5 +106,62 @@ describe('limparExtrapolacaoNormal (CardAula → AULA_NORMAL)', () => {
     const removidos = await limparExtrapolacaoNormal('t1', DATA, 'naoexiste');
     expect(removidos).toBe(0);
     expect(store.chamadas_log.length).toBe(antes);
+  });
+
+  it('preserva as aulas anteriores governadas por card climático (bug: aula 1 J, aula 4 NORMAL)', async () => {
+    store.turmas = [
+      { tenant_id: 't1', grupo_id: 'jeftq01', label: 'Ter/Qui', professor_id: 'jeff', horario: '07:00' },
+      { tenant_id: 't1', grupo_id: 'jeftq02', label: 'Ter/Qui', professor_id: 'jeff', horario: '08:00' },
+      { tenant_id: 't1', grupo_id: 'jeftq03', label: 'Ter/Qui', professor_id: 'jeff', horario: '09:00' },
+      { tenant_id: 't1', grupo_id: 'jeftq04', label: 'Ter/Qui', professor_id: 'jeff', horario: '10:00' },
+      { tenant_id: 't1', grupo_id: 'jeftq05', label: 'Ter/Qui', professor_id: 'jeff', horario: '11:00' },
+    ];
+    store.card_aula = [
+      { tenant_id: 't1', data: DATA, indice_aula: 0, status_sugerido: 'FALTA_JUSTIFICADA' },
+      { tenant_id: 't1', data: DATA, indice_aula: 3, status_sugerido: 'AULA_NORMAL' },
+    ];
+    store.chamadas_log = [
+      row({ grupo_id: 'jeftq01', indice_aula: 0, status: 'justificado', origem: 'extrapolado' }),
+      row({ grupo_id: 'jeftq02', indice_aula: 1, status: 'justificado', origem: 'extrapolado' }),
+      row({ grupo_id: 'jeftq03', indice_aula: 2, status: 'justificado', origem: 'extrapolado' }),
+      row({ grupo_id: 'jeftq04', indice_aula: 3, status: 'justificado', origem: 'extrapolado' }),
+      row({ grupo_id: 'jeftq05', indice_aula: 4, status: 'justificado', origem: 'extrapolado' }),
+    ];
+
+    const removidos = await limparExtrapolacaoNormal('t1', DATA, 'jeftq01', 3);
+    expect(removidos).toBe(2); // só os índices 3 e 4 (governados pelo card AULA_NORMAL)
+
+    const restantes = store.chamadas_log.map((l) => l.indice_aula).sort((a, b) => a - b);
+    expect(restantes).toEqual([0, 1, 2]); // aulas 1-3 mantêm o J propagado pela aula 1
+  });
+
+  it('regressão v2.87.1: card que virou AULA_NORMAL limpa todos os índices, inclusive anteriores', async () => {
+    store.card_aula = [
+      { tenant_id: 't1', data: DATA, indice_aula: 0, status_sugerido: 'AULA_NORMAL' },
+    ];
+    store.chamadas_log = [
+      row({ grupo_id: 'jeftq01', indice_aula: 0, status: 'cancelado', origem: 'extrapolado' }),
+      row({ grupo_id: 'jeftq02', indice_aula: 1, status: 'cancelado', origem: 'extrapolado' }),
+      row({ grupo_id: 'jeftq02', indice_aula: 2, status: 'cancelado', origem: 'extrapolado' }),
+    ];
+
+    const removidos = await limparExtrapolacaoNormal('t1', DATA, 'jeftq01', 0);
+    expect(removidos).toBe(3);
+    expect(store.chamadas_log.length).toBe(0);
+  });
+
+  it('preserva aulas posteriores governadas por card climático próprio (aula 5 J sobrevive à limpeza da aula 4)', async () => {
+    store.card_aula = [
+      { tenant_id: 't1', data: DATA, indice_aula: 3, status_sugerido: 'AULA_NORMAL' },
+      { tenant_id: 't1', data: DATA, indice_aula: 4, status_sugerido: 'FALTA_JUSTIFICADA' },
+    ];
+    store.chamadas_log = [
+      row({ grupo_id: 'jeftq01', indice_aula: 3, status: 'justificado', origem: 'extrapolado' }),
+      row({ grupo_id: 'jeftq02', indice_aula: 4, status: 'justificado', origem: 'extrapolado' }),
+    ];
+
+    const removidos = await limparExtrapolacaoNormal('t1', DATA, 'jeftq01', 3);
+    expect(removidos).toBe(1);
+    expect(store.chamadas_log.map((l) => l.indice_aula)).toEqual([4]);
   });
 });
