@@ -27,7 +27,7 @@ const Turmas: React.FC = () => {
       const [resTurmas, resProf, resAlunos] = await Promise.all([
         api.get('/turmas'),
         api.get('/professores'),
-        api.get('/alunos'),
+        api.get('/alunos?ativo=true'),
       ]);
       const alunosPorTurma: Record<string, number> = {};
       for (const a of resAlunos.data) {

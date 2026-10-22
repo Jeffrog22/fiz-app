@@ -1,5 +1,16 @@
 # Changelog - Fiz! App
 
+## [v2.91.1] - 2026-10-22
+### Fix
+- **Turmas: coluna Lotação contava alunos excluídos/ocultados** (`ativo=false`): turma com 6 ativos + 4 inativos exibia `10/6` no grid de Turmas, enquanto o grid de Chamadas, Vagas e Relatórios mostravam corretamente `6/6`
+  - **Causa**: `Turmas.tsx` buscava `GET /alunos` sem filtro e contava todo aluno com `turma_id` preenchido — alunos removidos/ocultados (`removerAlunoService`) mantêm o `turma_id` e eram somados à lotação
+  - **Correção**: busca trocada para `GET /alunos?ativo=true` (mesmo padrão de `Alunos.tsx` e `Chamadas.tsx`); contagem, ordenação e cores do badge inalteradas
+  - Evidência (produção): `vanqs03` = 6 ativos + 4 inativos = 10 (case reportado); 59 alunos inativos com `turma_id` em 36 turmas — todos deixam de inflar a coluna
+### Testes
+- Frontend: `tsc --noEmit` 0 erros · 77/77 passam (vitest) · `npm run build` limpo
+### Notas
+- Sem migration e sem mudança de backend — 1 linha em `Turmas.tsx`; Vagas/Relatórios/export/grid de Chamadas já filtravam `.eq('ativo', true)`
+
 ## [v2.91.0] - 2026-10-16
 ### Feat
 - **Tour guiado de boas-vindas (react-joyride)**: tour sequencial pelas principais telas, ativado automaticamente na **primeira vez** que cada professor abre o app (flag `tutorial_tour_<tenant>_<professor>` no localStorage — quem já usava o app vê o tour 1x ao atualizar)

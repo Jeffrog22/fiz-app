@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-10-16 — Tour guiado (react-joyride) + Central de Ajuda (modal carrossel com busca/FAQ) + guia de novidades por versão → v2.91.0 -->
+<!-- última-sessão: 2026-10-22 — Fix Turmas Lotação contava inativos → v2.91.1 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -34,7 +34,7 @@ Regras:
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v2.91.0
+- **Versão atual:** v2.91.1
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Build Cloudflare:** `git fetch --tags --unshallow` é necessário no build command para `git describe --tags` funcionar (clone shallow sem tags)
@@ -89,6 +89,31 @@ Regras:
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
 - Migration 030 (`app_settings` — tabela global key/JSONB **sem tenant_id**) **executada em produção** (confirmada em 29/09/2026); `VITE_ALLOW_DEV_MODE=true` configurado no build do Cloudflare — handles de coluna (v2.83.0) ativos em produção
 - Migration 031 (`professores.nome_documento` — nome formal dos documentos) **pendente de execução no Supabase**; até rodar, os exports continuam com o nome de login (fallback no `buscarProfessoresDocumento`) mas o **PATCH /professores/:id dá erro** (coluna inexistente)
+
+---
+
+## Sessão: 22/10/2026 — Fix Turmas Lotação contava alunos inativos → v2.91.1
+
+### O que foi feito
+- **Bug reportado**: coluna **Lotação** do grid de Turmas marcava `10/6` numa turma, enquanto o grid de Chamadas, Vagas e Relatórios mostravam `6/6` (correto)
+- **Causa raiz**: `Turmas.tsx` (`carregar`) buscava `GET /alunos` **sem filtro de ativo** e contava todo aluno com `turma_id` preenchido — alunos excluídos/ocultados (`removerAlunoService` só faz `update({ ativo: false })`, mantêm o `turma_id`) eram somados à lotação
+- **Correção (1 linha, só frontend)**: `api.get('/alunos')` → `api.get('/alunos?ativo=true')` — mesmo padrão de `Alunos.tsx:127` e `Chamadas.tsx:140`; contagem (`alunosPorTurma`), ordenação (`case 'lotacao'`) e cores do badge (`lotacaoClass`) inalteradas
+- **Evidência (leitura no Supabase)**: `vanqs03` = **6 ativos + 4 inativos = 10** (case batido exatamente); no total **59 alunos inativos com `turma_id` em 36 turmas** — todos deixam de inflar a coluna
+- Demais superfícies já filtravam ativos: Vagas (`vagasService.ts` `.eq('ativo', true)`), Relatórios/ocupação (`relatoriosService.ts:477`), export (`exportacaoService.ts:728`), grid Chamadas (`/alunos?ativo=true`) — nenhuma delas alterada
+
+### Decisões
+- Lotação = **só ativos** (alinhado a Vagas/Relatórios/grid — vagas refletem capacidade para matrículas novas); excluídos/ocultados não ocupam vaga
+- Descartado: contar no backend via `alunos_count` (join/subquery já causou 500 por falta de FK — sessão 01/07/2026, lotação é calculada no frontend por design)
+- Descartado: zerar `turma_id` na exclusão (quebraria histórico/exibição em Exclusões e transferências)
+- Não existe coluna "Lotação" na página Alunos (só em Turmas + barra do grid de Chamadas, que já estava correta)
+
+### Arquivos
+- `frontend/src/pages/Turmas.tsx` (fetch `/alunos?ativo=true`)
+- `CHANGELOG.md` (v2.91.1), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Frontend: 0 erros (`tsc --noEmit`) · 77/77 (vitest) · `npm run build` limpo
+- Backend inalterado; sem migration; sem mudança de API
 
 ---
 
