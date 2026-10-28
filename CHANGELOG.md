@@ -1,5 +1,22 @@
 # Changelog - Fiz! App
 
+## [v2.92.0] - 2026-10-28
+### Feat
+- **Extrapolação restrita por professor (toggle admin por unidade)**: resolve o vazamento do CardAula/clima e do BO Geral entre professores do mesmo label quando atendem em piscinas físicas diferentes (cenário real: reforma do Parque — Fernanda em São Matheus, Duda e Júnior em unidade nova; os 3 seguem no tenant Parque)
+  - **Toggle**: novo card **🚧 Extrapolação restrita** em Configurações (**visível/editável só para admin** — mesmo padrão do card Logs de Clima); valor global em `app_settings` chave `extrapolacao_restrita` com objeto por unidade (`{ "parque": true }`) — sem migration de tabela; GET liberado a autenticados (CardBO lê o estado), **PUT exige `professorId === 'admin'`** (403 para professor comum; allowlist `ALLOWED_KEYS` ganhou a chave)
+  - **Ligado**: CardAula (clima/piscina), limpeza `AULA_NORMAL`, BO via_1 (Geral) e Limpar BO afetam **apenas as turmas do professor que registrou** (`professorIdFilter` nos wrappers de `extrapolarService` + filtro em `limparExtrapolacaoNormal`/`cancelarBO`); via_2 (Pessoal) inalterado (já era por professor)
+  - **Desligado / erro de leitura / migration pendente**: fail-open → comportamento atual exato (extrapolação ampla do label)
+  - **Leitura do card do dia separada**: `GET /chamadas/card-aula/daily/:data` com toggle on retorna só os cards do professor logado — professor sem card próprio no dia recebe `[]` (não cai no fallback compartilhado que mostraria o card de outro professor)
+  - **Governante da limpeza também filtrado**: card climático de outro professor na mesma aula não decide mais se o idx é limpo/protegido (e, com migration 032 pendente, a query refaz sem filtro degradando para o comportamento atual)
+  - **UI**: CardBO ganha aviso condicional — via_1 com toggle on exibe "Apenas as turmas deste professor serão afetadas (via_1, extrapolação restrita ativa)" e o hint do checkbox vira "Só as turmas deste professor"
+- **Migration 032** (`backend/src/migrations/032_card_aula_professor.sql`): `card_aula.professor_id TEXT` (nullable) + unique index `(tenant_id, data, indice_aula, professor_id)` substituindo o antigo `(tenant_id, data, indice_aula)` — **linhas antigas com `professor_id` NULL não conflitam** (unique no Postgres ignora NULLs) e cards gravados com toggle desligado continuam NULL → dados 100% intactos; **pendente de executar no Supabase** (até lá só a extrapolação já funciona; cards seguem compartilhados com degradação graciosa)
+### Testes
+- Backend: `tsc --noEmit` 0 erros · 103/103 passam (81 + 22 novos em `extrapolacao_restrita.test.ts`: toggle por unidade + fail-open, extrapolação com/sem filtro, limpeza filtrada + governante por professor, salvarCardBO via_1/via_2, cancelarBO on/off, obterCardAula filtrado sem vazamento de fallback, controller 403/404/admin/GET)
+- Frontend: `tsc --noEmit` 0 erros · 77/77 passam (vitest) · `npm run build` limpo
+### Notas
+- Pós-deploy: **executar migration 032 no Supabase**; depois ligar o toggle em Configurações → Extrapolação restrita para a unidade afetada (admin)
+- Escopo da separação dos cards é por `(data, indice, professor)` — o índice da grid é por label+professor, então professores com aulas no mesmo horário deixam de colidir no `card_aula`
+
 ## [v2.91.1] - 2026-10-22
 ### Fix
 - **Turmas: coluna Lotação contava alunos excluídos/ocultados** (`ativo=false`): turma com 6 ativos + 4 inativos exibia `10/6` no grid de Turmas, enquanto o grid de Chamadas, Vagas e Relatórios mostravam corretamente `6/6`

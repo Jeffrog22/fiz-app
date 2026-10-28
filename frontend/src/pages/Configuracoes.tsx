@@ -65,6 +65,10 @@ const [climaLogs, setClimaLogs] = useState<Array<{
 const [climaLogsLoading, setClimaLogsLoading] = useState(false);
 const [climaLogsAutoRefresh, setClimaLogsAutoRefresh] = useState(false);
 
+const [extrapRestrita, setExtrapRestrita] = useState(false);
+const [extrapSalvando, setExtrapSalvando] = useState(false);
+const [extrapMsg, setExtrapMsg] = useState<string | null>(null);
+
 const navigate = useNavigate();
 const { logout, isAdmin } = useAuth();
 const { tenantId } = useTenant();
@@ -125,6 +129,33 @@ const { enabled: devEnabled } = useDevLog();
       return () => clearInterval(interval);
     }
   }, [isAdmin, climaLogsAutoRefresh, carregarClimaLogs]);
+
+  // Toggle "Extrapolação restrita" (admin only): valor global por unidade em app_settings.
+  // GET aberto a autenticados (CardBO le o estado); PUT so admin (backend valida).
+  useEffect(() => {
+    if (!isAdmin) return;
+    api.get('/app-settings/extrapolacao_restrita')
+      .then((res) => setExtrapRestrita(res.data?.value?.[tenantId] === true))
+      .catch(() => {});
+  }, [isAdmin, tenantId]);
+
+  const alternarExtrapolacao = async () => {
+    setExtrapSalvando(true);
+    setExtrapMsg(null);
+    try {
+      const novo = !extrapRestrita;
+      // Merge com o valor atual (chave e global — outros tenants sao preservados)
+      const atual = await api.get('/app-settings/extrapolacao_restrita');
+      const valor = { ...(atual.data?.value || {}), [tenantId]: novo };
+      await api.put('/app-settings/extrapolacao_restrita', { value: valor });
+      setExtrapRestrita(novo);
+      setExtrapMsg(novo ? 'Ativado para esta unidade.' : 'Desativado para esta unidade.');
+    } catch {
+      setExtrapMsg('Erro ao salvar. Tente novamente.');
+    } finally {
+      setExtrapSalvando(false);
+    }
+  };
 
   const handleToggleNotif = async () => {
     try {
@@ -945,6 +976,42 @@ const { enabled: devEnabled } = useDevLog();
                   </tbody>
                 </table>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Extrapolação restrita por professor (Admin only) */}
+        {isAdmin && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-black/20 p-6 md:col-span-2">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">🚧</span>
+              <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Extrapolação restrita</h2>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              Quando ativo nesta unidade, o CardAula (clima/piscina), a limpeza automática
+              e o BO <strong>Geral (via_1)</strong> só afetam as turmas do professor que
+              registrou — indicado quando professores do mesmo label atendem em piscinas
+              físicas diferentes (ex.: reforma do Parque). Desligado, vale o comportamento
+              antigo: tudo propaga para todas as turmas do label.
+            </p>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={extrapRestrita}
+                onChange={alternarExtrapolacao}
+                disabled={extrapSalvando}
+                className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+              />
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {extrapSalvando
+                  ? 'Salvando...'
+                  : extrapRestrita
+                    ? 'Ativo — cada professor extrapola apenas para as próprias turmas'
+                    : 'Desligado — extrapolação vale para todo o label'}
+              </span>
+            </label>
+            {extrapMsg && (
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{extrapMsg}</p>
             )}
           </div>
         )}

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
 import type { ChamadaLog } from '../../types';
+import { useTenant } from '../../hooks/useTenant';
 
 interface Props {
   aberto: boolean;
@@ -45,6 +46,17 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, b
   const [cancelarAula, setCancelarAula] = useState(false);
   const [diasInput, setDiasInput] = useState('');
   const [erro, setErro] = useState('');
+  const [extrapRestrita, setExtrapRestrita] = useState(false);
+
+  const { tenantId } = useTenant();
+
+  // Toggle 'extrapolacao_restrita' da unidade: aviso do via_1 muda de texto
+  useEffect(() => {
+    if (!aberto) return;
+    api.get('/app-settings/extrapolacao_restrita')
+      .then((res) => setExtrapRestrita(res.data?.value?.[tenantId] === true))
+      .catch(() => setExtrapRestrita(false));
+  }, [aberto, tenantId]);
 
   if (!aberto) return null;
 
@@ -138,7 +150,9 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, b
               Pessoal / Professor
             </label>
             <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-auto">
-              {via === 'via_2' ? 'Exclusivo do professor' : 'Afeta todos os professores'}
+              {via === 'via_2'
+                ? 'Exclusivo do professor'
+                : extrapRestrita ? 'Só as turmas deste professor' : 'Afeta todos os professores'}
             </span>
           </div>
 
@@ -218,7 +232,9 @@ const CardBO: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, b
               <p className="text-red-500 dark:text-red-400">
                 {via === 'via_2'
                   ? 'Apenas as turmas deste professor serão afetadas (via_2).'
-                  : 'Todas as turmas de todos os professores serão afetadas (via_1).'}
+                  : extrapRestrita
+                    ? 'Apenas as turmas deste professor serão afetadas (via_1, extrapolação restrita ativa).'
+                    : 'Todas as turmas de todos os professores serão afetadas (via_1).'}
               </p>
             </div>
           )}

@@ -13,6 +13,9 @@ export async function salvarCardAula(
   sensacao?: string[],
   status_sugerido?: string,
   motivo_sugerido?: string,
+  // Toggle 'extrapolacao_restrita' ativo: card separado por professor (piscinas
+  // diferentes). Ausente => professor_id NULL => comportamento antigo (compartilhado).
+  professorId?: string,
 ): Promise<{ id: string; criado_em: string } | null> {
   if (!data) throw new AppError('Campo data e obrigatorio', 400);
 
@@ -26,25 +29,28 @@ export async function salvarCardAula(
     ...(motivo_sugerido !== undefined && { motivo_sugerido }),
   };
 
-  // Verifica se ja existe registro para este indice
-  const { data: existing } = await supabase
+  // Verifica se ja existe registro para este indice (e professor, quando filtrado)
+  let existenteQuery = supabase
     .from('card_aula')
     .select('id, criado_em')
     .eq('tenant_id', tenantId)
     .eq('data', data)
-    .eq('indice_aula', indice_aula)
-    .maybeSingle();
+    .eq('indice_aula', indice_aula);
+  if (professorId) existenteQuery = existenteQuery.eq('professor_id', professorId);
+  const { data: existing } = await existenteQuery.maybeSingle();
 
   let result: { id: string; criado_em: string } | null = null;
 
   if (existing) {
     // Update: preserva criado_em original (evita que re-salvar quebre propagação de outros índices)
-    const { data: updated, error } = await supabase
+    let updateQuery = supabase
       .from('card_aula')
       .update(dataFields)
       .eq('tenant_id', tenantId)
       .eq('data', data)
-      .eq('indice_aula', indice_aula)
+      .eq('indice_aula', indice_aula);
+    if (professorId) updateQuery = updateQuery.eq('professor_id', professorId);
+    const { data: updated, error } = await updateQuery
       .select('id, criado_em')
       .maybeSingle();
 
@@ -61,6 +67,7 @@ export async function salvarCardAula(
         tenant_id: tenantId,
         data,
         indice_aula,
+        professor_id: professorId ?? null,
         criado_em: new Date().toISOString(),
         ...dataFields,
       })
@@ -81,20 +88,51 @@ export async function salvarCardAula(
     tenant_id: tenantId,
     tabela: 'card_aula',
     operacao: existing ? 'atualizacao' : 'insercao',
-    dados: { data, indice_aula, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima },
+    dados: { data, indice_aula, professor_id: professorId ?? null, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima },
   });
 
   return result;
 }
 
-export async function obterCardAula(data: string, tenantId: string): Promise<any[]> {
-  const { data: registros, error } = await supabase
+export async function obterCardAula(data: string, tenantId: string, professorId?: string): Promise<any[]> {
+  let query = supabase
     .from('card_aula')
     .select('*')
     .eq('tenant_id', tenantId)
-    .eq('data', data)
-    .order('indice_aula', { ascending: true });
+    .eq('data', data);
+  if (professorId) query = query.eq('professor_id', professorId);
+  const { data: registros, error } = await query.order('indice_aula', { ascending: true });
 
+  if (error) {
+    // Coluna professor_id pode nao existir ainda (migracao 032 pendente) — refaz sem filtro
+    if (professorId && (error.message?.includes('professor_id') || error.message?.includes('column'))) {
+      const retry = await supabase
+        .from('card_aula')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .eq('data', data)
+        .order('indice_aula', { ascending: true });
+      return finalizarLeitura(retry.data, retry.error, tenantId, data);
+    }
+    return finalizarLeitura(undefined, error, tenantId, data);
+  }
+
+  // Toggle ativo e professor sem card proprio no dia: nao cai no fallback compartilhado
+  // (veria card de outro professor em piscina diferente)
+  if (professorId) return registros || [];
+
+  if (registros && registros.length > 0) return registros;
+
+  // Fallback: tentar de chamadas_log
+  return buscarCardAulaFallback(tenantId, data);
+}
+
+async function finalizarLeitura(
+  registros: any[] | null | undefined,
+  error: { message?: string } | null,
+  tenantId: string,
+  data: string,
+): Promise<any[]> {
   if (error) {
     if (error.message?.includes('relation') || error.message?.includes('does not exist')) {
       return buscarCardAulaFallback(tenantId, data);

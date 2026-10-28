@@ -318,8 +318,9 @@ export async function extrapolarJustificativa(
   condicaoClima?: string,
   sensacoes?: string[],
   cloroPpm?: number,
+  professorIdFilter?: string,
 ): Promise<{ message: string; count: number }> {
-  return extrapolarPorLabel(tenantId, data, grupoId, indiceAulaOrigem, 'justificado', motivo, true, undefined, undefined, undefined, undefined, temperaturaPiscina, condicaoClima, sensacoes, cloroPpm);
+  return extrapolarPorLabel(tenantId, data, grupoId, indiceAulaOrigem, 'justificado', motivo, true, professorIdFilter, undefined, undefined, undefined, temperaturaPiscina, condicaoClima, sensacoes, cloroPpm);
 }
 
 export async function extrapolarCancelamento(
@@ -335,8 +336,9 @@ export async function extrapolarCancelamento(
   condicaoClima?: string,
   sensacoes?: string[],
   cloroPpm?: number,
+  professorIdFilter?: string,
 ): Promise<{ message: string; count: number }> {
-  return extrapolarPorLabel(tenantId, data, grupoId, indiceAulaOrigem, 'cancelado', motivo, false, undefined, false, tipoOcorrencia, tipoSelect, temperaturaPiscina, condicaoClima, sensacoes, cloroPpm);
+  return extrapolarPorLabel(tenantId, data, grupoId, indiceAulaOrigem, 'cancelado', motivo, false, professorIdFilter, false, tipoOcorrencia, tipoSelect, temperaturaPiscina, condicaoClima, sensacoes, cloroPpm);
 }
 
 export async function extrapolarCancelamentoPessoal(
@@ -404,6 +406,7 @@ export async function extrapolarCancelamentoGeral(
   motivo?: string,
   tipoOcorrencia?: string,
   tipoSelect?: string,
+  professorIdFilter?: string,
 ): Promise<{ message: string; count: number }> {
-  return extrapolarPorLabel(tenantId, data, grupoId, indiceAula, 'cancelado', motivo, false, undefined, !comprometeDia, tipoOcorrencia, tipoSelect);
+  return extrapolarPorLabel(tenantId, data, grupoId, indiceAula, 'cancelado', motivo, false, professorIdFilter, !comprometeDia, tipoOcorrencia, tipoSelect);
 }

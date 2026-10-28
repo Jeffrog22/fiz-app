@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-10-22 — Fix Turmas Lotação contava inativos → v2.91.1 -->
+<!-- última-sessão: 2026-10-28 — Extrapolação restrita por professor (toggle admin) + card_aula por professor → v2.92.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -34,7 +34,7 @@ Regras:
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v2.91.1
+- **Versão atual:** v2.92.0
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Build Cloudflare:** `git fetch --tags --unshallow` é necessário no build command para `git describe --tags` funcionar (clone shallow sem tags)
@@ -89,6 +89,56 @@ Regras:
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
 - Migration 030 (`app_settings` — tabela global key/JSONB **sem tenant_id**) **executada em produção** (confirmada em 29/09/2026); `VITE_ALLOW_DEV_MODE=true` configurado no build do Cloudflare — handles de coluna (v2.83.0) ativos em produção
 - Migration 031 (`professores.nome_documento` — nome formal dos documentos) **pendente de execução no Supabase**; até rodar, os exports continuam com o nome de login (fallback no `buscarProfessoresDocumento`) mas o **PATCH /professores/:id dá erro** (coluna inexistente)
+
+---
+
+## Sessão: 28/10/2026 — Extrapolação restrita por professor (toggle admin) + card_aula por professor → v2.92.0
+
+### O que foi feito
+- **Contexto**: unidade Parque em reforma — Fernanda (São Matheus), Duda e Júnior (unidade nova ainda sem cadastro) seguem todos no tenant Parque; CardAula (clima/piscina) e BO Geral (via_1) extrapolavam para **todos** os professores do mesmo label em piscinas diferentes
+- **Toggle por unidade** (chave `extrapolacao_restrita` em `app_settings` — tabela global da migration 030, valor = objeto `{ tenantId: boolean }`, sem migration de tabela):
+  - `appSettingsService.isExtrapolacaoRestrita(tenantId)` — lê a chave, `value[tenantId] === true`; erro/ausência → **fail-open** (false = comportamento atual)
+  - `appSettingsController`: `ALLOWED_KEYS` + `'extrapolacao_restrita'`; novo `ADMIN_ONLY_WRITE_KEYS` → PUT dessa chave exige `req.professorId === 'admin'` (403); GET liberado a autenticados (CardBO lê o estado); controller migrado de `Request` para `TenantRequest` (`/api` tem tenantMiddleware global em index.ts:54)
+  - `Configuracoes.tsx`: novo card **🚧 Extrapolação restrita** com `{isAdmin && ...}` (padrão do Logs de Clima), load no mount, `alternarExtrapolacao` faz GET→merge do objeto→PUT (preserva outros tenants), estados `extrapRestrita/extrapSalvando/extrapMsg`
+- **Escopo da restrição (toggle ON → `professorIdFilter = req.professorId`)**:
+  - `extrapolarService`: `professorIdFilter?` adicionado aos wrappers `extrapolarJustificativa`, `extrapolarCancelamento`, `extrapolarCancelamentoGeral` (parâmetro já existia no `extrapolarPorLabel`, linha 75)
+  - `chamadasController.salvarCardAula`: lê o toggle 1x por request (`profFilter`) e repassa às 3 ações (extrapolar cancelamento/justificativa + `limparExtrapolacaoNormal`); `obterCardAula` passa o filtro
+  - `chamadasService.limparExtrapolacaoNormal(..., professorIdFilter?)`: filtro nas turmas do label **e** nos cards governantes (com erro de coluna `professor_id` — migration pendente — refaz sem filtro); governante de outro professor não decide mais a limpeza
+  - `chamadasService.salvarCardBO` ramo via_1: lê toggle e repassa ao `extrapolarCancelamentoGeral`; via_2 inalterado (já era por professor via JWT)
+  - `chamadasService.cancelarBO` ramo `geral`: turmas do label filtradas por `sourceTurma.professor_id` quando toggle on (não apaga BO extrapolado de outro professor)
+- **CardAula separado por professor**: `cardAulaService.salvarCardAula/obterCardAula` ganharam `professorId?` (grava `professor_id` no insert; select `.eq('professor_id', ...)`; update também filtra); leitura com filtro e 0 linhas → `[]` **sem cair no fallback** compartilhado de `chamadas_log`; sem filtro → comportamento antigo (fallback preservado)
+- **Migration 032** (`032_card_aula_professor.sql`): `ADD COLUMN professor_id TEXT` + drop do `card_aula_tenant_data_indice_idx` (migration 019) + `UNIQUE (tenant_id, data, indice_aula, professor_id)` — NULLs não conflitam em unique → dados antigos e modo desligado intactos; **pendente de executar no Supabase**
+- **CardBO.tsx**: aviso condicional via estado `extrapRestrita` (GET `/app-settings/extrapolacao_restrita` no mount quando aberto) — hint do checkbox vira "Só as turmas deste professor" e o texto via_1 ganha "…(via_1, extrapolação restrita ativa)"
+- **Ponto de restauração**: tag `backup-pre-extrapolacao` criada em `0ca2e39` (commit anterior ao trabalho)
+
+### Decisões
+- **Admin-only no PUT, GET aberto**: toggle é ferramenta de admin (mesmo gate do backend de Log de Clima); CardBO (professor comum) só lê
+- Toggle desligado / erro / migration pendente → **fail-open** (nunca quebra o fluxo atual); via_2 (Pessoal) nunca foi afetado pelo problema (já filtra por professor)
+- `app_settings` global com objeto por-unidade (em vez de coluna/tabela por tenant) — mesmo padrão da migration 030, zero migration nova de tabela
+- Escopo da leitura do card: toggle on + professor sem card próprio → `[]` (não vaza card/fallback de outro professor); com migration pendente, queries que exigem `professor_id` degradam para o comportamento sem filtro
+- Card via_1 continua disponível para professor comum (só o PUT do toggle é admin) — mudança é no comportamento de extrapolação, não em permissão de BO
+
+### Arquivos
+- `backend/src/migrations/032_card_aula_professor.sql` (novo)
+- `backend/src/services/appSettingsService.ts` (+`isExtrapolacaoRestrita`)
+- `backend/src/controllers/appSettingsController.ts` (+allowlist, +`ADMIN_ONLY_WRITE_KEYS`, TenantRequest)
+- `backend/src/services/extrapolarService.ts` (+`professorIdFilter?` em 3 wrappers)
+- `backend/src/controllers/chamadasController.ts` (toggle em salvarCardAula/obterCardAula)
+- `backend/src/services/cardAulaService.ts` (+`professorId?` em salvar/obter, retry sem filtro, retorno `[]` filtrado)
+- `backend/src/services/chamadasService.ts` (+`professorIdFilter` em limpar, toggle em salvarCardBO via_1 e cancelarBO geral, import do helper)
+- `frontend/src/pages/Configuracoes.tsx` (card Extrapolação admin-only)
+- `frontend/src/components/modals/CardBO.tsx` (+estado/effect/avisos condicionais)
+- `backend/src/services/__tests__/extrapolacao_restrita.test.ts` (novo — 22 casos)
+- `CHANGELOG.md` (v2.92.0), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Backend: 0 erros (`tsc --noEmit`) · 103/103 (81 + 22 novos, jest)
+- Frontend: 0 erros (`tsc --noEmit`) · 77/77 (vitest) · `npm run build` limpo
+
+### Pendências
+- **Executar migration 032 no Supabase após deploy** (até lá: extrapolação já funciona com o toggle; cards continuam compartilhados com degradação graciosa)
+- Ligar o toggle (admin) em Configurações → Extrapolação restrita para a unidade afetada
+- Quando a unidade nova tiver cadastro: migrar os 3 professores/turmas para o novo tenant e o toggle deixa de ser necessário para elas
 
 ---
 

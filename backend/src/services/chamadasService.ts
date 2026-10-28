@@ -4,6 +4,7 @@ import { AppError } from '../middleware/errorHandler';
 import { fetchWeather } from '../utils/weather';
 import { registrarOperacao } from '../utils/logEngine';
 import * as extrapolarService from './extrapolarService';
+import { isExtrapolacaoRestrita } from './appSettingsService';
 
 export async function listarPorData(data: string, tenantId: string): Promise<any[]> {
   const { data: logs, error } = await supabase
@@ -349,6 +350,9 @@ export async function limparExtrapolacaoNormal(
   data: string,
   grupoId: string,
   indiceAula = 0,
+  // Toggle 'extrapolacao_restrita' ativo: limpa apenas os logs extrapolados do
+  // proprio professor (nao apaga a extrapolacao dos outros professores do label)
+  professorIdFilter?: string,
 ): Promise<number> {
   const { data: turmaOrigem } = await supabase
     .from('turmas')
@@ -359,20 +363,35 @@ export async function limparExtrapolacaoNormal(
 
   if (!turmaOrigem?.label) return 0;
 
-  const { data: turmasLabel } = await supabase
+  let turmasLabelQuery = supabase
     .from('turmas')
     .select('grupo_id')
     .eq('tenant_id', tenantId)
     .eq('label', turmaOrigem.label);
+  if (professorIdFilter) turmasLabelQuery = turmasLabelQuery.eq('professor_id', professorIdFilter);
+  const { data: turmasLabel } = await turmasLabelQuery;
 
   const grupoIds = (turmasLabel || []).map((t: any) => t.grupo_id).filter(Boolean);
   if (grupoIds.length === 0) return 0;
 
-  const { data: cards, error: cardsError } = await supabase
+  // Governantes do dia: com toggle ativo, olha apenas os cards do proprio professor
+  // (nao deixa card climatico de outro professor em piscina diferente decidir a limpeza);
+  // se a coluna professor_id nao existir ainda (migracao 032 pendente), refaz sem filtro.
+  let cardsQuery = supabase
     .from('card_aula')
     .select('indice_aula, status_sugerido')
     .eq('tenant_id', tenantId)
     .eq('data', data);
+  if (professorIdFilter) cardsQuery = cardsQuery.eq('professor_id', professorIdFilter);
+  let { data: cards, error: cardsError } = await cardsQuery;
+  if (cardsError && professorIdFilter) {
+    cardsError = null;
+    ({ data: cards, error: cardsError } = await supabase
+      .from('card_aula')
+      .select('indice_aula, status_sugerido')
+      .eq('tenant_id', tenantId)
+      .eq('data', data));
+  }
 
   const { data: candidatas, error: selError } = await supabase
     .from('chamadas_log')
@@ -538,7 +557,11 @@ export async function salvarCardBO(
       await extrapolarService.extrapolarCancelamentoPessoal(tenantId, data, grupoId, aulaIdx, !!compromete_dia, professorId, tMotivo, tipo_ocorrencia, 'pessoal', true);
     }
   } else {
-    await extrapolarService.extrapolarCancelamentoGeral(tenantId, data, grupoId, aulaIdx, !!compromete_dia, tMotivo, tipo_ocorrencia, 'geral');
+    // via_1 (Geral): com 'extrapolacao_restrita' ativo, cancela so as turmas do
+    // professor que registrou o BO (piscinas diferentes — ex.: reforma do Parque)
+    const restrita = await isExtrapolacaoRestrita(tenantId);
+    const profFilter = restrita && professorId ? professorId : undefined;
+    await extrapolarService.extrapolarCancelamentoGeral(tenantId, data, grupoId, aulaIdx, !!compromete_dia, tMotivo, tipo_ocorrencia, 'geral', profFilter);
   }
 
   registrarOperacao({
@@ -584,11 +607,18 @@ export async function cancelarBO(
         .eq('professor_id', sourceTurma.professor_id || '');
       turmaIds = (turmasProf || []).map((t) => t.grupo_id);
     } else {
-      const { data: turmasLabel } = await supabase
+      // via_1 (Geral): com 'extrapolacao_restrita' ativo, so as turmas do proprio
+      // professor (nao apaga cancelamento extrapolado dos outros do label)
+      const restrita = await isExtrapolacaoRestrita(tenantId);
+      let turmasLabelQuery = supabase
         .from('turmas')
         .select('grupo_id')
         .eq('tenant_id', tenantId)
         .eq('label', sourceTurma.label);
+      if (restrita && sourceTurma.professor_id) {
+        turmasLabelQuery = turmasLabelQuery.eq('professor_id', sourceTurma.professor_id);
+      }
+      const { data: turmasLabel } = await turmasLabelQuery;
       turmaIds = (turmasLabel || []).map((t) => t.grupo_id);
     }
   }

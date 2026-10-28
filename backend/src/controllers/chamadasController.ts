@@ -4,6 +4,7 @@ import { supabase } from '../services/supabaseClient';
 import * as chamadasService from '../services/chamadasService';
 import * as cardAulaService from '../services/cardAulaService';
 import * as extrapolarService from '../services/extrapolarService';
+import { isExtrapolacaoRestrita } from '../services/appSettingsService';
 import { AppError } from '../middleware/errorHandler';
 
 export class ChamadasController {
@@ -75,23 +76,28 @@ export class ChamadasController {
       const { data, indice_aula, grupo_id, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido } = req.body;
       console.log('[salvarCardAula] Recebido:', { data, indice_aula, grupo_id, status_sugerido, motivo_sugerido, temperatura_piscina, cloro_ppm, condicao_clima });
 
-      const hash = await cardAulaService.salvarCardAula(tenantId, data, indice_aula || 0, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido);
+      // Toggle por unidade: quando ativo, CardAula/clima vale so para o professor
+      // que registrou (piscinas fisicas diferentes — ex.: reforma do Parque).
+      const restrita = await isExtrapolacaoRestrita(tenantId);
+      const profFilter = restrita ? req.professorId : undefined;
+
+      const hash = await cardAulaService.salvarCardAula(tenantId, data, indice_aula || 0, temperatura_externa, temperatura_piscina, cloro_ppm, condicao_clima, sensacao, status_sugerido, motivo_sugerido, profFilter);
 
       // Auto-extrapolar conforme inputs brutos usando motor climatico unificado
       if (grupo_id) {
         const rawInputs = { condicao_clima, sensacao, cloro_ppm, temperatura_piscina };
-        console.log('[salvarCardAula] Disparando extrapolacao unificada para grupo_id:', grupo_id, 'data:', data, 'indice:', indice_aula, 'inputs:', rawInputs, 'status_sugerido:', status_sugerido);
+        console.log('[salvarCardAula] Disparando extrapolacao unificada para grupo_id:', grupo_id, 'data:', data, 'indice:', indice_aula, 'inputs:', rawInputs, 'status_sugerido:', status_sugerido, 'profFilter:', profFilter);
 
         if (status_sugerido === 'AULA_CANCELADA') {
           try {
-            const result = await extrapolarService.extrapolarCancelamento(tenantId, data, grupo_id, indice_aula || 0, 12, motivo_sugerido || '', undefined, undefined, temperatura_piscina, condicao_clima, sensacao, cloro_ppm);
+            const result = await extrapolarService.extrapolarCancelamento(tenantId, data, grupo_id, indice_aula || 0, 12, motivo_sugerido || '', undefined, undefined, temperatura_piscina, condicao_clima, sensacao, cloro_ppm, profFilter);
             console.log('[salvarCardAula] Resultado extrapolarCancelamento:', result);
           } catch (extError) {
             console.error('[salvarCardAula] Erro ao extrapolar cancelamento:', extError);
           }
         } else if (status_sugerido === 'FALTA_JUSTIFICADA') {
           try {
-            const result = await extrapolarService.extrapolarJustificativa(tenantId, data, grupo_id, indice_aula || 0, 12, motivo_sugerido || '', temperatura_piscina, condicao_clima, sensacao, cloro_ppm);
+            const result = await extrapolarService.extrapolarJustificativa(tenantId, data, grupo_id, indice_aula || 0, 12, motivo_sugerido || '', temperatura_piscina, condicao_clima, sensacao, cloro_ppm, profFilter);
             console.log('[salvarCardAula] Resultado extrapolarJustificativa:', result);
           } catch (extError) {
             console.error('[salvarCardAula] Erro ao extrapolar justificativa:', extError);
@@ -100,8 +106,9 @@ export class ChamadasController {
           // Cleanup: remove logs climáticos extrapolados (cancelado/justificado) das turmas
           // do label cujo card governante é este (AULA_NORMAL) — aulas anteriores com card
           // climático próprio (ex.: J propagado pela aula 1) são preservadas.
+          // Com toggle ativo, limpa apenas os logs extrapolados do próprio professor.
           try {
-            const removidos = await chamadasService.limparExtrapolacaoNormal(tenantId, data, grupo_id, indice_aula || 0);
+            const removidos = await chamadasService.limparExtrapolacaoNormal(tenantId, data, grupo_id, indice_aula || 0, profFilter);
             console.log('[salvarCardAula] Logs extrapolados limpos:', removidos);
           } catch (err) {
             console.error('[salvarCardAula] Erro ao limpar logs extrapolados:', err);
@@ -156,7 +163,9 @@ export class ChamadasController {
       const tenantId = req.tenantId!;
       const { data } = req.params;
       // Leitura nova: busca do card_aula (documento diario)
-      const result = await cardAulaService.obterCardAula(data, tenantId);
+      // Toggle ativo: cada professor ve apenas o proprio card (piscinas diferentes)
+      const restrita = await isExtrapolacaoRestrita(tenantId);
+      const result = await cardAulaService.obterCardAula(data, tenantId, restrita ? req.professorId : undefined);
       res.json(result);
     } catch (error) {
       next(error);
