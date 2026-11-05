@@ -1,5 +1,16 @@
 # Changelog - Fiz! App
 
+## [v2.92.1] - 2026-11-05
+### Fix
+- **Grid de Chamadas: nome do aluno deixa de ficar azul por motivo de CardBO** (`temAnotacao` em `DataGrid.tsx`)
+  - **Causa**: qualquer registro de `chamadas_log` com `motivo` e `status !== 'justificado'` era tratado como anotação individual — os **clones por aluno** criados pelo CardBO via_2 (cancelamento pessoal com `forcar`, `grupo_id` = UUID do aluno) e **registros legados de BO** (com `tipo_ocorrencia` e status `presente`/`falta`/`null`) pintavam o nome em azul
+  - **Correção**: novo helper puro **`ehAnotacaoIndividual`** (`chamadaUtils.ts`) usado em `temAnotacao` e no tooltip "Anotação:" — anotação só vale com `motivo`, sem `justificado`/`cancelado` e **sem marcadores de BO** (`tipo_ocorrencia`/`tipo_select`); o "C" na célula continua indicando o cancelamento
+  - Evidência (Supabase): 309 registros de nível aluno com `motivo` e `status != justificado` → 257 clones BO (cancelado + ambos marcadores), 26 legados com `tipo_ocorrencia`, **31 anotações reais sem marcador**; 0 clones sem marcador
+### Testes
+- Frontend: `tsc --noEmit` 0 erros · 86/86 passam (77 + 9 novos em `chamadaUtils.test.ts`) · `npm run build` limpo
+### Notas
+- Sem migration e sem mudança de backend — só frontend; destaque de `anotacoes_alunos` (modal) não é afetado
+
 ## [v2.92.0] - 2026-10-28
 ### Feat
 - **Extrapolação restrita por professor (toggle admin por unidade)**: resolve o vazamento do CardAula/clima e do BO Geral entre professores do mesmo label quando atendem em piscinas físicas diferentes (cenário real: reforma do Parque — Fernanda em São Matheus, Duda e Júnior em unidade nova; os 3 seguem no tenant Parque)

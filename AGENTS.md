@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-10-28 — Extrapolação restrita por professor (toggle admin) + card_aula por professor → v2.92.0 -->
+<!-- última-sessão: 2026-11-05 — Fix destaque azul do nome ignora motivo de CardBO → v2.92.1 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -34,7 +34,7 @@ Regras:
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v2.92.0
+- **Versão atual:** v2.92.1
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Build Cloudflare:** `git fetch --tags --unshallow` é necessário no build command para `git describe --tags` funcionar (clone shallow sem tags)
@@ -89,6 +89,32 @@ Regras:
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
 - Migration 030 (`app_settings` — tabela global key/JSONB **sem tenant_id**) **executada em produção** (confirmada em 29/09/2026); `VITE_ALLOW_DEV_MODE=true` configurado no build do Cloudflare — handles de coluna (v2.83.0) ativos em produção
 - Migration 031 (`professores.nome_documento` — nome formal dos documentos) **pendente de execução no Supabase**; até rodar, os exports continuam com o nome de login (fallback no `buscarProfessoresDocumento`) mas o **PATCH /professores/:id dá erro** (coluna inexistente)
+
+---
+
+## Sessão: 05/11/2026 — Fix destaque azul do nome do aluno ignora motivo de CardBO → v2.92.1
+
+### O que foi feito
+- **Bug**: nome do aluno ficava com fundo/texto azul (`#eff6ff` / `text-blue-600`) no grid de Chamadas quando o registro tinha **motivo de CardBO** — o azul é reservado a anotações individuais; o "C" na célula já indica o cancelamento
+- **Causa raiz**: `temAnotacao` (`DataGrid.tsx`) retornava `true` para qualquer log com `motivo` e `status !== 'justificado'` — mas o CardBO via_2 cria **clones por aluno** (`extrapolarPorLabel` com `forcar=true` → `grupo_id` = UUID do aluno, `status: 'cancelado'`, `motivo`, `tipo_ocorrencia`, `tipo_select`, `origem: 'extrapolado'`) e há **registros legados de BO** com `tipo_ocorrencia` e status `presente`/`falta`/`null`
+- **Evidência (Supabase)**: 309 registros de nível aluno com `motivo` e `status != justificado` → 257 clones BO (cancelado + `tipo_ocorrencia` + `tipo_select`), 26 legados com `tipo_ocorrencia`, **31 anotações reais sem marcador** (21 presente + 5 falta + 5 sem status, todos `origem: 'manual'`); **0 clones sem marcador**
+- **Correção**: novo helper puro **`ehAnotacaoIndividual(log)`** em `frontend/src/utils/chamadaUtils.ts` — anotação só com `motivo`, sem `justificado`/`cancelado` e **sem `tipo_ocorrencia`/`tipo_select`**; usado em `temAnotacao` (destaque do nome) e no tooltip "Anotação:" de `getTooltipText` (mesma classe de bug: registro legado de BO aparecia como "Anotação: ..." em célula Presente/Falta)
+- **Testes**: `frontend/src/utils/__tests__/chamadaUtils.test.ts` (9 casos: manual presente, sem status, sem motivo/vazio, justificativa, cancelado, clone BO via_2, legado presente/falta, só tipo_select, BO sem status)
+
+### Decisões
+- Filtro = marcadores `tipo_ocorrencia || tipo_select` (não `origem`): **todos** os registros BO de nível aluno têm `tipo_ocorrencia` (verificado no banco), anotações reais nunca têm; `origem` sozinho falharia nos legados `manual`
+- `status === 'cancelado'` também excluído (célula "C" nunca é anotação) — alinhado ao tooltip, que já excluía cancelado/justificado
+- Escopo: **só frontend** (`temAnotacao` + tooltip); `alunosComAnotacao` (tabela `anotacoes_alunos`) inalterado; sem migration, sem mudança de backend/API
+
+### Arquivos
+- `frontend/src/utils/chamadaUtils.ts` (+interface `MarcaAnotacao`, +`ehAnotacaoIndividual`)
+- `frontend/src/components/grid/DataGrid.tsx` (import + `temAnotacao` + tooltip)
+- `frontend/src/utils/__tests__/chamadaUtils.test.ts` (novo — 9 casos)
+- `CHANGELOG.md` (v2.92.1), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Frontend: 0 erros (`tsc --noEmit`) · 86/86 (77 + 9 novos, vitest) · `npm run build` limpo
+- Backend inalterado; sem migration; sem mudança de API
 
 ---
 
