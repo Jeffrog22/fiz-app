@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useMemo } from 'react';
 import type { ChamadaLog, Aluno, Turma, CalendarioEvento } from '../../types';
 import api from '../../utils/api';
 import { formatarNomeMobile } from '../../utils/formatters';
-import { isDataFutura, isDataPassada } from '../../utils/chamadaUtils';
+import { isDataFutura, isDataPassada, ehAnotacaoIndividual } from '../../utils/chamadaUtils';
 import AnotacoesModal from '../modals/AnotacoesModal';
 import JustificativaModal from '../modals/JustificativaModal';
 import { StickyNote, History, Trash2 } from 'lucide-react';
@@ -288,7 +288,7 @@ const DataGrid: React.FC<DataGridProps> = ({
         if (logEntry?.origem === 'extrapolado') partes.push('(extrapolado)');
       }
 
-      if (motivo && status !== 'cancelado' && status !== 'justificado') {
+      if (motivo && ehAnotacaoIndividual({ motivo, status, tipo_ocorrencia: logEntry?.tipo_ocorrencia, tipo_select: logEntry?.tipo_select })) {
         partes.push(`Anotação: ${motivo}`);
       }
 
@@ -308,7 +308,7 @@ const DataGrid: React.FC<DataGridProps> = ({
   const temAnotacao = useCallback((alunoId: string): boolean => {
     for (const dia of dias) {
       const log = logs[alunoId]?.[dia]?.[indiceAtual];
-      if (log?.motivo && log.status !== 'justificado') return true;
+      if (ehAnotacaoIndividual(log)) return true;
     }
     return false;
   }, [dias, logs, indiceAtual]);

@@ -90,3 +90,28 @@ export function isDataPassada(data: string): boolean {
   hoje.setHours(0, 0, 0, 0);
   return new Date(data + 'T00:00:00') < hoje;
 }
+
+export interface MarcaAnotacao {
+  motivo?: string | null;
+  status?: string | null;
+  tipo_ocorrencia?: string | null;
+  tipo_select?: string | null;
+}
+
+/**
+ * Determina se o motivo de um registro de chamada é uma anotação individual
+ * (destaque azul do nome no grid) e não um motivo vindo de CardBO.
+ *
+ * Regras:
+ * - precisa ter `motivo`;
+ * - `justificado` é justificativa (destaque próprio, não anotação);
+ * - `cancelado` é cancelamento (a célula já exibe "C");
+ * - `tipo_ocorrencia`/`tipo_select` marcam registros de CardBO — inclusive
+ *   clones por aluno da extrapolação via_2 e registros legados de BO.
+ */
+export function ehAnotacaoIndividual(log?: MarcaAnotacao | null): boolean {
+  if (!log?.motivo) return false;
+  if (log.status === 'justificado' || log.status === 'cancelado') return false;
+  if (log.tipo_ocorrencia || log.tipo_select) return false;
+  return true;
+}
