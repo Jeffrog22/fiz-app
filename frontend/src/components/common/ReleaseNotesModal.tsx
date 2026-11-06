@@ -1,49 +1,69 @@
 import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import { buscarChangelog, type ChangelogVersao, type ChangelogSecao } from '../../utils/changelog';
+import {
+  buscarChangelog,
+  filtrarSecoesResumidas,
+  type ChangelogVersao,
+  type ChangelogSecao,
+} from '../../utils/changelog';
 import { compararVersoes } from '../../utils/version';
 
 interface ReleaseNotesModalProps {
   aberto: boolean;
   onClose: () => void;
+  resumido?: boolean;
 }
 
-const BlocoVersao: React.FC<{ versao: ChangelogVersao; destaque: boolean }> = ({ versao, destaque }) => (
-  <div className={`border-l-4 pl-3 ${destaque ? 'border-emerald-400' : 'border-gray-200 dark:border-gray-600'}`}>
-    <div className="flex items-center gap-2 mb-1">
-      <span className="font-semibold text-sm text-gray-800 dark:text-gray-100">{versao.version}</span>
-      {versao.date && <span className="text-xs text-gray-400 dark:text-gray-500">{versao.date}</span>}
-      {destaque && (
-        <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-          nova
-        </span>
+const BlocoVersao: React.FC<{ versao: ChangelogVersao; destaque: boolean; resumido: boolean }> = ({
+  versao,
+  destaque,
+  resumido,
+}) => {
+  const secoes = resumido ? filtrarSecoesResumidas(versao.secoes) : versao.secoes;
+
+  return (
+    <div className={`border-l-4 pl-3 ${destaque ? 'border-emerald-400' : 'border-gray-200 dark:border-gray-600'}`}>
+      <div className="flex items-center gap-2 mb-1">
+        <span className="font-semibold text-sm text-gray-800 dark:text-gray-100">{versao.version}</span>
+        {versao.date && <span className="text-xs text-gray-400 dark:text-gray-500">{versao.date}</span>}
+        {destaque && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+            nova
+          </span>
+        )}
+      </div>
+      {secoes.length === 0 ? (
+        <p className="text-sm text-gray-400 dark:text-gray-500">
+          Sem correções registradas nesta versão.
+        </p>
+      ) : (
+        secoes.map((secao: ChangelogSecao, i: number) => (
+          <div key={i} className="mb-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+              {secao.titulo}
+            </p>
+            <ul className="space-y-1 mt-0.5">
+              {secao.itens.map((item, j) => (
+                <li key={j} className="text-sm text-gray-700 dark:text-gray-300">
+                  {item.titulo}
+                  {item.detalhes.length > 0 && (
+                    <ul className="ml-4 mt-0.5 space-y-0.5">
+                      {item.detalhes.map((d, k) => (
+                        <li key={k} className="text-xs text-gray-500 dark:text-gray-400 list-disc">{d}</li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
       )}
     </div>
-    {versao.secoes.map((secao: ChangelogSecao, i: number) => (
-      <div key={i} className="mb-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-          {secao.titulo}
-        </p>
-        <ul className="space-y-1 mt-0.5">
-          {secao.itens.map((item, j) => (
-            <li key={j} className="text-sm text-gray-700 dark:text-gray-300">
-              {item.titulo}
-              {item.detalhes.length > 0 && (
-                <ul className="ml-4 mt-0.5 space-y-0.5">
-                  {item.detalhes.map((d, k) => (
-                    <li key={k} className="text-xs text-gray-500 dark:text-gray-400 list-disc">{d}</li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          ))}
-        </ul>
-      </div>
-    ))}
-  </div>
-);
+  );
+};
 
-const ReleaseNotesModal: React.FC<ReleaseNotesModalProps> = ({ aberto, onClose }) => {
+const ReleaseNotesModal: React.FC<ReleaseNotesModalProps> = ({ aberto, onClose, resumido = false }) => {
   const [versoes, setVersoes] = useState<ChangelogVersao[] | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState(false);
@@ -121,7 +141,7 @@ const ReleaseNotesModal: React.FC<ReleaseNotesModalProps> = ({ aberto, onClose }
                   Novidades desde a sua versão
                 </p>
                 {novas.map((v) => (
-                  <BlocoVersao key={v.version} versao={v} destaque />
+                  <BlocoVersao key={v.version} versao={v} destaque resumido={resumido} />
                 ))}
               </div>
             ) : (
@@ -137,7 +157,7 @@ const ReleaseNotesModal: React.FC<ReleaseNotesModalProps> = ({ aberto, onClose }
                 </summary>
                 <div className="space-y-4 mt-3">
                   {anteriores.map((v) => (
-                    <BlocoVersao key={v.version} versao={v} destaque={false} />
+                    <BlocoVersao key={v.version} versao={v} destaque={false} resumido={resumido} />
                   ))}
                 </div>
               </details>

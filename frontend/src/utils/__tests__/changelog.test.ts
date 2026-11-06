@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
-import { parseChangelog } from '../changelog';
+import { parseChangelog, filtrarSecoesResumidas, type ChangelogSecao } from '../changelog';
 
 const FIXTURE = `# Changelog - Fiz! App
 
@@ -84,5 +84,52 @@ describe('parseChangelog', () => {
       expect(v.secoes.length).toBeGreaterThan(0);
       expect(v.secoes.some((s) => s.itens.length > 0)).toBe(true);
     }
+  });
+});
+
+describe('filtrarSecoesResumidas', () => {
+  const secoes: ChangelogSecao[] = [
+    { titulo: 'Fix', itens: [] },
+    { titulo: 'Feat', itens: [] },
+    { titulo: 'Adicionado', itens: [] },
+    { titulo: 'Testes', itens: [] },
+    { titulo: 'Testado (Fase 3)', itens: [] },
+    { titulo: 'Testes e Build', itens: [] },
+    { titulo: 'Testes Frontend', itens: [] },
+    { titulo: 'Notas', itens: [] },
+    { titulo: 'Nótas', itens: [] },
+    { titulo: 'Testés', itens: [] },
+  ];
+
+  it('mantém Fix, Feat e demais seções de conteúdo', () => {
+    expect(filtrarSecoesResumidas(secoes).map((s) => s.titulo)).toEqual([
+      'Fix',
+      'Feat',
+      'Adicionado',
+    ]);
+  });
+
+  it('remove Testes e Notas ignorando caixa e acentos', () => {
+    const titulos = filtrarSecoesResumidas(secoes).map((s) => s.titulo);
+    expect(titulos).not.toContain('Testes');
+    expect(titulos).not.toContain('Testado (Fase 3)');
+    expect(titulos).not.toContain('Testes e Build');
+    expect(titulos).not.toContain('Testes Frontend');
+    expect(titulos).not.toContain('Notas');
+    expect(titulos).not.toContain('Nótas');
+    expect(titulos).not.toContain('Testés');
+  });
+
+  it('não muta o array original', () => {
+    const copia = secoes.map((s) => s.titulo);
+    filtrarSecoesResumidas(secoes);
+    expect(secoes.map((s) => s.titulo)).toEqual(copia);
+  });
+
+  it('retorna vazio quando todas as seções são ocultas', () => {
+    expect(filtrarSecoesResumidas([
+      { titulo: 'Testes', itens: [] },
+      { titulo: 'Notas', itens: [] },
+    ])).toEqual([]);
   });
 });

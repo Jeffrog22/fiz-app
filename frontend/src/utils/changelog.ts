@@ -1,3 +1,5 @@
+import { normalizeSearch } from './formatters';
+
 export interface ChangelogItem {
   titulo: string;
   detalhes: string[];
@@ -86,6 +88,13 @@ export function parseChangelog(md: string, limite = 30): ChangelogVersao[] {
   }
 
   return versoes.slice(0, limite);
+}
+
+export function filtrarSecoesResumidas(secoes: ChangelogSecao[]): ChangelogSecao[] {
+  return secoes.filter((secao) => {
+    const titulo = normalizeSearch(secao.titulo);
+    return !titulo.startsWith('test') && !titulo.startsWith('nota');
+  });
 }
 
 export interface ChangelogArquivo {

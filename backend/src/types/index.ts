@@ -78,10 +78,10 @@ export interface EnrollmentPeriod {
   id: string;
   tenant_id: string;
   aluno_id: string;
-  turma_id?: string;
+  turma_id?: string | null;
   nivel?: string;
   data_inicio: string;
-  data_fim?: string;
+  data_fim?: string | null;
   motivo: 'matricula_inicial' | 'correcao' | 'transferencia' | 'desalocacao' | 'exclusao' | 'reativacao' | 'progressao_nivel' | 'correcao_turma' | 'transferencia_externa';
   criado_em: string;
 }

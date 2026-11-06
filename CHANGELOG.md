@@ -1,5 +1,22 @@
 # Changelog - Fiz! App
 
+## [v2.92.3] - 2026-11-05
+### Fix
+- **Chamadas respeitam o período de matrícula antes de qualquer status**
+  - A célula agora segue a ordem **matrícula → evento → aluno → turma**: aluno fora do período da turma exibida fica com célula vazia e bloqueada, mesmo em dia com feriado/ponte/reunião/evento
+  - Todos os eventos do calendário voltam a aparecer no cabeçalho da data (badge com o tipo; tooltip com a descrição), sem depender do status da célula
+  - Anotações e justificativas de registros individuais de outro período não aparecem nem contam no destaque do nome/ícone
+  - Justificativa, atestado com dias e "Limpar este dia/tudo" só alcançam os dias em que o aluno estava matriculado na turma atual
+  - `GET /api/alunos/enrollment?ids=...` retorna os períodos dos alunos em lote (até 100 por consulta) e o grid passa a carregá-los — antes a chamada caía em 404 e o bloqueio nunca ativava
+- **Configurações → Atualizações → "ver detalhes"**: o modal resumido oculta as seções **Testes** e **Notas**; versões sem seção visível mostram "Sem correções registradas nesta versão." (o "ver novidades" do banner continua completo)
+### Testes
+- Backend: `tsc --noEmit` 0 erros · 107/107 passam (103 + 4 novos em `enrollment_periodo.test.ts`: vazio/deduplicação/tenant/ordem, lotes de 100, erro)
+- Frontend: `tsc --noEmit` 0 erros · 101/101 passam (86 + 15 novos: `alunoEstavaNaTurma`/`resolverStatusCelula` + filtro de seções) · `npm run build` limpo
+### Notas
+- Sem migration: a origem do período continua em `enrollment_period`; `chamadas_log` não ganhou `turma_id`
+- Exportação XLSX de Frequência não foi alterada nesta rodada
+- Limitação conhecida: no dia exato da transferência, o período antigo e o novo podem coincidir; como o log individual não tem `turma_id`, o registro pode aparecer na turma nova
+
 ## [v2.92.1] - 2026-11-05
 ### Fix
 - **Grid de Chamadas: nome do aluno deixa de ficar azul por motivo de CardBO** (`temAnotacao` em `DataGrid.tsx`)

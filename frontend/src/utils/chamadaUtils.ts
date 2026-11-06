@@ -115,3 +115,50 @@ export function ehAnotacaoIndividual(log?: MarcaAnotacao | null): boolean {
   if (log.tipo_ocorrencia || log.tipo_select) return false;
   return true;
 }
+
+export interface PeriodoMatricula {
+  turma_id?: string | null;
+  data_inicio: string;
+  data_fim?: string | null;
+}
+
+/**
+ * Indica se o aluno estava matriculado na turma exibida na data informada.
+ * Fail-open: sem turma ou sem períodos carregados, não bloqueia a célula.
+ */
+export function alunoEstavaNaTurma(
+  periodos: PeriodoMatricula[] | undefined,
+  turmaGrupoId: string | undefined,
+  data: string,
+): boolean {
+  if (!turmaGrupoId || !periodos) return true;
+  return periodos.some(
+    (p) => p.turma_id === turmaGrupoId
+      && data >= p.data_inicio
+      && (!p.data_fim || data <= p.data_fim)
+  );
+}
+
+export interface DadosStatusCelula {
+  foraDoPeriodo: boolean;
+  evento?: string | null;
+  statusAluno?: string | null;
+  statusTurma?: string | null;
+}
+
+/**
+ * Prioridade do status da célula: matrícula -> evento -> aluno -> turma.
+ * Fora do período, nenhum status (inclusive evento) é exibido.
+ */
+export function resolverStatusCelula({
+  foraDoPeriodo,
+  evento,
+  statusAluno,
+  statusTurma,
+}: DadosStatusCelula): string | undefined {
+  if (foraDoPeriodo) return 'fora_periodo';
+  if (evento) return evento;
+  if (statusAluno) return statusAluno;
+  if (statusTurma) return statusTurma;
+  return undefined;
+}

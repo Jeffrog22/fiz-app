@@ -6,8 +6,8 @@ import ChamadaFilters from '../components/grid/ChamadaFilters';
 import GridPagination from '../components/grid/GridPagination';
 import CardAula from '../components/modals/CardAula';
 import CardBO from '../components/modals/CardBO';
-import type { Aluno, Turma, Professor, ChamadaLog, AnotacaoAluno, CalendarioEvento } from '../types';
-import { gerarDiasLetivos, hojeMesAno, parseDiasFromLabel, isDataPassada } from '../utils/chamadaUtils';
+import type { Aluno, Turma, Professor, ChamadaLog, AnotacaoAluno, CalendarioEvento, EnrollmentPeriod } from '../types';
+import { gerarDiasLetivos, hojeMesAno, parseDiasFromLabel, isDataPassada, alunoEstavaNaTurma } from '../utils/chamadaUtils';
 import { mesclarLogsServidor, type LogsIndex } from '../utils/logsMerge';
 
 type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento' | 'ferias' | 'fora_periodo' | undefined;
@@ -75,7 +75,7 @@ const Chamadas: React.FC = () => {
   const [alunosComAnotacao, setAlunosComAnotacao] = useState<Set<string>>(new Set());
   const [alunosComAtestadoAnotacao, setAlunosComAtestadoAnotacao] = useState<Set<string>>(new Set());
   const [cardAulaData, setCardAulaData] = useState<Record<string, Record<number, any>>>({});
-  const [enrollmentPeriods, setEnrollmentPeriods] = useState<Record<string, any[]>>({});
+  const [enrollmentPeriods, setEnrollmentPeriods] = useState<Record<string, EnrollmentPeriod[]>>({});
 
   const [limparConfirm, setLimparConfirm] = useState(false);
   const [limparModo, setLimparModo] = useState<'dia' | 'tudo'>('dia');
@@ -212,8 +212,8 @@ const Chamadas: React.FC = () => {
     const ids = alunosDaTurma.map((a) => a.id).join(',');
     try {
       const res = await api.get(`/alunos/enrollment?ids=${ids}`);
-      const data = res.data || [];
-      const grouped: Record<string, any[]> = {};
+      const data: EnrollmentPeriod[] = res.data || [];
+      const grouped: Record<string, EnrollmentPeriod[]> = {};
       for (const ep of data) {
         if (!grouped[ep.aluno_id]) grouped[ep.aluno_id] = [];
         grouped[ep.aluno_id].push(ep);
@@ -432,6 +432,7 @@ const Chamadas: React.FC = () => {
         const diaSemana = data.getDay();
         if (diasSemana.includes(diaSemana)) {
           const dataStr = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
+          if (!alunoEstavaNaTurma(enrollmentPeriods[alunoId], grupoId, dataStr)) continue;
           dates.push(dataStr);
           statuses[dataStr] = logs[alunoId]?.[dataStr]?.[indiceAtual]?.status;
         }
@@ -466,11 +467,12 @@ const Chamadas: React.FC = () => {
 
       agendarSalvamento(payload);
     },
-    [labelSelecionada, professorId, indiceAtual, logs, agendarSalvamento],
+    [labelSelecionada, professorId, indiceAtual, logs, agendarSalvamento, enrollmentPeriods, grupoId],
   );
 
   const handleSaveJustificativa = useCallback(
     (alunoId: string, data: string, motivo: string, dias?: number) => {
+      if (!alunoEstavaNaTurma(enrollmentPeriods[alunoId], grupoId, data)) return;
       const payload = [{
         grupo_id: alunoId, data, indice_aula: indiceAtual,
         status: 'justificado', motivo: motivo || null, origem: 'manual',
@@ -497,10 +499,11 @@ const Chamadas: React.FC = () => {
         aplicarAfastamento(alunoId, data, dias, 'Atestado');
       }
     },
-    [indiceAtual, agendarSalvamento, aplicarAfastamento],
+    [indiceAtual, agendarSalvamento, aplicarAfastamento, enrollmentPeriods, grupoId],
   );
 
   const handleLimparJustificativa = useCallback((alunoId: string, data: string) => {
+    if (!alunoEstavaNaTurma(enrollmentPeriods[alunoId], grupoId, data)) return;
     const logAtual = logs[alunoId]?.[data]?.[indiceAtual];
     if (logAtual?.status !== 'justificado') return;
 
@@ -527,7 +530,7 @@ const Chamadas: React.FC = () => {
       grupo_id: alunoId, data, indice_aula: indiceAtual,
       status: null, motivo: null, origem: 'manual',
     }]);
-  }, [logs, indiceAtual, agendarSalvamento]);
+  }, [logs, indiceAtual, agendarSalvamento, enrollmentPeriods, grupoId]);
 
   const handleNomeDoubleClick = useCallback((aluno: Aluno) => {
     navigate(`/alunos?search=${encodeURIComponent(aluno.nome)}`);
@@ -817,7 +820,10 @@ const Chamadas: React.FC = () => {
     if (alunosDaTurma.length === 0 || dias.length === 0) return;
     const data = dateHeaderClickData || dias[0];
     const turmaLog = logs[grupoId]?.[data]?.[indiceAtual];
-    const batch = alunosDaTurma.map((a) => ({
+    const alunosNoPeriodo = alunosDaTurma.filter(
+      (a) => alunoEstavaNaTurma(enrollmentPeriods[a.id], grupoId, data)
+    );
+    const batch = alunosNoPeriodo.map((a) => ({
       alunoId: a.id,
       statusAntigo: logs[a.id]?.[data]?.[indiceAtual]?.status,
       motivoAntigo: logs[a.id]?.[data]?.[indiceAtual]?.motivo,
@@ -869,19 +875,22 @@ const Chamadas: React.FC = () => {
     await processarFila();
     await carregarLogs();
     setLimparConfirm(false);
-  }, [alunosDaTurma, dias, dateHeaderClickData, indiceAtual, logs, grupoId, processarFila, carregarLogs]);
+  }, [alunosDaTurma, dias, dateHeaderClickData, indiceAtual, logs, grupoId, processarFila, carregarLogs, enrollmentPeriods]);
 
   const handleLimparTudo = useCallback(async () => {
     if (alunosDaTurma.length === 0 || dias.length === 0) return;
-    const batch = alunosDaTurma.map((a) => {
-      const statuses: Record<string, PresencaStatus> = {};
-      const motivos: Record<string, string | undefined> = {};
-      for (const d of dias) {
-        statuses[d] = logs[a.id]?.[d]?.[indiceAtual]?.status;
-        motivos[d] = logs[a.id]?.[d]?.[indiceAtual]?.motivo;
-      }
-      return { alunoId: a.id, statuses, motivos };
-    });
+    const batch = alunosDaTurma
+      .filter((a) => dias.some((d) => alunoEstavaNaTurma(enrollmentPeriods[a.id], grupoId, d)))
+      .map((a) => {
+        const statuses: Record<string, PresencaStatus> = {};
+        const motivos: Record<string, string | undefined> = {};
+        for (const d of dias) {
+          if (!alunoEstavaNaTurma(enrollmentPeriods[a.id], grupoId, d)) continue;
+          statuses[d] = logs[a.id]?.[d]?.[indiceAtual]?.status;
+          motivos[d] = logs[a.id]?.[d]?.[indiceAtual]?.motivo;
+        }
+        return { alunoId: a.id, statuses, motivos };
+      });
     const turmasAntigas: Record<string, { status?: PresencaStatus; motivo?: string; tipo_ocorrencia?: string; tipo_select?: string } | null> = {};
     for (const d of dias) {
       const turmaLog = logs[grupoId]?.[d]?.[indiceAtual];
@@ -898,7 +907,7 @@ const Chamadas: React.FC = () => {
 
     const payload: any[] = [];
     for (const b of batch) {
-      for (const d of dias) {
+      for (const d of Object.keys(b.statuses)) {
         payload.push({
           grupo_id: b.alunoId, data: d,
           indice_aula: indiceAtual,
@@ -917,7 +926,7 @@ const Chamadas: React.FC = () => {
     setLogs((prev) => {
       const next = { ...prev };
       for (const b of batch) {
-        for (const d of dias) {
+        for (const d of Object.keys(b.statuses)) {
           if (next[b.alunoId]?.[d]?.[indiceAtual]) {
             delete next[b.alunoId][d][indiceAtual];
             if (Object.keys(next[b.alunoId][d]).length === 0) {
@@ -941,7 +950,7 @@ const Chamadas: React.FC = () => {
     await processarFila();
     await carregarLogs();
     setLimparConfirm(false);
-  }, [alunosDaTurma, dias, indiceAtual, logs, grupoId, processarFila, carregarLogs]);
+  }, [alunosDaTurma, dias, indiceAtual, logs, grupoId, processarFila, carregarLogs, enrollmentPeriods]);
 
   useEffect(() => {
     if (!limparDropdownOpen) return;

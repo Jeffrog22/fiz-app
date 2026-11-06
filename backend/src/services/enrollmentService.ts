@@ -5,13 +5,15 @@ export interface EnrollmentPeriod {
   id: string;
   tenant_id: string;
   aluno_id: string;
-  turma_id?: string;
+  turma_id?: string | null;
   nivel?: string;
   data_inicio: string;
-  data_fim?: string;
+  data_fim?: string | null;
   motivo: string;
   criado_em: string;
 }
+
+const LOTE_ALUNOS = 100;
 
 export async function listarPeriodosService(
   alunoId: string,
@@ -29,6 +31,35 @@ export async function listarPeriodosService(
     throw new AppError('Erro ao buscar períodos do aluno', 500);
   }
   return data || [];
+}
+
+export async function listarPeriodosPorAlunosService(
+  alunoIds: string[],
+  tenantId: string,
+): Promise<EnrollmentPeriod[]> {
+  const ids = [...new Set(alunoIds.filter(Boolean))];
+  if (ids.length === 0) return [];
+
+  const periodos: EnrollmentPeriod[] = [];
+
+  for (let i = 0; i < ids.length; i += LOTE_ALUNOS) {
+    const lote = ids.slice(i, i + LOTE_ALUNOS);
+    const { data, error } = await supabase
+      .from('enrollment_period')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .in('aluno_id', lote)
+      .order('data_inicio', { ascending: false });
+
+    if (error) {
+      console.error('[enrollment/listarPeriodosPorAlunos] Supabase error:', error);
+      throw new AppError('Erro ao buscar períodos dos alunos', 500);
+    }
+
+    periodos.push(...(data || []));
+  }
+
+  return periodos;
 }
 
 export async function buscarPeriodoAtivoService(

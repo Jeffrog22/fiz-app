@@ -2,7 +2,13 @@ import React, { useState, useCallback, useRef, useMemo } from 'react';
 import type { ChamadaLog, Aluno, Turma, CalendarioEvento } from '../../types';
 import api from '../../utils/api';
 import { formatarNomeMobile } from '../../utils/formatters';
-import { isDataFutura, isDataPassada, ehAnotacaoIndividual } from '../../utils/chamadaUtils';
+import {
+  isDataFutura,
+  isDataPassada,
+  ehAnotacaoIndividual,
+  alunoEstavaNaTurma,
+  resolverStatusCelula,
+} from '../../utils/chamadaUtils';
 import AnotacoesModal from '../modals/AnotacoesModal';
 import JustificativaModal from '../modals/JustificativaModal';
 import { StickyNote, History, Trash2 } from 'lucide-react';
@@ -38,7 +44,7 @@ const STATUS_SYMBOLS: Record<string, string> = {
   reuniao: 'Re',
   evento: 'Ev',
   ferias: 'Férias',
-  fora_periodo: '—',
+  fora_periodo: '',
 };
 
 const TIPO_EVENTO_CORES: Record<string, string> = {
@@ -59,9 +65,9 @@ interface CardAulaRecord {
 interface EnrollmentPeriod {
   id: string;
   aluno_id: string;
-  turma_id?: string;
+  turma_id?: string | null;
   data_inicio: string;
-  data_fim?: string;
+  data_fim?: string | null;
   motivo: string;
   nivel?: string;
 }
@@ -162,41 +168,25 @@ const DataGrid: React.FC<DataGridProps> = ({
     return eventos.filter((e) => e.data === data);
   }, [eventos]);
 
+  const foraDoPeriodo = useCallback(
+    (alunoId: string, data: string): boolean => {
+      return !alunoEstavaNaTurma(enrollmentPeriods?.[alunoId], turmaGrupoId, data);
+    },
+    [enrollmentPeriods, turmaGrupoId]
+  );
+
   const getStatus = useCallback(
     (alunoId: string, data: string): PresencaStatus => {
-      // 1. Eventos de calendário — sempre bloqueiam
-      const dataEventos = eventosPorData(data);
-      if (dataEventos.length > 0) {
-        return dataEventos[0].tipo as PresencaStatus;
-      }
-
-      // Verificar se aluno estava neste grupo nesta data (via enrollmentPeriods)
-      if (enrollmentPeriods && turmaGrupoId) {
-        const periodos = enrollmentPeriods[alunoId];
-        if (periodos) {
-          const periodoAtivo = periodos.find(
-            (p) => p.turma_id === turmaGrupoId && data >= p.data_inicio && (!p.data_fim || data <= p.data_fim)
-          );
-          if (!periodoAtivo) {
-            return 'fora_periodo';
-          }
-        }
-      }
-
-      // 2. Student-level: clique do usuário P/F/J
-      // status null (célula limpa) cai no fallback da turma — vira status da turma
       const alunoLog = logs[alunoId]?.[data]?.[indiceAtual];
-      if (alunoLog?.status) {
-        return alunoLog.status as PresencaStatus;
-      }
-      // 3. Turma-level: fallback propagado por CardAula/CardBO/extrapolação
-      if (turmaGrupoId) {
-        const turmaLog = logs[turmaGrupoId]?.[data]?.[indiceAtual];
-        if (turmaLog?.status) return turmaLog.status as PresencaStatus;
-      }
-      return undefined;
+      const turmaLog = turmaGrupoId ? logs[turmaGrupoId]?.[data]?.[indiceAtual] : undefined;
+      return resolverStatusCelula({
+        foraDoPeriodo: foraDoPeriodo(alunoId, data),
+        evento: eventosPorData(data)[0]?.tipo,
+        statusAluno: alunoLog?.status,
+        statusTurma: turmaLog?.status,
+      }) as PresencaStatus;
     },
-    [logs, eventosPorData, indiceAtual, turmaGrupoId, enrollmentPeriods]
+    [logs, eventosPorData, indiceAtual, turmaGrupoId, foraDoPeriodo]
   );
 
   const getOrigem = useCallback(
@@ -208,9 +198,10 @@ const DataGrid: React.FC<DataGridProps> = ({
 
   const getAnotacao = useCallback(
     (alunoId: string, data: string): string | undefined => {
+      if (foraDoPeriodo(alunoId, data)) return undefined;
       return logs[alunoId]?.[data]?.[indiceAtual]?.motivo;
     },
-    [logs, indiceAtual]
+    [logs, indiceAtual, foraDoPeriodo]
   );
 
   const getCondicaoClima = useCallback(
@@ -250,6 +241,7 @@ const DataGrid: React.FC<DataGridProps> = ({
     (alunoId: string, data: string): string | undefined => {
       const status = getStatus(alunoId, data);
       const motivo = getAnotacao(alunoId, data);
+      if (status === 'fora_periodo') return 'Aluno não estava nesta turma nesta data';
       if (!status && !motivo) return undefined;
 
       const dataEventos = eventosPorData(data);
@@ -307,20 +299,22 @@ const DataGrid: React.FC<DataGridProps> = ({
 
   const temAnotacao = useCallback((alunoId: string): boolean => {
     for (const dia of dias) {
+      if (foraDoPeriodo(alunoId, dia)) continue;
       const log = logs[alunoId]?.[dia]?.[indiceAtual];
       if (ehAnotacaoIndividual(log)) return true;
     }
     return false;
-  }, [dias, logs, indiceAtual]);
+  }, [dias, logs, indiceAtual, foraDoPeriodo]);
 
   const listarJustificativas = useCallback((alunoId: string): { data: string; motivo?: string }[] => {
     const lista: { data: string; motivo?: string }[] = [];
     for (const dia of dias) {
+      if (foraDoPeriodo(alunoId, dia)) continue;
       const log = logs[alunoId]?.[dia]?.[indiceAtual];
       if (log?.status === 'justificado') lista.push({ data: dia, motivo: log.motivo });
     }
     return lista;
-  }, [dias, logs, indiceAtual]);
+  }, [dias, logs, indiceAtual, foraDoPeriodo]);
 
   const temJustificativa = useCallback((alunoId: string): boolean => {
     return listarJustificativas(alunoId).length > 0;
@@ -461,6 +455,19 @@ const DataGrid: React.FC<DataGridProps> = ({
                         {new Date(dia + 'T12:00:00').getDate()}
                       </span>
                     </button>
+                    {hasEvento && (
+                      <span
+                        className={`mt-0.5 inline-block max-w-[44px] truncate rounded border px-1 text-[8px] leading-tight ${
+                          TIPO_EVENTO_CORES[diaEventos[0].tipo] ||
+                          'bg-gray-100 border-gray-300 text-gray-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300'
+                        }`}
+                        title={diaEventos
+                          .map((e) => `${e.tipo}${e.descricao ? `: ${e.descricao}` : ''}`)
+                          .join(' | ')}
+                      >
+                        {diaEventos[0].tipo}
+                      </span>
+                    )}
                   </th>
                 );
               })}
@@ -472,6 +479,8 @@ const DataGrid: React.FC<DataGridProps> = ({
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {alunos.map((aluno) => {
               const faltasMes = contarFaltasMes(aluno.id);
+              const diaFoco = diaFocoJustificativa();
+              const justificativaBloqueada = !!diaFoco && foraDoPeriodo(aluno.id, diaFoco);
               return (
                 <tr key={aluno.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td
@@ -529,14 +538,14 @@ const DataGrid: React.FC<DataGridProps> = ({
                             className={`rounded-md font-bold transition-all ${
                               futura
                                 ? 'w-7 h-7 text-xs bg-gray-50 text-gray-200 cursor-not-allowed dark:bg-gray-700 dark:text-gray-600'
+                                : status === 'fora_periodo'
+                                ? 'w-7 h-7 text-xs bg-gray-50 text-transparent border border-gray-100 cursor-not-allowed opacity-60 dark:bg-gray-700 dark:border-gray-700 dark:text-transparent'
                                 : bloqueadoParQ
                                 ? status
                                   ? `${STATUS_COLORS[status]} w-7 h-7 text-xs cursor-not-allowed ${getOrigem(aluno.id, dia) === 'extrapolado' ? 'border border-dashed border-amber-400' : ''}`
                                   : 'w-7 h-7 text-xs bg-gray-100 text-gray-300 cursor-not-allowed dark:bg-gray-700 dark:text-gray-600'
                                 : isCalendario
                                 ? `${STATUS_COLORS[status || '']} ${status === 'ferias' ? 'text-[9px] px-1 py-0.5' : 'w-7 h-7 text-xs'} cursor-default`
-                                : status === 'fora_periodo'
-                                ? 'w-7 h-7 text-xs bg-gray-100 text-gray-300 border border-dashed border-gray-300 cursor-not-allowed opacity-50 dark:bg-gray-700 dark:text-gray-500 dark:border-gray-600'
                                 : status
                                 ? `${STATUS_COLORS[status]} w-7 h-7 text-xs cursor-pointer ${getOrigem(aluno.id, dia) === 'extrapolado' ? 'border border-dashed border-amber-400' : ''}`
                                 : 'w-7 h-7 text-xs bg-gray-100 hover:bg-gray-200 text-gray-400 cursor-pointer dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-500'
@@ -552,15 +561,19 @@ const DataGrid: React.FC<DataGridProps> = ({
                     <div className="flex gap-1 justify-center">
                       <button
                         onClick={() => {
-                          const dia = diaFocoJustificativa();
-                          if (dia) setJustificativaModal({ aluno, data: dia, motivo: getAnotacao(aluno.id, dia) ?? undefined });
+                          if (diaFoco && !justificativaBloqueada) {
+                            setJustificativaModal({ aluno, data: diaFoco, motivo: getAnotacao(aluno.id, diaFoco) ?? undefined });
+                          }
                         }}
+                        disabled={justificativaBloqueada}
                         className={`p-1 rounded transition-colors ${
-                          temJustificativa(aluno.id)
+                          justificativaBloqueada
+                            ? 'text-yellow-300 opacity-40 cursor-not-allowed dark:text-yellow-700'
+                            : temJustificativa(aluno.id)
                             ? 'bg-yellow-100 text-yellow-700 ring-1 ring-yellow-400 dark:bg-yellow-900/50 dark:text-yellow-300 dark:ring-yellow-600'
                             : 'text-yellow-600 hover:bg-yellow-100 dark:text-yellow-400 dark:hover:bg-yellow-900/50'
                         }`}
-                        title="Justificativa"
+                        title={justificativaBloqueada ? 'Aluno não estava nesta turma nesta data' : 'Justificativa'}
                         aria-label="Justificativa"
                       >
                         <StickyNote size={14} />

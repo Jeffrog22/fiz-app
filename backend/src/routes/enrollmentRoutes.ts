@@ -7,6 +7,7 @@ const router = Router();
 
 router.use(tenantMiddleware, authMiddleware);
 
+router.get('/alunos/enrollment', EnrollmentController.listarLote);
 router.get('/alunos/:alunoId/enrollment', EnrollmentController.listar);
 router.post('/alunos/:alunoId/enrollment', EnrollmentController.criar);
 

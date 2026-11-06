@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-11-05 — Fix destaque azul do nome ignora motivo de CardBO → v2.92.1 -->
+<!-- última-sessão: 2026-11-05 — Chamadas por período de matrícula + eventos no cabeçalho + modal resumido → v2.92.3 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -34,7 +34,7 @@ Regras:
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v2.92.1
+- **Versão atual:** v2.92.3
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Build Cloudflare:** `git fetch --tags --unshallow` é necessário no build command para `git describe --tags` funcionar (clone shallow sem tags)
@@ -89,6 +89,43 @@ Regras:
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
 - Migration 030 (`app_settings` — tabela global key/JSONB **sem tenant_id**) **executada em produção** (confirmada em 29/09/2026); `VITE_ALLOW_DEV_MODE=true` configurado no build do Cloudflare — handles de coluna (v2.83.0) ativos em produção
 - Migration 031 (`professores.nome_documento` — nome formal dos documentos) **pendente de execução no Supabase**; até rodar, os exports continuam com o nome de login (fallback no `buscarProfessoresDocumento`) mas o **PATCH /professores/:id dá erro** (coluna inexistente)
+
+---
+
+## Sessão: 05/11/2026 — Chamadas por período de matrícula + eventos no cabeçalho + modal resumido → v2.92.3
+
+### O que foi feito
+- **Célula fora do período de matrícula**: `DataGrid.getStatus` foi reorganizado para a precedência **matrícula → evento → aluno → turma** via helper puro `resolverStatusCelula`; aluno que não estava na turma exibida na data retorna `fora_periodo`, exibindo célula vazia e bloqueada (inclusive em dias com evento). `STATUS_SYMBOLS.fora_periodo` virou string vazia
+- **Eventos no cabeçalho**: a data volta a mostrar um badge com o tipo do evento (`TIPO_EVENTO_CORES`) e tooltip com todas as descrições — o badge não depende mais do status da célula
+- **Anotações/justificativas por período**: `getAnotacao`, `temAnotacao`, `listarJustificativas` e o tooltip ignoram registros fora do período; o botão de justificativa fica desabilitado quando o dia em foco está fora da matrícula do aluno
+- **Backend em lote**: novo `GET /api/alunos/enrollment?ids=...` (`EnrollmentController.listarLote` + `listarPeriodosPorAlunosService`) — deduplica IDs, valida UUIDs, filtra por tenant e consulta em lotes de 100; rota registrada antes de `/:alunoId/enrollment`. Antes o frontend chamava essa URL e recebia 404, então `enrollmentPeriods` ficava vazio e o bloqueio nunca ativava
+- **Justificativa/afastamento/limpeza**: `handleSaveJustificativa`, `aplicarAfastamento`, `handleLimparJustificativa`, `handleLimparDia` e `handleLimparTudo` só atingem dias em que o aluno estava na turma atual (`alunoEstavaNaTurma`); o undo dos lotes também só restaura esses dias
+- **Modal resumido**: `filtrarSecoesResumidas` (`changelog.ts`) remove seções cujo título normalizado começa com `test`/`nota`; `ReleaseNotesModal` ganhou `resumido` (default false), usado só em Configurações → Atualizações → "ver detalhes"; versão sem seção visível mostra "Sem correções registradas nesta versão."; o "ver novidades" do banner segue completo
+
+### Decisões
+- Fora do período a célula fica **vazia e bloqueada** (não mostra `—`), inclusive sobre eventos; a origem do período continua `enrollment_period` (sem `turma_id` em `chamadas_log`, sem migration)
+- Aluno transferido aparece só na turma atual; a turma antiga não lista histórico (decisão do usuário)
+- Todos os eventos visíveis no cabeçalho (decisão do usuário)
+- Resumo do modal: ocultar apenas Testes/Notas, manter Fix/Feat e demais seções; aplica-se só ao modal de Configurações — banner completo (decisão do usuário)
+- Exportação XLSX de Frequência inalterada nesta rodada
+- Limitação conhecida: no dia da transferência, `data_fim` antigo e `data_inicio` novo coincidem; como o log individual não tem `turma_id`, o registro pode aparecer na turma nova
+
+### Arquivos
+- `frontend/src/utils/chamadaUtils.ts` (+`PeriodoMatricula`, `alunoEstavaNaTurma`, `resolverStatusCelula`)
+- `frontend/src/components/grid/DataGrid.tsx` (precedência, célula vazia, badge de eventos, filtros de período no tooltip/anotações/justificativas)
+- `frontend/src/pages/Chamadas.tsx` (tipos de enrollment, guardas de justificativa/afastamento/limpeza)
+- `backend/src/services/enrollmentService.ts` (+`listarPeriodosPorAlunosService`), `controllers/enrollmentController.ts` (+`listarLote`), `routes/enrollmentRoutes.ts` (+rota em lote)
+- `backend/src/types/index.ts`, `frontend/src/types/index.ts` (`turma_id`/`data_fim` aceitam `null`)
+- `frontend/src/utils/changelog.ts` (+`filtrarSecoesResumidas`), `components/common/ReleaseNotesModal.tsx` (+`resumido`/fallback), `pages/Configuracoes.tsx` (passa `resumido`)
+- `backend/src/services/__tests__/enrollment_periodo.test.ts` (novo — 4), `frontend/src/utils/__tests__/chamadaUtils.test.ts` (+11), `frontend/src/utils/__tests__/changelog.test.ts` (+4)
+
+### Typecheck / Testes
+- Backend: 0 erros (`tsc --noEmit`) · 107/107 (103 + 4 novos, jest)
+- Frontend: 0 erros (`tsc --noEmit`) · 101/101 (86 + 15 novos, vitest) · `npm run build` limpo
+- Sem migration; export XLSX inalterado
+
+### Pendências / riscos conhecidos
+- Teste manual: aluno transferido (turma antiga vs nova), dia com evento + aluno fora do período, cabeçalho com todos os tipos de evento, atestado com dias, "Limpar este dia/tudo", modal resumido vs banner completo
 
 ---
 

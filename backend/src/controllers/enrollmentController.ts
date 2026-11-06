@@ -2,10 +2,35 @@ import { Response, NextFunction } from 'express';
 import { TenantRequest } from '../types';
 import {
   listarPeriodosService,
+  listarPeriodosPorAlunosService,
   iniciarPeriodoService,
 } from '../services/enrollmentService';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export class EnrollmentController {
+  static async listarLote(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const tenantId = req.tenantId!;
+      const bruto = Array.isArray(req.query.ids)
+        ? req.query.ids.join(',')
+        : String(req.query.ids || '');
+      const ids = [...new Set(
+        bruto.split(',').map((id) => id.trim()).filter((id) => UUID_RE.test(id))
+      )];
+
+      if (ids.length === 0) {
+        res.json([]);
+        return;
+      }
+
+      const data = await listarPeriodosPorAlunosService(ids, tenantId);
+      res.json(data);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async listar(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const tenantId = req.tenantId!;

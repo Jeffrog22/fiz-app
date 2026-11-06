@@ -1027,7 +1027,7 @@ const { enabled: devEnabled } = useDevLog();
         }}
       />
 
-      <ReleaseNotesModal aberto={notasAbertas} onClose={() => setNotasAbertas(false)} />
+      <ReleaseNotesModal aberto={notasAbertas} onClose={() => setNotasAbertas(false)} resumido />
     </div>
   );
 };
