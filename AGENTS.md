@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-11-05 — Chamadas por período de matrícula + eventos no cabeçalho + modal resumido → v2.92.3 -->
+<!-- última-sessão: 2026-11-08 — Fix aluno restaurado bloqueado (período de reativação sem turma_id) → v2.92.4 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -34,7 +34,7 @@ Regras:
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v2.92.3
+- **Versão atual:** v2.92.4
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Build Cloudflare:** `git fetch --tags --unshallow` é necessário no build command para `git describe --tags` funcionar (clone shallow sem tags)
@@ -89,6 +89,39 @@ Regras:
 - Migrations 017 e 018 executadas (017: grupo_id TEXT; 018: logs_operacoes, notificacoes_config, notificacoes_subscriptions)
 - Migration 030 (`app_settings` — tabela global key/JSONB **sem tenant_id**) **executada em produção** (confirmada em 29/09/2026); `VITE_ALLOW_DEV_MODE=true` configurado no build do Cloudflare — handles de coluna (v2.83.0) ativos em produção
 - Migration 031 (`professores.nome_documento` — nome formal dos documentos) **pendente de execução no Supabase**; até rodar, os exports continuam com o nome de login (fallback no `buscarProfessoresDocumento`) mas o **PATCH /professores/:id dá erro** (coluna inexistente)
+- Migration 032 (`card_aula.professor_id`) **pendente de execução no Supabase**
+- Migration 033 (`fix_reativacao_turma_id`) **pendente de execução no Supabase** — repara períodos de reativação com `turma_id` NULL (alunos restaurados bloqueados no grid)
+
+---
+
+## Sessão: 08/11/2026 — Fix aluno restaurado bloqueado (período de reativação sem turma_id) → v2.92.4
+
+### O que foi feito
+- **Bug reportado**: alunos que retornam via **Restaurar** (Exclusões) seguiam bloqueados no grid de Chamadas (células vazias/`fora_periodo`), mesmo ativos
+- **Causa raiz**: `exclusoesService.restaurar` chamava `iniciarPeriodoService(exclusao.aluno_id, turma_id || null, ...)`. Quando o usuário restaurava pela opção padrão **"Turma original"** (sem turma explícita), `turma_id` chegava `undefined` → o novo `enrollment_period` era gravado com `turma_id = NULL`, enquanto `alunos.turma_id` continuava preenchido. `alunoEstavaNaTurma` exige `periodo.turma_id === turmaGrupoId`, então nenhum dia casava → tudo `fora_periodo` (célula vazia + clique bloqueado)
+- **Evidência (Supabase)**: 4 períodos ativos (`data_fim IS NULL`) com `turma_id NULL` e motivo `reativacao`, todos de alunos ativos, com turma válida e `par_q = true`: Thiago Yuichi F. Sido (`fentq02`, parque, 29/10), Samuel Ometto Franco (`jefqs01`, bela-vista, 30/09), Alana Oliveira de Melo (`jefqs05`, bela-vista, 03/09) e Ana Clara da Silva Garcia (`dudtq01`, parque, 29/07)
+- **Correção (backend, 1 arquivo)**: `restaurar` passou a buscar `turma_id, nivel` do aluno após o update e usa `turmaFinal = turma_id || aluno?.turma_id || null` no `iniciarPeriodoService` — "Turma original" preserva a turma; turma explícita continua sendo a escolhida
+- **Migration 033** (`033_fix_reativacao_turma_id.sql`): `UPDATE enrollment_period SET turma_id = alunos.turma_id` somente para períodos **ativos** (`data_fim IS NULL`), motivo `reativacao`/`transferencia_externa`, aluno `ativo = true` com `turma_id` não nulo — repara os 4 registros (incluindo a pendência antiga da Alana) sem tocar em períodos históricos fechados; **pendente de executar no Supabase**
+
+### Decisões
+- Corrigir na **criação** (backend) + **reparo** dos dados existentes: só o código deixaria os 4 alunos atuais ainda bloqueados
+- Não alterar `alunoEstavaNaTurma` para "fail-open" com `turma_id NULL`: período sem turma significa aluno não alocado, não deve liberar marcação em qualquer turma; o certo é gravar/consertar o `turma_id`
+- `data_inicio` do período de reativação continua sendo a data da restauração — dias anteriores seguem fora do período (decisão de design da v2.92.3)
+- Escopo: só backend + migration + testes; frontend inalterado
+
+### Arquivos
+- `backend/src/services/exclusoesService.ts` (`select('turma_id, nivel')` + `turmaFinal`)
+- `backend/src/migrations/033_fix_reativacao_turma_id.sql` (novo)
+- `backend/src/services/__tests__/exclusoesService.test.ts` (novo — 4 casos)
+- `CHANGELOG.md` (v2.92.4), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Backend: `tsc --noEmit` 0 erros · 111/111 (107 + 4 novos) · Frontend: `tsc --noEmit` 0 erros
+- Migration 033 **pendente de execução no Supabase**
+
+### Pendências / riscos conhecidos
+- Executar a migration 033 no Supabase para destravar Thiago, Samuel, Alana e Ana Clara
+- `nivel` do período continua vindo de `alunos.nivel` (ao restaurar para outra turma, não persiste o nível da turma nova) — comportamento pré-existente
 
 ---
 

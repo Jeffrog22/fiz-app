@@ -62,13 +62,15 @@ export async function restaurar(id: string, tenantId: string, turma_id?: string,
 
   const { data: aluno } = await supabase
     .from('alunos')
-    .select('nivel')
+    .select('turma_id, nivel')
     .eq('id', exclusao.aluno_id)
     .single();
 
+  const turmaFinal = turma_id || aluno?.turma_id || null;
+
   await iniciarPeriodoService(
     exclusao.aluno_id,
-    turma_id || null,
+    turmaFinal,
     aluno?.nivel || null,
     motivo,
     tenantId,

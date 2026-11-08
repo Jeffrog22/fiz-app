@@ -1,5 +1,17 @@
 # Changelog - Fiz! App
 
+## [v2.92.4] - 2026-11-08
+### Fix
+- **Aluno restaurado deixa de ficar bloqueado no grid de Chamadas**
+  - **Causa**: ao restaurar pela opção padrão **"Turma original"** do modal de Exclusões, `restaurar` chamava `iniciarPeriodoService` com `turma_id || null` → o novo `enrollment_period` era gravado com `turma_id = NULL`, enquanto `alunos.turma_id` continuava preenchido. Como o grid exige `enrollment_period.turma_id = turma exibida`, todos os dias viravam `fora_periodo` (célula vazia + clique bloqueado), mesmo com aluno `ativo = true` e `par_q = true`
+  - **Correção**: `restaurar` lê `turma_id, nivel` do aluno após o update e usa `turmaFinal = turma_id || aluno.turma_id || null` no período — restauração sem turma explícita agora mantém a turma original; restauração com turma escolhida continua usando a informada
+- **Migration 033** (`033_fix_reativacao_turma_id.sql`): repara os períodos ativos de `reativacao`/`transferencia_externa` gravados com `turma_id` NULL para alunos ativos que hoje têm turma — corrige os 4 registros existentes (Thiago, Samuel, Alana e Ana Clara); **pendente de executar no Supabase**
+### Testes
+- Backend: `exclusoesService.test.ts` (novo — 4 casos: turma implícita do aluno, turma explícita, aluno sem turma e motivo `transferencia_externa`)
+### Notas
+- Sem mudança de frontend e sem alteração da regra de período (dias anteriores à restauração continuam fora do período, por design)
+- O `nivel` do período continua vindo de `alunos.nivel` (comportamento pré-existente)
+
 ## [v2.92.3] - 2026-11-05
 ### Fix
 - **Chamadas respeitam o período de matrícula antes de qualquer status**
