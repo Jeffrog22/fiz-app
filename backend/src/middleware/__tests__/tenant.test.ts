@@ -40,4 +40,66 @@ describe('tenantMiddleware', () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(next).not.toHaveBeenCalled();
   });
+
+  it('retorna 403 se X-Tenant-ID for a unidade desativada 3aidade', () => {
+    const next = jest.fn();
+    const { req, res } = mockReqRes({ 'x-tenant-id': '3aidade' });
+    tenantMiddleware(req, res, next);
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('retorna 403 para tenant desconhecido (whitelist)', () => {
+    const next = jest.fn();
+    const { req, res } = mockReqRes({ 'x-tenant-id': 'outro-tenant' });
+    tenantMiddleware(req, res, next);
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('retorna 403 para Origin do dominio antigo da 3aidade', () => {
+    const next = jest.fn();
+    const { req, res } = mockReqRes({
+      'x-tenant-id': 'bela-vista',
+      origin: 'https://chamada3aidade.pages.dev',
+    });
+    tenantMiddleware(req, res, next);
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('retorna 403 para Referer de rota no dominio antigo da 3aidade', () => {
+    const next = jest.fn();
+    const { req, res } = mockReqRes({
+      'x-tenant-id': 'bela-vista',
+      referer: 'https://chamada3aidade.pages.dev/login',
+    });
+    tenantMiddleware(req, res, next);
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('retorna 403 quando o Host e o dominio antigo da 3aidade', () => {
+    const next = jest.fn();
+    const { req, res } = mockReqRes({}, 'chamada3aidade.pages.dev');
+    tenantMiddleware(req, res, next);
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('extrai tenant do dominio valido quando nao ha header', () => {
+    const next = jest.fn();
+    const { req, res } = mockReqRes({}, 'chamadabelavista.pages.dev');
+    tenantMiddleware(req, res, next);
+    expect(req.tenantId).toBe('bela-vista');
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('normaliza X-Tenant-ID com espacos e maiusculas', () => {
+    const next = jest.fn();
+    const { req, res } = mockReqRes({ 'x-tenant-id': '  Bela-Vista  ' });
+    tenantMiddleware(req, res, next);
+    expect(req.tenantId).toBe('bela-vista');
+    expect(next).toHaveBeenCalled();
+  });
 });

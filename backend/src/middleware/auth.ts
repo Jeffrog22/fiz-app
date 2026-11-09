@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { TenantRequest, JwtPayload } from '../types';
+import { isAllowedTenant } from '../config/tenants';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
@@ -27,6 +28,12 @@ export function authMiddleware(req: TenantRequest, res: Response, next: NextFunc
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+
+    // Bloqueia tokens emitidos para unidades desativadas/desconhecidas
+    if (!isAllowedTenant(decoded.tenantId)) {
+      res.status(403).json({ error: 'Unidade desativada ou não autorizada' });
+      return;
+    }
 
     // Valida se o tenant do token corresponde ao tenant da requisição
     if (decoded.tenantId !== req.tenantId) {

@@ -20,13 +20,15 @@ const api = axios.create({
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const tenantId = getTenantId();
-    config.headers['X-Tenant-ID'] = tenantId;
+    if (tenantId) {
+      config.headers['X-Tenant-ID'] = tenantId;
+    }
 
     window.dispatchEvent(new CustomEvent('dev:api-request', {
       detail: { method: config.method?.toUpperCase(), url: config.url },
     }));
 
-    const storedProfessor = localStorage.getItem(`${tenantId}_professor`);
+    const storedProfessor = tenantId ? localStorage.getItem(`${tenantId}_professor`) : null;
     if (storedProfessor) {
       try {
         const parsed = JSON.parse(storedProfessor);

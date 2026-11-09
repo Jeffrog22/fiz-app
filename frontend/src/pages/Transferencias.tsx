@@ -4,7 +4,7 @@ import SearchInput from '../components/SearchInput';
 import AceitarTransferenciaModal from '../components/modals/AceitarTransferenciaModal';
 import type { Aluno, Turma, Professor, TransferenciaUnidade } from '../types';
 import { normalizeSearch, calcIdade, formatDateBR, formatarNomeMobile } from '../utils/formatters';
-import { getTenantNome, getAvailableTenants } from '../utils/tenant';
+import { getTenantNome, getAvailableTenants, isAllowedTenant } from '../utils/tenant';
 import { useTenant } from '../hooks/useTenant';
 import { ArrowRight, Check, X, Clock, Eye } from 'lucide-react';
 
@@ -103,7 +103,7 @@ const Transferencias: React.FC = () => {
   };
 
   const handleAdicionarAFila = async () => {
-    if (!tenantDestino || selecionados.size === 0) return;
+    if (!isAllowedTenant(tenantDestino) || selecionados.size === 0) return;
     setEnviando(true);
     try {
       await api.post('/transferencias', {

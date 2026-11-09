@@ -1,5 +1,21 @@
 # Changelog - Fiz! App
 
+## [v2.92.5] - 2026-11-08
+### Fix
+- **Unidade 3ª Idade removida definitivamente do app**
+  - **Backend**: nova whitelist `backend/src/config/tenants.ts` com as 4 unidades ativas (`bela-vista`, `sao-matheus`, `vila`, `parque`); `tenantMiddleware` bloqueia `X-Tenant-ID`, `Host`, `Origin` e `Referer` da 3ª Idade com **403** e rejeita qualquer tenant fora da whitelist; `authMiddleware` rejeita **tokens já emitidos** para a unidade desativada; `loginService`, `primeiroAcessoService`, `adminLoginService` e `clearDataService` também validam a whitelist (defesa em profundidade)
+  - **Transferências**: `criar`/`criarLote` só aceitam destino da whitelist; `3aidade` removida de `TENANT_NOMES`
+  - **Exportação**: `3aidade` removida de `TENANT_LOCAL` (não gera mais “Piscina 3ª Idade”)
+  - **Frontend**: `3aidade` removida de `DOMAIN_TENANT_MAP`, `TENANTS` e `getTenantNome`; `getTenantId()` não aceita mais override da unidade desativada e retorna vazio no domínio antigo (sem cair em `bela-vista`); `TenantContext` valida o override salvo; `api.ts` não envia `X-Tenant-ID` vazio; nova tela **Unidade desativada** (`UnidadeDesativada.tsx`) renderizada antes dos providers quando o host é `chamada3aidade.pages.dev`; `Transferencias.tsx` valida o destino no envio; limpeza automática de chaves locais residuais (`tenant_override`, `3aidade_professor`, `tutorial_tour_3aidade_*`)
+  - **Config**: `PIN_3AIDADE` removido do `.env.example` (e do `.env` local, não versionado)
+- **Migration 034** (`034_remove_3aidade_tenant.sql`): remove os **323 alunos**, a transferência cancelada (origem Bela Vista → 3aidade) e eventuais registros residuais em todas as tabelas por tenant; limpa a chave `3aidade` de `app_settings.extrapolacao_restrita`; bloco condicional para `logs_acesso` (tabela ausente em produção) e verificação final que aborta se sobrar aluno/transferência — **pendente de executar no Supabase**
+### Testes
+- Backend: `tenant.test.ts` (+6 casos: header bloqueado, tenant fora da whitelist, Origin/Referer/Host do domínio antigo, domínio válido, normalização) · `auth.test.ts` (+2: token 3aidade e token fora da whitelist) · `config/__tests__/tenants.test.ts` (novo — 6 casos)
+- Frontend: `utils/__tests__/tenant.test.ts` (novo — 9 casos)
+### Notas
+- O domínio `chamada3aidade.pages.dev` deve ser desativado no Cloudflare Pages e removido das variáveis de CORS/`FRONTEND_URL` no Render; até lá, a tela de unidade desativada e o bloqueio de Origin/Referer no backend protegem o acesso
+- Sem execução automática da migration 034 — os 323 alunos continuam no banco até o SQL ser rodado manualmente
+
 ## [v2.92.4] - 2026-11-08
 ### Fix
 - **Aluno restaurado deixa de ficar bloqueado no grid de Chamadas**

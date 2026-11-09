@@ -5,12 +5,19 @@ import { AppError } from '../middleware/errorHandler';
 import { Professor } from '../types';
 import { generateProfessorId } from '../utils/idGenerator';
 import { processCSVUpload } from './csvParser';
+import { isAllowedTenant } from '../config/tenants';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET obrigatório em produção');
 }
 export const JWT_EXPIRES_IN: number = 604800;
+
+function assertTenantAtivo(tenantId: string): void {
+  if (!isAllowedTenant(tenantId)) {
+    throw new AppError('Unidade desativada ou não autorizada', 403);
+  }
+}
 
 function generateHash(professor: string, tenantId: string, salt: string): string {
   const timestamp = Date.now().toString();
@@ -65,6 +72,7 @@ export async function loginService(
   ip: string,
   pin?: string,
 ): Promise<{ professor: Professor; token: string; hash?: string }> {
+  assertTenantAtivo(tenantId);
   if (!nome) {
     throw new AppError('Preencha o nome do professor', 400);
   }
@@ -143,6 +151,7 @@ export async function primeiroAcessoService(
   tenantId: string,
   csvBuffer?: Buffer,
 ): Promise<{ professor: Professor; hash: string; token: string }> {
+  assertTenantAtivo(tenantId);
   if (!nome || typeof nome !== 'string' || !nome.trim()) {
     throw new AppError('Preencha o nome do professor', 400);
   }
@@ -216,6 +225,7 @@ export async function adminLoginService(
   adminKey: string,
   tenantId: string,
 ): Promise<{ professor: Professor; token: string }> {
+  assertTenantAtivo(tenantId);
   if (process.env.ADMIN_KEY && adminKey !== process.env.ADMIN_KEY) {
     throw new AppError('Chave de admin inválida', 403);
   }
@@ -231,6 +241,7 @@ export async function adminLoginService(
 }
 
 export async function clearDataService(tenantId: string): Promise<{ ok: boolean }> {
+  assertTenantAtivo(tenantId);
   const tabelasSimples = [
     { table: 'planejamento_arquivos', filter: { tenant_id: tenantId } },
     { table: 'chamadas_log', filter: { tenant_id: tenantId } },

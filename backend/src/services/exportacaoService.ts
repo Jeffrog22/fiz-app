@@ -9,7 +9,6 @@ const TENANT_LOCAL: Record<string, string> = {
   'sao-matheus': 'Piscina São Matheus',
   'vila': 'Piscina Vila',
   'parque': 'Piscina Parque',
-  '3aidade': 'Piscina 3ª Idade',
 };
 
 function somarMinutos(horario: string, minutos: number): string {

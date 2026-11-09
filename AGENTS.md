@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-11-08 — Fix aluno restaurado bloqueado (período de reativação sem turma_id) → v2.92.4 -->
+<!-- última-sessão: 2026-11-08 — Remoção definitiva da unidade 3ª Idade → v2.92.5 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -34,7 +34,7 @@ Regras:
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v2.92.4
+- **Versão atual:** v2.92.5
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Build Cloudflare:** `git fetch --tags --unshallow` é necessário no build command para `git describe --tags` funcionar (clone shallow sem tags)
@@ -91,6 +91,51 @@ Regras:
 - Migration 031 (`professores.nome_documento` — nome formal dos documentos) **pendente de execução no Supabase**; até rodar, os exports continuam com o nome de login (fallback no `buscarProfessoresDocumento`) mas o **PATCH /professores/:id dá erro** (coluna inexistente)
 - Migration 032 (`card_aula.professor_id`) **pendente de execução no Supabase**
 - Migration 033 (`fix_reativacao_turma_id`) **pendente de execução no Supabase** — repara períodos de reativação com `turma_id` NULL (alunos restaurados bloqueados no grid)
+- Unidade **3ª Idade (`3aidade`) removida do app na v2.92.5**: whitelist `backend/src/config/tenants.ts` (4 unidades), bloqueio de header/host/origin/referer/token, tela `UnidadeDesativada` no domínio antigo e limpeza de dados na **migration 034** (`034_remove_3aidade_tenant.sql`) — **pendente de executar no Supabase**
+- Passos externos pendentes da v2.92.5: excluir o projeto/domínio `chamada3aidade.pages.dev` no Cloudflare Pages, remover `PIN_3AIDADE` e a origem antiga de CORS/`FRONTEND_URL` no Render e redeployar
+
+---
+
+## Sessão: 08/11/2026 — Remoção definitiva da unidade 3ª Idade → v2.92.5
+
+### O que foi feito
+- **Inventário (Supabase, somente leitura)**: 323 `alunos` em `3aidade` (todos ativos, sem turma/nível, importados em 07/08/2026); **0** em turmas/professores/chamadas/calendário/períodos/anotações/planejamentos/card_aula/logs/exclusões/enrollment/notificações; **1** `transferencia_unidade` (Bela Vista → 3aidade, cancelada, Alana); `notificacoes_aceite` 0; `app_settings` sem chave `3aidade`; `logs_acesso` não existe em produção
+- **Backend — whitelist/bloqueio**: novo `backend/src/config/tenants.ts` (`ALLOWED_TENANTS` = 4 unidades, `BLOCKED_TENANTS`, `BLOCKED_HOSTS`, `BLOCKED_ORIGINS`, normalizadores e helpers); `tenantMiddleware` bloqueia `X-Tenant-ID`/`Host`/`Origin`/`Referer` da 3ª Idade com **403** e rejeita tenant fora da whitelist; `authMiddleware` rejeita **tokens já emitidos** para unidade desativada; `authService` valida a whitelist em `loginService`/`primeiroAcessoService`/`adminLoginService`/`clearDataService`
+- **Backend — transferências/exportação**: `transferenciaService.criar` normaliza e valida o destino contra a whitelist (cobre `criarLote`) e removeu `3aidade` de `TENANT_NOMES`; `exportacaoService` removeu `3aidade` de `TENANT_LOCAL`
+- **Backend — config**: `PIN_3AIDADE` removido do `.env.example` e do `.env` local (não versionado)
+- **Frontend**: `tenant.ts` sem `3aidade` (mapa, `TENANTS`, `getTenantNome`), com `isAllowedTenant`/`isBlockedTenant`/`isBlockedHost`; `getTenantId` não aceita override da unidade desativada, limpa override inválido e retorna vazio no domínio antigo (sem fallback para `bela-vista`); `TenantContext` valida override salvo e `setTenant`; `api.ts` não envia `X-Tenant-ID` vazio; novo `UnidadeDesativada.tsx` renderizado antes dos providers em `App.tsx` quando `isBlockedHost()`; `Transferencias.tsx` valida o destino no envio; `main.tsx` limpa chaves locais residuais (`tenant_override`, `3aidade_professor`, `tutorial_tour_3aidade_*`)
+- **Migration 034** (`034_remove_3aidade_tenant.sql`): exclusão transacional dos 323 alunos, da transferência cancelada e de resíduos em todas as tabelas por tenant; limpeza da chave `3aidade` em `app_settings.extrapolacao_restrita`; bloco condicional para `logs_acesso`; verificação final que aborta se sobrar aluno/transferência — **pendente de executar no Supabase**
+
+### Decisões
+- **Whitelist** das 4 unidades ativas (em vez de só blocklist de `3aidade`): qualquer tenant desconhecido também é rejeitado com 403
+- Bloqueio em **camadas** (middleware + auth + services + frontend): cobre header forjado, token antigo, domínio antigo e chamadas diretas à API
+- `Origin`/`Referer` do domínio antigo bloqueados no backend porque o `Host` do Render não identifica a origem do frontend
+- Dados da 3ª Idade apagados **sem backup** (decisão do usuário); 323 alunos eram de importação em lote, sem turma/chamada
+- Versão **PATCH** v2.92.5 (commit `fix:`) por ser remoção de unidade já desativada, sem mudança de contrato das 4 unidades ativas
+
+### Arquivos
+- `backend/src/config/tenants.ts` (novo), `backend/src/config/__tests__/tenants.test.ts` (novo — 6 casos)
+- `backend/src/middleware/tenant.ts`, `backend/src/middleware/auth.ts`
+- `backend/src/services/authService.ts`, `transferenciaService.ts`, `exportacaoService.ts`
+- `backend/src/middleware/__tests__/tenant.test.ts` (+6), `auth.test.ts` (+2)
+- `backend/src/migrations/034_remove_3aidade_tenant.sql` (novo)
+- `backend/.env.example` (sem `PIN_3AIDADE`)
+- `frontend/src/utils/tenant.ts`, `utils/__tests__/tenant.test.ts` (novo — 9 casos)
+- `frontend/src/context/TenantContext.tsx`, `utils/api.ts`, `main.tsx`, `App.tsx`
+- `frontend/src/components/common/UnidadeDesativada.tsx` (novo)
+- `frontend/src/pages/Transferencias.tsx`
+- `CHANGELOG.md` (v2.92.5), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Backend: `tsc --noEmit` 0 erros · testes (tenant/auth/config) passando
+- Frontend: `tsc --noEmit` 0 erros · testes (tenant) passando · `npm run build` limpo
+- Migration 034 **pendente de execução no Supabase**
+
+### Pendências / riscos conhecidos
+- Executar a **migration 034** no Supabase (apaga os 323 alunos e a transferência cancelada)
+- Cloudflare Pages: excluir `chamada3aidade.pages.dev` (ou redeployar a versão nova para exibir a tela de unidade desativada antes de excluir)
+- Render: remover `PIN_3AIDADE`, remover a origem antiga de `CORS_ORIGINS`/`FRONTEND_URL` e redeployar
+- Tokens antigos da 3ª Idade passam a receber 403 no backend; o frontend no domínio antigo mostra a tela de unidade desativada
 
 ---
 

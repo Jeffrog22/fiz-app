@@ -57,4 +57,28 @@ describe('authMiddleware', () => {
     expect(next).toHaveBeenCalled();
     expect(req.professorId).toBe('abc');
   });
+
+  it('retorna 403 para token emitido para a unidade desativada 3aidade', () => {
+    const next = jest.fn();
+    const token = jwt.sign(
+      { professorId: 'abc', tenantId: '3aidade', nome: 'Teste' },
+      JWT_SECRET,
+    );
+    const { req, res } = mockReqRes({ 'x-tenant-id': '3aidade' }, { token });
+    authMiddleware(req, res, next);
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('retorna 403 para token de tenant fora da whitelist', () => {
+    const next = jest.fn();
+    const token = jwt.sign(
+      { professorId: 'abc', tenantId: 'outro-tenant', nome: 'Teste' },
+      JWT_SECRET,
+    );
+    const { req, res } = mockReqRes({ 'x-tenant-id': 'outro-tenant' }, { token });
+    authMiddleware(req, res, next);
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
 });

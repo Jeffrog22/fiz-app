@@ -22,8 +22,10 @@ import ConnectionBanner from './components/common/ConnectionBanner';
 import UpdateBanner from './components/common/UpdateBanner';
 import TourGuiado from './components/common/TourGuiado';
 import AjudaModal from './components/common/AjudaModal';
+import UnidadeDesativada from './components/common/UnidadeDesativada';
 import DevPanel from './components/dev/DevPanel';
 import { useAuth } from './hooks/useAuth';
+import { isBlockedHost } from './utils/tenant';
 
 const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -140,6 +142,10 @@ const PushNotificationInit: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  if (isBlockedHost()) {
+    return <UnidadeDesativada />;
+  }
+
   return (
     <BrowserRouter>
       <TenantProvider>

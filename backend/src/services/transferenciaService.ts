@@ -4,6 +4,7 @@ import { calcularCategoria } from '../utils/categoria';
 import { iniciarPeriodoService } from './enrollmentService';
 import { criarNotificacaoAceite } from './notificacoesAceiteService';
 import { enviarNotificacaoCustom } from './notificationScheduler';
+import { isAllowedTenant, normalizeTenantId } from '../config/tenants';
 
 export async function criar(
   tenantId: string,
@@ -13,7 +14,14 @@ export async function criar(
   turmaSugerida?: string,
   motivo?: string,
 ): Promise<any> {
-  if (tenantDestino === tenantId) {
+  const origem = normalizeTenantId(tenantId);
+  const destino = normalizeTenantId(tenantDestino);
+
+  if (!isAllowedTenant(destino)) {
+    throw new AppError('Unidade destino inválida ou desativada', 400);
+  }
+
+  if (destino === origem) {
     throw new AppError('Unidade destino deve ser diferente da origem', 400);
   }
 
@@ -62,8 +70,8 @@ export async function criar(
   const { data, error } = await supabase
     .from('transferencia_unidade')
     .insert({
-      tenant_id: tenantId,
-      tenant_destino: tenantDestino,
+      tenant_id: origem,
+      tenant_destino: destino,
       aluno_id: alunoId,
       dados_aluno: dadosAluno,
       turma_sugerida: turmaSugerida || aluno.turma_id || null,
@@ -222,7 +230,6 @@ export async function aceitar(
     'sao-matheus': 'São Matheus',
     'vila': 'Vila',
     'parque': 'Parque',
-    '3aidade': '3ª Idade',
   };
 
   const { data: professorDestino } = await supabase

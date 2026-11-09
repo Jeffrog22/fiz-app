@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { getTenantId, getTenantNome, setTenantOverride } from '../utils/tenant';
+import { getTenantId, getTenantNome, isAllowedTenant, normalizeTenantId, setTenantOverride } from '../utils/tenant';
 
 export interface TenantContextType {
   tenantId: string;
@@ -22,13 +22,19 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
   const [tenantNome, setTenantNome] = useState<string>(getTenantNome(tenantId));
 
   const setTenant = useCallback((newTenantId: string) => {
-    setTenantOverride(newTenantId);
-    setTenantId(newTenantId);
-    setTenantNome(getTenantNome(newTenantId));
+    const normalized = normalizeTenantId(newTenantId);
+    if (!isAllowedTenant(normalized)) return;
+    setTenantOverride(normalized);
+    setTenantId(normalized);
+    setTenantNome(getTenantNome(normalized));
   }, []);
 
   useEffect(() => {
-    const stored = localStorage.getItem('tenant_override');
+    const stored = normalizeTenantId(localStorage.getItem('tenant_override'));
+    if (stored && !isAllowedTenant(stored)) {
+      localStorage.removeItem('tenant_override');
+      return;
+    }
     if (stored && stored !== tenantId) {
       setTenantId(stored);
       setTenantNome(getTenantNome(stored));
