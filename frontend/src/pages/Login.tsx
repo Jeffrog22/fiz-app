@@ -9,7 +9,7 @@ import { getTenantId, getAvailableTenants } from '../utils/tenant';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { login, primeiroAcesso, adminLogin, loading, isAuthenticated, logout, sessionExpirada } = useAuth();
+  const { login, primeiroAcesso, adminLogin, visitanteLogin, loading, isAuthenticated, logout, sessionExpirada } = useAuth();
   const { tenantId, tenantNome, setTenant } = useTenant();
   const [professorNome, setProfessorNome] = useState('');
   const [pin, setPin] = useState('');
@@ -19,6 +19,10 @@ const Login: React.FC = () => {
   const [erro, setErro] = useState<string | null>(null);
   const [acessoRapido, setAcessoRapido] = useState<string[]>([]);
   const [adminMode, setAdminMode] = useState(false);
+  const [visitanteMode, setVisitanteMode] = useState(false);
+  const [visitanteUnidade, setVisitanteUnidade] = useState(tenantId);
+  const [visitanteLoading, setVisitanteLoading] = useState(false);
+  const [visitanteErro, setVisitanteErro] = useState<string | null>(null);
   const [limpando, setLimpando] = useState(false);
   const [avisoSessaoExpirada, setAvisoSessaoExpirada] = useState(true);
   const { enabled: devEnabled, toggle: toggleDev } = useDevLog();
@@ -55,12 +59,37 @@ const Login: React.FC = () => {
     if (e.ctrlKey && e.altKey && e.key === 'a') {
       setAdminMode((prev) => !prev);
     }
+    if (e.ctrlKey && e.altKey && e.key === 'v') {
+      e.preventDefault();
+      setVisitanteMode((prev) => !prev);
+      setVisitanteErro(null);
+    }
   }, []);
 
   useEffect(() => {
     window.addEventListener('keydown', handleAdminKeyDown);
     return () => window.removeEventListener('keydown', handleAdminKeyDown);
   }, [handleAdminKeyDown]);
+
+  useEffect(() => {
+    setVisitanteUnidade(tenantId);
+  }, [tenantId]);
+
+  const handleVisitante = async () => {
+    setVisitanteErro(null);
+    setVisitanteLoading(true);
+    try {
+      if (visitanteUnidade !== tenantId) {
+        setTenant(visitanteUnidade);
+      }
+      await visitanteLogin(visitanteUnidade);
+      navigate('/home', { replace: true });
+    } catch (err: any) {
+      setVisitanteErro(err?.response?.data?.error || err.message || 'Erro ao entrar como visitante');
+    } finally {
+      setVisitanteLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,6 +157,44 @@ const Login: React.FC = () => {
             </button>
           </div>
         )}
+        {visitanteMode && (
+          <div className="mb-6 p-4 bg-sky-50 dark:bg-sky-900/30 border border-sky-200 dark:border-sky-800 rounded space-y-3">
+            <div>
+              <p className="text-sm font-semibold text-sky-800 dark:text-sky-200">Modo Visitante</p>
+              <p className="text-xs text-sky-700 dark:text-sky-300">
+                Acesso somente leitura por 2 horas, com nomes fictícios. Nenhum dado é alterado.
+              </p>
+            </div>
+            <div>
+              <label htmlFor="visitante-unidade" className="block text-xs font-medium text-sky-800 dark:text-sky-200 mb-1">
+                Unidade
+              </label>
+              <select
+                id="visitante-unidade"
+                value={visitanteUnidade}
+                onChange={(e) => setVisitanteUnidade(e.target.value)}
+                className="w-full text-sm px-3 py-2 border border-sky-300 dark:border-sky-700 rounded bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              >
+                {unidades.map((u) => (
+                  <option key={u.id} value={u.id}>{u.nome}</option>
+                ))}
+              </select>
+            </div>
+            {visitanteErro && <p className="text-xs text-red-600 dark:text-red-400">{visitanteErro}</p>}
+            <button
+              type="button"
+              onClick={handleVisitante}
+              disabled={visitanteLoading || loading}
+              className="w-full py-2 px-4 bg-sky-600 text-white rounded hover:bg-sky-700 disabled:bg-gray-400 transition"
+            >
+              {visitanteLoading ? 'Entrando...' : 'Entrar como Visitante'}
+            </button>
+            <p className="text-[11px] text-sky-600 dark:text-sky-400 text-center">
+              Ctrl+Alt+V para fechar
+            </p>
+          </div>
+        )}
+
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 select-none" onClick={handleTitleTap}>Fiz! App</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Sistema de Lista de Chamada</p>

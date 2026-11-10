@@ -19,6 +19,7 @@ interface Props {
   nivelTurma?: string;
   faixaEtariaTurma?: string;
   onAbrirBO?: () => void;
+  somenteLeitura?: boolean;
 }
 
 const SENSACOES = ['Calor', 'Abafado', 'Seco', 'Agradável', 'Vento', 'Frio', 'Frio Intenso'];
@@ -189,7 +190,7 @@ function CloroSlider({ value, onChange }: CloroSliderProps) {
 
 /* ── CardAula ── */
 
-const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, nivelTurma, faixaEtariaTurma, onAbrirBO }) => {
+const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId, nivelTurma, faixaEtariaTurma, onAbrirBO, somenteLeitura = false }) => {
   const [tempExterna, setTempExterna] = useState(26);
   const [tempPiscina, setTempPiscina] = useState(28);
   const [cloro, setCloro] = useState(2.5);
@@ -319,7 +320,12 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
     <div className="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md shadow-xl dark:shadow-black/20 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">Card de Aula</h2>
+          <div>
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">Card de Aula</h2>
+            {somenteLeitura && (
+              <p className="text-[10px] text-blue-600 dark:text-blue-400">Modo Visitante — somente leitura</p>
+            )}
+          </div>
           <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-xl">&times;</button>
         </div>
         {!carregou ? (
@@ -329,7 +335,7 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
               {new Date(data + 'T12:00').toLocaleDateString('pt-BR')} - Aula {indiceAula + 1}
             </p>
-            <div className="space-y-4">
+            <div className={`space-y-4 ${somenteLeitura ? 'pointer-events-none' : ''}`}>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Condição climática</label>
                 <select value={condicao} onChange={(e) => setCondicao(e.target.value)}
@@ -407,7 +413,7 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
                     {sugestaoFinal.motivo === 'Água muito fria para menores' && <li>Água muito fria ({tempPiscina}°C) — risco para menores de 16 anos</li>}
                     {cloro === 0 && <li>Cloro zerado — condições inadequadas para aula</li>}
                   </ul>
-                  {cloro === 0 && onAbrirBO && (
+                  {cloro === 0 && onAbrirBO && !somenteLeitura && (
                     <button type="button" onClick={onAbrirBO}
                       className="text-xs px-3 py-1.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-800/50 transition">
                       Abrir BO de Cancelamento
@@ -418,10 +424,14 @@ const CardAula: React.FC<Props> = ({ aberto, onClose, data, indiceAula, grupoId,
             </div>
             <div className="flex justify-end gap-2 mt-6">
               <button onClick={onClose}
-                className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancelar</button>
-              <button onClick={handleSalvar} disabled={salvando}
-                className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600">
-                {salvando ? 'Salvando...' : 'Salvar'}</button>
+                className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
+                {somenteLeitura ? 'Fechar' : 'Cancelar'}
+              </button>
+              {!somenteLeitura && (
+                <button onClick={handleSalvar} disabled={salvando}
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600">
+                  {salvando ? 'Salvando...' : 'Salvar'}</button>
+              )}
             </div>
             <div className="text-right mt-2 space-y-0.5">
               {ultimoHash && (

@@ -28,7 +28,7 @@ import { useAuth } from './hooks/useAuth';
 import { isBlockedHost } from './utils/tenant';
 
 const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, isVisitante } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(() => window.innerWidth < 768);
   const [aceitesNaoVistos, setAceitesNaoVistos] = React.useState(0);
   const [ajudaAberta, setAjudaAberta] = React.useState(false);
@@ -42,7 +42,7 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
   }, []);
 
   React.useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || isVisitante) return;
     const carregarAceites = async () => {
       try {
         const res = await api.get('/transferencias/aceites/nao-vistos');
@@ -52,7 +52,7 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
     carregarAceites();
     const interval = setInterval(carregarAceites, 30000);
     return () => clearInterval(interval);
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isVisitante]);
 
   useEffect(() => {
     if (!devEnabled) return;
@@ -96,11 +96,16 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
           {children}
         </main>
       </div>
-      {devEnabled && <DevPanel />}
-      <TourGuiado />
-      <AjudaModal aberto={ajudaAberta} onClose={() => setAjudaAberta(false)} />
+      {devEnabled && !isVisitante && <DevPanel />}
+      {!isVisitante && <TourGuiado />}
+      {!isVisitante && <AjudaModal aberto={ajudaAberta} onClose={() => setAjudaAberta(false)} />}
     </div>
   );
+};
+
+const RotaVisitante: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isVisitante } = useAuth();
+  return isVisitante ? <Navigate to="/home" replace /> : <>{children}</>;
 };
 
 const AppContent: React.FC = () => {
@@ -126,18 +131,19 @@ const AppContent: React.FC = () => {
       <Route path="/alunos" element={<ProtectedLayout><Alunos /></ProtectedLayout>} />
       <Route path="/turmas" element={<ProtectedLayout><Turmas /></ProtectedLayout>} />
       <Route path="/chamadas" element={<ProtectedLayout><Chamadas /></ProtectedLayout>} />
-      <Route path="/vagas" element={<ProtectedLayout><Vagas /></ProtectedLayout>} />
-        <Route path="/exclusoes" element={<ProtectedLayout><Exclusoes /></ProtectedLayout>} />
-        <Route path="/relatorios" element={<ProtectedLayout><Relatorios /></ProtectedLayout>} />
-      <Route path="/calendario" element={<ProtectedLayout><Calendario /></ProtectedLayout>} />
-      <Route path="/configuracoes" element={<ProtectedLayout><Configuracoes /></ProtectedLayout>} />
+      <Route path="/vagas" element={<RotaVisitante><ProtectedLayout><Vagas /></ProtectedLayout></RotaVisitante>} />
+        <Route path="/exclusoes" element={<RotaVisitante><ProtectedLayout><Exclusoes /></ProtectedLayout></RotaVisitante>} />
+        <Route path="/relatorios" element={<RotaVisitante><ProtectedLayout><Relatorios /></ProtectedLayout></RotaVisitante>} />
+      <Route path="/calendario" element={<RotaVisitante><ProtectedLayout><Calendario /></ProtectedLayout></RotaVisitante>} />
+      <Route path="/configuracoes" element={<RotaVisitante><ProtectedLayout><Configuracoes /></ProtectedLayout></RotaVisitante>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };
 
 const PushNotificationInit: React.FC = () => {
-  usePushNotifications();
+  const { isVisitante } = useAuth();
+  usePushNotifications(!isVisitante);
   return null;
 };
 

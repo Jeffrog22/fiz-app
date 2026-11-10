@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 interface MenuItem {
   label: string;
@@ -33,11 +34,20 @@ const DARK_COLORS: Record<string, string> = {
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
+  const { isVisitante } = useAuth();
   const mainItems = menuItems.filter((m) => m.group === 'main');
   const moreItems = menuItems.filter((m) => m.group === 'more');
 
   return (
     <div className="space-y-8">
+      {isVisitante && (
+        <div className="p-4 bg-sky-50 dark:bg-sky-900/30 border border-sky-200 dark:border-sky-800 rounded-lg">
+          <p className="text-sm font-semibold text-sky-800 dark:text-sky-200">Modo Visitante</p>
+          <p className="text-xs text-sky-700 dark:text-sky-300">
+            Você está visualizando dados com nomes fictícios. O acesso é somente leitura e expira em 2 horas.
+          </p>
+        </div>
+      )}
       <div>
         <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-4">Menu Principal</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -54,7 +64,7 @@ const Home: React.FC = () => {
         </div>
       </div>
 
-      <div>
+      {!isVisitante && <div>
         <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Mais Opções</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {moreItems.map((item) => (
@@ -68,7 +78,7 @@ const Home: React.FC = () => {
             </button>
           ))}
         </div>
-      </div>
+      </div>}
     </div>
   );
 };

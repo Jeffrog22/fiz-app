@@ -1,3 +1,5 @@
+import { getVisitanteSession } from './visitante';
+
 const TENANT_OVERRIDE_KEY = 'tenant_override';
 
 const DOMAIN_TENANT_MAP: Record<string, string> = {
@@ -46,6 +48,11 @@ export function isBlockedHost(host: string = window.location.hostname): boolean 
 export function getTenantId(): string {
   if (isBlockedHost()) {
     return '';
+  }
+
+  const visitante = getVisitanteSession();
+  if (visitante && isAllowedTenant(visitante.tenantId)) {
+    return visitante.tenantId;
   }
 
   const override = normalizeTenantId(localStorage.getItem(TENANT_OVERRIDE_KEY));

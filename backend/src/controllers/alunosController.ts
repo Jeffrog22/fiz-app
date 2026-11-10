@@ -10,6 +10,7 @@ import {
   iniciarPeriodoService,
   fecharPeriodoAtivoService,
 } from '../services/enrollmentService';
+import { sanitizarAluno } from '../utils/visitante';
 
 export class AlunosController {
   static async listar(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
@@ -17,7 +18,7 @@ export class AlunosController {
       const tenantId = req.tenantId!;
       const { nome, ativo } = req.query;
       const data = await listarAlunosService(tenantId, { nome: nome as string, ativo: ativo as string });
-      res.json(data);
+      res.json(req.visitante ? data.map((aluno) => sanitizarAluno(aluno, tenantId)) : data);
     } catch (error) {
       next(error);
     }

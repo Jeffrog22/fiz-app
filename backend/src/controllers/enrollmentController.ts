@@ -5,6 +5,7 @@ import {
   listarPeriodosPorAlunosService,
   iniciarPeriodoService,
 } from '../services/enrollmentService';
+import { sanitizarEnrollment } from '../utils/visitante';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -25,7 +26,7 @@ export class EnrollmentController {
       }
 
       const data = await listarPeriodosPorAlunosService(ids, tenantId);
-      res.json(data);
+      res.json(req.visitante ? data.map(sanitizarEnrollment) : data);
     } catch (error) {
       next(error);
     }

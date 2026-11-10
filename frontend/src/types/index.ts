@@ -118,6 +118,7 @@ export interface AuthState {
   tenantId?: string;
   loading: boolean;
   isAdmin?: boolean;
+  isVisitante?: boolean;
   sessionExpirada?: boolean;
 }
 

@@ -81,4 +81,60 @@ describe('authMiddleware', () => {
     expect(res.status).toHaveBeenCalledWith(403);
     expect(next).not.toHaveBeenCalled();
   });
+
+  it('permite visitante em GET da allowlist', () => {
+    const next = jest.fn();
+    const token = jwt.sign(
+      { professorId: 'visitante', tenantId: 'bela-vista', nome: 'Visitante', visitante: true },
+      JWT_SECRET,
+    );
+    const { req, res } = mockReqRes({ 'x-tenant-id': 'bela-vista' }, { token });
+    req.method = 'GET';
+    req.originalUrl = '/api/alunos?ativo=true';
+    authMiddleware(req, res, next);
+    expect(next).toHaveBeenCalled();
+    expect(req.visitante).toBe(true);
+  });
+
+  it('bloqueia visitante em escrita', () => {
+    const next = jest.fn();
+    const token = jwt.sign(
+      { professorId: 'visitante', tenantId: 'bela-vista', nome: 'Visitante', visitante: true },
+      JWT_SECRET,
+    );
+    const { req, res } = mockReqRes({ 'x-tenant-id': 'bela-vista' }, { token });
+    req.method = 'POST';
+    req.originalUrl = '/api/alunos';
+    authMiddleware(req, res, next);
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('bloqueia visitante em leitura fora da allowlist', () => {
+    const next = jest.fn();
+    const token = jwt.sign(
+      { professorId: 'visitante', tenantId: 'bela-vista', nome: 'Visitante', visitante: true },
+      JWT_SECRET,
+    );
+    const { req, res } = mockReqRes({ 'x-tenant-id': 'bela-vista' }, { token });
+    req.method = 'GET';
+    req.originalUrl = '/api/anotacoes/lote';
+    authMiddleware(req, res, next);
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('não aplica restrição de visitante a token normal', () => {
+    const next = jest.fn();
+    const token = jwt.sign(
+      { professorId: 'abc', tenantId: 'bela-vista', nome: 'Teste' },
+      JWT_SECRET,
+    );
+    const { req, res } = mockReqRes({ 'x-tenant-id': 'bela-vista' }, { token });
+    req.method = 'GET';
+    req.originalUrl = '/api/anotacoes/lote';
+    authMiddleware(req, res, next);
+    expect(next).toHaveBeenCalled();
+    expect(req.visitante).toBe(false);
+  });
 });

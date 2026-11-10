@@ -6,6 +6,7 @@ import SearchInput from '../components/SearchInput';
 import { normalizeSearch } from '../utils/formatters';
 import { Pencil, Trash2 } from 'lucide-react';
 import type { Turma } from '../types';
+import { useAuth } from '../hooks/useAuth';
 
 interface SortRule {
   column: string;
@@ -14,6 +15,7 @@ interface SortRule {
 
 const Turmas: React.FC = () => {
   const navigate = useNavigate();
+  const { isVisitante } = useAuth();
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [professores, setProfessores] = useState<{ id: string; nome: string }[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -165,12 +167,14 @@ const Turmas: React.FC = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Turmas</h1>
-        <button
-          onClick={() => { setEditando(null); setModalOpen(true); }}
-          className="px-4 py-2 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
-        >
-          + Nova Turma
-        </button>
+        {!isVisitante && (
+          <button
+            onClick={() => { setEditando(null); setModalOpen(true); }}
+            className="px-4 py-2 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+          >
+            + Nova Turma
+          </button>
+        )}
       </div>
 
       <SearchInput
@@ -193,7 +197,7 @@ const Turmas: React.FC = () => {
                 <th className="text-left px-4 py-2">{thSort('professor', 'Professor')}</th>
                 <th className="text-left px-4 py-2">{thSort('faixa_etaria', 'Faixa Etária')}</th>
                 <th className="text-left px-4 py-2">{thSort('lotacao', 'Lotação')}</th>
-                <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Ações</th>
+                {!isVisitante && <th className="text-right px-4 py-2 font-medium text-gray-500 dark:text-gray-400">Ações</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -218,28 +222,30 @@ const Turmas: React.FC = () => {
                         {alunosCount}/{t.capacidade || '∞'}
                       </span>
                     </td>
-                    <td className="px-4 py-2 text-right whitespace-nowrap">
-                      <button
-                        onClick={() => { setEditando(t); setModalOpen(true); }}
-                        className="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-200 ml-1 align-middle"
-                        title="Editar"
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(t.id)}
-                        className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 ml-1 align-middle"
-                        title="Remover"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
+                    {!isVisitante && (
+                      <td className="px-4 py-2 text-right whitespace-nowrap">
+                        <button
+                          onClick={() => { setEditando(t); setModalOpen(true); }}
+                          className="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-200 ml-1 align-middle"
+                          title="Editar"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(t.id)}
+                          className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 ml-1 align-middle"
+                          title="Remover"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
+                  <td colSpan={isVisitante ? 6 : 7} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
                     Nenhuma turma encontrada
                   </td>
                 </tr>
@@ -249,14 +255,16 @@ const Turmas: React.FC = () => {
         </div>
       )}
 
-      <TurmaModal
-        open={modalOpen}
-        turma={editando}
-        professores={professores}
-        onSave={handleSave}
-        onNavigateToAlunos={() => navigate('/alunos')}
-        onClose={() => { setModalOpen(false); setEditando(null); }}
-      />
+      {!isVisitante && (
+        <TurmaModal
+          open={modalOpen}
+          turma={editando}
+          professores={professores}
+          onSave={handleSave}
+          onNavigateToAlunos={() => navigate('/alunos')}
+          onClose={() => { setModalOpen(false); setEditando(null); }}
+        />
+      )}
     </div>
   );
 };

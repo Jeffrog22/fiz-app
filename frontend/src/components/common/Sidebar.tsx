@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 
 interface SidebarLink {
   to: string;
@@ -28,7 +29,10 @@ interface Props {
   aceitesNaoVistos?: number;
 }
 
+const VISITANTE_ROTAS = ['/home', '/chamadas', '/alunos', '/turmas'];
+
 const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0 }) => {
+  const { isVisitante } = useAuth();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const touchStartX = React.useRef(0);
   const touchStartY = React.useRef(0);
@@ -88,7 +92,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0 })
       </div>
 
       <nav className="flex flex-col gap-1 px-2 flex-1">
-        {links.map((link) => (
+        {links.filter((link) => !isVisitante || VISITANTE_ROTAS.includes(link.to)).map((link) => (
           <NavLink
             key={link.to}
             to={link.to}
@@ -111,7 +115,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0 })
             >
               {link.label}
             </span>
-            {link.to === '/alunos' && aceitesNaoVistos > 0 && (
+            {link.to === '/alunos' && !isVisitante && aceitesNaoVistos > 0 && (
               <span
                 className={`bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center flex-shrink-0 ${
                   collapsed ? 'absolute mt-[-10px] mr-[-10px]' : 'ml-auto'
@@ -125,7 +129,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0 })
         ))}
       </nav>
 
-      <nav className="flex flex-col gap-1 px-2 pt-2 border-t border-gray-200 dark:border-t dark:border-gray-800 mt-2">
+      {!isVisitante && <nav className="flex flex-col gap-1 px-2 pt-2 border-t border-gray-200 dark:border-t dark:border-gray-800 mt-2">
         {configLinks.map((link) => (
           <NavLink
             key={link.to}
@@ -169,9 +173,9 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0 })
             Ajuda
           </span>
         </button>
-      </nav>
+      </nav>}
 
-      {deferredPrompt && (
+      {deferredPrompt && !isVisitante && (
         <div className="px-2 mt-2">
           <button
             onClick={handleInstall}

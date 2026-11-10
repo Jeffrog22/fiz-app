@@ -9,6 +9,7 @@ import CardBO from '../components/modals/CardBO';
 import type { Aluno, Turma, Professor, ChamadaLog, AnotacaoAluno, CalendarioEvento, EnrollmentPeriod } from '../types';
 import { gerarDiasLetivos, hojeMesAno, parseDiasFromLabel, isDataPassada, alunoEstavaNaTurma } from '../utils/chamadaUtils';
 import { mesclarLogsServidor, type LogsIndex } from '../utils/logsMerge';
+import { useAuth } from '../hooks/useAuth';
 
 type PresencaStatus = 'presente' | 'falta' | 'justificado' | 'cancelado' | 'feriado' | 'ponte' | 'reuniao' | 'evento' | 'ferias' | 'fora_periodo' | undefined;
 
@@ -50,6 +51,7 @@ function getSessionNumber(key: string, fallback: number): number {
 
 const Chamadas: React.FC = () => {
   const navigate = useNavigate();
+  const { isVisitante } = useAuth();
   const { mes: mesInicial, ano: anoInicial } = hojeMesAno();
 
   const [alunos, setAlunos] = useState<Aluno[]>([]);
@@ -174,7 +176,7 @@ const Chamadas: React.FC = () => {
   }, [dias, professorId, indiceAtual]);
 
   const aplicarEventosCalendario = useCallback(async () => {
-    if (eventos.length === 0) return;
+    if (isVisitante || eventos.length === 0) return;
     for (const ev of eventos) {
       if (dias.includes(ev.data)) {
         try {
@@ -185,9 +187,14 @@ const Chamadas: React.FC = () => {
       }
     }
     carregarLogs();
-  }, [eventos, dias, carregarLogs]);
+  }, [eventos, dias, carregarLogs, isVisitante]);
 
   const carregarAnotacoes = useCallback(async () => {
+    if (isVisitante) {
+      setAlunosComAnotacao(new Set());
+      setAlunosComAtestadoAnotacao(new Set());
+      return;
+    }
     const ids = alunosDaTurma.map((a) => a.id);
     if (ids.length === 0) { setAlunosComAnotacao(new Set()); return; }
     try {
@@ -202,7 +209,7 @@ const Chamadas: React.FC = () => {
     } catch (err) {
       console.error('Erro ao carregar anotacoes', err);
     }
-  }, [alunosDaTurma]);
+  }, [alunosDaTurma, isVisitante]);
 
   const carregarEnrollmentPeriods = useCallback(async () => {
     if (alunosDaTurma.length === 0) {
@@ -1024,11 +1031,13 @@ const Chamadas: React.FC = () => {
         />
 
         <div className="flex gap-1 ml-auto">
-          <button onClick={handleDesfazer} disabled={!podeDesfazer}
-            className="px-3 py-1.5 text-xs bg-gray-50 text-gray-600 rounded hover:bg-gray-100 border border-gray-200 transition disabled:opacity-30 disabled:cursor-not-allowed dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:border-gray-700">
-            Desfazer
-          </button>
-          {alunosDaTurma.length > 0 && (
+          {!isVisitante && (
+            <button onClick={handleDesfazer} disabled={!podeDesfazer}
+              className="px-3 py-1.5 text-xs bg-gray-50 text-gray-600 rounded hover:bg-gray-100 border border-gray-200 transition disabled:opacity-30 disabled:cursor-not-allowed dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:border-gray-700">
+              Desfazer
+            </button>
+          )}
+          {!isVisitante && alunosDaTurma.length > 0 && (
             <div className="relative">
               <button onClick={(e) => { e.stopPropagation(); setLimparDropdownOpen(v => !v); }}
                 className="px-3 py-1.5 text-xs bg-red-50 text-red-700 rounded hover:bg-red-100 border border-red-200 transition dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 dark:border-red-800">
@@ -1054,12 +1063,14 @@ const Chamadas: React.FC = () => {
           )}
           <button onClick={() => { if (!dateHeaderClickData) setDateHeaderClickData(dias[0] || ''); setCardAulaAberto(true); }} disabled={!grupoId}
             className="px-3 py-1.5 text-xs bg-cyan-50 text-cyan-700 rounded hover:bg-cyan-100 border border-cyan-200 transition disabled:opacity-30 disabled:cursor-not-allowed dark:bg-cyan-900/30 dark:text-cyan-400 dark:hover:bg-cyan-900/50 dark:border-cyan-800">
-            Card Aula
+            {isVisitante ? 'Ver Card Aula' : 'Card Aula'}
           </button>
-          <button onClick={() => { if (!dateHeaderClickData) setDateHeaderClickData(dias[0] || ''); setCardBOAberto(true); }} disabled={!grupoId}
-            className="px-3 py-1.5 text-xs bg-orange-50 text-orange-700 rounded hover:bg-orange-100 border border-orange-200 transition disabled:opacity-30 disabled:cursor-not-allowed dark:bg-orange-900/30 dark:text-orange-400 dark:hover:bg-orange-900/50 dark:border-orange-800">
-            Card BO
-          </button>
+          {!isVisitante && (
+            <button onClick={() => { if (!dateHeaderClickData) setDateHeaderClickData(dias[0] || ''); setCardBOAberto(true); }} disabled={!grupoId}
+              className="px-3 py-1.5 text-xs bg-orange-50 text-orange-700 rounded hover:bg-orange-100 border border-orange-200 transition disabled:opacity-30 disabled:cursor-not-allowed dark:bg-orange-900/30 dark:text-orange-400 dark:hover:bg-orange-900/50 dark:border-orange-800">
+              Card BO
+            </button>
+          )}
         </div>
       </div>
 
@@ -1093,6 +1104,7 @@ const Chamadas: React.FC = () => {
           turmaGrupoId={grupoId}
           enrollmentPeriods={enrollmentPeriods}
           retroativo={retroativo}
+          somenteLeitura={isVisitante}
           onTogglePresenca={handleTogglePresenca}
           onUpdateAnotacao={handleUpdateAnotacao}
           onDateHeaderClick={handleDateHeaderClick}
@@ -1147,9 +1159,11 @@ const Chamadas: React.FC = () => {
         grupoId={grupoId}
         nivelTurma={turmaAtual?.nivel}
         faixaEtariaTurma={turmaAtual?.faixa_etaria}
-        onAbrirBO={() => { setCardAulaAberto(false); setCardBOAberto(true); }}
+        somenteLeitura={isVisitante}
+        onAbrirBO={isVisitante ? undefined : () => { setCardAulaAberto(false); setCardBOAberto(true); }}
       />
 
+      {!isVisitante && (
       <CardBO
         aberto={cardBOAberto}
         onClose={async () => {
@@ -1169,6 +1183,7 @@ const Chamadas: React.FC = () => {
             : null)
           : null}
       />
+      )}
     </div>
   );
 };

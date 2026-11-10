@@ -6,6 +6,7 @@ import * as cardAulaService from '../services/cardAulaService';
 import * as extrapolarService from '../services/extrapolarService';
 import { isExtrapolacaoRestrita } from '../services/appSettingsService';
 import { AppError } from '../middleware/errorHandler';
+import { sanitizarLog, sanitizarCardAula } from '../utils/visitante';
 
 export class ChamadasController {
   static async listarPorData(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
@@ -32,7 +33,7 @@ export class ChamadasController {
           console.log('[listarPorPeriodo] Turma-level logs no result:', JSON.stringify(turmaLogs));
         }
       }
-      res.json(result);
+      res.json(req.visitante ? result.map(sanitizarLog) : result);
     } catch (error) {
       next(error);
     }
@@ -165,8 +166,9 @@ export class ChamadasController {
       // Leitura nova: busca do card_aula (documento diario)
       // Toggle ativo: cada professor ve apenas o proprio card (piscinas diferentes)
       const restrita = await isExtrapolacaoRestrita(tenantId);
-      const result = await cardAulaService.obterCardAula(data, tenantId, restrita ? req.professorId : undefined);
-      res.json(result);
+      const profFilter = req.visitante ? undefined : (restrita ? req.professorId : undefined);
+      const result = await cardAulaService.obterCardAula(data, tenantId, profFilter);
+      res.json(req.visitante ? result.map(sanitizarCardAula) : result);
     } catch (error) {
       next(error);
     }

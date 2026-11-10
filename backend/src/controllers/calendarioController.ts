@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { TenantRequest } from '../types';
 import * as calendarioService from '../services/calendarioService';
+import { sanitizarEvento } from '../utils/visitante';
 
 export class CalendarioController {
   static async listar(req: TenantRequest, res: Response, next: NextFunction) {
@@ -8,7 +9,7 @@ export class CalendarioController {
       const tenantId = req.tenantId!;
       const { mes, ano } = req.query;
       const result = await calendarioService.listar(tenantId, mes ? Number(mes) : undefined, ano ? Number(ano) : undefined);
-      res.json(result);
+      res.json(req.visitante ? result.map(sanitizarEvento) : result);
     } catch (e) { next(e); }
   }
 

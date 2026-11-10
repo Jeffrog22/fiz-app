@@ -95,6 +95,7 @@ interface DataGridProps {
   onNomeDoubleClick?: (aluno: Aluno) => void;
   onAfastamento?: (alunoId: string, dias: number) => void;
   retroativo?: boolean;
+  somenteLeitura?: boolean;
 }
 
 const DataGrid: React.FC<DataGridProps> = ({
@@ -120,11 +121,13 @@ const DataGrid: React.FC<DataGridProps> = ({
   onAfastamento,
   enrollmentPeriods,
   retroativo = false,
+  somenteLeitura = false,
 }) => {
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dateHeaderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleNomeClickTimer = useCallback((aluno: Aluno) => {
+    if (somenteLeitura) return;
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
@@ -135,7 +138,7 @@ const DataGrid: React.FC<DataGridProps> = ({
       clickTimerRef.current = null;
       setAnotacoesModalAluno(aluno);
     }, 250);
-  }, [onNomeDoubleClick]);
+  }, [onNomeDoubleClick, somenteLeitura]);
 
   const handleDateHeaderClickTimer = useCallback((dia: string) => {
     if (dateHeaderTimerRef.current) {
@@ -336,6 +339,7 @@ const DataGrid: React.FC<DataGridProps> = ({
 
   const handleCellClick = useCallback(
     (alunoId: string, data: string) => {
+      if (somenteLeitura) return;
       if (isDataFutura(data)) return;
       const current = getStatus(alunoId, data);
       if (current === 'feriado' || current === 'ponte' || current === 'reuniao' || current === 'evento' || current === 'ferias' || current === 'cancelado' || current === 'fora_periodo') return;
@@ -357,7 +361,7 @@ const DataGrid: React.FC<DataGridProps> = ({
         onTogglePresenca(alunoId, data, 'presente');
       }
     },
-    [getStatus, onTogglePresenca, logs, indiceAtual]
+    [getStatus, onTogglePresenca, logs, indiceAtual, somenteLeitura]
   );
 
   const handleNomeClick = useCallback((aluno: Aluno) => {
@@ -471,9 +475,11 @@ const DataGrid: React.FC<DataGridProps> = ({
                   </th>
                 );
               })}
-              <th className="sticky right-0 bg-gray-50 px-2 py-2 text-center font-medium text-gray-500 min-w-[70px] z-10 dark:bg-gray-900 dark:text-gray-400">
-                Ações
-              </th>
+              {!somenteLeitura && (
+                <th className="sticky right-0 bg-gray-50 px-2 py-2 text-center font-medium text-gray-500 min-w-[70px] z-10 dark:bg-gray-900 dark:text-gray-400">
+                  Ações
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -484,8 +490,12 @@ const DataGrid: React.FC<DataGridProps> = ({
               return (
                 <tr key={aluno.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td
-                    className={`sticky left-0 bg-white px-4 py-2 font-medium whitespace-nowrap cursor-pointer z-10 dark:bg-gray-800 ${
-                      alunosComAtestadoAnotacao?.has(aluno.id) || atestadoProximoVencer(aluno)
+                    className={`sticky left-0 bg-white px-4 py-2 font-medium whitespace-nowrap z-10 dark:bg-gray-800 ${
+                      somenteLeitura ? 'cursor-default' : 'cursor-pointer'
+                    } ${
+                      somenteLeitura
+                        ? 'text-gray-800 dark:text-gray-100'
+                        : alunosComAtestadoAnotacao?.has(aluno.id) || atestadoProximoVencer(aluno)
                         ? 'text-red-700 dark:text-red-400'
                         : semParQ(aluno)
                         ? 'text-amber-700 dark:text-amber-400'
@@ -494,7 +504,9 @@ const DataGrid: React.FC<DataGridProps> = ({
                         : 'text-gray-800 dark:text-gray-100'
                     }`}
                     style={
-                      alunosComAtestadoAnotacao?.has(aluno.id) || atestadoProximoVencer(aluno)
+                      somenteLeitura
+                        ? undefined
+                        : alunosComAtestadoAnotacao?.has(aluno.id) || atestadoProximoVencer(aluno)
                         ? { backgroundColor: '#fecaca' }
                         : semParQ(aluno)
                         ? { backgroundColor: '#fef3c7' }
@@ -504,7 +516,9 @@ const DataGrid: React.FC<DataGridProps> = ({
                     }
                     onClick={() => handleNomeClickTimer(aluno)}
                     title={
-                      alunosComAtestadoAnotacao?.has(aluno.id) || atestadoProximoVencer(aluno)
+                      somenteLeitura
+                        ? undefined
+                        : alunosComAtestadoAnotacao?.has(aluno.id) || atestadoProximoVencer(aluno)
                         ? aluno.data_atestado
                           ? (() => {
                               const d = diasRestantes(aluno.data_atestado!);
@@ -525,14 +539,14 @@ const DataGrid: React.FC<DataGridProps> = ({
                     const status = getStatus(aluno.id, dia);
                     const futura = isDataFutura(dia);
                     const isCalendario = status === 'feriado' || status === 'ponte' || status === 'reuniao' || status === 'evento' || status === 'ferias' || status === 'cancelado';
-                    const bloqueadoParQ = semParQ(aluno);
-                    const retroBloqueia = !retroativo && isDataPassada(dia) && !isCalendario && status !== 'fora_periodo' && !bloqueadoParQ;
+                    const bloqueadoParQ = !somenteLeitura && semParQ(aluno);
+                    const retroBloqueia = !somenteLeitura && !retroativo && isDataPassada(dia) && !isCalendario && status !== 'fora_periodo' && !bloqueadoParQ;
                     return (
                       <td key={dia} className="px-2 py-1 text-center border-r border-gray-100 dark:border-gray-800">
                         <div className="flex flex-col items-center gap-0.5">
                           <button
                             onClick={() => handleCellClick(aluno.id, dia)}
-                            aria-disabled={futura || isCalendario || bloqueadoParQ || status === 'fora_periodo' || retroBloqueia}
+                            aria-disabled={somenteLeitura || futura || isCalendario || bloqueadoParQ || status === 'fora_periodo' || retroBloqueia}
                             title={status === 'fora_periodo' ? 'Aluno não estava nesta turma nesta data' : retroBloqueia ? 'Ative o Lançamento retroativo para marcar esta data' : bloqueadoParQ && !status ? 'ParQ pendente — registre o ParQ do aluno' : getTooltipText(aluno.id, dia)}
                             style={retroBloqueia ? { cursor: 'not-allowed' } : undefined}
                             className={`rounded-md font-bold transition-all ${
@@ -546,6 +560,10 @@ const DataGrid: React.FC<DataGridProps> = ({
                                   : 'w-7 h-7 text-xs bg-gray-100 text-gray-300 cursor-not-allowed dark:bg-gray-700 dark:text-gray-600'
                                 : isCalendario
                                 ? `${STATUS_COLORS[status || '']} ${status === 'ferias' ? 'text-[9px] px-1 py-0.5' : 'w-7 h-7 text-xs'} cursor-default`
+                                : somenteLeitura
+                                ? status
+                                  ? `${STATUS_COLORS[status]} w-7 h-7 text-xs cursor-default`
+                                  : 'w-7 h-7 text-xs bg-gray-100 text-gray-400 cursor-default dark:bg-gray-700 dark:text-gray-500'
                                 : status
                                 ? `${STATUS_COLORS[status]} w-7 h-7 text-xs cursor-pointer ${getOrigem(aluno.id, dia) === 'extrapolado' ? 'border border-dashed border-amber-400' : ''}`
                                 : 'w-7 h-7 text-xs bg-gray-100 hover:bg-gray-200 text-gray-400 cursor-pointer dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-500'
@@ -557,6 +575,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                       </td>
                     );
                   })}
+                  {!somenteLeitura && (
                   <td className="sticky right-0 bg-white px-2 py-1 text-center z-10 dark:bg-gray-800">
                     <div className="flex gap-1 justify-center">
                       <button
@@ -598,6 +617,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                       )}
                     </div>
                   </td>
+                  )}
                 </tr>
               );
             })}

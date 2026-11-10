@@ -6,12 +6,24 @@ import { Professor } from '../types';
 import { generateProfessorId } from '../utils/idGenerator';
 import { processCSVUpload } from './csvParser';
 import { isAllowedTenant } from '../config/tenants';
+import { VISITANTE_TTL_SECONDS } from '../utils/visitante';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET obrigatório em produção');
 }
 export const JWT_EXPIRES_IN: number = 604800;
+export const VISITANTE_EXPIRES_IN: number = VISITANTE_TTL_SECONDS;
+
+export function visitanteLoginService(tenantId: string): { token: string; nome: string } {
+  assertTenantAtivo(tenantId);
+  const token = jwt.sign(
+    { professorId: 'visitante', tenantId, nome: 'Visitante', visitante: true },
+    JWT_SECRET,
+    { expiresIn: VISITANTE_EXPIRES_IN },
+  );
+  return { token, nome: 'Visitante' };
+}
 
 function assertTenantAtivo(tenantId: string): void {
   if (!isAllowedTenant(tenantId)) {

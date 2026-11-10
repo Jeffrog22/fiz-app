@@ -10,6 +10,7 @@ import { Pencil, Unlink, Trash2, Printer } from 'lucide-react';
 import { getTenantId, getTenantNome } from '../utils/tenant';
 import useIsTouchDevice from '../hooks/useIsTouchDevice';
 import { useDevLog } from '../hooks/useDevLog';
+import { useAuth } from '../hooks/useAuth';
 
 interface SortRule {
   column: string;
@@ -80,12 +81,13 @@ const Alunos: React.FC = () => {
 
   const isTouch = useIsTouchDevice();
   const { enabled: devEnabled } = useDevLog();
+  const { isVisitante } = useAuth();
   const [largurasCols, setLargurasCols] = useState<LargurasCols | null>(null);
   const resizeRef = useRef<{ key: ColunaCfg; startX: number; startW: number; base: LargurasCols } | null>(null);
   const resizeListenersRef = useRef<{ move: (e: PointerEvent) => void; up: (e: PointerEvent) => void; cancel: () => void } | null>(null);
 
   useEffect(() => {
-    if (!isTouch) return;
+    if (!isTouch || isVisitante) return;
     let ativo = true;
     (async () => {
       try {
@@ -97,7 +99,7 @@ const Alunos: React.FC = () => {
       }
     })();
     return () => { ativo = false; };
-  }, [isTouch]);
+  }, [isTouch, isVisitante]);
 
   const professorMap = new Map(professores.map((p) => [p.id, p.nome]));
   // Versão para DOCUMENTOS (print/PDF/XLSX da lista): prioriza o nome formal
@@ -156,13 +158,17 @@ const Alunos: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => { carregarJanelaRematricula(); }, [carregarJanelaRematricula]);
+  useEffect(() => {
+    if (isVisitante) return;
+    carregarJanelaRematricula();
+  }, [carregarJanelaRematricula, isVisitante]);
 
   const janelaAberta = rematriculaJanela
     ? hojeLocal() >= rematriculaJanela.inicio && hojeLocal() <= rematriculaJanela.fim
     : false;
 
   useEffect(() => {
+    if (isVisitante) return;
     const aceiteId = searchParams.get('aceite');
     if (!aceiteId) return;
     const carregarAceite = async () => {
@@ -176,7 +182,7 @@ const Alunos: React.FC = () => {
       } catch { /* ignore */ }
     };
     carregarAceite();
-  }, [searchParams]);
+  }, [searchParams, isVisitante]);
 
   const getFilterValue = (a: any, col: string): string => {
     switch (col) {
@@ -258,7 +264,7 @@ const Alunos: React.FC = () => {
 
   const editandoCols = isTouch && devEnabled;
   const fixarLayout = isTouch && largurasCols !== null;
-  const temCheckbox = modoAlocacao || modoTransferencia || modoRematricula;
+  const temCheckbox = !isVisitante && (modoAlocacao || modoTransferencia || modoRematricula);
 
   const salvarLarguras = async (novas: LargurasCols) => {
     try {
@@ -606,7 +612,7 @@ const Alunos: React.FC = () => {
 
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Alunos</h1>
-        <div className="flex gap-2">
+        {!isVisitante && <div className="flex gap-2">
           <button
             type="button"
             onClick={() => {
@@ -689,7 +695,7 @@ const Alunos: React.FC = () => {
           >
             + Novo Aluno
           </button>
-        </div>
+        </div>}
       </div>
 
       <div className="flex items-center justify-between gap-3">
@@ -906,10 +912,14 @@ const Alunos: React.FC = () => {
                 {thFilter('turma', 'Turma')}
                 {thFilter('horario', 'Horário')}
                 {thFilter('professor', 'Professor')}
-                <th className={`text-left px-3 py-2 ${thFixo}`}>{thSort('idade', 'Idade')}{colResizeHandle('idade')}</th>
-                {thFilter('categoria', 'Categoria')}
-                <th className={`text-left px-3 py-2 ${thFixo}`}>{thSort('genero', 'Gênero')}{colResizeHandle('genero')}</th>
-                <th className={`text-right px-3 py-2 font-medium text-gray-500 dark:text-gray-400 ${thFixo}`}>Ações{colResizeHandle('acoes')}</th>
+                {!isVisitante && (
+                  <>
+                    <th className={`text-left px-3 py-2 ${thFixo}`}>{thSort('idade', 'Idade')}{colResizeHandle('idade')}</th>
+                    {thFilter('categoria', 'Categoria')}
+                    <th className={`text-left px-3 py-2 ${thFixo}`}>{thSort('genero', 'Gênero')}{colResizeHandle('genero')}</th>
+                    <th className={`text-right px-3 py-2 font-medium text-gray-500 dark:text-gray-400 ${thFixo}`}>Ações{colResizeHandle('acoes')}</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -934,13 +944,13 @@ const Alunos: React.FC = () => {
                       </td>
                     )}
                     <td
-                      className={`px-3 py-2 font-medium cursor-pointer hover:text-primary-800 dark:hover:text-primary-200 ${tdTrunc} ${
+                      className={`px-3 py-2 font-medium ${isVisitante ? '' : 'cursor-pointer hover:text-primary-800 dark:hover:text-primary-200'} ${tdTrunc} ${
                         aceiteNotif?.aluno_id === a.id
                           ? 'text-amber-700 dark:text-amber-300'
                           : 'text-primary-600 dark:text-primary-400'
                       }`}
-                      title={aceiteNotif?.aluno_id === a.id ? 'Aluno aceito em outra unidade — pode ser excluído' : 'clique para editar'}
-                      onClick={() => { setEditando(a); setModalOpen(true); }}
+                      title={isVisitante ? undefined : aceiteNotif?.aluno_id === a.id ? 'Aluno aceito em outra unidade — pode ser excluído' : 'clique para editar'}
+                      onClick={() => { if (!isVisitante) { setEditando(a); setModalOpen(true); } }}
                     >
                       {aceiteNotif?.aluno_id === a.id && (
                         <span className="mr-1">{'\uD83C\uDF93'}</span>
@@ -952,29 +962,33 @@ const Alunos: React.FC = () => {
                     <td className={`px-3 py-2 text-gray-600 dark:text-gray-400 ${tdTrunc}`}>{a.turma?.label || '-'}</td>
                     <td className={`px-3 py-2 text-gray-600 dark:text-gray-400 ${tdTrunc}`}>{(a.turma?.horario || '-').substring(0, 5)}</td>
                     <td className={`px-3 py-2 text-gray-600 dark:text-gray-400 ${tdTrunc}`}>{profNome || '-'}</td>
-                    <td className={`px-3 py-2 text-gray-600 dark:text-gray-400 ${tdTrunc}`}>{idade !== null ? idade : '-'}</td>
-                    <td className={`px-3 py-2 text-gray-600 dark:text-gray-400 ${tdTrunc}`}>{categoria || '-'}</td>
-                    <td className={`px-3 py-2 text-gray-600 dark:text-gray-400 ${tdTrunc}`}>
-                      {a.genero
-                        ? a.genero.charAt(0).toUpperCase() + a.genero.slice(1).replace('-', ' ')
-                        : '-'}
-                    </td>
-                    <td className={`px-3 py-2 text-right whitespace-nowrap ${tdTrunc}`}>
-                      <button onClick={() => { setEditando(a); setModalOpen(true); }}
-                        className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 ml-1 inline-flex items-center align-middle" title="Editar"><Pencil size={16} /></button>
-                      {a.turma_id && (
-                        <button onClick={() => setDesalocarTarget({ id: a.id, nome: a.nome })}
-                          className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 ml-1 inline-flex items-center align-middle" title="Desalocar"><Unlink size={16} /></button>
-                      )}
-                      <button onClick={() => { setDeleteTarget({ id: a.id, nome: a.nome }); setDeleteMotivo('falta'); }}
-                        className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 ml-1 inline-flex items-center align-middle" title="Remover"><Trash2 size={16} /></button>
-                    </td>
+                    {!isVisitante && (
+                      <>
+                        <td className={`px-3 py-2 text-gray-600 dark:text-gray-400 ${tdTrunc}`}>{idade !== null ? idade : '-'}</td>
+                        <td className={`px-3 py-2 text-gray-600 dark:text-gray-400 ${tdTrunc}`}>{categoria || '-'}</td>
+                        <td className={`px-3 py-2 text-gray-600 dark:text-gray-400 ${tdTrunc}`}>
+                          {a.genero
+                            ? a.genero.charAt(0).toUpperCase() + a.genero.slice(1).replace('-', ' ')
+                            : '-'}
+                        </td>
+                        <td className={`px-3 py-2 text-right whitespace-nowrap ${tdTrunc}`}>
+                          <button onClick={() => { setEditando(a); setModalOpen(true); }}
+                            className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200 ml-1 inline-flex items-center align-middle" title="Editar"><Pencil size={16} /></button>
+                          {a.turma_id && (
+                            <button onClick={() => setDesalocarTarget({ id: a.id, nome: a.nome })}
+                              className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 ml-1 inline-flex items-center align-middle" title="Desalocar"><Unlink size={16} /></button>
+                          )}
+                          <button onClick={() => { setDeleteTarget({ id: a.id, nome: a.nome }); setDeleteMotivo('falta'); }}
+                            className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 ml-1 inline-flex items-center align-middle" title="Remover"><Trash2 size={16} /></button>
+                        </td>
+                      </>
+                    )}
                   </tr>
                 );
               })}
               {processed.length === 0 && !carregando && (
                 <tr>
-                  <td colSpan={modoAlocacao || modoTransferencia || modoRematricula ? 10 : 9} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
+                  <td colSpan={(isVisitante ? 5 : 9) + (temCheckbox ? 1 : 0)} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
                     Nenhum aluno encontrado
                   </td>
                 </tr>

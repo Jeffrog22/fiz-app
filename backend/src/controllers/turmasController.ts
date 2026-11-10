@@ -6,6 +6,7 @@ import {
   atualizarTurmaService,
   excluirTurmaService,
 } from '../services/turmasService';
+import { sanitizarTurma } from '../utils/visitante';
 
 export class TurmasController {
   static async listar(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
@@ -17,7 +18,8 @@ export class TurmasController {
         professor_id: professor_id as string,
         horario: horario as string,
       });
-      res.json(data || []);
+      const turmas = data || [];
+      res.json(req.visitante ? turmas.map(sanitizarTurma) : turmas);
     } catch (error) {
       next(error);
     }

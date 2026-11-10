@@ -1,5 +1,6 @@
 import axios, { InternalAxiosRequestConfig } from 'axios';
 import { getTenantId } from './tenant';
+import { getVisitanteSession } from './visitante';
 
 /**
  * Instância do Axios pré-configurada para o Fiz! App.
@@ -19,7 +20,8 @@ const api = axios.create({
 // Interceptor de requisição: injeta X-Tenant-ID e Authorization
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const tenantId = getTenantId();
+    const visitante = getVisitanteSession();
+    const tenantId = visitante?.tenantId || getTenantId();
     if (tenantId) {
       config.headers['X-Tenant-ID'] = tenantId;
     }
@@ -28,15 +30,19 @@ api.interceptors.request.use(
       detail: { method: config.method?.toUpperCase(), url: config.url },
     }));
 
-    const storedProfessor = tenantId ? localStorage.getItem(`${tenantId}_professor`) : null;
-    if (storedProfessor) {
-      try {
-        const parsed = JSON.parse(storedProfessor);
-        if (parsed.token) {
-          config.headers.Authorization = `Bearer ${parsed.token}`;
+    if (visitante?.token) {
+      config.headers.Authorization = `Bearer ${visitante.token}`;
+    } else {
+      const storedProfessor = tenantId ? localStorage.getItem(`${tenantId}_professor`) : null;
+      if (storedProfessor) {
+        try {
+          const parsed = JSON.parse(storedProfessor);
+          if (parsed.token) {
+            config.headers.Authorization = `Bearer ${parsed.token}`;
+          }
+        } catch {
+          // ignore
         }
-      } catch {
-        // ignore
       }
     }
 

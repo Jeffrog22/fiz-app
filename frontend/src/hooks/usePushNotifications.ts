@@ -25,7 +25,7 @@ interface UsePushNotificationsReturn extends PushSubscriptionInfo {
   refresh: () => Promise<void>;
 }
 
-export function usePushNotifications(): UsePushNotificationsReturn {
+export function usePushNotifications(enabled = true): UsePushNotificationsReturn {
   const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>('unsupported');
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -53,8 +53,12 @@ export function usePushNotifications(): UsePushNotificationsReturn {
   }, []);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     refresh();
-  }, [refresh]);
+  }, [refresh, enabled]);
 
   const requestPermission = useCallback(async () => {
     const result = await Notification.requestPermission();

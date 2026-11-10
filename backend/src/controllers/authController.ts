@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { TenantRequest } from '../types';
 import { AppError } from '../middleware/errorHandler';
-import { loginService, primeiroAcessoService, adminLoginService, clearDataService, JWT_EXPIRES_IN } from '../services/authService';
+import { loginService, primeiroAcessoService, adminLoginService, clearDataService, visitanteLoginService, JWT_EXPIRES_IN, VISITANTE_EXPIRES_IN } from '../services/authService';
 
 export class AuthController {
   static async login(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
@@ -77,6 +77,31 @@ export class AuthController {
         professorId: professor.id,
         nome: professor.nome,
         isAdmin: true,
+        token,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async visitanteLogin(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const tenantId = req.tenantId!;
+      const { token, nome } = visitanteLoginService(tenantId);
+
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: VISITANTE_EXPIRES_IN * 1000,
+      });
+
+      res.json({
+        message: 'Modo Visitante ativado',
+        professorId: 'visitante',
+        nome,
+        tenantId,
+        isVisitante: true,
         token,
       });
     } catch (error) {

@@ -2,29 +2,21 @@ import React, { createContext, useState, useEffect, ReactNode, useCallback } fro
 import { AuthState } from '../types';
 import { getTenantId } from '../utils/tenant';
 import api from '../utils/api';
+import { isTokenExpirado } from '../utils/jwt';
+import {
+  getVisitanteSession,
+  getVisitanteSessionBruta,
+  setVisitanteSession,
+  clearVisitanteSession,
+} from '../utils/visitante';
 
-function decodeBase64Url(segment: string): string {
-  const base64 = segment.replace(/-/g, '+').replace(/_/g, '/');
-  const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
-  return decodeURIComponent(
-    atob(padded).split('').map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
-  );
-}
-
-export function isTokenExpirado(token: string): boolean {
-  try {
-    const payload = JSON.parse(decodeBase64Url(token.split('.')[1]));
-    if (typeof payload.exp !== 'number') return false;
-    return payload.exp * 1000 < Date.now();
-  } catch {
-    return false;
-  }
-}
+export { isTokenExpirado };
 
 export interface AuthContextType extends AuthState {
   login: (professorNome: string, pin?: string) => Promise<void>;
   primeiroAcesso: (professorNome: string, pin: string, csvFile?: File) => Promise<void>;
   adminLogin: (adminKey: string) => Promise<void>;
+  visitanteLogin: (tenantId?: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -34,6 +26,7 @@ export const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   primeiroAcesso: async () => {},
   adminLogin: async () => {},
+  visitanteLogin: async () => {},
   logout: () => {},
 });
 
@@ -48,6 +41,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   });
 
   useEffect(() => {
+    const visitante = getVisitanteSessionBruta();
+    if (visitante) {
+      if (isTokenExpirado(visitante.token)) {
+        clearVisitanteSession();
+        setState({ isAuthenticated: false, loading: false, sessionExpirada: true });
+        return;
+      }
+      setState({
+        isAuthenticated: true,
+        professorId: 'visitante',
+        professorNome: visitante.nome,
+        tenantId: visitante.tenantId,
+        loading: false,
+        isVisitante: true,
+      });
+      return;
+    }
+
     const storedProfessor = localStorage.getItem(`${getTenantId()}_professor`);
     if (storedProfessor) {
       try {
@@ -77,6 +88,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const handleSessionExpired = () => {
       localStorage.removeItem(`${getTenantId()}_professor`);
+      clearVisitanteSession();
       setState({
         isAuthenticated: false,
         loading: false,
@@ -95,6 +107,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { professorId, nome, token, hash } = response.data;
 
       localStorage.setItem(`${getTenantId()}_professor`, JSON.stringify({ professorId, nome, hash, token, isAdmin: false }));
+      clearVisitanteSession();
 
       setState({
         isAuthenticated: true,
@@ -103,6 +116,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         tenantId: getTenantId(),
         loading: false,
         isAdmin: false,
+        isVisitante: false,
         sessionExpirada: false,
       });
     } catch (error) {
@@ -127,6 +141,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { professorId, nome, token, hash } = response.data;
 
       localStorage.setItem(`${getTenantId()}_professor`, JSON.stringify({ professorId, nome, hash, token, isAdmin: false }));
+      clearVisitanteSession();
 
       setState({
         isAuthenticated: true,
@@ -135,6 +150,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         tenantId: getTenantId(),
         loading: false,
         isAdmin: false,
+        isVisitante: false,
         sessionExpirada: false,
       });
     } catch (error) {
@@ -150,6 +166,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { professorId, nome, token, isAdmin } = response.data;
 
       localStorage.setItem(`${getTenantId()}_professor`, JSON.stringify({ professorId, nome, hash: '', token, isAdmin: true }));
+      clearVisitanteSession();
 
       setState({
         isAuthenticated: true,
@@ -158,6 +175,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         tenantId: getTenantId(),
         loading: false,
         isAdmin: true,
+        isVisitante: false,
+        sessionExpirada: false,
+      });
+    } catch (error) {
+      setState(prev => ({ ...prev, loading: false }));
+      throw error;
+    }
+  }, []);
+
+  const visitanteLogin = useCallback(async (tenantId?: string) => {
+    setState(prev => ({ ...prev, loading: true }));
+    try {
+      const response = await api.post(
+        '/auth/visitante-login',
+        {},
+        tenantId ? { headers: { 'X-Tenant-ID': tenantId } } : undefined,
+      );
+      const { token, nome } = response.data;
+      const sessao = {
+        token,
+        tenantId: response.data.tenantId || tenantId || getTenantId(),
+        nome: nome || 'Visitante',
+        isVisitante: true as const,
+      };
+      setVisitanteSession(sessao);
+
+      setState({
+        isAuthenticated: true,
+        professorId: 'visitante',
+        professorNome: sessao.nome,
+        tenantId: sessao.tenantId,
+        loading: false,
+        isAdmin: false,
+        isVisitante: true,
         sessionExpirada: false,
       });
     } catch (error) {
@@ -168,6 +219,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = useCallback(() => {
     localStorage.removeItem(`${getTenantId()}_professor`);
+    clearVisitanteSession();
     setState({
       isAuthenticated: false,
       loading: false,
@@ -176,7 +228,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, primeiroAcesso, adminLogin, logout }}>
+    <AuthContext.Provider value={{ ...state, login, primeiroAcesso, adminLogin, visitanteLogin, logout }}>
       {children}
     </AuthContext.Provider>
   );

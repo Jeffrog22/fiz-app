@@ -4,6 +4,7 @@ import { Request } from 'express';
 export interface TenantRequest extends Request {
   tenantId?: string;
   professorId?: string;
+  visitante?: boolean;
 }
 
 // Types do banco de dados
@@ -72,6 +73,7 @@ export interface JwtPayload {
   professorId: string;
   tenantId: string;
   nome: string;
+  visitante?: boolean;
 }
 
 export interface EnrollmentPeriod {

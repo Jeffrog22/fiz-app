@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { TenantRequest } from '../types';
 import { supabase } from '../services/supabaseClient';
 import { AppError } from '../middleware/errorHandler';
+import { sanitizarProfessor } from '../utils/visitante';
 
 const MAX_NOME_DOCUMENTO = 80;
 
@@ -12,12 +13,13 @@ export class ProfessoresController {
 
       const { data, error } = await supabase
         .from('professores')
-        .select('id, nome, nome_documento, hash')
+        .select(req.visitante ? 'id, nome' : 'id, nome, nome_documento, hash')
         .eq('tenant_id', tenantId)
         .order('nome', { ascending: true });
 
       if (error) throw new AppError('Erro ao buscar professores', 500);
-      res.json(data || []);
+      const professores = data || [];
+      res.json(req.visitante ? professores.map((professor) => sanitizarProfessor(professor, tenantId)) : professores);
     } catch (error) {
       next(error);
     }

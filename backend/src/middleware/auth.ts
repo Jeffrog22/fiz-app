@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { TenantRequest, JwtPayload } from '../types';
 import { isAllowedTenant } from '../config/tenants';
+import { podeAcessarVisitante } from '../utils/visitante';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
@@ -42,6 +43,13 @@ export function authMiddleware(req: TenantRequest, res: Response, next: NextFunc
     }
 
     req.professorId = decoded.professorId;
+    req.visitante = decoded.visitante === true;
+
+    if (req.visitante && !podeAcessarVisitante(req.method, req.originalUrl)) {
+      res.status(403).json({ error: 'Ação não permitida no Modo Visitante' });
+      return;
+    }
+
     next();
   } catch (err) {
     if (err instanceof jwt.TokenExpiredError) {

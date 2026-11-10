@@ -6,7 +6,7 @@ import WeatherWidget from './WeatherWidget';
 
 const TopBar: React.FC = () => {
   const { tenantNome } = useTenant();
-  const { professorNome, logout } = useAuth();
+  const { professorNome, logout, isVisitante } = useAuth();
   const dbStatus = useDbStatus();
 
   return (
@@ -19,6 +19,11 @@ const TopBar: React.FC = () => {
       </div>
       <div className="flex items-center gap-4">
         <WeatherWidget />
+        {isVisitante && (
+          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+            Modo Visitante
+          </span>
+        )}
         {professorNome && (
           <span className="text-sm text-gray-600 dark:text-gray-300">{professorNome}</span>
         )}
