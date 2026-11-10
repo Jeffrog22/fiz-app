@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-11-08 — Remoção definitiva da unidade 3ª Idade → v2.92.5 -->
+<!-- última-sessão: 2026-11-09 — Modo Visitante (somente leitura 2h, nomes fictícios) → v2.93.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -34,7 +34,7 @@ Regras:
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v2.92.5
+- **Versão atual:** v2.93.0
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Build Cloudflare:** `git fetch --tags --unshallow` é necessário no build command para `git describe --tags` funcionar (clone shallow sem tags)
@@ -2951,6 +2951,67 @@ Regras:
 ### Typecheck
 - Backend: 0 erros (`tsc --noEmit`)
 - Testes: 43/43 passam
+
+---
+
+## Sessão: 09/11/2026 — Modo Visitante (somente leitura 2h, nomes fictícios) → v2.93.0
+
+### O que foi feito
+- **Modo Visitante** ativado por `Ctrl+Alt+V` no login, com escolha de unidade autorizada (whitelist dos 4 tenants ativos) e sessão restrita a Chamadas, Alunos e Turmas em somente leitura
+- **Backend**:
+  - `visitanteLoginService` emite JWT com claim `visitante: true` e TTL de 2h (7200s), sem PIN
+  - `POST /api/auth/visitante-login` (rateLimiter + tenantMiddleware)
+  - `authMiddleware` guarda por allowlist (método + `originalUrl`): permite apenas GET em alunos, alunos/enrollment, turmas, professores, chamadas/periodo, chamadas/clima, card-aula/daily/:data e calendario; bloqueia escritas e rotas sensíveis (anotacoes, app-settings, transferencias, relatorios, exportacoes, planejamento, notificacoes, chamadas/:data)
+  - Sanitizadores de resposta (`backend/src/utils/visitante.ts`): ocultam nomes reais, data_nascimento, genero, contato, par_q, atestado_medico, hash, nome_documento, descricao, motivo, tipo_ocorrencia, tipo_select, compromete_dia; mantêm IDs reais e dados operacionais
+  - Todos os controllers (alunos, turmas, professores, chamadas, calendario, enrollment) aplicam sanitização quando `req.visitante`
+- **Frontend**:
+  - Sessão visitante em `sessionStorage` com expiração por token (2h)
+  - `api.ts` prioriza token visitante e X-Tenant-ID da sessão visitante
+  - Atalho `Ctrl+Alt+V` + seletor de unidade no Login; fluxo sem PIN
+  - `isVisitante`/`visitanteLogin` no AuthContext; logout limpa sessão visitante
+  - Badge "Modo Visitante" no TopBar (sem seletor de unidade)
+  - Sidebar/Home: só Início/Chamadas/Alunos/Turmas + Ajuda; oculta Configurações, Vagas, Exclusões, Relatórios, Calendário
+  - App.tsx: `RotaVisitante` bloqueia rotas não permitidas; pula `/transferencias/aceites/nao-vistos`; desativa push notifications; esconde Tour/Ajuda/DevPanel
+  - Alunos/Turmas/Chamadas/ChamadaFilters/DataGrid/CardAula/CardBO/AnotacoesModal/JustificativaModal: leitura apenas; colunas/ações de escrita ocultas; CardAula read-only; CardBO inacessível
+- Sem migration: pseudonimização determinística via HMAC (`tenantId + id`) com `JWT_SECRET`, consistente entre endpoints
+
+### Decisões
+- Visitante sem PIN; sessão de 2 horas; IDs reais mantidos (grupo_id pode revelar iniciais do professor — decisão aceita para preservar filtros e enrollment); nomes fictícios realistas e determinísticos; CardAula somente leitura e CardBO oculto; troca de unidade somente no login
+- `/api/calendario/periodo` não liberado no backend; pulado no frontend visitante (rematrícula não necessária)
+- GET /clear-data sem tenantMiddleware/auth é risco pré-existente fora do escopo; não alterado, apenas documentado
+
+### Arquivos
+- `backend/src/services/authService.ts` (+`visitanteLoginService`, `VISITANTE_EXPIRES_IN`)
+- `backend/src/controllers/authController.ts` (+`visitanteLogin`)
+- `backend/src/routes/authRoutes.ts` (+`POST /visitante-login`)
+- `backend/src/middleware/auth.ts` (+guard de visitante por allowlist)
+- `backend/src/types/index.ts` (+`visitante` claim em `TenantRequest`/`JwtPayload`)
+- `backend/src/utils/visitante.ts` (novo — allowlist + sanitizadores)
+- `backend/src/utils/__tests__/visitante.test.ts` (novo — 12 casos)
+- `backend/src/controllers/alunosController.ts`, `turmasController.ts`, `professoresController.ts`, `chamadasController.ts`, `calendarioController.ts`, `enrollmentController.ts` (aplicam sanitização)
+- `frontend/src/utils/visitante.ts` (novo — sessão em sessionStorage)
+- `frontend/src/utils/jwt.ts` (novo — `isTokenExpirado`)
+- `frontend/src/utils/__tests__/visitante.test.ts` (novo — 7 casos), `frontend/src/utils/__tests__/jwt.test.ts` (novo — 4 casos)
+- `frontend/src/utils/api.ts` (prioriza token visitante)
+- `frontend/src/context/AuthContext.tsx` (+`isVisitante`, `visitanteLogin`)
+- `frontend/src/pages/Login.tsx` (atalho Ctrl+Alt+V, seletor de unidade, fluxo sem PIN)
+- `frontend/src/components/common/TopBar.tsx` (+badge Modo Visitante)
+- `frontend/src/components/common/Sidebar.tsx`, `frontend/src/pages/Home.tsx` (filtro de rotas)
+- `frontend/src/App.tsx` (`RotaVisitante`, guarda aceites/push/Tour/Ajuda/DevPanel)
+- `frontend/src/pages/Alunos.tsx`, `Turmas.tsx`, `Chamadas.tsx` (guards de leitura)
+- `frontend/src/components/grid/DataGrid.tsx`, `ChamadaFilters.tsx` (somente leitura)
+- `frontend/src/components/modals/CardAula.tsx`, `CardBO.tsx`, `AnotacoesModal.tsx`, `JustificativaModal.tsx` (escrita ocultada)
+- `frontend/src/types/index.ts` (+`isVisitante` em `AuthState`)
+- `CHANGELOG.md` (v2.93.0), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Backend: `tsc --noEmit` 0 erros · 136/136 testes passam (132 + 4 novos, jest)
+- Frontend: `tsc --noEmit` 0 erros · `npm run build` limpo · 120/120 testes passam (116 + 4 novos, vitest)
+- Sem migration
+
+### Pendências / riscos conhecidos
+- Pendências externas da v2.92.5 continuam fora deste escopo: executar migration 034 no Supabase; excluir `chamada3aidade.pages.dev` no Cloudflare Pages; remover `PIN_3AIDADE` e origem antiga de CORS/FRONTEND_URL no Render e redeployar
+
 
 ---
 

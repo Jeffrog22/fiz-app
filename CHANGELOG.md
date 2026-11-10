@@ -1,5 +1,14 @@
 # Changelog - Fiz! App
 
+## [v2.93.0] - 2026-11-09
+### Feat
+- **Modo Visitante (Ctrl+Alt+V)** — acesso somente leitura por 2 horas, sem PIN, com escolha de unidade autorizada na whitelist (bela-vista, sao-matheus, vila, parque)
+  - **Backend**: `visitanteLoginService` emite JWT com claim `visitante: true` e TTL 7200s; `POST /api/auth/visitante-login` (rateLimiter + tenantMiddleware); `authMiddleware` guarda por allowlist (método + `originalUrl`) permitindo apenas GET em alunos, alunos/enrollment, turmas, professores, chamadas/periodo, chamadas/clima, card-aula/daily/:data e calendario; bloqueia escritas e rotas sensíveis (anotacoes, app-settings, transferencias, relatorios, exportacoes, planejamento, notificacoes, chamadas/:data); sanitizadores de resposta ocultam nomes reais, data_nascimento, genero, contato, par_q, atestado_medico, hash, nome_documento, descricao, motivo, tipo_ocorrencia, tipo_select, compromete_dia, mantendo IDs reais
+  - **Frontend**: sessao visitante em `sessionStorage` com expiracao por token; `api.ts` prioriza token visitante e X-Tenant-ID da sessao visitante; atalho Ctrl+Alt+V + seletor de unidade no Login (fluxo sem PIN); `isVisitante`/`visitanteLogin` no AuthContext; badge "Modo Visitante" no TopBar (sem seletor de unidade); Sidebar/Home filtram rotas (só Inicio/Chamadas/Alunos/Turmas + Ajuda); App.tsx bloqueia rotas nao permitidas via `RotaVisitante`, pula `/transferencias/aceites/nao-vistos`, desativa push notifications e esconde Tour/Ajuda/DevPanel; Alunos/Turmas/Chamadas/ChamadaFilters/DataGrid/CardAula/CardBO/AnotacoesModal/JustificativaModal em leitura apenas (colunas/acoes de escrita ocultas, CardAula read-only, CardBO inacessivel)
+  - Sem migration: pseudonimizacao deterministica via HMAC (`tenantId + id`) com `JWT_SECRET`, consistente entre endpoints
+- Testes: backend `visitante.test.ts` (12 casos), frontend `visitante.test.ts` (7 casos) + `jwt.test.ts` (4 casos)
+- Typecheck: backend 0 erros, frontend 0 erros; testes backend 136/136, frontend 120/120; build frontend limpo
+
 ## [v2.92.5] - 2026-11-08
 ### Fix
 - **Unidade 3ª Idade removida definitivamente do app**
