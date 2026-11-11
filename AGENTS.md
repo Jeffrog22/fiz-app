@@ -2954,6 +2954,25 @@ Regras:
 
 ---
 
+## Sessão: 02/09/2026 — Bloco de notas: ícone SVG colorido menor → v2.95.4
+
+### O que foi feito
+- Criação do componente `frontend/src/components/icons/NotebookColorido.tsx` com o SVG do notebook (notas) fornecido pelo usuário
+- Ícone com tamanho adaptado ao padrão da sidebar (`w-5 h-5` ≈ 20px) e cores variadas por elemento:
+  - Linha vertical esquerda: azul (`stroke-blue-500`)
+  - Quatro abas horizontais: vermelho (`stroke-red-500`)
+  - Retângulo do corpo: branco (`stroke-white`)
+- Troca no link da Sidebar `/bloco-de-notas` de `<NotebookTabs />` (lucide-react) para `<NotebookColorido />`
+- `tsc --noEmit`: 0 erros · `npm run build`: limpo
+- Commit `d789107` + tag `v2.95.4` (bump PATCH via hook, `chore:`) → `origin/master`
+
+### Arquivos
+- `frontend/src/components/icons/NotebookColorido.tsx` (novo)
+- `frontend/src/components/common/Sidebar.tsx` (import + ícone)
+- `AGENTS.md` (esta sessão)
+
+---
+
 ## Sessão: 02/09/2026 — Bloco de notas: ícone StickyNoteCheck → NotebookTabs → v2.95.2
 
 ### O que foi feito
