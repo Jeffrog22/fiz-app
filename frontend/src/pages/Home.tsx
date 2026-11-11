@@ -1,24 +1,34 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import {
+  ChamadaIcon,
+  AlunosIcon,
+  TurmasIcon,
+  CalendarioIcon,
+  ExclusoesIcon,
+  VagasIcon,
+  RelatoriosIcon,
+  SettingsIcon,
+} from '../components/icons/IconsColoridos';
 
 interface MenuItem {
   label: string;
   path: string;
-  icon: string;
+  icon: React.ReactNode;
   color: string;
   group: 'main' | 'more';
 }
 
 const menuItems: MenuItem[] = [
-  { label: 'Chamadas', path: '/chamadas', icon: '\uD83D\uDCDD', color: 'bg-blue-50 hover:bg-blue-100 border-blue-200', group: 'main' },
-  { label: 'Alunos', path: '/alunos', icon: '\uD83D\uDC65', color: 'bg-green-50 hover:bg-green-100 border-green-200', group: 'main' },
-  { label: 'Turmas', path: '/turmas', icon: '\uD83D\uDCDA', color: 'bg-purple-50 hover:bg-purple-100 border-purple-200', group: 'main' },
-  { label: 'Calendário', path: '/calendario', icon: '\uD83D\uDCC5', color: 'bg-orange-50 hover:bg-orange-100 border-orange-200', group: 'more' },
-  { label: 'Exclusões', path: '/exclusoes', icon: '\uD83D\uDDD1\uFE0F', color: 'bg-red-50 hover:bg-red-100 border-red-200', group: 'more' },
-  { label: 'Vagas', path: '/vagas', icon: '\uD83D\uDCE6', color: 'bg-cyan-50 hover:bg-cyan-100 border-cyan-200', group: 'more' },
-  { label: 'Relatórios', path: '/relatorios', icon: '\uD83D\uDCCA', color: 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200', group: 'more' },
-  { label: 'Configurações', path: '/configuracoes', icon: '\u2699\uFE0F', color: 'bg-gray-50 hover:bg-gray-100 border-gray-200', group: 'more' },
+  { label: 'Chamadas', path: '/chamadas', icon: <ChamadaIcon />, color: 'bg-blue-50 hover:bg-blue-100 border-blue-200', group: 'main' },
+  { label: 'Alunos', path: '/alunos', icon: <AlunosIcon />, color: 'bg-green-50 hover:bg-green-100 border-green-200', group: 'main' },
+  { label: 'Turmas', path: '/turmas', icon: <TurmasIcon />, color: 'bg-purple-50 hover:bg-purple-100 border-purple-200', group: 'main' },
+  { label: 'Calendário', path: '/calendario', icon: <CalendarioIcon />, color: 'bg-orange-50 hover:bg-orange-100 border-orange-200', group: 'more' },
+  { label: 'Exclusões', path: '/exclusoes', icon: <ExclusoesIcon />, color: 'bg-red-50 hover:bg-red-100 border-red-200', group: 'more' },
+  { label: 'Vagas', path: '/vagas', icon: <VagasIcon />, color: 'bg-cyan-50 hover:bg-cyan-100 border-cyan-200', group: 'more' },
+  { label: 'Relatórios', path: '/relatorios', icon: <RelatoriosIcon />, color: 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200', group: 'more' },
+  { label: 'Configurações', path: '/configuracoes', icon: <SettingsIcon />, color: 'bg-gray-50 hover:bg-gray-100 border-gray-200', group: 'more' },
 ];
 
 const DARK_COLORS: Record<string, string> = {
@@ -57,7 +67,7 @@ const Home: React.FC = () => {
               onClick={() => navigate(item.path)}
               className={`flex flex-col items-center justify-center p-8 rounded-xl border-2 shadow-sm dark:shadow-black/20 transition-all ${item.color} ${DARK_COLORS[item.color] || ''}`}
             >
-              <span className="text-4xl mb-3">{item.icon}</span>
+              {item.icon}
               <span className="text-base font-medium text-gray-700 dark:text-gray-200">{item.label}</span>
             </button>
           ))}
@@ -73,7 +83,7 @@ const Home: React.FC = () => {
               onClick={() => navigate(item.path)}
               className={`flex items-center gap-3 p-4 rounded-lg border shadow-sm dark:shadow-black/20 transition-all ${item.color} ${DARK_COLORS[item.color] || ''}`}
             >
-              <span className="text-2xl">{item.icon}</span>
+              {item.icon}
               <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{item.label}</span>
             </button>
           ))}

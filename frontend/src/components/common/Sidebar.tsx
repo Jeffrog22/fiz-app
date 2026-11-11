@@ -11,6 +11,8 @@ import {
   RelatoriosIcon,
   CalendarioIcon,
   BlocoNotasIcon,
+  SettingsIcon,
+  AjudaIcon,
 } from '../icons/IconsColoridos';
 
 interface SidebarLink {
@@ -32,7 +34,7 @@ const links: SidebarLink[] = [
 ];
 
 const configLinks: SidebarLink[] = [
-  { to: '/configuracoes', label: 'Configurações', icon: '\u2699\uFE0F' },
+  { to: '/configuracoes', label: 'Configurações', icon: <SettingsIcon /> },
 ];
 
 interface Props {
@@ -176,7 +178,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0 })
             collapsed ? 'justify-center' : ''
           } text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200`}
         >
-          <span className="text-lg flex-shrink-0">❓</span>
+          <AjudaIcon />
           <span
             className={`transition-all duration-300 ${
               collapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'
