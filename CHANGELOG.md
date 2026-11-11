@@ -1,5 +1,16 @@
 # Changelog - Fiz! App
 
+## [v2.94.0] - 2026-11-10
+### Feat
+- **Bloco de notas** — notas pessoais do professor (texto livre e listas de tarefas), persistidas no Supabase e isoladas por unidade + professor
+  - **Migration 035** (`035_create_bloco_de_notas.sql`): tabela `bloco_de_notas` (id, tenant_id, professor_id, titulo, conteudo, tipo, itens JSONB, cor, fixada, criado_em, atualizado_em) com índices de isolamento `(professor_id)`, `(tenant_id, professor_id)`, `(professor_id, fixada, atualizado_em)`; sem RLS — isolamento aplicado no serviço por `tenant_id` + `professor_id` em todas as queries, incluindo operações por ID
+  - **Backend**: `blocoDeNotasService` (listar/criar/atualizar/fixar/remover, todos filtrados por `tenant_id` + `professor_id`), `blocoDeNotasController`, `blocoDeNotasRoutes` montado em `/api/bloco-de-notas` sob `tenantMiddleware` + `authMiddleware`; Modo Visitante não tem acesso (não está na `podeAcessarVisitante` allowlist) e admin vê apenas as próprias notas (filtrado por `professor_id` do JWT)
+  - **Frontend**: página `/bloco-de-notas` (`RotaVisitante` + `ProtectedLayout`), link na Sidebar (somente não-visitante), cartões em seções **Fixadas** e **Outras notas**, cinco cores (amarelo/azul/verde/rosa/lilas), busca por título/texto/conteúdo dos itens via `normalizeSearch` (sem acento/case) combinada com filtros **Todas/Textos/Listas**, fixar/desafixar, excluir com confirmação (`window.confirm`), marcar/desmarcar tarefas direto no cartão, modal de criar/editar que preserva `concluido` dos itens que continuam na lista, estados de carregamento, lista vazia, busca sem resultado e erro ao salvar com conteúdo preservado para nova tentativa
+  - Sem compartilhamento, notificações, anexos, vínculo com turmas/alunos nem importação de notas de exemplo (fora do escopo da v1)
+  - Testes: backend `blocoDeNotasService.test.ts` (8 casos: isolamento por professor, isolamento por unidade, criar grava tenant/professor, atualizar afeta só o próprio, preserva concluido ao editar lista, fixar/desafixar, remover isolado, atualizar de outro professor 404); frontend `blocoDeNotasUtils.test.ts` (6 casos: busca sem acento/case, busca em conteúdo e itens, filtros Textos/Listas, busca+filtro combinados)
+- Typecheck: backend 0 erros, frontend 0 erros; testes backend 144/144, frontend 126/126; build frontend limpo
+- Migration 035 **pendente de executar no Supabase** (aguardando autorização explícita)
+
 ## [v2.93.0] - 2026-11-09
 ### Feat
 - **Modo Visitante (Ctrl+Alt+V)** — acesso somente leitura por 2 horas, sem PIN, com escolha de unidade autorizada na whitelist (bela-vista, sao-matheus, vila, parque)

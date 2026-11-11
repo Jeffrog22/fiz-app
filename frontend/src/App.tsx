@@ -11,6 +11,7 @@ import Home from './pages/Home';
 import Alunos from './pages/Alunos';
 import Turmas from './pages/Turmas';
 import Chamadas from './pages/Chamadas';
+import BlocoDeNotas from './pages/BlocoDeNotas';
 import Vagas from './pages/Vagas';
 import Exclusoes from './pages/Exclusoes';
 import Calendario from './pages/Calendario';
@@ -134,6 +135,7 @@ const AppContent: React.FC = () => {
       <Route path="/vagas" element={<RotaVisitante><ProtectedLayout><Vagas /></ProtectedLayout></RotaVisitante>} />
         <Route path="/exclusoes" element={<RotaVisitante><ProtectedLayout><Exclusoes /></ProtectedLayout></RotaVisitante>} />
         <Route path="/relatorios" element={<RotaVisitante><ProtectedLayout><Relatorios /></ProtectedLayout></RotaVisitante>} />
+      <Route path="/bloco-de-notas" element={<RotaVisitante><ProtectedLayout><BlocoDeNotas /></ProtectedLayout></RotaVisitante>} />
       <Route path="/calendario" element={<RotaVisitante><ProtectedLayout><Calendario /></ProtectedLayout></RotaVisitante>} />
       <Route path="/configuracoes" element={<RotaVisitante><ProtectedLayout><Configuracoes /></ProtectedLayout></RotaVisitante>} />
       <Route path="*" element={<Navigate to="/" replace />} />

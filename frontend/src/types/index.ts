@@ -385,3 +385,27 @@ export interface NotificacaoAceite {
   lida: boolean;
   criado_em: string;
 }
+
+export type TipoNota = 'texto' | 'lista';
+
+export type CorNota = 'amarelo' | 'azul' | 'verde' | 'rosa' | 'lilas';
+
+export interface ItemNota {
+  id: string;
+  texto: string;
+  concluido: boolean;
+}
+
+export interface BlocoDeNotas {
+  id: string;
+  tenant_id: string;
+  professor_id: string;
+  titulo: string;
+  conteudo: string;
+  tipo: TipoNota;
+  itens: ItemNota[];
+  cor: CorNota;
+  fixada: boolean;
+  criado_em: string;
+  atualizado_em: string;
+}

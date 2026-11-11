@@ -22,6 +22,7 @@ import relatoriosRoutes from './routes/relatoriosRoutes';
 import importacaoRoutes from './routes/importacaoRoutes';
 import transferenciaRoutes from './routes/transferenciaRoutes';
 import appSettingsRoutes from './routes/appSettingsRoutes';
+import blocoDeNotasRoutes from './routes/blocoDeNotasRoutes';
 import { ExportacaoController } from './controllers/exportacaoController';
 
 dotenv.config();
@@ -69,6 +70,7 @@ app.use('/api/relatorios', relatoriosRoutes);
 app.use('/api/alunos/importar', importacaoRoutes);
 app.use('/api/transferencias', transferenciaRoutes);
 app.use('/api/app-settings', appSettingsRoutes);
+app.use('/api/bloco-de-notas', blocoDeNotasRoutes);
 app.post('/api/exportar/frequencia', (req, _res, next) => { console.log('[EXPORT] POST frequencia chamado url=' + req.url + ' ct=' + req.headers['content-type']); next(); }, tenantMiddleware, authMiddleware, ExportacaoController.exportarFrequencia);
 app.post('/api/exportar/vagas', tenantMiddleware, authMiddleware, ExportacaoController.exportarVagas);
 app.post('/api/exportar/cancelamentos', tenantMiddleware, authMiddleware, ExportacaoController.exportarCancelamentos);

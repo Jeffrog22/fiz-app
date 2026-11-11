@@ -17,6 +17,7 @@ const links: SidebarLink[] = [
   { to: '/exclusoes', label: 'Exclusões', icon: '\uD83D\uDDD1\uFE0F' },
   { to: '/relatorios', label: 'Relatórios', icon: '\uD83D\uDCCA' },
   { to: '/calendario', label: 'Calendário', icon: '\uD83D\uDCC5' },
+  { to: '/bloco-de-notas', label: 'Bloco de notas', icon: '\uD83D\uDDD3\uFE0F' },
 ];
 
 const configLinks: SidebarLink[] = [

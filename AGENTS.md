@@ -2954,6 +2954,47 @@ Regras:
 
 ---
 
+## Sessão: 02/09/2026 — Bloco de notas (notas pessoais do professor) → v2.94.0
+
+### O que foi feito
+- **Feature "Bloco de notas"** (inspirada no ColorNote): cada professor organiza lembretes, ideias de aula e listas de tarefas da sua unidade, persistidas no Supabase e isoladas por `tenant_id` + `professor_id`
+- **Migration 035** (`035_create_bloco_de_notas.sql`): tabela `bloco_de_notas` (id UUID PK, tenant_id, professor_id, titulo, conteudo, tipo, itens JSONB, cor, fixada, criado_em, atualizado_em) com índices de isolamento `(professor_id)`, `(tenant_id, professor_id)`, `(professor_id, fixada, atualizado_em)`; sem RLS — isolamento aplicado no serviço em todas as queries, incluindo operações por ID
+- **Backend**: `blocoDeNotasService` (listar/criar/atualizar/fixar/remover, todos filtrados por `tenant_id` + `professor_id`), `blocoDeNotasController`, `blocoDeNotasRoutes` montado em `/api/bloco-de-notas` sob `tenantMiddleware` + `authMiddleware`; Modo Visitante sem acesso (não está na allowlist de `podeAcessarVisitante`); admin vê apenas próprias notas (filtrado por `professor_id` do JWT, sem bypass)
+- **Frontend**: página `/bloco-de-notas` (`RotaVisitante` + `ProtectedLayout`), link na Sidebar (somente não-visitante), cartões em seções **Fixadas** e **Outras notas**, cinco cores (amarelo/azul/verde/rosa/lilas), busca por título/texto/conteúdo dos itens via `normalizeSearch` (sem acento/case) combinada com filtros **Todas/Textos/Listas**, fixar/desafixar, excluir com confirmação, marcar/desmarcar tarefas direto no cartão, modal de criar/editar que preserva `concluido` dos itens que continuam na lista, estados de carregamento, lista vazia, busca sem resultado e erro ao salvar com conteúdo preservado para nova tentativa
+- Fora do escopo v1: compartilhamento, notificações, anexos, vínculo com turmas/alunos, importação de notas de exemplo
+
+### Decisões
+- Modal separado para criar/editar (consistente com modais existentes); busca no cabeçalho da tela
+- Isolamento na camada de serviço (não RLS), seguindo o padrão de `card_aula`/`app_settings`
+- Migration 035 **não executada no Supabase** — pendente de autorização explícita
+
+### Arquivos
+- `backend/src/migrations/035_create_bloco_de_notas.sql` (novo)
+- `backend/src/types/index.ts` (+`TipoNota`, `CorNota`, `ItemNota`, `BlocoDeNotas`)
+- `backend/src/services/blocoDeNotasService.ts` (novo)
+- `backend/src/controllers/blocoDeNotasController.ts` (novo)
+- `backend/src/routes/blocoDeNotasRoutes.ts` (novo)
+- `backend/src/index.ts` (+import +mount rota `/api/bloco-de-notas`)
+- `frontend/src/types/index.ts` (+mesmos tipos)
+- `frontend/src/pages/BlocoDeNotas.tsx` (novo)
+- `frontend/src/utils/blocoDeNotasUtils.ts` (novo — `filtrarNotas` puro)
+- `frontend/src/App.tsx` (+rota)
+- `frontend/src/components/common/Sidebar.tsx` (+link)
+- `backend/src/services/__tests__/blocoDeNotasService.test.ts` (novo — 8 casos)
+- `frontend/src/utils/__tests__/blocoDeNotasUtils.test.ts` (novo — 6 casos)
+- `CHANGELOG.md` (v2.94.0), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Backend: `tsc --noEmit` 0 erros · 144/144 testes passam (136 + 8 novos, jest)
+- Frontend: `tsc --noEmit` 0 erros · 126/126 testes passam (120 + 6 novos, vitest) · `npm run build` limpo
+- Sem mudança de API para rotas existentes
+
+### Pendências / riscos conhecidos
+- Executar migration 035 no Supabase apenas após autorização explícita
+- Teste manual: criar/recarregar/recuperar nota, editar lista preservando concluido, busca "iniciacao" acha "Iniciação", fixar/desafixar move entre secoes, outro professor/unidade/visitante tem acesso negado, erro ao salvar preserva conteúdo
+
+---
+
 ## Sessão: 09/11/2026 — Modo Visitante (somente leitura 2h, nomes fictícios) → v2.93.0
 
 ### O que foi feito
