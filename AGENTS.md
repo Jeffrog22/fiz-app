@@ -2954,6 +2954,26 @@ Regras:
 
 ---
 
+## Sessão: 02/09/2026 — Sidebar: todos os ícones em SVG colorido → v2.95.6
+
+### O que foi feito
+- Criação do arquivo `frontend/src/components/icons/IconsColoridos.tsx` com 9 componentes SVG coloridos para todos os links da Sidebar:
+  - `HomeIcon` (casa), `ChamadaIcon` (livro+usuário), `TurmasIcon` (pasta+usuários)
+  - `VagasIcon` (seta+quadrado), `AlunosIcon` (usuário+caneta), `ExclusoesIcon` (lixeira)
+  - `RelatoriosIcon` (gráficos), `CalendarioIcon` (calendário), `BlocoNotasIcon` (notas)
+- Cada ícone usa tamanho padrão da sidebar (`w-5 h-5` ≈ 20px) e cores variadas por elemento:
+  - `stroke-blue-500` (azul), `stroke-red-500` (vermelho), `stroke-white` (branco)
+- Troca em `frontend/src/components/common/Sidebar.tsx` de todos os emojis unicode pelos novos componentes SVG coloridos
+- `tsc --noEmit`: 0 erros · `npm run build`: limpo
+- Commit `c99d733` + tag `v2.95.6` (bump PATCH via hook, `chore:`) → `origin/master`
+
+### Arquivos
+- `frontend/src/components/icons/IconsColoridos.tsx` (novo)
+- `frontend/src/components/common/Sidebar.tsx` (import + todos os ícones trocados)
+- `AGENTS.md` (esta sessão)
+
+---
+
 ## Sessão: 02/09/2026 — Bloco de notas: ícone SVG colorido menor → v2.95.4
 
 ### O que foi feito
