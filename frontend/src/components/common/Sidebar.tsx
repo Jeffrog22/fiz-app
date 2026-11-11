@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { NotebookColorido } from '../icons/NotebookColorido';
+import {
+  HomeIcon,
+  ChamadaIcon,
+  TurmasIcon,
+  VagasIcon,
+  AlunosIcon,
+  ExclusoesIcon,
+  RelatoriosIcon,
+  CalendarioIcon,
+  BlocoNotasIcon,
+} from '../icons/IconsColoridos';
 
 interface SidebarLink {
   to: string;
@@ -10,15 +20,15 @@ interface SidebarLink {
 }
 
 const links: SidebarLink[] = [
-  { to: '/home', label: 'Início', icon: '\uD83C\uDFE0' },
-  { to: '/chamadas', label: 'Chamadas', icon: '\uD83D\uDCDD' },
-  { to: '/alunos', label: 'Alunos', icon: '\uD83D\uDC65' },
-  { to: '/turmas', label: 'Turmas', icon: '\uD83D\uDCDA' },
-  { to: '/vagas', label: 'Vagas', icon: '\uD83D\uDCE6' },
-  { to: '/exclusoes', label: 'Exclusões', icon: '\uD83D\uDDD1\uFE0F' },
-  { to: '/relatorios', label: 'Relatórios', icon: '\uD83D\uDCCA' },
-  { to: '/calendario', label: 'Calendário', icon: '\uD83D\uDCC5' },
-  { to: '/bloco-de-notas', label: 'Bloco de notas', icon: <NotebookColorido /> },
+  { to: '/home', label: 'Início', icon: <HomeIcon /> },
+  { to: '/chamadas', label: 'Chamadas', icon: <ChamadaIcon /> },
+  { to: '/alunos', label: 'Alunos', icon: <AlunosIcon /> },
+  { to: '/turmas', label: 'Turmas', icon: <TurmasIcon /> },
+  { to: '/vagas', label: 'Vagas', icon: <VagasIcon /> },
+  { to: '/exclusoes', label: 'Exclusões', icon: <ExclusoesIcon /> },
+  { to: '/relatorios', label: 'Relatórios', icon: <RelatoriosIcon /> },
+  { to: '/calendario', label: 'Calendário', icon: <CalendarioIcon /> },
+  { to: '/bloco-de-notas', label: 'Bloco de notas', icon: <BlocoNotasIcon /> },
 ];
 
 const configLinks: SidebarLink[] = [

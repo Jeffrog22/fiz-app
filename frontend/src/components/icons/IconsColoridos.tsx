@@ -1,0 +1,194 @@
+import { SVGProps } from 'react';
+
+export function HomeIcon({ className }: SVGProps<SVGSVGElement> & { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`w-5 h-5 ${className ?? ''}`}
+    >
+      <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" stroke="blue-500" />
+      <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="red-500" />
+    </svg>
+  );
+}
+
+export function ChamadaIcon({ className }: SVGProps<SVGSVGElement> & { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`w-5 h-5 ${className ?? ''}`}
+    >
+      <path d="M15 13a3 3 0 1 0-6 0" stroke="blue-500" />
+      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20" stroke="red-500" />
+      <circle cx="12" cy="8" r="2" stroke="white" fill="none" />
+    </svg>
+  );
+}
+
+export function TurmasIcon({ className }: SVGProps<SVGSVGElement> & { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`w-5 h-5 ${className ?? ''}`}
+    >
+      <path d="M5.254 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2V9.255" stroke="blue-500" />
+      <circle cx="13" cy="15" r="3" stroke="red-500" fill="none" />
+      <path d="M17 22a4 4 0 0 0-8 0" stroke="white" />
+      <path d="M22 22A4 4 0 0 0 20.24 18.686 1 1 0 0 1 20.1 17.143 3 3 0 0 0 19.5 12.402" stroke="red-500" fill="none" />
+    </svg>
+  );
+}
+
+export function VagasIcon({ className }: SVGProps<SVGSVGElement> & { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`w-5 h-5 ${className ?? ''}`}
+    >
+      <path d="M3 12h10" stroke="blue-500" />
+      <path d="M3 8V5a2 2 0 012-2h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2v-3" stroke="red-500" fill="none" />
+      <path d="m9 16 4-4-4-4" stroke="white" />
+    </svg>
+  );
+}
+
+export function AlunosIcon({ className }: SVGProps<SVGSVGElement> & { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`w-5 h-5 ${className ?? ''}`}
+    >
+      <path d="M11.5 15H7a4 4 0 0 0-4 4v2" stroke="blue-500" fill="none" />
+      <path d="M21.378 16.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z" stroke="red-500" fill="none" />
+      <circle cx="10" cy="7" r="4" stroke="white" fill="none" />
+    </svg>
+  );
+}
+
+export function ExclusoesIcon({ className }: SVGProps<SVGSVGElement> & { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`w-5 h-5 ${className ?? ''}`}
+    >
+      <path d="M10 11v6" stroke="blue-500" />
+      <path d="M14 11v6" stroke="blue-500" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" stroke="red-500" fill="none" />
+      <path d="M3 6h18" stroke="red-500" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="white" fill="none" />
+    </svg>
+  );
+}
+
+export function RelatoriosIcon({ className }: SVGProps<SVGSVGElement> & { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`w-5 h-5 ${className ?? ''}`}
+    >
+      <path d="M12 16v5" stroke="blue-500" />
+      <path d="M16 14.639V21" stroke="blue-500" />
+      <path d="M20 10.656V21" stroke="blue-500" />
+      <path d="m22 3-8.646 8.646a.5.5 0 0 1-.708 0L9.354 8.354a.5.5 0 0 0-.707 0L2 15" stroke="red-500" fill="none" />
+      <path d="M4 18.463V21" stroke="red-500" />
+      <path d="M8 14.656V21" stroke="white" />
+    </svg>
+  );
+}
+
+export function CalendarioIcon({ className }: SVGProps<SVGSVGElement> & { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`w-5 h-5 ${className ?? ''}`}
+    >
+      <path d="M8 2v3" stroke="blue-500" />
+      <path d="M16 2v3" stroke="blue-500" />
+      <rect x="3" y="3" width="18" height="18" rx="2" stroke="blue-500" fill="none" />
+      <path d="M3 9h18" stroke="red-500" />
+      <path d="M8 13h.01" stroke="red-500" />
+      <path d="M12 13h.01" stroke="red-500" />
+      <path d="M16 13h.01" stroke="red-500" />
+      <path d="M8 17h.01" stroke="white" />
+      <path d="M12 17h.01" stroke="white" />
+      <path d="M16 17h.01" stroke="white" />
+    </svg>
+  );
+}
+
+export function BlocoNotasIcon({ className }: SVGProps<SVGSVGElement> & { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`w-5 h-5 ${className ?? ''}`}
+    >
+      <path d="M15 3v5a1 1 0 0 0 1 1h5" stroke="blue-500" fill="none" />
+      <path d="M18 15v6" stroke="red-500" fill="none" />
+      <path d="M21 12.356V9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7.355" stroke="red-500" fill="none" />
+      <path d="M21 18h-6" stroke="white" fill="none" />
+    </svg>
+  );
+}
