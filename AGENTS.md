@@ -2954,6 +2954,20 @@ Regras:
 
 ---
 
+## Sessão: 02/09/2026 — Bloco de notas: ícone StickyNoteCheck → NotebookTabs → v2.95.2
+
+### O que foi feito
+- Troca do ícone da Sidebar do link "Bloco de notas" de `<StickyNoteCheck />` para `<NotebookTabs />` (lucide-react), conforme escolha do usuário
+- Interface `SidebarLink.icon` já tipada como `React.ReactNode` (ajustada na sessão anterior)
+- `tsc --noEmit`: 0 erros · `npm run build`: limpo
+- Commit `fc3de53` + tag `v2.95.2` (bump PATCH via hook, `chore:`) → `origin/master`
+
+### Arquivos
+- `frontend/src/components/common/Sidebar.tsx` (import e ícone do link /bloco-de-notas)
+- `AGENTS.md` (esta sessão)
+
+---
+
 ## Sessão: 02/09/2026 — Bloco de notas (notas pessoais do professor) → v2.94.0
 
 ### O que foi feito
