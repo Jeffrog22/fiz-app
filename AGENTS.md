@@ -2954,6 +2954,25 @@ Regras:
 
 ---
 
+## Sessão: 02/09/2026 — Sidebar e Home: ícones Configurações, Ajuda e cards em SVG colorido → v2.95.10
+
+### O que foi feito
+- Adição de `SettingsIcon` (baseado em `lucide-settings`) e `AjudaIcon` (baseado em `lucide-shield-question-mark`) a `frontend/src/components/icons/IconsColoridos.tsx`, seguindo o padrão dos demais ícones: `w-5 h-5`, cores `stroke-blue-600 dark:stroke-blue-400` (azul), `stroke-red-600 dark:stroke-red-400` (vermelho), `stroke-gray-500 dark:stroke-gray-400` (cinza)
+- Troca no link da Sidebar `/configuracoes` de `⚙️` (emoji) por `<SettingsIcon />`
+- Troca no botão Ajuda da Sidebar de `❓` (emoji) por `<AjudaIcon />`
+- Troca nos cards grandes da tela `Home.tsx` de todos os emojis unicode pelos componentes SVG coloridos (`ChamadaIcon`, `AlunosIcon`, `TurmasIcon`, `CalendarioIcon`, `ExclusoesIcon`, `VagasIcon`, `RelatoriosIcon`, `SettingsIcon`)
+- Interface `MenuItem.icon` de `string` alterada para `React.ReactNode`
+- `tsc --noEmit`: 0 erros · `npm run build`: limpo
+- Commit `2d96d8c` + tag `v2.95.10` (bump PATCH via hook, `chore:`) → `origin/master`
+
+### Arquivos
+- `frontend/src/components/icons/IconsColoridos.tsx` (+SettingsIcon, +AjudaIcon)
+- `frontend/src/components/common/Sidebar.tsx` (Configurações e Ajuda trocados)
+- `frontend/src/pages/Home.tsx` (cards grandes trocados para SVG colorido)
+- `AGENTS.md` (esta sessão)
+
+---
+
 ## Sessão: 02/09/2026 — Sidebar: ícones SVG corrigidos para visibilidade em ambos os temas → v2.95.8
 
 ### O que foi feito
