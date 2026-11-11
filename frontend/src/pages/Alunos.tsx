@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import AlunoModal from '../components/modals/AlunoModal';
 import ImpressaoListaModal from '../components/modals/ImpressaoListaModal';
@@ -37,6 +37,9 @@ function largurasValidas(v: unknown): LargurasCols | null {
 
 const Alunos: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const nomeClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [alunoSemTurma, setAlunoSemTurma] = useState<string | null>(null);
   const [alunos, setAlunos] = useState<any[]>([]);
   const [professores, setProfessores] = useState<Professor[]>([]);
   const [turmas, setTurmas] = useState<any[]>([]);
@@ -874,7 +877,13 @@ const Alunos: React.FC = () => {
       {carregando ? (
         <p className="text-sm text-gray-500 dark:text-gray-400">Carregando...</p>
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
+        <>
+          {alunoSemTurma && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg mb-3 text-sm dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-300">
+              {alunoSemTurma} não está alocado a nenhuma turma. Selecione uma turma primeiro.
+            </div>
+          )}
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
           <table
             className="w-full text-sm"
             style={
@@ -950,7 +959,25 @@ const Alunos: React.FC = () => {
                           : 'text-primary-600 dark:text-primary-400'
                       }`}
                       title={isVisitante ? undefined : aceiteNotif?.aluno_id === a.id ? 'Aluno aceito em outra unidade — pode ser excluído' : 'clique para editar'}
-                      onClick={() => { if (!isVisitante) { setEditando(a); setModalOpen(true); } }}
+                      onClick={() => {
+                        if (isVisitante) return;
+                        if (nomeClickTimerRef.current) {
+                          clearTimeout(nomeClickTimerRef.current);
+                          nomeClickTimerRef.current = null;
+                          if (!a.turma_id) {
+                            setAlunoSemTurma(a.nome);
+                            setTimeout(() => setAlunoSemTurma(null), 5000);
+                            return;
+                          }
+                          navigate(`/chamadas?turma=${encodeURIComponent(a.turma_id)}&aluno=${encodeURIComponent(a.id)}`);
+                          return;
+                        }
+                        nomeClickTimerRef.current = setTimeout(() => {
+                          nomeClickTimerRef.current = null;
+                          setEditando(a);
+                          setModalOpen(true);
+                        }, 250);
+                      }}
                     >
                       {aceiteNotif?.aluno_id === a.id && (
                         <span className="mr-1">{'\uD83C\uDF93'}</span>
@@ -996,6 +1023,7 @@ const Alunos: React.FC = () => {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {desalocarTarget && (

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import type { ChamadaLog, Aluno, Turma, CalendarioEvento } from '../../types';
 import api from '../../utils/api';
 import { formatarNomeMobile } from '../../utils/formatters';
@@ -96,6 +96,7 @@ interface DataGridProps {
   onAfastamento?: (alunoId: string, dias: number) => void;
   retroativo?: boolean;
   somenteLeitura?: boolean;
+  alunoDestacado?: string;
 }
 
 const DataGrid: React.FC<DataGridProps> = ({
@@ -122,6 +123,7 @@ const DataGrid: React.FC<DataGridProps> = ({
   enrollmentPeriods,
   retroativo = false,
   somenteLeitura = false,
+  alunoDestacado,
 }) => {
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dateHeaderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -152,6 +154,12 @@ const DataGrid: React.FC<DataGridProps> = ({
       dateHeaderTimerRef.current = null;
     }, 250);
   }, [onDateHeaderClick, onDateHeaderDoubleClick]);
+
+  useEffect(() => {
+    if (!alunoDestacado) return;
+    const el = document.querySelector<HTMLElement>(`td[data-aluno-id="${alunoDestacado}"]`);
+    el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [alunoDestacado]);
 
   const [editandoAnotacao, setEditandoAnotacao] = useState<{
     alunoId: string;
@@ -490,6 +498,7 @@ const DataGrid: React.FC<DataGridProps> = ({
               return (
                 <tr key={aluno.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td
+                    data-aluno-id={aluno.id}
                     className={`sticky left-0 bg-white px-4 py-2 font-medium whitespace-nowrap z-10 dark:bg-gray-800 ${
                       somenteLeitura ? 'cursor-default' : 'cursor-pointer'
                     } ${
@@ -502,7 +511,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                         : temAnotacao(aluno.id) || (alunosComAnotacao?.has(aluno.id))
                         ? 'text-blue-600 dark:text-blue-400'
                         : 'text-gray-800 dark:text-gray-100'
-                    }`}
+                    } ${aluno.id === alunoDestacado ? 'ring-2 ring-primary-500 bg-blue-50 dark:bg-blue-900/20' : ''}`}
                     style={
                       somenteLeitura
                         ? undefined

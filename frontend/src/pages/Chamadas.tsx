@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
 import DataGrid from '../components/grid/DataGrid';
 import ChamadaFilters from '../components/grid/ChamadaFilters';
@@ -83,6 +83,13 @@ const Chamadas: React.FC = () => {
   const [limparModo, setLimparModo] = useState<'dia' | 'tudo'>('dia');
   const [limparDropdownOpen, setLimparDropdownOpen] = useState(false);
   const [undoCount, setUndoCount] = useState(0);
+
+  const [searchParams] = useSearchParams();
+  const urlTurma = searchParams.get('turma') || '';
+  const urlAluno = searchParams.get('aluno') || '';
+  const [alunoDestacado, setAlunoDestacado] = useState<string | undefined>(urlAluno || undefined);
+  const aplicadoUrlRef = useRef<string | null>(null);
+  const suprimeResetIndiceRef = useRef(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const filaSalvamento = useRef<any[]>([]);
@@ -258,6 +265,24 @@ const Chamadas: React.FC = () => {
   }, [dias]);
 
   useEffect(() => { carregarDados(); }, [carregarDados, labelSelecionada, professorId]);
+
+  useEffect(() => {
+    if (!urlTurma) return;
+    if (aplicadoUrlRef.current === urlTurma) return;
+    const turma = turmas.find((t) => t.grupo_id === urlTurma);
+    if (!turma) return;
+    aplicadoUrlRef.current = urlTurma;
+    suprimeResetIndiceRef.current = true;
+    setProfessorId(turma.professor_id || '');
+    setLabelSelecionada(turma.label || '');
+    const lista = turmas
+      .filter((t) => t.label === turma.label && t.professor_id === turma.professor_id)
+      .sort((a, b) => (a.horario || '').localeCompare(b.horario || ''));
+    const idx = lista.findIndex((t) => t.grupo_id === urlTurma);
+    setIndiceAtual(idx >= 0 ? idx : 0);
+    setAlunoDestacado(urlAluno || undefined);
+    setTimeout(() => { suprimeResetIndiceRef.current = false; }, 0);
+  }, [urlTurma, turmas, urlAluno]);
   useEffect(() => { carregarLogs(); }, [carregarLogs]);
   useEffect(() => { aplicarEventosCalendario(); }, [aplicarEventosCalendario]);
   useEffect(() => { carregarAnotacoes(); }, [carregarAnotacoes]);
@@ -283,6 +308,7 @@ const Chamadas: React.FC = () => {
   }, [labelSelecionada, professorId, indiceAtual, mes, ano, retroativo]);
 
   useEffect(() => {
+    if (suprimeResetIndiceRef.current) return;
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
@@ -1105,6 +1131,7 @@ const Chamadas: React.FC = () => {
           enrollmentPeriods={enrollmentPeriods}
           retroativo={retroativo}
           somenteLeitura={isVisitante}
+          alunoDestacado={alunoDestacado}
           onTogglePresenca={handleTogglePresenca}
           onUpdateAnotacao={handleUpdateAnotacao}
           onDateHeaderClick={handleDateHeaderClick}

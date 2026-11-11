@@ -206,8 +206,9 @@ const Turmas: React.FC = () => {
                 return (
                   <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td
-                      className="px-4 py-2 font-medium text-gray-800 dark:text-gray-100"
-                      title={t.grupo_id || t.label}
+                      className="px-4 py-2 font-medium text-gray-800 dark:text-gray-100 cursor-pointer hover:underline decoration-primary-600 underline-offset-4"
+                      title={t.grupo_id ? `Duplo clique para abrir chamada da turma (${t.grupo_id})` : t.label || ''}
+                      onDoubleClick={() => navigate(`/chamadas?turma=${encodeURIComponent(t.grupo_id || '')}`)}
                     >
                       {t.label}
                     </td>
