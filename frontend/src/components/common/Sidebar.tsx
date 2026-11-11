@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { StickyNoteCheck } from 'lucide-react';
 
 interface SidebarLink {
   to: string;
   label: string;
-  icon: string;
+  icon: React.ReactNode;
 }
 
 const links: SidebarLink[] = [
@@ -17,7 +18,7 @@ const links: SidebarLink[] = [
   { to: '/exclusoes', label: 'Exclusões', icon: '\uD83D\uDDD1\uFE0F' },
   { to: '/relatorios', label: 'Relatórios', icon: '\uD83D\uDCCA' },
   { to: '/calendario', label: 'Calendário', icon: '\uD83D\uDCC5' },
-  { to: '/bloco-de-notas', label: 'Bloco de notas', icon: '\uD83D\uDDD3\uFE0F' },
+  { to: '/bloco-de-notas', label: 'Bloco de notas', icon: <StickyNoteCheck /> },
 ];
 
 const configLinks: SidebarLink[] = [
@@ -108,7 +109,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0 })
               }`
             }
           >
-            <span className="text-lg flex-shrink-0">{link.icon}</span>
+            {link.icon}
             <span
               className={`transition-all duration-300 ${
                 collapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'
@@ -146,7 +147,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0 })
               }`
             }
           >
-            <span className="text-lg flex-shrink-0">{link.icon}</span>
+            {link.icon}
             <span
               className={`transition-all duration-300 ${
                 collapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'
