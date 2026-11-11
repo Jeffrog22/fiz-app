@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { NotebookTabs } from 'lucide-react';
+import { NotebookColorido } from '../icons/NotebookColorido';
 
 interface SidebarLink {
   to: string;
@@ -18,7 +18,7 @@ const links: SidebarLink[] = [
   { to: '/exclusoes', label: 'Exclusões', icon: '\uD83D\uDDD1\uFE0F' },
   { to: '/relatorios', label: 'Relatórios', icon: '\uD83D\uDCCA' },
   { to: '/calendario', label: 'Calendário', icon: '\uD83D\uDCC5' },
-  { to: '/bloco-de-notas', label: 'Bloco de notas', icon: <NotebookTabs /> },
+  { to: '/bloco-de-notas', label: 'Bloco de notas', icon: <NotebookColorido /> },
 ];
 
 const configLinks: SidebarLink[] = [
