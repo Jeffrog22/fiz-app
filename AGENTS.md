@@ -2954,6 +2954,23 @@ Regras:
 
 ---
 
+## Sessão: 02/09/2026 — Sidebar: ícones SVG corrigidos para visibilidade em ambos os temas → v2.95.8
+
+### O que foi feito
+- Correção de `frontend/src/components/icons/IconsColoridos.tsx`: substituídos os atributos `stroke="blue-500"`, `stroke="red-500"` e `stroke="white"` (inválidos no SVG e invisíveis no modo claro) por `className` com classes Tailwind válidas:
+  - Azul: `stroke-blue-600 dark:stroke-blue-400`
+  - Vermelho: `stroke-red-600 dark:stroke-red-400`
+  - Branco/substituto: `stroke-gray-500 dark:stroke-gray-400` (visível em ambos os temas)
+- Ícones agora ficam visíveis nos temas claro e escuro
+- `tsc --noEmit`: 0 erros · `npm run build`: limpo
+- Commit `f8fd20d` + tag `v2.95.8` (bump PATCH via hook, `fix:`) → `origin/master`
+
+### Arquivos
+- `frontend/src/components/icons/IconsColoridos.tsx` (corrigido)
+- `AGENTS.md` (esta sessão)
+
+---
+
 ## Sessão: 02/09/2026 — Sidebar: todos os ícones em SVG colorido → v2.95.6
 
 ### O que foi feito
