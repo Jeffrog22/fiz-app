@@ -1,5 +1,14 @@
 # Changelog - Fiz! App
 
+## [v2.96.1] - 2026-11-11
+### Fix
+- **Correção aba Transferências de Nível e botão Transferir no grid**
+  - Removido código morto do `modoTransferencia` no `Alunos.tsx` (estados `professorTransferir`, `turmaTransferir`, `transferindo`, `turmaOrigemFiltro`, `handleTransferir`, filtro de origem, bloco JSX de checkboxes) que mantinha o comportamento antigo de ativação de checkboxes no grid
+  - Botão "Transferir" agora navega direto para `/transferencias-nivel/novo` (sem ativar modo de seleção no grid)
+  - `columnFilters` restaurado (filtros por coluna do grid de Alunos)
+  - Sidebar: badge de lotes pendentes (`lotesPendentes`) no link "Transferências de nível", carregado via `/api/transferencias-nivel/lotes/pendentes/count` com polling de 30s
+  - App.tsx: estado `lotesPendentes` e useEffect de carregamento
+
 ## [v2.95.0] - 2026-11-11
 ### Feat
 - **Programação de transferências de nível em bloco** — planeja trocas de turma de vários alunos (inclusive entre professores da mesma unidade) com data efetiva futura, aplicadas mediante confirmação manual, sem alterar a chamada nem a documentação do mês atual até a aplicação

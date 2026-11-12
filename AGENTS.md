@@ -2954,6 +2954,41 @@ Regras:
 
 ---
 
+## Sessão: 11/11/2026 — Correção aba Transferências de Nível e botão Transferir no grid → v2.96.1
+
+### O que foi feito
+- **Remoção de código morto** do `modoTransferencia` no `Alunos.tsx` que mantinha o comportamento antigo de ativação de checkboxes no grid:
+  - Removidos estados `professorTransferir`, `turmaTransferir`, `transferindo`, `turmaOrigemFiltro`
+  - Removida função `handleTransferir` (aplicação imediata via PUT serial)
+  - Removido bloco JSX `{modoTransferencia && ...}` com checkboxes, filtro de turma origem, professor destino e botão "Programar transferência destes alunos"
+  - Removida declaração órfã de `turmasDestino` (useMemo baseado em `professorTransferir` inexistente)
+  - Restaurada declaração de `columnFilters` (filtros por coluna do grid)
+  - Botão "Transferir" agora navega direto para `/transferencias-nivel/novo` (sem ativar modo de seleção no grid)
+- **Badge de lotes pendentes na Sidebar**: link "Transferências de nível" exibe badge roxo com contador quando há lotes pendentes de aplicação
+- **App.tsx**: estado `lotesPendentes` + useEffect de carregamento via `/api/transferencias-nivel/lotes/pendentes/count` (polling 30s)
+- **Sidebar.tsx**: prop `lotesPendentes` + render do badge no link `/transferencias-nivel`
+
+### Decisões
+- O link "Transferências de nível" aparece sempre na sidebar para não-visitantes (entre Alunos e Turmas), não depende de nenhuma transferência ter sido feita
+- O botão "Transferir" no grid de Alunos não ativa mais checkboxes; apenas navega para a página de programação
+- A seleção de alunos é feita dentro da página `/transferencias-nivel/novo`, não via grid de Alunos
+
+### Arquivos
+- `frontend/src/pages/Alunos.tsx` (remoção código morto modoTransferencia, restauração columnFilters, botão Transferir simplificado)
+- `frontend/src/components/common/Sidebar.tsx` (+prop lotesPendentes, +badge no link)
+- `frontend/src/App.tsx` (+estado lotesPendentes, +useEffect carregamento, +passagem de prop ao Sidebar)
+- `CHANGELOG.md` (v2.96.1), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Frontend: 0 erros (`tsc --noEmit`) · 126/126 testes passam (vitest) · `npm run build` limpo
+- Backend inalterado nesta correção
+
+### Commit / Tag / Push
+- Commit `0c14054` + tag `v2.96.1` (bump PATCH via hook, `fix:`) → `origin/master` e `origin v2.96.1`
+
+
+---
+
 ## Sessão: 11/11/2026 — Programação de transferências de nível em bloco → v2.95.0
 
 ### O que foi feito
