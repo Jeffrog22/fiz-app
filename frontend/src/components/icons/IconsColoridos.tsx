@@ -231,3 +231,26 @@ export function AjudaIcon({ className }: SVGProps<SVGSVGElement> & { className?:
     </svg>
   );
 }
+
+export function TransferenciasIcon({ className }: SVGProps<SVGSVGElement> & { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`w-5 h-5 ${className ?? ''}`}
+    >
+      <path d="M13 11V5" className="stroke-blue-600 dark:stroke-blue-400" />
+      <path d="M11 7h4" className="stroke-blue-600 dark:stroke-blue-400" />
+      <path d="M7 7h4" className="stroke-red-600 dark:stroke-red-400" />
+      <path d="M7 11V16" className="stroke-red-600 dark:stroke-red-400" />
+      <path d="M11 16h4" className="stroke-gray-500 dark:stroke-gray-400" />
+      <path d="M13 16V20" className="stroke-gray-500 dark:stroke-gray-400" />
+    </svg>
+  );
+}

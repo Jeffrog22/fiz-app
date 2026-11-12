@@ -13,6 +13,7 @@ import {
   BlocoNotasIcon,
   SettingsIcon,
   AjudaIcon,
+  TransferenciasIcon,
 } from '../icons/IconsColoridos';
 
 interface SidebarLink {
@@ -25,6 +26,7 @@ const links: SidebarLink[] = [
   { to: '/home', label: 'Início', icon: <HomeIcon /> },
   { to: '/chamadas', label: 'Chamadas', icon: <ChamadaIcon /> },
   { to: '/alunos', label: 'Alunos', icon: <AlunosIcon /> },
+  { to: '/transferencias-nivel', label: 'Transferências de nível', icon: <TransferenciasIcon /> },
   { to: '/turmas', label: 'Turmas', icon: <TurmasIcon /> },
   { to: '/vagas', label: 'Vagas', icon: <VagasIcon /> },
   { to: '/exclusoes', label: 'Exclusões', icon: <ExclusoesIcon /> },

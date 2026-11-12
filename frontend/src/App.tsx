@@ -17,6 +17,8 @@ import Exclusoes from './pages/Exclusoes';
 import Calendario from './pages/Calendario';
 import Relatorios from './pages/Relatorios';
 import Configuracoes from './pages/Configuracoes';
+import TransferenciasNivel from './pages/TransferenciasNivel';
+import TransferenciasNivelNovo from './pages/TransferenciasNivelNovo';
 import TopBar from './components/common/TopBar';
 import Sidebar from './components/common/Sidebar';
 import ConnectionBanner from './components/common/ConnectionBanner';
@@ -136,6 +138,8 @@ const AppContent: React.FC = () => {
         <Route path="/exclusoes" element={<RotaVisitante><ProtectedLayout><Exclusoes /></ProtectedLayout></RotaVisitante>} />
         <Route path="/relatorios" element={<RotaVisitante><ProtectedLayout><Relatorios /></ProtectedLayout></RotaVisitante>} />
       <Route path="/bloco-de-notas" element={<RotaVisitante><ProtectedLayout><BlocoDeNotas /></ProtectedLayout></RotaVisitante>} />
+      <Route path="/transferencias-nivel" element={<ProtectedLayout><TransferenciasNivel /></ProtectedLayout>} />
+      <Route path="/transferencias-nivel/novo" element={<ProtectedLayout><TransferenciasNivelNovo /></ProtectedLayout>} />
       <Route path="/calendario" element={<RotaVisitante><ProtectedLayout><Calendario /></ProtectedLayout></RotaVisitante>} />
       <Route path="/configuracoes" element={<RotaVisitante><ProtectedLayout><Configuracoes /></ProtectedLayout></RotaVisitante>} />
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -634,15 +634,11 @@ const Alunos: React.FC = () => {
           <button
             type="button"
             onClick={() => {
-              if (modoTransferencia) { setSelectedIds(new Set()); setTurmaTransferir(''); setProfessorTransferir(''); setTurmaOrigemFiltro(''); }
               setModoAlocacao(false);
-              setModoTransferencia(!modoTransferencia);
+              setModoRematricula(false);
+              navigate('/transferencias-nivel/novo');
             }}
-            className={`px-4 py-2 text-sm rounded-md transition-colors ${
-              modoTransferencia
-                ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-300'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
-            }`}
+            className="px-4 py-2 text-sm rounded-md transition-colors bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-300"
           >
             {modoTransferencia ? 'Sair da Transferência' : 'Transferir'}
           </button>
@@ -781,66 +777,25 @@ const Alunos: React.FC = () => {
 
       {modoTransferencia && (
         <div className="flex items-center gap-3 px-4 py-2 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 rounded-md flex-wrap">
-          <select
-            value={turmaOrigemFiltro}
-            onChange={(e) => { setTurmaOrigemFiltro(e.target.value); setSelectedIds(new Set()); }}
-            className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:dark:ring-purple-400 min-w-[160px]"
-          >
-            <option value="">Turma atual (filtro)</option>
-            {turmasOrdenadas.map((t: any) => (
-              <option key={t.grupo_id} value={t.grupo_id}>
-                {t.label} - {(t.horario || '').slice(0, 5)} ({t.nivel || 'sem nível'})
-              </option>
-            ))}
-          </select>
-
-          <span className="text-xs text-gray-400 dark:text-gray-500">→</span>
-
-          <select
-            value={professorTransferir}
-            onChange={(e) => { setProfessorTransferir(e.target.value); setTurmaTransferir(''); }}
-            className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:dark:ring-purple-400 min-w-[140px]"
-          >
-            <option value="">Professor(a)</option>
-            {professores.map((p) => (
-              <option key={p.id} value={p.id}>{p.nome}</option>
-            ))}
-          </select>
-          <select
-            value={turmaTransferir}
-            onChange={(e) => setTurmaTransferir(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:dark:ring-purple-400 min-w-[180px]"
-            disabled={!professorTransferir}
-          >
-            <option value="">Nova turma</option>
-            {turmasDestino.map((t: any) => (
-              <option key={t.grupo_id} value={t.grupo_id}>
-                {t.label} - {(t.horario || '').slice(0, 5)} ({t.nivel || 'sem nível'})
-              </option>
-            ))}
-          </select>
+          <span className="text-sm font-medium text-purple-700 dark:text-purple-300 whitespace-nowrap">
+            Modo Transferência ativo — {selectedIds.size} aluno(s) selecionado{selectedIds.size !== 1 ? 's' : ''}
+          </span>
           {selectedIds.size > 0 && (
-            <>
-              <span className="text-sm font-medium text-purple-700 dark:text-purple-300 whitespace-nowrap">
-                {selectedIds.size} selecionado{selectedIds.size !== 1 ? 's' : ''}
-              </span>
-              <button
-                type="button"
-                onClick={handleTransferir}
-                disabled={!turmaTransferir || transferindo}
-                className="px-4 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {transferindo ? 'Transferindo...' : 'Transferir'}
-              </button>
-              <button
-                type="button"
-                onClick={() => { setSelectedIds(new Set()); setTurmaTransferir(''); }}
-                className="px-4 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                Limpar
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={() => navigate('/transferencias-nivel/novo')}
+              className="px-4 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+            >
+              Programar transferência destes alunos
+            </button>
           )}
+          <button
+            type="button"
+            onClick={() => { setSelectedIds(new Set()); setModoTransferencia(false); }}
+            className="px-4 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            Sair
+          </button>
         </div>
       )}
 

@@ -409,3 +409,64 @@ export interface BlocoDeNotas {
   criado_em: string;
   atualizado_em: string;
 }
+
+export type StatusTransferenciaLote = 'programado' | 'revisao' | 'aplicando' | 'aplicado' | 'cancelado' | 'erro_parcial';
+
+export type StatusTransferenciaLoteItem = 'pendente' | 'aplicado' | 'conflito' | 'erro';
+
+export interface TransferenciaLote {
+  id: string;
+  tenant_id: string;
+  professor_id: string;
+  turma_destino: string;
+  nivel_destino?: string | null;
+  professor_destino?: string | null;
+  data_efetiva: string;
+  status: StatusTransferenciaLote;
+  motivo?: string | null;
+  criado_em: string;
+  atualizado_em: string;
+  confirmado_em?: string | null;
+  confirmado_por?: string | null;
+  totalItens?: number;
+  itensAplicados?: number;
+  itensPendentes?: number;
+}
+
+export interface TransferenciaLoteItem {
+  id: string;
+  lote_id: string;
+  tenant_id: string;
+  aluno_id: string;
+  aluno_nome?: string;
+  turma_origem: string;
+  nivel_origem?: string | null;
+  turma_destino: string;
+  nivel_destino?: string | null;
+  professor_destino?: string | null;
+  status: StatusTransferenciaLoteItem;
+  erro_mensagem?: string | null;
+  criado_em: string;
+}
+
+export interface TransferenciaLoteItemInput {
+  aluno_id: string;
+  turma_destino: string;
+}
+
+export interface TransferenciaLoteCreateInput {
+  turma_destino: string;
+  nivel_destino?: string | null;
+  professor_destino?: string | null;
+  data_efetiva: string;
+  motivo?: string | null;
+  itens: TransferenciaLoteItemInput[];
+}
+
+export interface TransferenciaLoteUpdateInput {
+  turma_destino?: string;
+  nivel_destino?: string | null;
+  professor_destino?: string | null;
+  data_efetiva?: string;
+  motivo?: string | null;
+}

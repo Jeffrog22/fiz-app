@@ -2954,6 +2954,56 @@ Regras:
 
 ---
 
+## Sessão: 11/11/2026 — Programação de transferências de nível em bloco → v2.95.0
+
+### O que foi feito
+- **Programação de transferências de nível em bloco** — permite planejar trocas de turma de vários alunos (inclusive entre professores da mesma unidade) com data efetiva futura, aplicadas mediante confirmação manual, sem alterar a chamada nem a documentação do mês atual até a aplicação
+- **Migrations**:
+  - `036_create_transferencia_lote.sql`: tabelas `transferencia_lote` e `transferencia_lote_item`, com índices de isolamento e unicidade; RLS desabilitado
+  - `037_apply_transferencia_lote_fn.sql`: função PL/pgSQL `aplicar_transferencia_lote` em **uma única transação**; protege contra confirmação concorrente/repetida, revalida origem, valida lotação, fecha período anterior e insere novo na data efetiva com motivo `transferencia`
+- **Backend**: `transferenciaLoteService`, `transferenciaLoteController`, `transferenciaLoteRoutes` montado em `/api/transferencias-nivel` sob `tenantMiddleware` + `authMiddleware`; visitante bloqueado (403)
+- **Frontend**: página `/transferencias-nivel` (lista de lotes, aplicar a partir da data efetiva), página `/transferencias-nivel/novo` (seleção de alunos, modal de revisão, seletor professor→turma/horário, nível automático, data efetiva default = 1º dia do mês seguinte America/Sao_Paulo, projeção de lotação), link na Sidebar (somente não-visitante), rotas no App.tsx
+- **Exportação**: `gerarFrequenciaXLSX` corrigida para associar marcações à turma via `enrollment_period` (preservando chamada oficial histórica)
+- **Grid de Alunos**: botão "Transferir" agora programa um lote pendente (não aplica imediatamente); origem deriva da matrícula atual
+- **Ícone**: novo `TransferenciasIcon` em `IconsColoridos.tsx`
+- Testes: backend `transferenciaLoteService.test.ts` (15 casos)
+
+### Decisões
+- Data efetiva padrão = primeiro dia do mês seguinte (America/Sao_Paulo); validação também no servidor
+- Aplicação só a partir da data efetiva, com confirmação explícita por lote; virada do calendário não executa automaticamente
+- Confirmação tardia preserva a data programada; período anterior encerrado no dia anterior
+- Aplica cada lote em uma única transação; se algum item falhar, o lote permanece pendente
+- Protege contra confirmação concorrente e repetida
+- Revalida lotação dentro da operação de aplicação
+- Modo Visitante não pode programar, editar, cancelar ou aplicar lotes
+- Migrations 036 e 037 **pendentes de executar no Supabase** (aguardando autorização explícita)
+
+### Arquivos
+- `backend/src/migrations/036_create_transferencia_lote.sql` (novo)
+- `backend/src/migrations/037_apply_transferencia_lote_fn.sql` (novo)
+- `backend/src/types/index.ts`, `backend/src/services/transferenciaLoteService.ts`, `backend/src/controllers/transferenciaLoteController.ts`, `backend/src/routes/transferenciaLoteRoutes.ts`
+- `backend/src/index.ts` (+mount rota `/api/transferencias-nivel`)
+- `backend/src/services/exportacaoService.ts` (lookup de chamada por `enrollment_period`)
+- `backend/src/services/__tests__/transferenciaLoteService.test.ts` (novo — 15 casos)
+- `frontend/src/types/index.ts`, `frontend/src/pages/TransferenciasNivel.tsx`, `frontend/src/pages/TransferenciasNivelNovo.tsx`
+- `frontend/src/components/modals/TransferenciaLoteReviewModal.tsx` (novo)
+- `frontend/src/components/icons/IconsColoridos.tsx` (+TransferenciasIcon)
+- `frontend/src/components/common/Sidebar.tsx` (+link Transferências de nível)
+- `frontend/src/App.tsx` (+rotas /transferencias-nivel e /transferencias-nivel/novo)
+- `frontend/src/pages/Alunos.tsx` (botão Transferir navega para programação)
+- `CHANGELOG.md` (v2.95.0), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Backend: 0 erros (`tsc --noEmit`) · 159/159 testes passam (jest)
+- Frontend: 0 erros (`tsc --noEmit`) · 126/126 testes passam (vitest) · `npm run build` limpo
+
+### Pendências / riscos conhecidos
+- Executar as migrations 036 e 037 no Supabase apenas após autorização explícita
+- Ensaio local com dados fictícios e virada de mês simulada ainda pendente
+
+
+---
+
 ## Sessão: 02/09/2026 — Sidebar e Home: ícones Configurações, Ajuda e cards em SVG colorido → v2.95.10
 
 ### O que foi feito

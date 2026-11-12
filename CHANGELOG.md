@@ -1,5 +1,18 @@
 # Changelog - Fiz! App
 
+## [v2.95.0] - 2026-11-11
+### Feat
+- **Programação de transferências de nível em bloco** — planeja trocas de turma de vários alunos (inclusive entre professores da mesma unidade) com data efetiva futura, aplicadas mediante confirmação manual, sem alterar a chamada nem a documentação do mês atual até a aplicação
+  - **Migration 036** (`036_create_transferencia_lote.sql`): tabelas `transferencia_lote` (lote com tenant, responsável, destino, data efetiva, status) e `transferencia_lote_item` (aluno, origem, destino, status do item), com índices de isolamento e unicidade; RLS desabilitado
+  - **Migration 037** (`037_apply_transferencia_lote_fn.sql`): função PL/pgSQL `aplicar_transferencia_lote` executada em **uma única transação**; protege contra confirmação concorrente/repetida (marca 'aplicando' apenas se 'programado'/'revisao'), revalida origem de cada aluno, valida lotação do destino, fecha período anterior no dia anterior à data efetiva e insere o novo período na data efetiva com motivo `transferencia`
+  - **Backend**: `transferenciaLoteService` (criar/listar/buscar/atualizar/remover-item/cancelar/aplicar), `transferenciaLoteController`, `transferenciaLoteRoutes` montado em `/api/transferencias-nivel` sob `tenantMiddleware` + `authMiddleware`; visitante bloqueado (403)
+  - **Frontend**: página `/transferencias-nivel` (lista de lotes com status, contagem pendentes, aplicar a partir da data efetiva), página `/transferencias-nivel/novo` (seleção de alunos do grid, modal de revisão com origem da matrícula atual, seletor professor→turma/horário, nível automático, data efetiva default = 1º dia do mês seguinte America/Sao_Paulo, projeção de lotação), link na Sidebar (somente não-visitante), rotas no App.tsx
+  - **Exportação**: `gerarFrequenciaXLSX` corrigida para associar marcações à turma em que o aluno estava na data via `enrollment_period` (não `aluno.turma_id`, que muda após transferência), preservando a chamada oficial histórica
+  - **Grid de Alunos**: o botão "Transferir" agora programa um lote pendente (não aplica imediatamente); a origem de cada aluno deriva da matrícula atual
+  - Testes: backend `transferenciaLoteService.test.ts` (15 casos: criação com múltiplas origens, duplicidade, data no passado, atualização, remoção de item, cancelamento, aplicação atômica, aplicação repetida, conflito de origem alterada, lotação excedida)
+  - Typecheck: backend 0 erros, frontend 0 erros; testes backend 159/159, frontend 126/126; build frontend limpo
+  - Migrations 036 e 037 **pendentes de executar no Supabase** (aguardando autorização explícita)
+
 ## [v2.94.0] - 2026-11-10
 ### Feat
 - **Bloco de notas** — notas pessoais do professor (texto livre e listas de tarefas), persistidas no Supabase e isoladas por unidade + professor

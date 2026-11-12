@@ -427,11 +427,14 @@ export async function gerarFrequenciaXLSX(
             cell.value = '';
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F0F0' } };
             cell.font = { size: 9, color: { argb: 'FFCCCCCC' } };
-          } else {
-            const logAluno = logsByDataGrupo.get(`${dataStr}|${aluno.id}`);
-            const log = logAluno && logAluno.status
-              ? logAluno
-              : logsByDataGrupo.get(`${dataStr}|${aluno.turma_id}`);
+            } else {
+              // Usar a turma em que o aluno estava naquela data (via enrollment_period)
+              // como fallback para o log de chamada, preservando a chamada oficial histórica.
+              const turmaNaData = epNaData ? epNaData.turma_id : aluno.turma_id;
+              const logAluno = logsByDataGrupo.get(`${dataStr}|${aluno.id}`);
+              const log = logAluno && logAluno.status
+                ? logAluno
+                : logsByDataGrupo.get(`${dataStr}|${turmaNaData}`);
             if (log && log.status) {
               cell.value = STATUS_MAP[log.status] || '';
               if (cell.value === 'C') {
