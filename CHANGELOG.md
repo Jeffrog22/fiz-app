@@ -1,5 +1,30 @@
 # Changelog - Fiz! App
 
+## [v3.0.0] - 2026-11-12
+### Feat (MAJOR)
+- **Transferência de nível em bloco — fluxo completo no grid de Alunos + aba "Transferência"**
+  - **Grid de Alunos (inline)**: o botão "Transferir" agora **ativa o modo seleção no próprio grid** (sem trocar de rota): checkboxes por linha, "selecionar todos", contador, "Limpar" e "Sair". Alocar / Transferir / Rematrículas são **mutuamente exclusivos** (ativar um desliga os outros). A seleção da transferência usa um `Set` próprio (`selecaoTransferencia`), independente da seleção de Alocação/Rematrícula. No modo Transferência o grid filtra apenas alunos **com matrícula vigente** (sem turma não é transferível).
+  - **Modal de destino (inline sobre o grid)**: `TransferenciaLoteReviewModal` repurposeado como "Escolher destino da transferência" — professor destino → turma/horário (filtrada), nível de destino (read-only da turma), data efetiva (padrão: 1º dia do mês seguinte em **America/Sao_Paulo**) e tabela de **origens** (aluno, turma de origem, nível de origem — somente leitura, sempre a matrícula vigente). Projeção de **lotação**: atual − saídas + entradas (do bloco e de outros lotes pendentes), com capacidade e vagas restantes.
+  - **Aba "Transferência" (`/transferencias-nivel`)** com duas visões internas:
+    - **Visão geral**: tabela das turmas afetadas agrupada por professor — professor, turma, horário, papel (Origem / Destino / Origem e destino), lotação atual, **lotação projetada**, e as colunas **Entra / Sai / Permanece** (projeção desconta saídas e soma entradas de todos os lotes pendentes).
+    - **Prévia de chamada**: filtros Professor → Turma (→ Horário), mês/ano da competência e **grid somente leitura** (`DataGrid` com `somenteLeitura`) da turma selecionada, com a **composição projetada** (entra/sai) e período sintético de matrícula para quem entra na data efetiva (antes dela a célula fica bloqueada, como na chamada real). Eventos do calendário são respeitados.
+  - **Lista de lotes pendentes**: revisão, edição (turma de destino + data efetiva), retirada de aluno, cancelamento e **"Aprovar e aplicar"** — o botão só habilita **a partir da data efetiva**, com confirmação explícita (data efetiva, destino e quantidade de alunos).
+  - **Roteamento**: a rota sem lotes pendentes **redireciona para `/chamadas`**; a página `/transferencias-nivel/novo` foi **removida** (tudo acontece no grid + aba temporária). O botão "Programar transferência" leva para `/alunos?modo=transferencia` (abre o grid já em modo seleção).
+  - **Sidebar**: link renomeado para **"Transferência"**, posicionado imediatamente após "Bloco de notas", exibido **somente quando há lotes pendentes**, mantendo o badge roxo com o contador.
+- **Fix**
+  - **Duplo `/api/api/`** corrigido nas chamadas restantes: `TransferenciasNivel.tsx` (`/api/turmas?grupo_id=`), `TransferenciaLoteReviewModal.tsx` (`/api/professores`, `/api/turmas`) e `TransferenciasNivelNovo.tsx` (`/api/alunos`) — o `baseURL` do axios já inclui `/api`.
+- **Backend**
+  - `criarLote`: **elegibilidade** (aluno sem matrícula vigente é rejeitado com 400) e **duplicidade ampliada** — aluno com lote ativo em **outra** data efetiva também é bloqueado (409), além do caso de mesma data.
+  - `aplicarLote`: **aplicação bloqueada antes da data efetiva** (400) no serviço; a RPC `aplicar_transferencia_lote` (migration 037) também valida `data_efetiva <= CURRENT_DATE` — falha reverte a transação inteira e o lote permanece pendente (sem movimentação parcial).
+  - Comparação de datas por **string YYYY-MM-DD** (data local do servidor), eliminando o off-by-one do `new Date('YYYY-MM-DD')` (UTC) na validação de "data efetiva no passado".
+- **Testes**: frontend `transferenciasUtils.test.ts` (10 casos: datas em SP, movimentos, composição, visão geral, projeção de lotação); backend `transferenciaLoteService.test.ts` (+3 casos: elegibilidade, duplicidade em outra data, bloqueio de aplicação antes da data efetiva) — 162/162 backend, 136/136 frontend
+- **Pendências**: migrations **036** e **037** continuam **pendentes de execução no Supabase** (requerem autorização explícita); sem elas a funcionalidade de transferência não opera em produção.
+
+### Breaking changes
+- A rota **`/transferencias-nivel/novo` foi removida** — o fluxo de programação de transferências passa a ser feito **no grid de Alunos** (botão "Transferir" → seleção → "Escolher destino") e a revisão ocorre na aba **"Transferência"** (`/transferencias-nivel`).
+- A aplicação de lotes agora é **bloqueada antes da data efetiva** (antes dependia apenas da UI).
+- Alunos **sem matrícula vigente** não podem mais ser incluídos em um lote de transferência.
+
 ## [v2.96.3] - 2026-11-11
 ### Fix
 - **Correção duplo /api/api/ nas chamadas da API**: removido o prefixo `/api` das chamadas `api.get/post/delete('/transferencias-nivel/...')` no frontend, pois o `baseURL` do axios já inclui `/api` via `VITE_API_URL`. Isso corrigia 404 em todas as rotas de transferências-nivel e alunos.

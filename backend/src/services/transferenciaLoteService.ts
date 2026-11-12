@@ -14,6 +14,14 @@ const ITEM_TABLE = 'transferencia_lote_item';
 
 const STATUS_ATIVOS: string[] = ['programado', 'revisao'];
 
+/** Data de hoje no horario local do servidor (YYYY-MM-DD) */
+function hojeLocalISO(): string {
+  const d = new Date();
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mes}-${dia}`;
+}
+
 export async function criarLote(
   tenantId: string,
   professorId: string,
@@ -31,11 +39,12 @@ export async function criarLote(
   if (!turmaDestino) throw new AppError('Turma destino nao encontrada nesta unidade', 404);
 
   // Valida data efetiva
-  const dataEfetiva = new Date(input.data_efetiva);
-  if (isNaN(dataEfetiva.getTime())) throw new AppError('Data efetiva invalida', 400);
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  if (dataEfetiva < hoje) throw new AppError('Data efetiva nao pode ser no passado', 400);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(input.data_efetiva || ''))) {
+    throw new AppError('Data efetiva invalida', 400);
+  }
+  if (String(input.data_efetiva) < hojeLocalISO()) {
+    throw new AppError('Data efetiva nao pode ser no passado', 400);
+  }
 
   // Valida alunos e origens
   const alunoIds = [...new Set(input.itens.map((i) => i.aluno_id).filter(Boolean))];
@@ -54,7 +63,13 @@ export async function criarLote(
 
   const alunoMap = new Map(alunos.map((a) => [a.id, a]));
 
-  // Verifica duplicidade: aluno ja tem lote ativo (programado/revisao) com data efetiva sobreposta
+  // Elegibilidade: o aluno precisa ter matrícula vigente (turma de origem definida)
+  const semMatricula = alunos.filter((a) => !a.turma_id).map((a) => a.id);
+  if (semMatricula.length > 0) {
+    throw new AppError('Aluno sem matricula vigente nao pode ser transferido', 400);
+  }
+
+  // Verifica duplicidade: aluno ja tem lote ativo (programado/revisao)
   const lotesAtivos = await supabase
     .from(ITEM_TABLE)
     .select('aluno_id, lote_id, status')
@@ -73,17 +88,21 @@ export async function criarLote(
 
     if (lotesDetalhe.error) throw new AppError('Erro ao verificar lotes existentes', 500);
 
-    const lotesSobrepostos = new Set<string>();
+    const mesmaData = new Set<string>();
+    const outraData = new Set<string>();
     for (const lote of lotesDetalhe.data || []) {
-      if (lote.data_efetiva === input.data_efetiva) {
-        for (const item of lotesAtivos.data || []) {
-          if (item.lote_id === lote.id) lotesSobrepostos.add(item.aluno_id);
-        }
+      for (const item of lotesAtivos.data || []) {
+        if (item.lote_id !== lote.id) continue;
+        if (lote.data_efetiva === input.data_efetiva) mesmaData.add(item.aluno_id);
+        else outraData.add(item.aluno_id);
       }
     }
 
-    if (lotesSobrepostos.size > 0) {
+    if (mesmaData.size > 0) {
       throw new AppError('Um ou mais alunos ja possuem transferencia programada para esta data', 409);
+    }
+    if (outraData.size > 0) {
+      throw new AppError('Um ou mais alunos ja possuem transferencia programada em outro lote', 409);
     }
   }
 
@@ -430,10 +449,10 @@ export async function aplicarLote(
   tenantId: string,
   professorId: string,
 ): Promise<{ aplicados: number; erros: number; conflitos: number; detalhes: Array<{ item_id: string; aluno_id: string; status: string; erro_mensagem?: string }> }> {
-  // Verifica se o lote existe e esta disponível
+  // Verifica se o lote existe e esta disponivel
   const { data: lote, error: loteError } = await supabase
     .from(LOTE_TABLE)
-    .select('status')
+    .select('status, data_efetiva')
     .eq('id', loteId)
     .eq('tenant_id', tenantId)
     .maybeSingle();
@@ -442,6 +461,12 @@ export async function aplicarLote(
   if (!lote) throw new AppError('Lote nao encontrado', 404);
   if (!STATUS_ATIVOS.includes(lote.status as string)) {
     throw new AppError('Lote ja foi aplicado, cancelado ou esta em processo', 400);
+  }
+
+  // A aplicacao so e permitida a partir da data efetiva
+  const hoje = hojeLocalISO();
+  if (String(lote.data_efetiva) > hoje) {
+    throw new AppError(`A data efetiva do lote ainda nao chegou (${lote.data_efetiva})`, 400);
   }
 
   // Chama a funcao RPC atomica no banco

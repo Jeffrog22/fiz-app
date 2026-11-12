@@ -41,6 +41,11 @@ BEGIN
     RAISE EXCEPTION 'Lote nao esta disponível para aplicacao (ja aplicado, cancelado ou em processo)';
   END IF;
 
+  -- 1b. A aplicacao so e permitida a partir da data efetiva
+  IF v_data_efetiva > CURRENT_DATE THEN
+    RAISE EXCEPTION 'A data efetiva do lote ainda nao chegou (%)', v_data_efetiva;
+  END IF;
+
   -- 2. Processa cada item pendente do lote
   FOR v_item IN
     SELECT li.id, li.aluno_id, li.turma_origem, li.turma_destino, li.nivel_destino, li.professor_destino

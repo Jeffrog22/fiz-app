@@ -211,6 +211,7 @@ const ALUNOS = [
 ];
 
 beforeEach(() => {
+  jest.useRealTimers();
   store.transferencia_lote = [];
   store.transferencia_lote_item = [];
   store.alunos = [...ALUNOS.map((a) => ({ ...a }))];
@@ -223,6 +224,16 @@ beforeEach(() => {
   ];
   store.professores = [];
 });
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+/** Avanca o relogio (a aplicacao so e liberada a partir da data efetiva) */
+const avancarClock = (iso: string) => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date(`${iso}T12:00:00`));
+};
 
 describe('transferenciaLoteService', () => {
   it('cria lote com alunos de duas origens diferentes para mesmo destino', async () => {
@@ -261,6 +272,34 @@ describe('transferenciaLoteService', () => {
         itens: [{ aluno_id: 'a1', turma_destino: 'marqq01' }],
       }),
     ).rejects.toThrow(/ja possuem transferencia programada para esta data/);
+  });
+
+  it('rejeita aluno sem matricula vigente (sem turma)', async () => {
+    store.alunos.push({ id: 'a5', tenant_id: TENANT, nome: 'Aluno 5', turma_id: null, nivel: null, ativo: true });
+
+    await expect(
+      criarLote(TENANT, PROFESSOR, {
+        turma_destino: 'marqq01',
+        data_efetiva: '2027-01-01',
+        itens: [{ aluno_id: 'a5', turma_destino: 'marqq01' }],
+      }),
+    ).rejects.toThrow(/sem matricula vigente/);
+  });
+
+  it('rejeita aluno com lote ativo em outra data efetiva', async () => {
+    await criarLote(TENANT, PROFESSOR, {
+      turma_destino: 'marqq01',
+      data_efetiva: '2027-01-01',
+      itens: [{ aluno_id: 'a1', turma_destino: 'marqq01' }],
+    });
+
+    await expect(
+      criarLote(TENANT, PROFESSOR, {
+        turma_destino: 'jeftq02',
+        data_efetiva: '2027-02-01',
+        itens: [{ aluno_id: 'a1', turma_destino: 'jeftq02' }],
+      }),
+    ).rejects.toThrow(/ja possuem transferencia programada em outro lote/);
   });
 
   it('rejeita data efetiva no passado', async () => {
@@ -381,6 +420,7 @@ describe('transferenciaLoteService', () => {
       ],
     });
 
+    avancarClock('2027-01-02');
     const resultado = await aplicarLote(lote.id, TENANT, PROFESSOR);
 
     expect(resultado.aplicados).toBe(2);
@@ -409,9 +449,28 @@ describe('transferenciaLoteService', () => {
       itens: [{ aluno_id: 'a1', turma_destino: 'marqq01' }],
     });
 
+    avancarClock('2027-01-02');
     await aplicarLote(lote.id, TENANT, PROFESSOR);
 
     await expect(aplicarLote(lote.id, TENANT, PROFESSOR)).rejects.toThrow(/ja foi aplicado/);
+  });
+
+  it('bloqueia aplicacao antes da data efetiva', async () => {
+    const lote = await criarLote(TENANT, PROFESSOR, {
+      turma_destino: 'marqq01',
+      data_efetiva: '2027-01-01',
+      itens: [{ aluno_id: 'a1', turma_destino: 'marqq01' }],
+    });
+
+    // Relogio ainda antes da data efetiva
+    avancarClock('2026-12-20');
+
+    await expect(aplicarLote(lote.id, TENANT, PROFESSOR)).rejects.toThrow(/data efetiva do lote ainda nao chegou/);
+
+    // Lote permanece pendente (sem movimentação parcial)
+    const loteStore = store.transferencia_lote.find((l) => l.id === lote.id)!;
+    expect(loteStore.status).toBe('programado');
+    expect(store.alunos.find((a) => a.id === 'a1')?.turma_id).toBe('jeftq01');
   });
 
   it('conflito quando origem foi alterada desde a programacao', async () => {
@@ -426,6 +485,7 @@ describe('transferenciaLoteService', () => {
     const epAtivo = store.enrollment_period.find((e) => e.aluno_id === 'a1' && e.data_fim === null)!;
     epAtivo.turma_id = 'jeftq02';
 
+    avancarClock('2027-01-02');
     const resultado = await aplicarLote(lote.id, TENANT, PROFESSOR);
 
     expect(resultado.conflitos).toBe(1);
@@ -452,6 +512,7 @@ describe('transferenciaLoteService', () => {
       ],
     });
 
+    avancarClock('2027-01-02');
     const resultado = await aplicarLote(lote.id, TENANT, PROFESSOR);
 
     // 5 já ocupados + 2 entradas = 7 > capacidade 5 -> erro

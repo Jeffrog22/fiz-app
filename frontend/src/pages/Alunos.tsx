@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import AlunoModal from '../components/modals/AlunoModal';
 import ImpressaoListaModal from '../components/modals/ImpressaoListaModal';
+import TransferenciaLoteReviewModal from '../components/modals/TransferenciaLoteReviewModal';
 import SearchInput from '../components/SearchInput';
 import type { Aluno, Professor, SavePayload, NotificacaoAceite } from '../types';
 import { calcIdade, calcIdadeDoAno, calcCategoria, normalizeSearch, sortTurmas, formatarNomeMobile, formatDateBR } from '../utils/formatters';
@@ -55,7 +56,10 @@ const Alunos: React.FC = () => {
   const [alocando, setAlocando] = useState(false);
   const [sortRules, setSortRules] = useState<SortRule[]>([]);
   const [modoAlocacao, setModoAlocacao] = useState(false);
+  const [modoTransferencia, setModoTransferencia] = useState(false);
   const [modoRematricula, setModoRematricula] = useState(false);
+  const [selecaoTransferencia, setSelecaoTransferencia] = useState<Set<string>>(new Set());
+  const [modalTransferenciaAberto, setModalTransferenciaAberto] = useState(false);
   const [rematriculando, setRematriculando] = useState(false);
   const [rematriculaJanela, setRematriculaJanela] = useState<{ inicio: string; fim: string } | null>(null);
   const [lastSession, setLastSession] = useState({ genero: '', turmaId: '', professorId: '', nivel: '' });
@@ -200,6 +204,7 @@ const Alunos: React.FC = () => {
     let data = [...alunos];
 
     if (modoAlocacao) data = data.filter((a: any) => !a.turma_id);
+    if (modoTransferencia) data = data.filter((a: any) => !!a.turma_id);
     if (modoRematricula) data = data.filter((a: any) => a.par_q !== true);
 
     if (filtro) {
@@ -240,7 +245,7 @@ const Alunos: React.FC = () => {
     }
 
     return data;
-  }, [alunos, filtro, columnFilters, sortRules, professorMap, modoAlocacao, modoRematricula]);
+  }, [alunos, filtro, columnFilters, sortRules, professorMap, modoAlocacao, modoTransferencia, modoRematricula]);
 
   const alunosNomes = useMemo(() => alunos.map((a: any) => a.nome), [alunos]);
 
@@ -248,11 +253,12 @@ const Alunos: React.FC = () => {
     !!filtro ||
     Object.keys(columnFilters).length > 0 ||
     modoAlocacao ||
+    modoTransferencia ||
     modoRematricula;
 
   const editandoCols = isTouch && devEnabled;
   const fixarLayout = isTouch && largurasCols !== null;
-  const temCheckbox = !isVisitante && (modoAlocacao || modoRematricula);
+  const temCheckbox = !isVisitante && (modoAlocacao || modoTransferencia || modoRematricula);
 
   const salvarLarguras = async (novas: LargurasCols) => {
     try {
@@ -419,6 +425,15 @@ const Alunos: React.FC = () => {
   };
 
   const toggleSelecao = (id: string) => {
+    if (modoTransferencia) {
+      setSelecaoTransferencia((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+      return;
+    }
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -428,11 +443,64 @@ const Alunos: React.FC = () => {
   };
 
   const toggleSelecionarTodos = () => {
+    if (modoTransferencia) {
+      setSelecaoTransferencia((prev) =>
+        prev.size === processed.length ? new Set() : new Set(processed.map((a: any) => a.id))
+      );
+      return;
+    }
     if (selectedIds.size === processed.length) {
       setSelectedIds(new Set());
     } else {
       setSelectedIds(new Set(processed.map((a: any) => a.id)));
     }
+  };
+
+  const sairModoAlocacao = () => {
+    setSelectedIds(new Set());
+    setTurmaAlocar('');
+    setProfessorAlocar('');
+    setModoAlocacao(false);
+  };
+
+  const sairModoTransferencia = () => {
+    setSelecaoTransferencia(new Set());
+    setModoTransferencia(false);
+  };
+
+  const sairModoRematricula = () => {
+    setSelectedIds(new Set());
+    setModoRematricula(false);
+  };
+
+  const alternarModoAlocacao = () => {
+    if (modoAlocacao) {
+      sairModoAlocacao();
+      return;
+    }
+    sairModoTransferencia();
+    sairModoRematricula();
+    setModoAlocacao(true);
+  };
+
+  const alternarModoTransferencia = () => {
+    if (modoTransferencia) {
+      sairModoTransferencia();
+      return;
+    }
+    sairModoAlocacao();
+    sairModoRematricula();
+    setModoTransferencia(true);
+  };
+
+  const alternarModoRematricula = () => {
+    if (modoRematricula) {
+      sairModoRematricula();
+      return;
+    }
+    sairModoAlocacao();
+    sairModoTransferencia();
+    setModoRematricula(true);
   };
 
   const handleAlocar = async () => {
@@ -477,6 +545,18 @@ const Alunos: React.FC = () => {
     } finally {
       setRematriculando(false);
     }
+  };
+
+  const alunosTransferencia = useMemo(
+    () => alunos.filter((a: any) => selecaoTransferencia.has(a.id)),
+    [alunos, selecaoTransferencia]
+  );
+
+  const handleTransferenciaSucesso = () => {
+    setSelecaoTransferencia(new Set());
+    setModoTransferencia(false);
+    setModalTransferenciaAberto(false);
+    navigate('/transferencias-nivel');
   };
 
   const toggleSort = (column: string) => {
@@ -557,6 +637,15 @@ const Alunos: React.FC = () => {
     </th>
   );
 
+  const selecaoAtiva = modoTransferencia ? selecaoTransferencia : selectedIds;
+
+  useEffect(() => {
+    if (isVisitante) return;
+    if (searchParams.get('modo') === 'transferencia') {
+      setModoTransferencia(true);
+    }
+  }, [searchParams, isVisitante]);
+
   return (
     <div className="space-y-4">
       {aceiteNotif && (
@@ -579,10 +668,7 @@ const Alunos: React.FC = () => {
         {!isVisitante && <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => {
-              if (modoAlocacao) { setSelectedIds(new Set()); setTurmaAlocar(''); setProfessorAlocar(''); }
-              setModoAlocacao(!modoAlocacao);
-            }}
+            onClick={alternarModoAlocacao}
             className={`px-4 py-2 text-sm rounded-md transition-colors ${
               modoAlocacao
                 ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-primary-300'
@@ -593,23 +679,20 @@ const Alunos: React.FC = () => {
           </button>
           <button
             type="button"
-            onClick={() => {
-              setModoAlocacao(false);
-              setModoRematricula(false);
-              navigate('/transferencias-nivel/novo');
-            }}
-            className="px-4 py-2 text-sm rounded-md transition-colors bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-300"
+            onClick={alternarModoTransferencia}
+            className={`px-4 py-2 text-sm rounded-md transition-colors ${
+              modoTransferencia
+                ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-300'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
+            }`}
+            title="Selecione os alunos no grid e escolha a turma de destino"
           >
-            Transferir
+            {modoTransferencia ? 'Sair da Transferência' : 'Transferir'}
           </button>
           <button
             type="button"
             disabled={!janelaAberta}
-            onClick={() => {
-              if (modoRematricula) { setSelectedIds(new Set()); }
-              setModoAlocacao(false);
-              setModoRematricula(!modoRematricula);
-            }}
+            onClick={alternarModoRematricula}
             title={janelaAberta
               ? undefined
               : rematriculaJanela
@@ -764,6 +847,39 @@ const Alunos: React.FC = () => {
         </div>
       )}
 
+      {modoTransferencia && (
+        <div className="flex items-center gap-3 px-4 py-2 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 rounded-md flex-wrap">
+          <span className="text-sm text-gray-600 dark:text-gray-400">
+            Alunos selecionados: <strong className="text-purple-700 dark:text-purple-300">{selecaoTransferencia.size}</strong>
+          </span>
+          {selecaoTransferencia.size > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={() => setModalTransferenciaAberto(true)}
+                className="px-4 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+              >
+                Escolher destino
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelecaoTransferencia(new Set())}
+                className="px-4 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Limpar
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            onClick={sairModoTransferencia}
+            className="px-4 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            Sair
+          </button>
+        </div>
+      )}
+
       {carregando ? (
         <p className="text-sm text-gray-500 dark:text-gray-400">Carregando...</p>
       ) : (
@@ -800,7 +916,7 @@ const Alunos: React.FC = () => {
                   <th className="w-8 px-2 py-2">
                     <input
                       type="checkbox"
-                      checked={processed.length > 0 && selectedIds.size === processed.length}
+                      checked={processed.length > 0 && selecaoAtiva.size === processed.length}
                       onChange={toggleSelecionarTodos}
                       className="rounded border-gray-300 dark:border-gray-600 text-primary-600 dark:text-primary-400"
                     />
@@ -832,11 +948,11 @@ const Alunos: React.FC = () => {
                       ? 'bg-amber-50 dark:bg-amber-900/20'
                       : ''
                   }`}>
-                    {(modoAlocacao || modoRematricula) && (
+                    {(modoAlocacao || modoTransferencia || modoRematricula) && (
                       <td className="px-2 py-2">
                         <input
                           type="checkbox"
-                          checked={selectedIds.has(a.id)}
+                          checked={selecaoAtiva.has(a.id)}
                           onChange={() => toggleSelecao(a.id)}
                           className="rounded border-gray-300 dark:border-gray-600 text-primary-600 dark:text-primary-400"
                         />
@@ -1010,6 +1126,14 @@ const Alunos: React.FC = () => {
         alunos={processed}
         professorMap={professorMapDoc}
         unidade={getTenantNome(getTenantId())}
+      />
+
+      <TransferenciaLoteReviewModal
+        aberto={modalTransferenciaAberto}
+        onClose={() => setModalTransferenciaAberto(false)}
+        alunosSelecionados={alunosTransferencia}
+        alunosAtivos={alunos}
+        onSucesso={handleTransferenciaSucesso}
       />
 
       {importResult && (

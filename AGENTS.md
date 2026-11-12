@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-11-09 — Modo Visitante (somente leitura 2h, nomes fictícios) → v2.93.0 -->
+<!-- última-sessão: 2026-11-12 — Transferência de nível em bloco (grid + aba "Transferência") → v3.0.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -34,7 +34,7 @@ Regras:
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v2.93.0
+- **Versão atual:** v3.0.0
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Build Cloudflare:** `git fetch --tags --unshallow` é necessário no build command para `git describe --tags` funcionar (clone shallow sem tags)
@@ -3391,3 +3391,51 @@ Regras:
 ### Typecheck
 - Backend: 0 erros (`tsc --noEmit`)
 - Testes: 43/43 passam
+
+---
+
+## Sessão: 12/11/2026 — Transferência de nível em bloco (grid de Alunos + aba "Transferência") → v3.0.0
+
+### O que foi feito
+- **Grid de Alunos (inline)**: botão "Transferir" **ativa o modo seleção no próprio grid** (checkboxes por linha, "selecionar todos", contador, "Limpar", "Sair"); Alocar/Transferir/Rematrículas **mutuualmente exclusivos**; seleção própria (`selecaoTransferencia`, `Set<string>`) independente da de Alocação/Rematrícula; no modo Transferência o grid lista apenas alunos **com matrícula vigente**
+- **Modal de destino inline** (`TransferenciaLoteReviewModal` repurposeado): professor → turma/horário, nível de destino read-only, data efetiva (1º dia do mês seguinte em **America/Sao_Paulo**), tabela de **origens** (turma/nível vigentes, somente leitura) e **projeção de lotação** (atual − saídas + entradas, capacidade e vagas restantes)
+- **Aba "Transferência" (`/transferencias-nivel`)** reescrita com 2 visões:
+  - **Visão geral**: turmas afetadas agrupadas por professor — professor, turma, horário, papel (Origem/Destino/Ambos), lotação atual, **lotação projetada**, **Entra/Sai/Permanece**
+  - **Prévia de chamada** (`components/transferencias/PreviaChamada.tsx`): filtros Professor → Turma, mês/ano da competência e **grid read-only** (`DataGrid` com `somenteLeitura`) com a **composição projetada**; período sintético de matrícula para quem entra na data efetiva (célula bloqueada antes dela); eventos do calendário respeitados
+- **Lotes pendentes**: revisão, edição (destino + data efetiva), retirada de aluno, cancelamento e **"Aprovar e aplicar"** — habilitado **somente a partir da data efetiva**, com confirmação explícita (destino, data efetiva, nº de alunos)
+- **Roteamento**: rota sem pendências **redireciona para `/chamadas`**; página `/transferencias-nivel/novo` **removida** (rota + arquivo); "Programar transferência" aponta para `/alunos?modo=transferencia`
+- **Sidebar**: link renomeado para **"Transferência"**, posicionado **após "Bloco de notas"**, visível **só quando há lotes pendentes**, badge roxo mantido
+- **Fix duplo `/api/api/`** restante: `TransferenciasNivel.tsx` (`/api/turmas?grupo_id=`), `TransferenciaLoteReviewModal.tsx` (`/api/professores`, `/api/turmas`), `TransferenciasNivelNovo.tsx` (`/api/alunos`)
+- **Backend** (`transferenciaLoteService.ts`): `criarLote` ganhou **elegibilidade** (aluno sem matrícula → 400) e **duplicidade ampliada** (aluno com lote ativo em outra data → 409); `aplicarLote` **bloqueia aplicação antes da data efetiva** (400, lote permanece pendente); comparação de datas por string `YYYY-MM-DD` (elimina off-by-one do UTC); migration **037** (RPC) valida `data_efetiva <= CURRENT_DATE` (rollback integral em caso de falha)
+
+### Decisões
+- **MAJOR (v3.0.0)** a pedido do usuário: a rota `/transferencias-nivel/novo` foi removida e a aplicação passou a ser bloqueada antes da data efetiva — mudança de contrato do fluxo
+- Fluxo **100% no grid + aba temporária** (protótipo): seleção no grid → modal inline → POST do lote → limpeza da seleção → abertura da aba "Transferência"
+- A página só aparece na sidebar **com pendências**; sem pendências a rota redireciona para `/chamadas` (evita aba vazia)
+- "Prévia de chamada" reaproveita o `DataGrid` em `somenteLeitura` (fidelidade de cores/símbolos) em vez de um grid novo
+- Aluno que **entra** recebe período de matrícula sintético a partir da data efetiva → antes dela a célula fica bloqueada (`fora_periodo`), como na chamada real
+- Aplicação continua **manual** (não há virada automática de mês); a RPC atômica protege concorrência/repetição
+
+### Arquivos
+- `frontend/src/utils/transferenciasUtils.ts` (novo — datas SP, movimentos, composição, visão geral, projeção)
+- `frontend/src/utils/__tests__/transferenciasUtils.test.ts` (novo — 10 casos)
+- `frontend/src/components/transferencias/PreviaChamada.tsx` (novo)
+- `frontend/src/pages/TransferenciasNivel.tsx` (reescrito — abas, lista de lotes, aprovar/aplicar, redirect)
+- `frontend/src/pages/TransferenciasNivelNovo.tsx` (deletado)
+- `frontend/src/components/modals/TransferenciaLoteReviewModal.tsx` (repurposeado — destino inline, projeção, fix /api)
+- `frontend/src/pages/Alunos.tsx` (modo transferência inline, exclusão mútua, modal, `?modo=transferencia`)
+- `frontend/src/components/common/Sidebar.tsx` ("Transferência" após Bloco de notas, condicional)
+- `frontend/src/App.tsx` (rota `/transferencias-nivel/novo` removida; `RotaVisitante` na rota de transferências)
+- `backend/src/services/transferenciaLoteService.ts` (elegibilidade, duplicidade, guarda de data efetiva, datas locais)
+- `backend/src/migrations/037_apply_transferencia_lote_fn.sql` (guarda `data_efetiva <= CURRENT_DATE`)
+- `backend/src/services/__tests__/transferenciaLoteService.test.ts` (+3 casos; clock falso nos testes de aplicação)
+- `CHANGELOG.md` (v3.0.0), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Backend: 0 erros (`tsc --noEmit`) · 162/162 testes (jest)
+- Frontend: 0 erros (`tsc --noEmit`) · 136/136 testes (vitest) · `npm run build` limpo
+
+### Pendências / riscos conhecidos
+- **Migrations 036 e 037 pendentes de execução no Supabase** (exigem autorização explícita) — sem elas a funcionalidade não opera em produção
+- Ensaio com dados fictícios e virada de mês simulada ainda pendente
+- `exportacaoService.gerarFrequenciaXLSX` mantém a associação da chamada via `enrollment_period` (não alterado nesta sessão) — a comparação antes/depois da aplicação precisa ser validada com as migrations aplicadas

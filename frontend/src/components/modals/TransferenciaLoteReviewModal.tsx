@@ -9,28 +9,31 @@ import type {
   TransferenciaLoteItemInput,
 } from '../../types';
 import { getTenantId } from '../../utils/tenant';
-import { parseDiasFromLabel } from '../../utils/chamadaUtils';
-import { X, Loader2, Clock, AlertCircle, Users, ArrowRight } from 'lucide-react';
+import {
+  hojeSaoPaulo,
+  primeiroDiaMesSeguinte,
+  projetarLotacaoDestino,
+  type MovimentoTransferencia,
+} from '../../utils/transferenciasUtils';
+import { X, Loader2, AlertCircle, Users, ArrowRight, CalendarClock } from 'lucide-react';
 
 interface TransferenciaLoteReviewModalProps {
   aberto: boolean;
   onClose: () => void;
   alunosSelecionados: Aluno[];
+  /** Todos os alunos ativos da unidade — usado para projetar a lotação */
+  alunosAtivos?: Aluno[];
+  /** Movimentos já programados em outros lotes pendentes */
+  movimentosPendentes?: MovimentoTransferencia[];
   onSucesso: () => void;
 }
-
-const primeiroDiaMesSeguinte = (): string => {
-  const hoje = new Date();
-  hoje.setMonth(hoje.getMonth() + 1);
-  hoje.setDate(1);
-  hoje.setHours(0, 0, 0, 0);
-  return hoje.toISOString().split('T')[0];
-};
 
 const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> = ({
   aberto,
   onClose,
   alunosSelecionados,
+  alunosAtivos = [],
+  movimentosPendentes = [],
   onSucesso,
 }) => {
   const { isVisitante } = useAuth();
@@ -41,28 +44,60 @@ const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> 
   const [dataEfetiva, setDataEfetiva] = useState(primeiroDiaMesSeguinte());
   const [motivo, setMotivo] = useState('');
   const [nivelDestino, setNivelDestino] = useState<string | null>(null);
-  const [professorDestinoNome, setProfessorDestinoNome] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
 
-  // Origem de cada aluno: matrícula atual (turma_id + nivel)
-  const origens = useMemo(() => {
-    return alunosSelecionados.map((a) => ({
-      aluno_id: a.id,
-      aluno_nome: a.nome,
-      turma_origem: a.turma_id || '',
-      nivel_origem: a.nivel || null,
-    }));
-  }, [alunosSelecionados]);
+  // Origem de cada aluno: matrícula atual (turma_id + nivel) — somente leitura
+  const origens = useMemo(
+    () =>
+      alunosSelecionados.map((a) => ({
+        aluno_id: a.id,
+        aluno_nome: a.nome,
+        turma_origem: a.turma_id || '',
+        nivel_origem: a.nivel || null,
+      })),
+    [alunosSelecionados],
+  );
 
-  // Turmas disponíveis para o professor destino selecionado
   const turmasDisponiveis = useMemo(() => {
     if (!professorDestino) return turmas;
     return turmas.filter((t) => t.professor_id === professorDestino);
   }, [professorDestino, turmas]);
 
-  const turmaSelecionada = turmas.find((t) => t.grupo_id === turmaDestino);
+  const turmaSelecionada = useMemo(
+    () => turmas.find((t) => t.grupo_id === turmaDestino) || null,
+    [turmas, turmaDestino],
+  );
+
+  const projecao = useMemo(
+    () =>
+      projetarLotacaoDestino({
+        turmaDestino: turmaSelecionada,
+        alunosAtivos,
+        alunoIdsSelecionados: alunosSelecionados.map((a) => a.id),
+        movimentosPendentes,
+      }),
+    [turmaSelecionada, alunosAtivos, alunosSelecionados, movimentosPendentes],
+  );
+
+  const carregarDados = useCallback(async () => {
+    setCarregando(true);
+    try {
+      const [resProf, resTur] = await Promise.all([
+        api.get('/professores'),
+        api.get('/turmas'),
+      ]);
+      setProfessores(resProf.data || []);
+      const tenant = getTenantId();
+      const lista: Turma[] = resTur.data || [];
+      setTurmas(tenant ? lista.filter((t: any) => t.tenant_id === tenant) : lista);
+    } catch {
+      setErro('Erro ao carregar professores e turmas');
+    } finally {
+      setCarregando(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!aberto) return;
@@ -70,38 +105,19 @@ const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> 
     setErro(null);
     setTurmaDestino('');
     setNivelDestino(null);
-    setProfessorDestinoNome(null);
+    setDataEfetiva(primeiroDiaMesSeguinte());
     carregarDados();
-  }, [aberto]);
+  }, [aberto, carregarDados]);
 
-  const carregarDados = async () => {
-    setCarregando(true);
-    try {
-      const [resProf, resTur] = await Promise.all([
-        api.get('/api/professores'),
-        api.get('/api/turmas'),
-      ]);
-      setProfessores(resProf.data || []);
-      setTurmas((resTur.data || []).filter((t: any) => t.tenant_id === getTenantId()));
-    } catch {
-      setErro('Erro ao carregar professores e turmas');
-    } finally {
-      setCarregando(false);
-    }
-  };
-
-  const handleProfessorChange = async (value: string) => {
+  const handleProfessorChange = (value: string) => {
     setProfessorDestino(value);
     setTurmaDestino('');
     setNivelDestino(null);
-    setProfessorDestinoNome(null);
-    const prof = professores.find((p) => p.id === value);
-    setProfessorDestinoNome(prof?.nome || null);
   };
 
   const handleTurmaChange = (value: string) => {
     setTurmaDestino(value);
-    const t = turmasDisponiveis.find((t) => t.grupo_id === value);
+    const t = turmasDisponiveis.find((x) => x.grupo_id === value);
     setNivelDestino(t?.nivel || null);
   };
 
@@ -114,17 +130,23 @@ const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> 
       setErro('Selecione a turma de destino');
       return;
     }
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const dataEf = new Date(dataEfetiva);
-    if (dataEf < hoje) {
+    if (!dataEfetiva) {
+      setErro('Informe a data efetiva');
+      return;
+    }
+    if (dataEfetiva < hojeSaoPaulo()) {
       setErro('A data efetiva não pode ser no passado');
+      return;
+    }
+    const semTurma = origens.filter((o) => !o.turma_origem);
+    if (semTurma.length > 0) {
+      setErro('Alunos sem matrícula vigente não podem ser transferidos');
       return;
     }
 
     const itens: TransferenciaLoteItemInput[] = origens.map((o) => ({
       aluno_id: o.aluno_id,
-      turma_destino: o.turma_origem ? turmaDestino : '',
+      turma_destino: turmaDestino,
     }));
 
     const input: TransferenciaLoteCreateInput = {
@@ -140,9 +162,9 @@ const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> 
     setErro(null);
     try {
       await api.post('/transferencias-nivel/lotes', input);
-      setSucesso('Lote programado com sucesso. Os alunos serão transferidos na data efetiva.');
+      setSucesso('Lote programado. Os alunos serão transferidos na data efetiva.');
       onSucesso();
-      setTimeout(() => onClose(), 1500);
+      setTimeout(() => onClose(), 1200);
     } catch (err: any) {
       setErro(err?.response?.data?.error || 'Erro ao programar transferência');
     } finally {
@@ -152,19 +174,13 @@ const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> 
 
   if (!aberto) return null;
 
-  // Projeção de lotação: alunos atuais da turma destino - saídas + entradas
-  let projecao = { atuais: 0, saidas: 0, entradas: 0, projetado: 0 };
-  if (turmaSelecionada?.capacidade) {
-    projecao.atuais = turmaSelecionada.capacidade; // usar capacidade como base visual
-  }
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-            Programar Transferência de Nível
+            Escolher destino da transferência
           </h2>
           <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
             <X size={20} />
@@ -175,9 +191,14 @@ const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> 
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
             <div className="flex items-center gap-3 mb-3">
               <Users size={18} className="text-blue-600 dark:text-blue-400" />
-              <span className="font-medium text-blue-800 dark:text-blue-200">Alunos selecionados ({alunosSelecionados.length})</span>
+              <span className="font-medium text-blue-800 dark:text-blue-200">
+                Origem dos alunos selecionados ({alunosSelecionados.length})
+              </span>
             </div>
-            <div className="overflow-x-auto">
+            <p className="text-xs text-blue-700 dark:text-blue-300 mb-2">
+              A origem é a matrícula vigente de cada aluno e não pode ser alterada aqui.
+            </p>
+            <div className="overflow-x-auto max-h-48">
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -234,7 +255,7 @@ const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> 
                   const prof = professores.find((p) => p.id === t.professor_id);
                   return (
                     <option key={t.grupo_id} value={t.grupo_id}>
-                      {t.label} • {t.horario.slice(0, 5)} {prof ? `— ${prof.nome_documento || prof.nome}` : ''}
+                      {t.label} • {(t.horario || '').slice(0, 5)} {prof ? `— ${prof.nome_documento || prof.nome}` : ''}
                     </option>
                   );
                 })}
@@ -265,19 +286,46 @@ const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> 
                 type="text"
                 value={nivelDestino || ''}
                 readOnly
+                placeholder="Definido pela turma de destino"
                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100"
               />
             </div>
           </div>
 
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-2">Lotação projetada</h3>
-            <div className="flex items-center gap-4 text-sm">
-              <span className="text-gray-600 dark:text-gray-400">Vagas na turma destino:</span>
-              <span className="font-mono font-medium">{turmaSelecionada?.capacidade ?? '—'}</span>
-              <span className="text-gray-600 dark:text-gray-400">Alunos entrando:</span>
-              <span className="font-mono font-medium text-blue-600 dark:text-blue-400">{alunosSelecionados.length}</span>
+            <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-2">
+              Lotação projetada da turma de destino
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Lotação atual</p>
+                <p className="font-mono font-medium text-gray-800 dark:text-gray-100">{projecao.lotacao_atual}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Saídas</p>
+                <p className="font-mono font-medium text-red-600 dark:text-red-400">-{projecao.saidas}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Entradas</p>
+                <p className="font-mono font-medium text-green-600 dark:text-green-400">+{projecao.entradas}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Projetado</p>
+                <p className="font-mono font-medium text-gray-800 dark:text-gray-100">
+                  {projecao.projetado}
+                  {projecao.capacidade !== null && (
+                    <span className="text-gray-400 dark:text-gray-500">/{projecao.capacidade}</span>
+                  )}
+                </p>
+              </div>
             </div>
+            {projecao.vagas_restantes !== null && (
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                {projecao.vagas_restantes >= 0
+                  ? `Vagas após a aplicação: ${projecao.vagas_restantes}`
+                  : `Excesso de ${Math.abs(projecao.vagas_restantes)} vaga(s) na turma de destino`}
+              </p>
+            )}
           </div>
 
           {erro && (
@@ -295,24 +343,34 @@ const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> 
           )}
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={carregando}
-            className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={carregando || !turmaDestino || isVisitante}
-            className="px-4 py-2 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {carregando ? <Loader2 size={16} className="mr-2 animate-spin" /> : ''}
-            Programar transferência
-          </button>
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <CalendarClock size={14} />
+            <span>
+              Aplicação somente a partir de {dataEfetiva ? dataEfetiva.split('-').reverse().join('/') : '—'}
+            </span>
+            <ArrowRight size={12} />
+            <span>mudança de turma e matrícula</span>
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={carregando}
+              className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={carregando || !turmaDestino || isVisitante}
+              className="px-4 py-2 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {carregando ? <Loader2 size={16} className="mr-2 animate-spin" /> : ''}
+              Programar transferência
+            </button>
+          </div>
         </div>
       </div>
     </div>
