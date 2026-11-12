@@ -34,6 +34,7 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const { isAuthenticated, loading, isVisitante } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(() => window.innerWidth < 768);
   const [aceitesNaoVistos, setAceitesNaoVistos] = React.useState(0);
+  const [lotesPendentes, setLotesPendentes] = React.useState(0);
   const [ajudaAberta, setAjudaAberta] = React.useState(false);
   const { enabled: devEnabled, addConsoleLine } = useDevLog();
   const origConsole = useRef<Record<string, (...args: unknown[]) => void>>({});
@@ -55,6 +56,19 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
     carregarAceites();
     const interval = setInterval(carregarAceites, 30000);
     return () => clearInterval(interval);
+  }, [isAuthenticated, isVisitante]);
+
+  React.useEffect(() => {
+    if (!isAuthenticated || isVisitante) return;
+    const carregarLotes = async () => {
+      try {
+        const res = await api.get('/api/transferencias-nivel/lotes/pendentes/count');
+        setLotesPendentes(res.data.pendentes || 0);
+      } catch { /* ignore */ }
+    };
+    carregarLotes();
+    const intervalLotes = setInterval(carregarLotes, 30000);
+    return () => clearInterval(intervalLotes);
   }, [isAuthenticated, isVisitante]);
 
   useEffect(() => {
@@ -94,7 +108,7 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
       <UpdateBanner />
       <TopBar />
       <div className="flex flex-1">
-        <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(v => !v)} aceitesNaoVistos={aceitesNaoVistos} />
+        <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(v => !v)} aceitesNaoVistos={aceitesNaoVistos} lotesPendentes={lotesPendentes} />
         <main className="flex-1 p-6 overflow-auto">
           {children}
         </main>

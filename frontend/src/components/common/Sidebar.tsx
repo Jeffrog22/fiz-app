@@ -43,11 +43,12 @@ interface Props {
   collapsed: boolean;
   onToggle: () => void;
   aceitesNaoVistos?: number;
+  lotesPendentes?: number;
 }
 
 const VISITANTE_ROTAS = ['/home', '/chamadas', '/alunos', '/turmas'];
 
-const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0 }) => {
+const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0, lotesPendentes = 0 }) => {
   const { isVisitante } = useAuth();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const touchStartX = React.useRef(0);
@@ -131,16 +132,26 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0 })
             >
               {link.label}
             </span>
-            {link.to === '/alunos' && !isVisitante && aceitesNaoVistos > 0 && (
-              <span
-                className={`bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center flex-shrink-0 ${
-                  collapsed ? 'absolute mt-[-10px] mr-[-10px]' : 'ml-auto'
-                }`}
-                title={`${aceitesNaoVistos} aluno(s) aceito(s) em outra unidade`}
-              >
-                {aceitesNaoVistos}
-              </span>
-            )}
+          {link.to === '/alunos' && !isVisitante && aceitesNaoVistos > 0 && (
+            <span
+              className={`bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center flex-shrink-0 ${
+                collapsed ? 'absolute mt-[-10px] mr-[-10px]' : 'ml-auto'
+              }`}
+              title={`${aceitesNaoVistos} aluno(s) aceito(s) em outra unidade`}
+            >
+              {aceitesNaoVistos}
+            </span>
+          )}
+          {link.to === '/transferencias-nivel' && !isVisitante && lotesPendentes > 0 && (
+            <span
+              className={`bg-purple-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center flex-shrink-0 ${
+                collapsed ? 'absolute mt-[-10px] mr-[-10px]' : 'ml-auto'
+              }`}
+              title={`${lotesPendentes} lote(s) de transferência pendente(s) de aplicação`}
+            >
+              {lotesPendentes}
+            </span>
+          )}
           </NavLink>
         ))}
       </nav>
