@@ -1,5 +1,16 @@
 # Changelog - Fiz! App
 
+## [v3.1.0] - 2026-11-12
+### Feat
+- **Ícones do menu lateral e dos cards da tela inicial ampliados em 80%** (20px → **36px**, ou seja, ×1,8)
+  - `IconsColoridos.tsx`: os 13 ícones SVG passam de `w-5 h-5` para `w-9 h-9` (2.25rem = 36px exatos), com a constante compartilhada `CLASSE_ICONE` — como o componente é usado **somente** na Sidebar e na Home, os dois alvos são cobertos de uma vez
+  - Tamanhos **rem-based**: o zoom de acessibilidade do app (`useZoom` altera o `font-size` da raiz) continua escalando os ícones junto com o resto da interface
+  - **Barra lateral**: `py-1.5` no modo recolhido (compensa a altura extra dos ícones; expandida mantém `py-2`); badge das notificações/lotes reposicionado para `absolute -top-1 -right-1` (canto do ícone, dentro do trilho de 56px); `NavLink` com `relative`
+  - **Barra lateral (rolagem)**: o menu principal passa a ter `min-h-0 overflow-y-auto` com scrollbar oculta — em telas baixas a lista rola em vez de ser cortada pelo `overflow-hidden` do `<aside>` (antes Configurações/Ajuda/Instalar App podiam sumir)
+  - **Cards da tela inicial**: cards principais com `gap-2` entre o ícone maior e o rótulo; "Mais Opções" com `grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-4` (1 coluna abaixo de 420px para o rótulo não ficar espremido), `gap-2 sm:gap-3` e `p-3 sm:p-4`
+  - Ícone de "Instalar App" na sidebar: `text-lg` → `text-[2rem] leading-none`
+  - **Textos preservados** em toda a interface (`text-lg`/`text-sm`/`text-xs`/`text-base`) e **barra superior inalterada** (decisão do usuário)
+
 ## [v3.0.1] - 2026-11-12
 ### Fix
 - **Modal de escolha do destino da transferência corrigido** (estava translúcido e não funcional): o `TransferenciaLoteReviewModal` usava um **backdrop separado** (`absolute inset-0 bg-black/60 backdrop-blur-sm`) como irmão do painel. Pela ordem de pintura do CSS, um elemento posicionado é desenhado **por cima** do painel (que é estático) — o overlay escuro com blur cobria o modal (aparência translúcida) e capturava todos os cliques, que caíam no `onClose` do backdrop e fechavam o modal imediatamente

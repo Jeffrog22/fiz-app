@@ -65,7 +65,7 @@ const Home: React.FC = () => {
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center justify-center p-8 rounded-xl border-2 shadow-sm dark:shadow-black/20 transition-all ${item.color} ${DARK_COLORS[item.color] || ''}`}
+              className={`flex flex-col items-center justify-center gap-2 p-8 rounded-xl border-2 shadow-sm dark:shadow-black/20 transition-all ${item.color} ${DARK_COLORS[item.color] || ''}`}
             >
               {item.icon}
               <span className="text-base font-medium text-gray-700 dark:text-gray-200">{item.label}</span>
@@ -76,12 +76,12 @@ const Home: React.FC = () => {
 
       {!isVisitante && <div>
         <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Mais Opções</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-4 gap-3">
           {moreItems.map((item) => (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`flex items-center gap-3 p-4 rounded-lg border shadow-sm dark:shadow-black/20 transition-all ${item.color} ${DARK_COLORS[item.color] || ''}`}
+              className={`flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border shadow-sm dark:shadow-black/20 transition-all ${item.color} ${DARK_COLORS[item.color] || ''}`}
             >
               {item.icon}
               <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{item.label}</span>

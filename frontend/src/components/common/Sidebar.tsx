@@ -122,14 +122,14 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0, l
         </button>
       </div>
 
-      <nav className="flex flex-col gap-1 px-2 flex-1">
+      <nav className="flex flex-col gap-1 px-2 flex-1 min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {linksVisiveis.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}
             data-tour={`nav-${link.to.replace('/', '')}`}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors whitespace-nowrap ${
+              `relative flex items-center gap-3 px-2 ${collapsed ? 'py-1.5' : 'py-2'} rounded-md text-sm transition-colors whitespace-nowrap ${
                 collapsed ? 'justify-center' : ''
               } ${
                 isActive
@@ -149,7 +149,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0, l
           {link.to === '/alunos' && !isVisitante && aceitesNaoVistos > 0 && (
             <span
               className={`bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center flex-shrink-0 ${
-                collapsed ? 'absolute mt-[-10px] mr-[-10px]' : 'ml-auto'
+                collapsed ? 'absolute -top-1 -right-1' : 'ml-auto'
               }`}
               title={`${aceitesNaoVistos} aluno(s) aceito(s) em outra unidade`}
             >
@@ -159,7 +159,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0, l
           {link.to === '/transferencias-nivel' && !isVisitante && lotesPendentes > 0 && (
             <span
               className={`bg-purple-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center flex-shrink-0 ${
-                collapsed ? 'absolute mt-[-10px] mr-[-10px]' : 'ml-auto'
+                collapsed ? 'absolute -top-1 -right-1' : 'ml-auto'
               }`}
               title={`${lotesPendentes} lote(s) de transferência pendente(s) de aplicação`}
             >
@@ -177,7 +177,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0, l
             to={link.to}
             data-tour={`nav-${link.to.replace('/', '')}`}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors whitespace-nowrap ${
+              `flex items-center gap-3 px-2 ${collapsed ? 'py-1.5' : 'py-2'} rounded-md text-sm transition-colors whitespace-nowrap ${
                 collapsed ? 'justify-center' : ''
               } ${
                 isActive
@@ -201,7 +201,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0, l
           data-tour="nav-ajuda"
           onClick={() => window.dispatchEvent(new CustomEvent('abrir-ajuda'))}
           title="Ajuda"
-          className={`flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors whitespace-nowrap w-full text-left ${
+          className={`flex items-center gap-3 px-2 ${collapsed ? 'py-1.5' : 'py-2'} rounded-md text-sm transition-colors whitespace-nowrap w-full text-left ${
             collapsed ? 'justify-center' : ''
           } text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200`}
         >
@@ -220,12 +220,12 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0, l
         <div className="px-2 mt-2">
           <button
             onClick={handleInstall}
-            className={`flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors whitespace-nowrap w-full ${
+            className={`flex items-center gap-3 px-2 ${collapsed ? 'py-1.5' : 'py-2'} rounded-md text-sm transition-colors whitespace-nowrap w-full ${
               collapsed ? 'justify-center' : ''
             } text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200`}
             title="Instalar App"
           >
-            <span className="text-lg flex-shrink-0">{'\u2B07'}</span>
+            <span className="text-[2rem] leading-none flex-shrink-0">{'\u2B07'}</span>
             <span
               className={`transition-all duration-300 ${
                 collapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'

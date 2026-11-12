@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-11-12 — Fix modal de escolha do destino (translúcido e não funcional) → v3.0.1 -->
+<!-- última-sessão: 2026-11-12 — Ícones do menu lateral e cards da Home ampliados em 80% → v3.1.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -34,7 +34,7 @@ Regras:
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v3.0.1
+- **Versão atual:** v3.1.0
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Build Cloudflare:** `git fetch --tags --unshallow` é necessário no build command para `git describe --tags` funcionar (clone shallow sem tags)
@@ -3461,3 +3461,39 @@ Regras:
 ### Typecheck / Testes
 - Frontend: 0 erros (`tsc --noEmit`) · 136/136 testes (vitest) · `npm run build` limpo
 - Backend inalterado
+
+---
+
+## Sessão: 12/11/2026 — Ícones do menu lateral e dos cards da Home ampliados em 80% → v3.1.0
+
+### O que foi feito
+- **Ampliação ×1,8**: os ícones do **menu lateral** e dos **cards da tela inicial** passaram de 20px (`w-5 h-5`) para **36px** (`w-9 h-9` = 2.25rem exatos)
+- `IconsColoridos.tsx`: constante compartilhada `CLASSE_ICONE = 'w-9 h-9'` aplicada nos **13 ícones** — o componente é usado **somente** na `Sidebar` e na `Home`, então os dois alvos foram cobertos de uma vez (sem parâmetro novo)
+- **Tamanhos rem-based**: o zoom de acessibilidade (`useZoom` altera `document.documentElement.style.fontSize`) continua escalando os ícones junto com o resto da interface (utilitários px não escalariam)
+- **Barra lateral**:
+  - `py-2` → `py-1.5` **só no modo recolhido** (compensa a altura extra; expandida mantém `py-2`)
+  - badge de notificações/lotes: `absolute mt-[-10px] mr-[-10px]` → `absolute -top-1 -right-1` com `relative` no `NavLink` → fica no canto do ícone, **dentro do trilho de 56px** (8 + 36 + 8 = 52px, sem corte)
+  - menu principal: `flex-1 min-h-0 overflow-y-auto` + scrollbar oculta (`[scrollbar-width:none] [&::-webkit-scrollbar]:hidden`) → em telas baixas a lista **rola** em vez de ser cortada pelo `overflow-hidden` do `<aside>` (antes Configurações/Ajuda/Instalar App podiam sumir); ocultar a scrollbar evita que ela consuma a largura do trilho e corte o ícone de 36px
+  - ícone "Instalar App" (`📦`): `text-lg` → `text-[2rem] leading-none`
+  - `min-h-[calc(100vh-57px)]` **mantida** (a TopBar não mudou de altura)
+- **Cards da Home**: principais com `gap-2` entre ícone e rótulo; "Mais Opções" com `grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-4` (1 coluna abaixo de 420px), `gap-2 sm:gap-3` e `p-3 sm:p-4`
+- **Barra superior não foi alterada** (decisão do usuário: só menu lateral e cards da Home); **todos os tamanhos de texto preservados**
+
+### Decisões
+- `w-9` (2.25rem) em vez de `w-[36px]`: valor exato pedido (36px) **e** compatível com o zoom do app
+- `min-[420px]:grid-cols-2` (variante arbitrata do Tailwind 3.3, verificada no CSS gerado) evita o rótulo "Configurações" espremido em 2 colunas no celular
+- Ícones com `strokeWidth="2"` preservado — o traço engrossa proporcionalmente ao redimensionar o viewBox
+
+### Arquivos
+- `frontend/src/components/icons/IconsColoridos.tsx` (+`CLASSE_ICONE`, 13 ícones `w-9 h-9`)
+- `frontend/src/components/common/Sidebar.tsx` (padding colapsado, badge, nav rolável sem scrollbar, emoji do Instalar App)
+- `frontend/src/pages/Home.tsx` (gap nos cards principais, grid/padding/gap dos cards "Mais Opções")
+- `CHANGELOG.md` (v3.1.0), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Frontend: 0 erros (`tsc --noEmit`) · 136/136 testes (vitest) · `npm run build` limpo
+- CSS gerado verificado: `.w-9{width:2.25rem}`, `.h-9{height:2.25rem}`, media query `min-width:420px` e `scrollbar-width:none` presentes
+- Backend inalterado; sem migration
+
+### Pendências / riscos conhecidos
+- Checagem visual em dispositivo (desktop expandida/recolhida, celular, zoom 80%/150%) fica a cargo do usuário — o ambiente não tem browser headless instalado no projeto
