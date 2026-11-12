@@ -34,7 +34,7 @@ Regras:
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v3.1.1
+- **Versão atual:** v3.3.0
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Build Cloudflare:** `git fetch --tags --unshallow` é necessário no build command para `git describe --tags` funcionar (clone shallow sem tags)
@@ -3553,3 +3553,47 @@ Regras:
 - Frontend: 0 erros (`tsc --noEmit`) · 136/136 testes (vitest) · `npm run build` limpo
 - CSS verificado: `.w-12{width:3rem}`, `.h-12{height:3rem}`, `.w-16{width:4rem}`
 - Backend inalterado; sem migration
+
+---
+
+## Sessão: 12/11/2026 — Guia visual único (cartão próprio + demos) → v3.3.0
+
+### O que foi feito
+- **Novo sistema de guias** (substitui o tour com tooltip padrão do react-joyride por um **cartão próprio**, no estilo do protótipo `tour-visual-fiz.html`)
+  - `components/guia/GuiaVisual.tsx` (novo): cartão com eyebrow de progresso ("{rótulo} · {i} de {n}"), título, frase curta, botões **Pular / Voltar / Próximo** (vira **Concluir** no último) e ✕; posicionamento **à direita do alvo** → **abaixo** do alvo → **canto inferior direito** (fallback); no celular (<768px) fixo na parte inferior
+  - O **react-joyride segue como dependência**, usado só para o **recorte iluminado** (spotlight `#77bcff`, overlay `rgba(10,23,61,.53)`, `continuous={false}` + `key` por passo para remontar); o tooltip nativo é substituído por `<span className="hidden">`
+  - `components/guia/DemosGuia.tsx` (novo): **demonstrações fictícias** (grade de alunos com seleção, destino professor→turma, prévia de chamada, confirmação) exibidas quando o alvo real não existe — réplicas estáticas, sem handlers
+  - `context/GuiaVisualContext.tsx` + `hooks/useGuiaVisual.ts` (novos): estado do guia (guia, índice, chave, consulta de transferências pendentes, flags de visualização), auto-start do guia de boas-vindas (900ms) e abertura manual pelo evento `guia:abrir`
+  - `data/guiaVisual.tsx` (novo): catálogo dos guias — **boas-vindas** (9 passos, preservados do tour atual) e **novidades "Veja o que mudou"** (4 passos da Transferência de nível, versão `v3.0.0`)
+  - `utils/guiaVisualUtils.ts` (novo): elegibilidade por versão (`compararVersoes`), busca por id, guia mais recente do tipo e `deveMostrarGuiaNovidades`
+- **Wiring**: `App.tsx` (mount do `GuiaVisualProvider` + `<GuiaVisual />`), `Home.tsx` (versão + entrada discreta "Veja o que mudou"), `AjudaModal.tsx` (seção "Guias visuais" + fallback para as notas de versão), `Configuracoes.tsx` (botão do tour passa a emitir `guia:abrir`)
+- **`data-tour`**: `botao-transferir` e `botao-escolher-destino` (grid de Alunos), `lote-aprovar` (aba Transferência), `grade-alunos` (Alunos) e `filtros-chamada` (ChamadaFilters)
+- **Teclado**: `←`/`→` navegam, `Esc` fecha **sem** marcar como visto, `Tab` preso no cartão (também quando o foco escapa para a página)
+- **Armazenamento**: `tutorial_seq_<id>_<unidade>_<professor>` para as sequências (novidades); boas-vindas segue com a flag `tutorial_tour_<unidade>_<professor>`
+- **Arquivos removidos** (substituídos): `components/common/TourGuiado.tsx`, `data/tourSteps.ts`, `hooks/useTutorial.ts`
+- **Limpezas desta rodada**: import `deveMostrarGuiaNovidades` não usado removido do contexto, campo morto `demoRotulo` removido do tipo de passo, newline final em `index.css`, focus trap do cartão reforçado
+
+### Decisões
+- **Joyride só como spotlight**: mantém a dependência e o recorte já implementado, mas o cartão é do app (visual do protótipo, dark mode, teardown previsível)
+- **Demos são inertes**: réplicas com `pointer-events-none` e `aria-hidden` — o guia nunca cria, edita, programa nem aplica transferências
+- **Guia de novidades é manual**: entrada discreta na Home e na Ajuda (sem tour automático ao atualizar), coerente com o protótipo
+- **Passo com alvo ausente não navega**: passos com `requerPendentes` só mudam de rota quando a unidade realmente tem transferências pendentes
+- Sem migration e sem mudança de API; backend inalterado
+
+### Arquivos
+- `frontend/src/components/guia/GuiaVisual.tsx` (novo), `components/guia/DemosGuia.tsx` (novo)
+- `frontend/src/context/GuiaVisualContext.tsx` (novo), `hooks/useGuiaVisual.ts` (novo)
+- `frontend/src/data/guiaVisual.tsx` (novo), `utils/guiaVisualUtils.ts` (novo), `utils/__tests__/guiaVisualUtils.test.ts` (novo — 5 casos)
+- `frontend/src/App.tsx`, `pages/Home.tsx`, `pages/Alunos.tsx`, `pages/Configuracoes.tsx`, `pages/TransferenciasNivel.tsx`, `components/grid/ChamadaFilters.tsx`, `components/common/AjudaModal.tsx`, `utils/tutorialStorage.ts`, `index.css`
+- **Removidos**: `components/common/TourGuiado.tsx`, `data/tourSteps.ts`, `hooks/useTutorial.ts`
+- `frontend/src/data/__tests__/ajuda.test.ts` (invariantes do novo catálogo), `utils/__tests__/tutorialStorage.test.ts` (+1 caso)
+- `CHANGELOG.md` (v3.3.0), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Frontend: 0 erros (`tsc --noEmit`) · **143/143** testes (vitest — 136 + 7 novos) · `npm run build` limpo (≈43s: vite 16s + SW 0,4s)
+- Backend inalterado; sem migration
+
+### Pendências / riscos conhecidos
+- Checagem visual do guia no app (recorte, cartão, demos, mobile) fica a cargo do usuário — o ambiente não tem browser headless instalado no projeto
+- Migrations **036** e **037** (Transferência de nível) continuam pendentes de execução no Supabase — o guia de novidades as apresenta como funcionalidade já disponível
+

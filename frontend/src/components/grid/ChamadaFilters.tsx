@@ -68,7 +68,7 @@ const ChamadaFilters: React.FC<ChamadaFiltersProps> = ({
   const anos = [hoje.ano - 1, hoje.ano, hoje.ano + 1];
 
   return (
-    <div className="bg-white p-4 rounded-lg border border-gray-200 space-y-3 dark:bg-gray-800 dark:border-gray-700">
+    <div className="bg-white p-4 rounded-lg border border-gray-200 space-y-3 dark:bg-gray-800 dark:border-gray-700" data-tour="filtros-chamada">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex flex-col gap-1">

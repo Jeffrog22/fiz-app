@@ -22,11 +22,12 @@ import TopBar from './components/common/TopBar';
 import Sidebar from './components/common/Sidebar';
 import ConnectionBanner from './components/common/ConnectionBanner';
 import UpdateBanner from './components/common/UpdateBanner';
-import TourGuiado from './components/common/TourGuiado';
+import GuiaVisual from './components/guia/GuiaVisual';
 import AjudaModal from './components/common/AjudaModal';
 import UnidadeDesativada from './components/common/UnidadeDesativada';
 import DevPanel from './components/dev/DevPanel';
 import { useAuth } from './hooks/useAuth';
+import { GuiaVisualProvider } from './context/GuiaVisualContext';
 import { isBlockedHost } from './utils/tenant';
 
 const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -102,20 +103,22 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
-      <ConnectionBanner />
-      <UpdateBanner />
-      <TopBar />
-      <div className="flex flex-1">
-        <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(v => !v)} aceitesNaoVistos={aceitesNaoVistos} lotesPendentes={lotesPendentes} />
-        <main className="flex-1 p-6 overflow-auto">
-          {children}
-        </main>
+    <GuiaVisualProvider>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
+        <ConnectionBanner />
+        <UpdateBanner />
+        <TopBar />
+        <div className="flex flex-1">
+          <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((v) => !v)} aceitesNaoVistos={aceitesNaoVistos} lotesPendentes={lotesPendentes} />
+          <main className="flex-1 p-6 overflow-auto">
+            {children}
+          </main>
+        </div>
+        {devEnabled && !isVisitante && <DevPanel />}
+        {!isVisitante && <GuiaVisual />}
+        {!isVisitante && <AjudaModal aberto={ajudaAberta} onClose={() => setAjudaAberta(false)} />}
       </div>
-      {devEnabled && !isVisitante && <DevPanel />}
-      {!isVisitante && <TourGuiado />}
-      {!isVisitante && <AjudaModal aberto={ajudaAberta} onClose={() => setAjudaAberta(false)} />}
-    </div>
+    </GuiaVisualProvider>
   );
 };
 

@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Sparkles, BookOpen } from 'lucide-react';
 import SearchInput from '../SearchInput';
+import ReleaseNotesModal from './ReleaseNotesModal';
+import { useGuiaVisual } from '../../hooks/useGuiaVisual';
 import {
   PERGUNTAS_FREQUENTES,
   TOPICOS_AJUDA,
@@ -18,6 +20,8 @@ const AjudaModal: React.FC<AjudaModalProps> = ({ aberto, onClose }) => {
   const [topico, setTopico] = useState<TopicoAjuda | null>(null);
   const [indiceSlide, setIndiceSlide] = useState(0);
   const [faqAberta, setFaqAberta] = useState<number | null>(null);
+  const [notasAbertas, setNotasAbertas] = useState(false);
+  const { guiaNovidades, iniciar } = useGuiaVisual();
 
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
@@ -44,6 +48,21 @@ const AjudaModal: React.FC<AjudaModalProps> = ({ aberto, onClose }) => {
   const fecharTopico = () => {
     setTopico(null);
     setIndiceSlide(0);
+  };
+
+  const abrirGuia = (id: string) => {
+    onClose();
+    // deixa o modal fechar antes de abrir o guia
+    window.setTimeout(() => iniciar(id), 60);
+  };
+
+  const abrirNovidades = () => {
+    if (guiaNovidades) {
+      abrirGuia(guiaNovidades.id);
+    } else {
+      // Sem guia visual nesta versão: mantém o acesso às notas de versão
+      setNotasAbertas(true);
+    }
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -141,6 +160,28 @@ const AjudaModal: React.FC<AjudaModalProps> = ({ aberto, onClose }) => {
               )
             ) : (
               <>
+                <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
+                    Guias visuais
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => abrirGuia('boas-vindas')}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      <BookOpen size={14} /> Conheça o Fiz!
+                    </button>
+                    <button
+                      type="button"
+                      onClick={abrirNovidades}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      <Sparkles size={14} /> Veja o que mudou
+                    </button>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {TOPICOS_AJUDA.map((t) => (
                     <button
@@ -269,6 +310,8 @@ const AjudaModal: React.FC<AjudaModalProps> = ({ aberto, onClose }) => {
           </>
         )}
       </div>
+
+      <ReleaseNotesModal aberto={notasAbertas} onClose={() => setNotasAbertas(false)} resumido />
     </div>
   );
 };

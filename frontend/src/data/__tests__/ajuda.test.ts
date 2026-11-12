@@ -5,7 +5,7 @@ import {
   buscarAjuda,
   type TopicoAjuda,
 } from '../ajuda';
-import { NOVIDADES_POR_VERSAO, TOUR_BOAS_VINDAS } from '../tourSteps';
+import { GUIAS, GUIA_BOAS_VINDAS, GUIA_NOVIDADES_TRANSFERENCIA } from '../guiaVisual';
 
 describe('TOPICOS_AJUDA (invariantes)', () => {
   it('tem ids únicos, tags e ao menos 1 slide por tópico', () => {
@@ -88,10 +88,10 @@ describe('buscarAjuda', () => {
   });
 });
 
-describe('tourSteps (invariantes)', () => {
-  it('tour de boas-vindas tem ids únicos e conteúdo', () => {
+describe('guiaVisual (invariantes)', () => {
+  it('guia de boas-vindas tem ids únicos e conteúdo', () => {
     const ids = new Set<string>();
-    for (const p of TOUR_BOAS_VINDAS) {
+    for (const p of GUIA_BOAS_VINDAS.passos) {
       expect(p.id).toBeTruthy();
       expect(ids.has(p.id)).toBe(false);
       ids.add(p.id);
@@ -100,14 +100,23 @@ describe('tourSteps (invariantes)', () => {
     }
   });
 
-  it('NOVIDADES_POR_VERSAO tem passos não vazios', () => {
-    for (const [versao, passos] of Object.entries(NOVIDADES_POR_VERSAO)) {
-      expect(versao).toMatch(/^v?\d+\.\d+\.\d+$/);
-      expect(passos.length).toBeGreaterThan(0);
-      for (const p of passos) {
-        expect(p.title).toBeTruthy();
-        expect(p.content).toBeTruthy();
-      }
+  it('guia de novidades tem passos não vazios e versão válida', () => {
+    expect(GUIA_NOVIDADES_TRANSFERENCIA.versao).toMatch(/^v?\d+\.\d+\.\d+$/);
+    expect(GUIA_NOVIDADES_TRANSFERENCIA.passos.length).toBe(4);
+    for (const p of GUIA_NOVIDADES_TRANSFERENCIA.passos) {
+      expect(p.title).toBeTruthy();
+      expect(p.content).toBeTruthy();
+    }
+  });
+
+  it('todos os guias têm id único, versão válida e ao menos um passo', () => {
+    const ids = new Set<string>();
+    for (const g of GUIAS) {
+      expect(ids.has(g.id)).toBe(false);
+      ids.add(g.id);
+      expect(g.versao).toMatch(/^v?\d+\.\d+\.\d+$/);
+      expect(g.rotulo).toBeTruthy();
+      expect(g.passos.length).toBeGreaterThan(0);
     }
   });
 });

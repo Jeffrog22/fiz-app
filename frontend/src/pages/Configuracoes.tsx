@@ -790,7 +790,7 @@ const { enabled: devEnabled } = useDevLog();
               ❓ Central de Ajuda
             </button>
             <button
-              onClick={() => window.dispatchEvent(new CustomEvent('tutorial:iniciar'))}
+              onClick={() => window.dispatchEvent(new CustomEvent('guia:abrir', { detail: { id: 'boas-vindas' } }))}
               className="px-3 py-1.5 text-xs bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
             >
               🚀 Fazer tour de boas-vindas

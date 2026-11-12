@@ -4,6 +4,8 @@ import {
   marcarTourVisto,
   getUltimaVersaoVista,
   setUltimaVersaoVista,
+  sequenciaJaVista,
+  marcarSequenciaVista,
 } from '../tutorialStorage';
 
 describe('tutorialStorage', () => {
@@ -29,5 +31,15 @@ describe('tutorialStorage', () => {
     marcarTourVisto('jeff');
     expect(localStorage.getItem('tutorial_tour_bela-vista_jeff')).toBe('true');
     expect(localStorage.getItem('tutorial_tour_vila_jeff')).toBeNull();
+  });
+
+  it('marca a sequência de guia por professor e unidade', () => {
+    expect(sequenciaJaVista('transferencia-nivel', 'jeff')).toBe(false);
+    marcarSequenciaVista('transferencia-nivel', 'jeff');
+    expect(sequenciaJaVista('transferencia-nivel', 'jeff')).toBe(true);
+    // outra sequência e outro professor seguem independentes
+    expect(sequenciaJaVista('boas-vindas', 'jeff')).toBe(false);
+    expect(sequenciaJaVista('transferencia-nivel', 'duda')).toBe(false);
+    expect(localStorage.getItem('tutorial_seq_transferencia-nivel_bela-vista_jeff')).toBe('true');
   });
 });

@@ -1,5 +1,20 @@
 # Changelog - Fiz! App
 
+## [v3.3.0] - 2026-11-12
+### Feat
+- **Guia visual único**: o tour de boas-vindas e o guia de novidades passam a usar um **cartão próprio** (estilo do protótipo `tour-visual-fiz.html`) em vez do tooltip padrão do react-joyride
+  - **Cartão do guia**: eyebrow de progresso ("Veja o que mudou · 1 de 4"), título, frase curta e botões **Pular / Voltar / Próximo** (vira **Concluir** no último) + fechar (✕ / Esc). Posicionado **à direita do alvo** quando há espaço, **abaixo** do alvo se não couber à direita e no **canto inferior direito** como fallback; no **celular (<768px)** fica fixo na parte inferior
+  - **Recorte iluminado** continua a cargo do react-joyride (dependência mantida): contorno azul `#77bcff`, camada escura `rgba(10,23,61,.53)`, blur leve **apenas na camada escura** (o alvo permanece nítido) e cartão acima da camada (`z-[1001]`)
+  - **Demonstrações fictícias** (`components/guia/DemosGuia.tsx`): quando o alvo real não existe na tela (ex.: "Escolher destino" sem seleção, "Aprovar e aplicar" sem lote pendente), o cartão mostra uma **réplica estática** com dados fictícios — sem handlers, sem criar/editar/programar/aplicar nada
+  - **Guia de novidades "Veja o que mudou"** (4 passos) sobre a Transferência de nível: *Selecione no próprio grid → Escolha a turma de destino → Confira a formação das turmas → Aplique após a virada*. Elegível por versão (`v3.0.0`), de abertura **manual** (entrada discreta "Veja o que mudou" na tela inicial + botões na Central de Ajuda)
+  - **Central de Ajuda**: nova seção **"Guias visuais"** com "Conheça o Fiz!" e "Veja o que mudou" (sem guia de novidades elegível, abre as notas de versão resumidas)
+  - **Novo contexto** `GuiaVisualContext` + hook `useGuiaVisual` (guia aberto, índice, chave de remontagem, consulta de transferências pendentes, flags de visualização)
+  - **`data-tour` novos**: `botao-transferir` (grid de Alunos), `botao-escolher-destino` (action bar da transferência) e `lote-aprovar` (aba Transferência); `grade-alunos` e `filtros-chamada` adicionados
+  - **Teclado**: `←` / `→` navegam entre os passos, `Esc` fecha **sem** marcar como visto, `Tab` fica preso no cartão (inclusive quando o foco escapa para a página)
+  - **Armazenamento**: sequência de novidades em `tutorial_seq_<id>_<unidade>_<professor>`; o guia de boas-vindas continua usando a flag `tutorial_tour_<unidade>_<professor>` (quem já viu o tour não o vê de novo)
+  - **Arquivos removidos** (substituídos pelo novo sistema): `components/common/TourGuiado.tsx`, `data/tourSteps.ts` e `hooks/useTutorial.ts`
+  - **Sem migration** e **sem mudança de API**; backend inalterado
+
 ## [v3.2.0] - 2026-11-12
 ### Feat
 - **Ícones do menu recolhido ampliados novamente**: de 36px para **48px (×2,4 sobre os 20px originais)** — `CLASSE_ICONE_GRANDE` passa de `w-9 h-9` (2.25rem) para `w-12 h-12` (3rem = 48px exatos), mantendo o **rem-based** (acompanha o zoom de acessibilidade)

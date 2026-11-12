@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useGuiaVisual } from '../hooks/useGuiaVisual';
+import { deveMostrarGuiaNovidades } from '../utils/guiaVisualUtils';
 import {
   ChamadaIcon,
   AlunosIcon,
@@ -45,8 +47,11 @@ const DARK_COLORS: Record<string, string> = {
 const Home: React.FC = () => {
   const navigate = useNavigate();
   const { isVisitante } = useAuth();
+  const { guiaNovidades, novidadesVistas, iniciar } = useGuiaVisual();
   const mainItems = menuItems.filter((m) => m.group === 'main');
   const moreItems = menuItems.filter((m) => m.group === 'more');
+  const versao = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '';
+  const mostrarNovidades = !isVisitante && deveMostrarGuiaNovidades(guiaNovidades, novidadesVistas);
 
   return (
     <div className="space-y-8">
@@ -89,6 +94,20 @@ const Home: React.FC = () => {
           ))}
         </div>
       </div>}
+
+      <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+        <span>Versão {versao || 'dev'}</span>
+        {mostrarNovidades && guiaNovidades && (
+          <button
+            type="button"
+            onClick={() => iniciar(guiaNovidades.id)}
+            className="underline underline-offset-2 hover:text-primary-600 dark:hover:text-primary-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded px-1 py-2 -my-2"
+            title="Ver o que mudou nesta versão"
+          >
+            Veja o que mudou
+          </button>
+        )}
+      </div>
     </div>
   );
 };

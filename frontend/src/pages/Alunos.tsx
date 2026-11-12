@@ -680,6 +680,7 @@ const Alunos: React.FC = () => {
           <button
             type="button"
             onClick={alternarModoTransferencia}
+            data-tour="botao-transferir"
             className={`px-4 py-2 text-sm rounded-md transition-colors ${
               modoTransferencia
                 ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-300'
@@ -857,6 +858,7 @@ const Alunos: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setModalTransferenciaAberto(true)}
+                data-tour="botao-escolher-destino"
                 className="px-4 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
               >
                 Escolher destino
@@ -889,7 +891,7 @@ const Alunos: React.FC = () => {
               {alunoSemTurma} não está alocado a nenhuma turma. Selecione uma turma primeiro.
             </div>
           )}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto" data-tour="grade-alunos">
           <table
             className="w-full text-sm"
             style={

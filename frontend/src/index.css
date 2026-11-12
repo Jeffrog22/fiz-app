@@ -68,3 +68,18 @@ body {
     border: 1px solid #000 !important;
   }
 }
+
+/* --- Guia visual (recorte iluminado do Joyride) --- */
+/* Blur leve apenas na camada escura: o alvo permanece nitido */
+.react-joyride__spotlight > path:first-child {
+  filter: blur(1.5px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .react-joyride__spotlight,
+  .react-joyride__spotlight > path,
+  .react-joyride__overlay {
+    transition: none !important;
+    animation: none !important;
+  }
+}
