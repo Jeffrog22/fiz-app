@@ -68,7 +68,12 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
     };
     carregarLotes();
     const intervalLotes = setInterval(carregarLotes, 30000);
-    return () => clearInterval(intervalLotes);
+    const handler = () => carregarLotes();
+    window.addEventListener('transferencias:contagem-mudou', handler);
+    return () => {
+      clearInterval(intervalLotes);
+      window.removeEventListener('transferencias:contagem-mudou', handler);
+    };
   }, [isAuthenticated, isVisitante]);
 
   useEffect(() => {

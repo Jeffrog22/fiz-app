@@ -127,8 +127,8 @@ export async function removerItemLoteHandler(
   }
 
   try {
-    await removerItemLote(loteId, alunoId, tenantId);
-    res.status(204).send();
+    const resultado = await removerItemLote(loteId, alunoId, tenantId);
+    res.status(200).json(resultado);
   } catch (err: any) {
     next(err);
   }

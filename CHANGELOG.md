@@ -1,5 +1,20 @@
 # Changelog - Fiz! App
 
+## [v3.4.0] - 2026-11-12
+### Feat
+- **Transferência de nível — "Lotes pendentes" vira aba interna**: a aba temporária passa a ter **3 abas internas** — *Visão geral* | *Prévia de chamada* | *Lotes pendentes* (a lista de lotes deixa de ficar sempre visível abaixo da visão geral)
+  - **`?aba=visao|previa|lotes`** na URL: permite abrir a aba correta por link (o guia visual "Veja o que mudou" agora aponta para `/transferencias-nivel?aba=lotes`, garantindo que o alvo `lote-aprovar` exista em tela)
+- **Últimos filtros persistidos por professor + unidade** (`localStorage`, chave `tf_<tipo>:<unidade>:<professor>`):
+  - **Programar** (`TransferenciaLoteReviewModal`): destino **professor → turma/horário** é restaurado ao reabrir o modal (validado contra as opções existentes: professor ou turma removidos → limpa o campo dependente)
+  - **Prévia de chamada** (`PreviaChamada`): **professor → turma** e a **competência** (mês/ano) manual são restaurados
+- **Retirar o último aluno de um lote cancela o lote automaticamente** (`backend/src/services/transferenciaLoteService.ts`):
+  - Antes de remover, o serviço **bloqueia por lote** (lê o status sem filtro) e **revalida** que o lote está em `STATUS_ATIVOS` — remoção em lote já aplicado/cancelado/em processo é rejeitada com 400
+  - Depois de remover, conta os itens **pendentes** restantes; se zerar, **cancela o lote** com update revalidando `.in('status', STATUS_ATIVOS)` (protege contra aplicação concorrente)
+  - **`DELETE /api/transferencias-nivel/lotes/:id/itens/:alunoId`** agora responde **200** com `{ status, itensRestantes, canceladoAutomaticamente }` (antes 204) — o front usa a resposta do servidor em vez do estado local (que ainda estaria defasado logo após o `setLotes`)
+- **Badge do menu atualizado na hora**: evento `transferencias:contagem-mudou` disparado após aplicar/cancelar lote, editar lote e retirar aluno → `App.tsx` recarrega `/transferencias-nivel/lotes/pendentes/count` (antes só no polling de 30s)
+- **Testes**: backend `transferenciaLoteService.test.ts` (+8 casos: auto-cancelamento, revalidação de status, concorrência, retorno do serviço); frontend `transferenciaPreferencias.test.ts` (novo, 7 casos: round-trip, isolamento por professor/unidade, valor corrompido)
+- **Sem migration** e **sem breaking change** de contrato (o DELETE apenas passa a devolver corpo JSON)
+
 ## [v3.3.0] - 2026-11-12
 ### Feat
 - **Guia visual único**: o tour de boas-vindas e o guia de novidades passam a usar um **cartão próprio** (estilo do protótipo `tour-visual-fiz.html`) em vez do tooltip padrão do react-joyride

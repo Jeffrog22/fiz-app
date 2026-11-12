@@ -1,8 +1,14 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../../utils/api';
+import { useAuth } from '../../hooks/useAuth';
 import type { Aluno, CalendarioEvento, ChamadaLog, Professor, Turma } from '../../types';
 import DataGrid from '../grid/DataGrid';
 import { gerarDiasLetivos } from '../../utils/chamadaUtils';
+import { getTenantId } from '../../utils/tenant';
+import {
+  carregarPreferencia,
+  salvarPreferencia,
+} from '../../utils/transferenciaPreferencias';
 import {
   comporTurma,
   mesAnoDeData,
@@ -40,6 +46,8 @@ const PreviaChamada: React.FC<PreviaChamadaProps> = ({
   movimentos,
   dataEfetivaBase,
 }) => {
+  const { professorId: professorLogado } = useAuth();
+  const tenantId = getTenantId();
   const [professorId, setProfessorId] = useState('');
   const [turmaGrupoId, setTurmaGrupoId] = useState('');
   const [competenciaManual, setCompetenciaManual] = useState(false);
@@ -159,6 +167,42 @@ const PreviaChamada: React.FC<PreviaChamadaProps> = ({
     carregar();
   }, [carregar]);
 
+  // Restaura a última seleção Professor -> Turma + competência, isolada por
+  // professor logado e unidade, validando as dependências após carregar as
+  // opções disponíveis.
+  useEffect(() => {
+    if (!professorLogado || !tenantId) return;
+    const saved = carregarPreferencia<{
+      professorId: string;
+      turmaGrupoId: string;
+      competencia?: { mes: number; ano: number } | null;
+    }>(
+      'previa',
+      tenantId,
+      professorLogado,
+      { professorId: '', turmaGrupoId: '', competencia: null },
+    );
+    if (!saved) return;
+    const profExiste = professores.some((p) => p.id === saved.professorId);
+    if (!profExiste) {
+      setProfessorId('');
+      setTurmaGrupoId('');
+      return;
+    }
+    setProfessorId(saved.professorId);
+    const turmasDoProf = turmas.filter((t) => t.professor_id === saved.professorId);
+    const turmaExiste = turmasDoProf.some((t) => t.grupo_id === saved.turmaGrupoId);
+    if (!turmaExiste) {
+      setTurmaGrupoId('');
+      return;
+    }
+    setTurmaGrupoId(saved.turmaGrupoId);
+    if (saved.competencia && saved.competencia.mes && saved.competencia.ano) {
+      setCompetencia(saved.competencia);
+      setCompetenciaManual(true);
+    }
+  }, [professorLogado, tenantId, professores, turmas]);
+
   // Competência padrão = mês da data efetiva (enquanto o usuário não escolher outro)
   useEffect(() => {
     if (competenciaManual) return;
@@ -176,7 +220,17 @@ const PreviaChamada: React.FC<PreviaChamadaProps> = ({
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Professor</label>
           <select
             value={professorId}
-            onChange={(e) => { setProfessorId(e.target.value); setTurmaGrupoId(''); }}
+            onChange={(e) => {
+              const valor = e.target.value;
+              setProfessorId(valor);
+              setTurmaGrupoId('');
+              if (!tenantId || !professorLogado) return;
+              salvarPreferencia('previa', tenantId, professorLogado, {
+                professorId: valor,
+                turmaGrupoId: '',
+                competencia: null,
+              });
+            }}
             className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
           >
             <option value="">Escolha o professor</option>
@@ -190,7 +244,16 @@ const PreviaChamada: React.FC<PreviaChamadaProps> = ({
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Turma</label>
           <select
             value={turmaGrupoId}
-            onChange={(e) => setTurmaGrupoId(e.target.value)}
+            onChange={(e) => {
+              const valor = e.target.value;
+              setTurmaGrupoId(valor);
+              if (!tenantId || !professorLogado) return;
+              salvarPreferencia('previa', tenantId, professorLogado, {
+                professorId,
+                turmaGrupoId: valor,
+                competencia: competenciaManual ? competencia : null,
+              });
+            }}
             disabled={!professorId}
             className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -210,6 +273,12 @@ const PreviaChamada: React.FC<PreviaChamadaProps> = ({
             onChange={(e) => {
               setCompetenciaManual(true);
               setCompetencia((c) => ({ ...c, mes: parseInt(e.target.value, 10) }));
+              if (!tenantId || !professorLogado) return;
+              salvarPreferencia('previa', tenantId, professorLogado, {
+                professorId,
+                turmaGrupoId,
+                competencia: { mes: parseInt(e.target.value, 10), ano: competencia.ano },
+              });
             }}
             className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
           >
@@ -227,6 +296,12 @@ const PreviaChamada: React.FC<PreviaChamadaProps> = ({
             onChange={(e) => {
               setCompetenciaManual(true);
               setCompetencia((c) => ({ ...c, ano: parseInt(e.target.value, 10) || c.ano }));
+              if (!tenantId || !professorLogado) return;
+              salvarPreferencia('previa', tenantId, professorLogado, {
+                professorId,
+                turmaGrupoId,
+                competencia: { mes: competencia.mes, ano: parseInt(e.target.value, 10) || competencia.ano },
+              });
             }}
             className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
           />

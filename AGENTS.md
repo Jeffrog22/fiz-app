@@ -3556,6 +3556,53 @@ Regras:
 
 ---
 
+## Sessão: 12/11/2026 — Transferência de nível: abas internas, filtros persistidos e auto-cancelamento → v3.4.0
+
+### O que foi feito
+- **Ajuste 1 — "Lotes pendentes" como aba interna**: a página `/transferencias-nivel` passa a ter **3 abas internas** — *Visão geral* | *Prévia de chamada* | *Lotes pendentes*. A lista de lotes (com busca, filtro de status, cards e "Aprovar e aplicar") deixa de ficar sempre visível abaixo da visão geral e passa a ser a 3ª aba
+  - **`?aba=visao|previa|lotes`** na URL (`useSearchParams`): a aba inicial vem do query param e o clique nas abas atualiza a URL (`replace`, sem `aba` no modo padrão). O guia visual "Veja o que mudou" passou a apontar para `/transferencias-nivel?aba=lotes` — sem isso o alvo `data-tour="lote-aprovar"` não existiria em tela (o passo cairia na demo)
+- **Ajuste 2 — últimos filtros persistidos por professor + unidade**: novo helper `frontend/src/utils/transferenciaPreferencias.ts` (`carregarPreferencia` / `salvarPreferencia`, chave `tf_<tipo>:<unidade>:<professor>` no `localStorage`, com `try/catch` para storage indisponível)
+  - **Programar** (`TransferenciaLoteReviewModal`): destino **professor → turma/horário** restaurado ao reabrir o modal; valida contra as opções carregadas (professor inexistente → limpa tudo; turma fora do professor → limpa só a turma)
+  - **Prévia de chamada** (`PreviaChamada`): **professor → turma** e a **competência** (mês/ano) manual restaurados; a competência só é reaplicada se o usuário tinha escolhido manualmente
+- **Ajuste 3 — auto-cancelar lote ao retirar o último aluno** (`backend/src/services/transferenciaLoteService.ts`)
+  - **Bloqueio por lote + revalidação**: lê o status do lote **sem filtro** e só permite remoção se estiver em `STATUS_ATIVOS`; mensagem "Lote nao esta disponível para modificacao (ja aplicado, cancelado ou em processo)"
+  - **Cancelamento automático**: conta os itens **pendentes** restantes; se zerar, cancela o lote com update revalidando `.in('status', STATUS_ATIVOS)` (aplicação concorrente não é sobrescrita)
+  - **Contrato**: `DELETE /api/transferencias-nivel/lotes/:id/itens/:alunoId` passou de **204** para **200** com `{ status, itensRestantes, canceladoAutomaticamente }`
+- **Badge do menu imediato**: evento `transferencias:contagem-mudou` disparado em aplicar/cancelar lote, editar lote e retirar aluno → `App.tsx` recarrega `/transferencias-nivel/lotes/pendentes/count` na hora (antes só no polling de 30s)
+
+### Bug corrigido durante a sessão
+- **Estado defasado ao retirar o último aluno**: o front decidia fechar/reabrir o modal lendo `lotes.find(...)` do **state local**, que ainda não tinha o `setLotes` do `carregar()` aplicado (React agenda a atualização) → o modal reabria mostrando um lote já cancelado. Corrigido usando a **resposta do servidor** (`canceladoAutomaticamente`) em vez do state local
+
+### Decisões
+- Preferências no `localStorage` (não `sessionStorage`): a última seleção deve sobreviver ao fechamento do app
+- Persistência por **professor logado + unidade** (não global): dois professores da mesma unidade não sobrescrevem a seleção um do outro
+- Auto-cancelamento **no servidor** (fonte única de verdade): o front não pode inferir "lote vazio" com segurança (itens em outros estados)
+- `DELETE` devolvendo corpo JSON é **retrocompatível** (axios trata 204 e 200 igual) — nenhum outro consumidor quebrou
+- Sem migration: a feature continua dependente das migrations **036/037** (pendentes de execução no Supabase)
+
+### Arquivos
+- `backend/src/services/transferenciaLoteService.ts` (`removerItemLote` → `ResultadoRemocaoItemLote`, lock + revalidação + cancelamento automático)
+- `backend/src/controllers/transferenciaLoteController.ts` (DELETE → 200 JSON)
+- `backend/src/services/__tests__/transferenciaLoteService.test.ts` (+8 casos; asserção do valor de retorno)
+- `frontend/src/utils/transferenciaPreferencias.ts` (novo), `frontend/src/utils/__tests__/transferenciaPreferencias.test.ts` (novo — 7 casos)
+- `frontend/src/components/modals/TransferenciaLoteReviewModal.tsx` (restaura destino)
+- `frontend/src/components/transferencias/PreviaChamada.tsx` (restaura professor/turma/competência)
+- `frontend/src/pages/TransferenciasNivel.tsx` (aba interna "Lotes pendentes", `?aba=`, resposta do servidor, evento de contagem)
+- `frontend/src/App.tsx` (listener `transferencias:contagem-mudou`)
+- `frontend/src/data/guiaVisual.tsx` (passo "aplique-depois-da-virada" com `rota` `/transferencias-nivel?aba=lotes`)
+- `CHANGELOG.md` (v3.4.0), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Backend: 0 erros (`tsc --noEmit`) · **168/168** testes (jest)
+- Frontend: 0 erros (`tsc --noEmit`) · **150/150** testes (vitest) · `npm run build` limpo
+- Sem migration
+
+### Pendências / riscos conhecidos
+- Migrations **036** e **037** (Transferência de nível) continuam **pendentes de execução no Supabase** — a funcionalidade não opera em produção sem elas
+- Checagem visual (abas, preferências restauradas, badge, auto-cancelamento) fica a cargo do usuário — o ambiente não tem browser headless
+
+---
+
 ## Sessão: 12/11/2026 — Guia visual único (cartão próprio + demos) → v3.3.0
 
 ### O que foi feito

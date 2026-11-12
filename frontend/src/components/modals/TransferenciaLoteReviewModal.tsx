@@ -10,6 +10,10 @@ import type {
 } from '../../types';
 import { getTenantId } from '../../utils/tenant';
 import {
+  carregarPreferencia,
+  salvarPreferencia,
+} from '../../utils/transferenciaPreferencias';
+import {
   hojeSaoPaulo,
   primeiroDiaMesSeguinte,
   projetarLotacaoDestino,
@@ -36,7 +40,8 @@ const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> 
   movimentosPendentes = [],
   onSucesso,
 }) => {
-  const { isVisitante } = useAuth();
+  const { isVisitante, professorId: professorLogado } = useAuth();
+  const tenantId = getTenantId();
   const [professores, setProfessores] = useState<Professor[]>([]);
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [professorDestino, setProfessorDestino] = useState<string>('');
@@ -47,6 +52,13 @@ const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> 
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
+
+  type PreferenciaDestino = {
+    professorId: string;
+    turmaGrupoId: string;
+  };
+
+  const PREFERENCIA_TIPO = 'destino';
 
   // Origem de cada aluno: matrícula atual (turma_id + nivel) — somente leitura
   const origens = useMemo(
@@ -109,16 +121,57 @@ const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> 
     carregarDados();
   }, [aberto, carregarDados]);
 
+  // Restaura o último destino (professor + turma/horário) por professor+unidade,
+  // validando as dependências após carregar as opções disponíveis.
+  useEffect(() => {
+    if (!aberto || !professorLogado || !tenantId) return;
+    const saved = carregarPreferencia<PreferenciaDestino>(
+      PREFERENCIA_TIPO,
+      tenantId,
+      professorLogado,
+      { professorId: '', turmaGrupoId: '' },
+    );
+    if (!saved) return;
+    const profExiste = professores.some((p) => p.id === saved.professorId);
+    if (!profExiste) {
+      setProfessorDestino('');
+      setTurmaDestino('');
+      setNivelDestino(null);
+      return;
+    }
+    setProfessorDestino(saved.professorId);
+    const turmasDoProf = turmas.filter((t) => t.professor_id === saved.professorId);
+    const turmaExiste = turmasDoProf.some((t) => t.grupo_id === saved.turmaGrupoId);
+    if (!turmaExiste) {
+      setTurmaDestino('');
+      setNivelDestino(null);
+      return;
+    }
+    setTurmaDestino(saved.turmaGrupoId);
+    const t = turmasDoProf.find((x) => x.grupo_id === saved.turmaGrupoId);
+    setNivelDestino(t?.nivel || null);
+  }, [aberto, professorLogado, tenantId, professores, turmas]);
+
   const handleProfessorChange = (value: string) => {
     setProfessorDestino(value);
     setTurmaDestino('');
     setNivelDestino(null);
+    if (!tenantId || !professorLogado) return;
+    salvarPreferencia(PREFERENCIA_TIPO, tenantId, professorLogado, {
+      professorId: value,
+      turmaGrupoId: '',
+    });
   };
 
   const handleTurmaChange = (value: string) => {
     setTurmaDestino(value);
     const t = turmasDisponiveis.find((x) => x.grupo_id === value);
     setNivelDestino(t?.nivel || null);
+    if (!tenantId || !professorLogado) return;
+    salvarPreferencia(PREFERENCIA_TIPO, tenantId, professorLogado, {
+      professorId: professorDestino,
+      turmaGrupoId: value,
+    });
   };
 
   const handleSave = async () => {

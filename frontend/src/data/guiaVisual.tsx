@@ -78,6 +78,7 @@ export const GUIA_NOVIDADES_TRANSFERENCIA: GuiaVisual = {
     {
       id: 'aplique-depois-da-virada',
       target: '[data-tour="lote-aprovar"]',
+      rota: '/transferencias-nivel?aba=lotes',
       requerPendentes: true,
       title: 'Aplique após a virada',
       content:

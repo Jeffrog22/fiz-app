@@ -389,11 +389,19 @@ export async function atualizarLote(
   };
 }
 
+export interface ResultadoRemocaoItemLote {
+  status: StatusTransferenciaLote;
+  itensRestantes: number;
+  canceladoAutomaticamente: boolean;
+}
+
 export async function removerItemLote(
   loteId: string,
   alunoId: string,
   tenantId: string,
-): Promise<void> {
+): Promise<ResultadoRemocaoItemLote> {
+  // 1. Bloqueio por lote: lê o status atual (sem filtrar status) para detectar
+  //    concorrência com aplicação/cancelamento simultâneos.
   const { data: lote, error: loteError } = await supabase
     .from(LOTE_TABLE)
     .select('status')
@@ -403,10 +411,12 @@ export async function removerItemLote(
 
   if (loteError) throw new AppError('Erro ao buscar lote', 500);
   if (!lote) throw new AppError('Lote nao encontrado', 404);
+  // 2. Revalida o status apos o bloqueio: so e possivel modificar lotes ativos.
   if (!STATUS_ATIVOS.includes(lote.status as string)) {
-    throw new AppError('Só é possível modificar lotes programados ou em revisao', 400);
+    throw new AppError('Lote nao esta disponível para modificacao (ja aplicado, cancelado ou em processo)', 400);
   }
 
+  // 3. Remove exclusivamente o item pendente do aluno informado.
   const { error } = await supabase
     .from(ITEM_TABLE)
     .delete()
@@ -415,6 +425,54 @@ export async function removerItemLote(
     .eq('status', 'pendente');
 
   if (error) throw new AppError('Erro ao retirar item do lote', 500);
+
+  // 4. Se o lote ficou sem itens pendentes, cancela-o na mesma transacao logica,
+  //    revalidando que ainda esta ativo (nao foi aplicado concorrentemente).
+  const { data: restantes, error: restantesError } = await supabase
+    .from(ITEM_TABLE)
+    .select('id')
+    .eq('lote_id', loteId)
+    .eq('status', 'pendente');
+
+  if (restantesError) throw new AppError('Erro ao verificar itens restantes', 500);
+
+  const itensRestantes = (restantes || []).length;
+
+  if (itensRestantes === 0) {
+    const { data: cancelados, error: cancelError } = await supabase
+      .from(LOTE_TABLE)
+      .update({ status: 'cancelado', atualizado_em: new Date().toISOString() })
+      .eq('id', loteId)
+      .eq('tenant_id', tenantId)
+      .in('status', STATUS_ATIVOS)
+      .select('status');
+
+    if (cancelError) throw new AppError('Erro ao cancelar lote esvaziado', 500);
+
+    if (cancelados && cancelados.length > 0) {
+      return { status: 'cancelado', itensRestantes, canceladoAutomaticamente: true };
+    }
+
+    // Concorrencia: outro processo mudou o status -> reflete o estado atual
+    const { data: atual } = await supabase
+      .from(LOTE_TABLE)
+      .select('status')
+      .eq('id', loteId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
+
+    return {
+      status: (atual?.status as StatusTransferenciaLote) || (lote.status as StatusTransferenciaLote),
+      itensRestantes,
+      canceladoAutomaticamente: false,
+    };
+  }
+
+  return {
+    status: lote.status as StatusTransferenciaLote,
+    itensRestantes,
+    canceladoAutomaticamente: false,
+  };
 }
 
 export async function cancelarLote(

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
 import SearchInput from '../components/SearchInput';
@@ -21,7 +21,7 @@ import {
   isLoteAtivo,
   type MovimentoTransferencia,
 } from '../utils/transferenciasUtils';
-import { Pencil, Trash2, UserPlus, Play, ShieldAlert, Clock, X, LayoutGrid, CalendarRange } from 'lucide-react';
+import { Pencil, Trash2, UserPlus, Play, ShieldAlert, Clock, X, LayoutGrid, CalendarRange, List } from 'lucide-react';
 
 const STATUS_LABEL: Record<StatusTransferenciaLote, string> = {
   programado: 'Programado',
@@ -54,10 +54,11 @@ const PAPEL_LABEL: Record<string, string> = {
   ambos: 'Origem e destino',
 };
 
-type Aba = 'visao' | 'previa';
+type Aba = 'visao' | 'previa' | 'lotes';
 
 const TransferenciasNivel: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isVisitante } = useAuth();
   const redirectRef = useRef(false);
 
@@ -79,6 +80,26 @@ const TransferenciasNivel: React.FC = () => {
   const [editandoLote, setEditandoLote] = useState(false);
   const [turmaEditada, setTurmaEditada] = useState('');
   const [dataEditada, setDataEditada] = useState('');
+
+  // Aba inicial pela URL (?aba=visao|previa|lotes) — permite abrir a aba
+  // "Lotes pendentes" pelo link do guia visual.
+  const abaParam = searchParams.get('aba');
+  useEffect(() => {
+    if (abaParam === 'visao' || abaParam === 'previa' || abaParam === 'lotes') {
+      setAba(abaParam);
+    }
+  }, [abaParam]);
+
+  const trocarAba = useCallback(
+    (nova: Aba) => {
+      setAba(nova);
+      const params = new URLSearchParams(searchParams);
+      if (nova === 'visao') params.delete('aba');
+      else params.set('aba', nova);
+      setSearchParams(params, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
 
   const professorMap = useMemo(
     () => new Map(professores.map((p) => [p.id, p.nome])),
@@ -211,6 +232,7 @@ const TransferenciasNivel: React.FC = () => {
       alert(`Aplicação concluída: ${aplicados} aplicado(s), ${erros} erro(s), ${conflitos} conflito(s).`);
       setModalAberto(false);
       await carregar();
+      window.dispatchEvent(new CustomEvent('transferencias:contagem-mudou'));
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Erro ao aplicar lote');
     } finally {
@@ -224,6 +246,7 @@ const TransferenciasNivel: React.FC = () => {
       await api.delete(`/transferencias-nivel/lotes/${lote.id}`);
       setModalAberto(false);
       await carregar();
+      window.dispatchEvent(new CustomEvent('transferencias:contagem-mudou'));
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Erro ao cancelar lote');
     }
@@ -233,9 +256,26 @@ const TransferenciasNivel: React.FC = () => {
     if (!loteSelecionado) return;
     if (!confirm(`Retirar ${item.aluno_nome || 'o aluno'} deste lote?`)) return;
     try {
-      await api.delete(`/transferencias-nivel/lotes/${loteSelecionado.id}/itens/${item.aluno_id}`);
+      const res = await api.delete(
+        `/transferencias-nivel/lotes/${loteSelecionado.id}/itens/${item.aluno_id}`,
+      );
+      const resultado = res.data as {
+        status?: string;
+        itensRestantes?: number;
+        canceladoAutomaticamente?: boolean;
+      };
       await carregar();
-      await abrirLote(loteSelecionado);
+      // O servidor cancela o lote automaticamente quando fica sem itens pendentes.
+      // Usa a resposta do servidor (o estado local ainda pode estar defasado).
+      if (resultado?.canceladoAutomaticamente) {
+        setModalAberto(false);
+        setLoteSelecionado(null);
+        setItensLote([]);
+      } else {
+        await abrirLote(loteSelecionado);
+      }
+      // Atualiza o badge do menu imediatamente
+      window.dispatchEvent(new CustomEvent('transferencias:contagem-mudou'));
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Erro ao retirar aluno do lote');
     }
@@ -250,6 +290,7 @@ const TransferenciasNivel: React.FC = () => {
       });
       setEditandoLote(false);
       await carregar();
+      window.dispatchEvent(new CustomEvent('transferencias:contagem-mudou'));
       await abrirLote(loteSelecionado);
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Erro ao atualizar lote');
@@ -292,7 +333,7 @@ const TransferenciasNivel: React.FC = () => {
       <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700">
         <button
           type="button"
-          onClick={() => setAba('visao')}
+          onClick={() => trocarAba('visao')}
           className={`flex items-center gap-2 px-4 py-2 text-sm border-b-2 transition-colors ${
             aba === 'visao'
               ? 'border-purple-600 text-purple-700 dark:text-purple-300 font-medium'
@@ -303,7 +344,7 @@ const TransferenciasNivel: React.FC = () => {
         </button>
         <button
           type="button"
-          onClick={() => setAba('previa')}
+          onClick={() => trocarAba('previa')}
           className={`flex items-center gap-2 px-4 py-2 text-sm border-b-2 transition-colors ${
             aba === 'previa'
               ? 'border-purple-600 text-purple-700 dark:text-purple-300 font-medium'
@@ -311,6 +352,17 @@ const TransferenciasNivel: React.FC = () => {
           }`}
         >
           <CalendarRange size={15} /> Prévia de chamada
+        </button>
+        <button
+          type="button"
+          onClick={() => trocarAba('lotes')}
+          className={`flex items-center gap-2 px-4 py-2 text-sm border-b-2 transition-colors ${
+            aba === 'lotes'
+              ? 'border-purple-600 text-purple-700 dark:text-purple-300 font-medium'
+              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+          }`}
+        >
+          <List size={15} /> Lotes pendentes
         </button>
       </div>
 
@@ -394,32 +446,33 @@ const TransferenciasNivel: React.FC = () => {
         />
       )}
 
-      <div className="space-y-3">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-            Lotes {filtroStatus === 'pendentes' ? 'pendentes' : filtroStatus === 'todos' ? '' : 'históricos'}{' '}
-            <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({lotesFiltrados.length})</span>
-          </h2>
-          <div className="flex gap-3 items-center">
-            <SearchInput
-              value={filtroBusca}
-              onChange={setFiltroBusca}
-              placeholder="Buscar por turma destino, professor..."
-              className="max-w-xs"
-            />
-            <select
-              value={filtroStatus}
-              onChange={(e) => setFiltroStatus(e.target.value as any)}
-              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-            >
-              <option value="pendentes">Pendentes</option>
-              <option value="todos">Todos os lotes</option>
-              {Object.entries(STATUS_LABEL).map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
-              ))}
-            </select>
+      {aba === 'lotes' && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+              Lotes {filtroStatus === 'pendentes' ? 'pendentes' : filtroStatus === 'todos' ? '' : 'históricos'}{' '}
+              <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({lotesFiltrados.length})</span>
+            </h2>
+            <div className="flex gap-3 items-center">
+              <SearchInput
+                value={filtroBusca}
+                onChange={setFiltroBusca}
+                placeholder="Buscar por turma destino, professor..."
+                className="max-w-xs"
+              />
+              <select
+                value={filtroStatus}
+                onChange={(e) => setFiltroStatus(e.target.value as any)}
+                className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+              >
+                <option value="pendentes">Pendentes</option>
+                <option value="todos">Todos os lotes</option>
+                {Object.entries(STATUS_LABEL).map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </select>
+            </div>
           </div>
-        </div>
 
         {contadorPendentes > 0 && (
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3 flex items-center gap-3">
@@ -513,7 +566,8 @@ const TransferenciasNivel: React.FC = () => {
             {lotesHistorico.length} lote(s) já aplicado(s) ou cancelado(s) — use o filtro para revisá-los.
           </p>
         )}
-      </div>
+        </div>
+      )}
 
       {modalAberto && loteSelecionado && (
         <div className="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setModalAberto(false)}>

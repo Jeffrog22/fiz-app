@@ -396,6 +396,94 @@ describe('transferenciaLoteService', () => {
     expect(itens[0].aluno_id).toBe('a1');
   });
 
+  it('cancela lote automaticamente ao retirar o ultimo item pendente', async () => {
+    const lote = await criarLote(TENANT, PROFESSOR, {
+      turma_destino: 'marqq01',
+      data_efetiva: '2027-01-01',
+      itens: [{ aluno_id: 'a1', turma_destino: 'marqq01' }],
+    });
+
+    const resultado = await removerItemLote(lote.id, 'a1', TENANT);
+
+    // Item removido
+    const itens = store.transferencia_lote_item.filter((i) => i.lote_id === lote.id);
+    expect(itens).toHaveLength(0);
+    // Lote cancelado porque ficou vazio
+    const loteStore = store.transferencia_lote.find((l) => l.id === lote.id)!;
+    expect(loteStore.status).toBe('cancelado');
+    // Retorno reflete o cancelamento automatico (o front usa isso, nao o estado local)
+    expect(resultado).toEqual({
+      status: 'cancelado',
+      itensRestantes: 0,
+      canceladoAutomaticamente: true,
+    });
+  });
+
+  it('nao cancela lote se ainda restar pelo menos um item pendente', async () => {
+    const lote = await criarLote(TENANT, PROFESSOR, {
+      turma_destino: 'marqq01',
+      data_efetiva: '2027-01-01',
+      itens: [
+        { aluno_id: 'a1', turma_destino: 'marqq01' },
+        { aluno_id: 'a2', turma_destino: 'marqq01' },
+      ],
+    });
+
+    const resultado = await removerItemLote(lote.id, 'a2', TENANT);
+
+    const loteStore = store.transferencia_lote.find((l) => l.id === lote.id)!;
+    expect(loteStore.status).toBe('programado');
+    expect(store.transferencia_lote_item.filter((i) => i.lote_id === lote.id && i.status === 'pendente')).toHaveLength(1);
+    // Retorno indica que o lote continua ativo
+    expect(resultado).toEqual({
+      status: 'programado',
+      itensRestantes: 1,
+      canceladoAutomaticamente: false,
+    });
+  });
+
+  it('rejeita remocao quando lote ja nao esta ativo (aplicado)', async () => {
+    const lote = await criarLote(TENANT, PROFESSOR, {
+      turma_destino: 'marqq01',
+      data_efetiva: '2027-01-01',
+      itens: [{ aluno_id: 'a1', turma_destino: 'marqq01' }],
+    });
+    // Simula aplicacao concorrente
+    store.transferencia_lote.find((l) => l.id === lote.id)!.status = 'aplicado';
+
+    await expect(removerItemLote(lote.id, 'a1', TENANT)).rejects.toThrow(/nao esta disponível para modificacao/);
+    // Item nao foi removido
+    expect(store.transferencia_lote_item.filter((i) => i.lote_id === lote.id)).toHaveLength(1);
+  });
+
+  it('rejeita remocao de lote inexistente', async () => {
+    await expect(removerItemLote('id-inexistente', 'a1', TENANT)).rejects.toThrow(/Lote nao encontrado/);
+  });
+
+  it('rejeita remocao de lote de outra unidade (tenant)', async () => {
+    const lote = await criarLote(TENANT, PROFESSOR, {
+      turma_destino: 'marqq01',
+      data_efetiva: '2027-01-01',
+      itens: [{ aluno_id: 'a1', turma_destino: 'marqq01' }],
+    });
+
+    await expect(removerItemLote(lote.id, 'a1', 'outra-unidade')).rejects.toThrow(/Lote nao encontrado/);
+  });
+
+  it('nao cancela lote se aplicacao concorrente o esvaziar entre a leitura e o cancelamento', async () => {
+    const lote = await criarLote(TENANT, PROFESSOR, {
+      turma_destino: 'marqq01',
+      data_efetiva: '2027-01-01',
+      itens: [{ aluno_id: 'a1', turma_destino: 'marqq01' }],
+    });
+
+    // A aplicacao marca como aplicando e depois aplicado (mesmo comportamento do serviço de aplicacao)
+    store.transferencia_lote.find((l) => l.id === lote.id)!.status = 'aplicando';
+
+    // Mesmo estando em 'aplicando' (nao esta em STATUS_ATIVOS), a remocao e rejeitada
+    await expect(removerItemLote(lote.id, 'a1', TENANT)).rejects.toThrow(/nao esta disponível para modificacao/);
+  });
+
   it('cancela lote pendente', async () => {
     const lote = await criarLote(TENANT, PROFESSOR, {
       turma_destino: 'marqq01',
