@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-11-12 — Transferência de nível em bloco (grid + aba "Transferência") → v3.0.0 -->
+<!-- última-sessão: 2026-11-12 — Fix modal de escolha do destino (translúcido e não funcional) → v3.0.1 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -34,7 +34,7 @@ Regras:
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v3.0.0
+- **Versão atual:** v3.0.1
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Build Cloudflare:** `git fetch --tags --unshallow` é necessário no build command para `git describe --tags` funcionar (clone shallow sem tags)
@@ -3439,3 +3439,25 @@ Regras:
 - **Migrations 036 e 037 pendentes de execução no Supabase** (exigem autorização explícita) — sem elas a funcionalidade não opera em produção
 - Ensaio com dados fictícios e virada de mês simulada ainda pendente
 - `exportacaoService.gerarFrequenciaXLSX` mantém a associação da chamada via `enrollment_period` (não alterado nesta sessão) — a comparação antes/depois da aplicação precisa ser validada com as migrations aplicadas
+
+---
+
+## Sessão: 12/11/2026 — Fix modal de escolha do destino (translúcido e não funcional) → v3.0.1
+
+### O que foi feito
+- **Causa raiz**: `TransferenciaLoteReviewModal.tsx` era o **único** modal do projeto (verificado nos 13 modais) a usar **backdrop separado** (`absolute inset-0 bg-black/60 backdrop-blur-sm`) como irmão do painel. Pela ordem de pintura do CSS, um descendente **posicionado** (z-index auto) é pintado **depois** dos não posicionados — o overlay escuro com blur ficava **por cima** do painel (aparência translúcida) e capturava o hit-test, de modo que todo clique caía no `onClose` do backdrop e o modal fechava na hora ("não funcional")
+- **Correção**: adotado o **padrão do projeto** (igual a `AlunoModal`, `CardBO`, `CardAula`, `JustificativaModal`, `AnotacoesModal`, `TurmaModal`, `RestoreModal`) — overlay único `fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 dark:bg-black/60` com `onClick={onClose}` e `onClick={(e) => e.stopPropagation()}` no painel
+- **`z-[60]`** (em vez de `z-50`): o `DevPanel` também é `z-50` e é renderizado **depois** de `main` — em Modo Dev o painel flutuante cobria o canto inferior direito do modal
+- **Removido** o `backdrop-blur-sm` (opção A do usuário) — visual idêntico ao dos demais modais do app
+
+### Decisões
+- Sem alteração de API, backend ou banco — correção **exclusivamente de markup/CSS** do modal
+- Nenhum outro modal usa o padrão de backdrop separado (confirmado por `grep` em todo o frontend)
+
+### Arquivos
+- `frontend/src/components/modals/TransferenciaLoteReviewModal.tsx` (overlay único + `stopPropagation` + `z-[60]`)
+- `CHANGELOG.md` (v3.0.1), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Frontend: 0 erros (`tsc --noEmit`) · 136/136 testes (vitest) · `npm run build` limpo
+- Backend inalterado

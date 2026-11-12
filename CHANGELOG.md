@@ -1,5 +1,13 @@
 # Changelog - Fiz! App
 
+## [v3.0.1] - 2026-11-12
+### Fix
+- **Modal de escolha do destino da transferência corrigido** (estava translúcido e não funcional): o `TransferenciaLoteReviewModal` usava um **backdrop separado** (`absolute inset-0 bg-black/60 backdrop-blur-sm`) como irmão do painel. Pela ordem de pintura do CSS, um elemento posicionado é desenhado **por cima** do painel (que é estático) — o overlay escuro com blur cobria o modal (aparência translúcida) e capturava todos os cliques, que caíam no `onClose` do backdrop e fechavam o modal imediatamente
+  - Corrigido para o **padrão do projeto** (igual a `AlunoModal`, `CardBO`, `CardAula`, `JustificativaModal`, `AnotacoesModal`, `TurmaModal` e `RestoreModal`): overlay único `fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 dark:bg-black/60` com `onClick={onClose}` e `stopPropagation` no painel
+  - `z-[60]` para o modal ficar acima do `DevPanel` (`z-50`, renderizado depois de `main`), que em Modo Dev cobria o canto inferior direito do modal
+  - Removido o `backdrop-blur-sm` (opção A) para manter o visual idêntico ao dos demais modais do app
+  - Verificado em `grep`: este era o **único** modal do projeto com o padrão de backdrop separado
+
 ## [v3.0.0] - 2026-11-12
 ### Feat (MAJOR)
 - **Transferência de nível em bloco — fluxo completo no grid de Alunos + aba "Transferência"**
