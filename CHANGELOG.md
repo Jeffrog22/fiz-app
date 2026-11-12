@@ -1,5 +1,14 @@
 # Changelog - Fiz! App
 
+## [v3.2.0] - 2026-11-12
+### Feat
+- **Ícones do menu recolhido ampliados novamente**: de 36px para **48px (×2,4 sobre os 20px originais)** — `CLASSE_ICONE_GRANDE` passa de `w-9 h-9` (2.25rem) para `w-12 h-12` (3rem = 48px exatos), mantendo o **rem-based** (acompanha o zoom de acessibilidade)
+  - **Trilho do menu recolhido alargado**: `w-14` (56px) → `w-16` (64px) para acomodar 8 + 48 + 8 = 64px de ícone com folga de 8px de cada lado
+  - Linhas do menu recolhido: `py-1.5` → `py-1` (48 + 8 = 56px por linha) para conter a altura extra
+  - Emoji "Instalar App": `text-[2.25rem]` → `text-[3rem]` (48px) no recolhido, `text-lg` no expandido
+  - Badge de contagem mantém `absolute -top-1 -right-1` → borda a 60px, dentro do trilho de 64px ✓
+  - **Sem alteração** no menu expandido (20px), nos cards da tela inicial (20px) e na barra superior
+
 ## [v3.1.1] - 2026-11-12
 ### Fix
 - **Correção do alvo da ampliação dos ícones**: a v3.1.0 havia ampliado em 80% os ícones do **menu lateral (expandido)** e dos **cards da tela inicial** — o pedido real era ampliar **somente os ícones do menu recolhido**, e apenas quando ele recolhe

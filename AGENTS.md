@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-11-12 — Correção do alvo da ampliação dos ícones (só menu recolhido) → v3.1.1 -->
+<!-- última-sessão: 2026-11-12 — Ícones do menu recolhido ampliados para 48px + guia visual único → v3.2.0/v3.3.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -3528,3 +3528,28 @@ Regras:
 
 ### Pendências / riscos conhecidos
 - Checagem visual ao recolher/expandir o menu (desktop e celular) fica a cargo do usuário — o ambiente não tem browser headless instalado no projeto
+
+---
+
+## Sessão: 12/11/2026 — Ícones do menu recolhido em 48px (×2,4) → v3.2.0
+
+### O que foi feito
+- **Ampliação**: ícones do menu **recolhido** de 36px → **48px** (`w-12 h-12` = 3rem, ×2,4 sobre os 20px originais); a prop `grande` da v3.1.1 foi reaproveitada — só a classe mudou
+- `Sidebar.tsx`: trilho recolhido `w-14` (56px) → **`w-16` (64px)** (8 + 48 + 8 = 64px, folga de 8px de cada lado); linhas do recolhido `py-1.5` → `py-1` (56px por linha); emoji "Instalar App" `text-[2.25rem]` → `text-[3rem]` (48px) no recolhido
+- Badge de contagem mantido em `absolute -top-1 -right-1` → borda a 60px, dentro do trilho de 64px ✓
+- **Sem alteração**: menu expandido (20px), cards da Home (20px) e barra superior
+
+### Decisões
+- `w-12` (3rem = 48px exatos) em vez de `w-[48px]`: valor exato pedido e **rem-based** → acompanha o zoom de acessibilidade (`useZoom` altera o `font-size` da raiz)
+- Alargamento do trilho de 56px → 64px: sem isso o ícone de 48px encostaria na borda do trilho e o badge seria cortado pelo `overflow-hidden` do `<aside>`
+- Redução do padding vertical no recolhido para compensar a altura extra dos ícones
+
+### Arquivos
+- `frontend/src/components/icons/IconsColoridos.tsx` (`CLASSE_ICONE_GRANDE` → `w-12 h-12`)
+- `frontend/src/components/common/Sidebar.tsx` (trilho `w-16`, `py-1` no recolhido, emoji do instalar)
+- `CHANGELOG.md` (v3.2.0), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Frontend: 0 erros (`tsc --noEmit`) · 136/136 testes (vitest) · `npm run build` limpo
+- CSS verificado: `.w-12{width:3rem}`, `.h-12{height:3rem}`, `.w-16{width:4rem}`
+- Backend inalterado; sem migration

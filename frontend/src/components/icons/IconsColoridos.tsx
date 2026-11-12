@@ -1,7 +1,7 @@
 import { SVGProps } from 'react';
 
 const CLASSE_ICONE = 'w-5 h-5';
-const CLASSE_ICONE_GRANDE = 'w-9 h-9';
+const CLASSE_ICONE_GRANDE = 'w-12 h-12';
 
 export function HomeIcon({ className, grande }: SVGProps<SVGSVGElement> & { className?: string; grande?: boolean }) {
   return (

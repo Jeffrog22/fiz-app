@@ -1,0 +1,49 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fiz! · Tour visual</title><style>
+*{box-sizing:border-box}body{margin:0;background:#f1f5fb;color:#172640;font:16px system-ui,sans-serif}header{padding:16px 5%;background:#112343;color:white;font-size:25px;font-weight:800}header small{font-size:13px;color:#c8d7ee;margin-left:14px}main{max-width:1080px;margin:auto;padding:24px 16px 250px}.banner,.panel,nav{background:white;border:1px solid #dae3ef;border-radius:16px;padding:18px}.banner{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap}.layout{display:grid;grid-template-columns:190px 1fr;gap:16px}nav{align-self:start;display:grid;gap:8px}nav span{padding:9px;border-radius:8px;background:#eff4fb}h1{margin:0 0 16px;letter-spacing:-.04em}p{line-height:1.5}button{font:inherit;cursor:pointer;background:#edf2fa;border:0;border-radius:9px;padding:9px 13px;color:#172640}button:focus-visible{outline:3px solid #61baff;outline-offset:3px}.primary{background:#2251ce;color:white}.target{background:#fff;border:1px solid #cfd9e9;border-radius:10px;padding:12px;margin:8px 0}.target strong{display:block}.table{width:100%;border-collapse:collapse;margin-top:12px}td,th{text-align:left;border-bottom:1px solid #e5ebf5;padding:10px}.shade{position:fixed;inset:0;z-index:2;background:#0a173d88;backdrop-filter:blur(4px)}.focus{position:relative;z-index:3;outline:3px solid #77bcff;box-shadow:0 0 0 7px #77bcff55}.coach{position:fixed;z-index:4;right:24px;bottom:18px;width:min(465px,calc(100% - 32px));padding:16px;background:white;border-radius:16px;box-shadow:0 16px 50px #0005}.coach h2{font-size:20px;margin:6px 0}.coach p{margin:6px 0 12px}.controls{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.controls .primary{margin-left:auto}.eyebrow{color:#325484;font-size:13px;font-weight:700}[hidden]{display:none!important}@media(max-width:600px){.layout{grid-template-columns:1fr}nav{display:flex;flex-wrap:wrap;padding:8px}td,th{padding:7px}.coach{right:16px;bottom:10px}}
+</style><header>Fiz! <small>Bela Vista · Demonstração</small></header><main id="app"><div class="banner"><strong>Explore o novo guia visual</strong><div><button class="primary" id="news">Veja o que mudou</button> <button id="welcome">Conheça o Fiz!</button></div></div><div class="layout"><nav aria-label="Menu"><span>Alunos</span><span>Chamadas</span><span>Bloco de notas</span><span id="transferNav" hidden>Transferência</span></nav><section class="panel" id="screen"><h1>Alunos</h1><p>Abra um guia para testar os destaques.</p></section></div></main>
+<div class="shade" id="shade" hidden></div><section class="coach" id="coach" role="dialog" aria-modal="true" aria-labelledby="title" hidden><div id="progress" class="eyebrow" aria-live="polite"></div><h2 id="title"></h2><p id="description"></p><div class="controls"><button id="skip">Pular</button><button id="back">Voltar</button><button id="next" class="primary">Próximo</button></div></section>
+<script>
+const el=id=>document.getElementById(id);
+const students='<table class="table"><thead><tr><th>Aluno</th><th>Turma</th></tr></thead><tbody><tr><td>☑ Alice Ramos</td><td>Iniciação · 08h</td></tr><tr><td>☑ Bruno Tavares</td><td>Iniciação · 08h</td></tr><tr><td>☐ Clara Nunes</td><td>Iniciação · 08h</td></tr></tbody></table>';
+const preview='<div class="target" id="preview"><strong>Prévia de chamada · Dezembro</strong>Marina → Adaptação → 09h00<table class="table"><tr><th>Aluno</th><th>01/12</th><th>03/12</th></tr><tr><td>Alice Ramos · Entrada</td><td>—</td><td>—</td></tr><tr><td>Bruno Tavares · Entrada</td><td>—</td><td>—</td></tr><tr><td>Davi Castro</td><td>—</td><td>—</td></tr></table></div>';
+const guides={
+news:[
+['Selecione no próprio grid','Ao tocar em Transferir, marque os alunos na lista que você já usa.','select','<h1>Alunos</h1><button id="select" class="primary" tabindex="-1">Transferir</button>'+students],
+['Escolha a turma de destino','A origem vem dos alunos marcados. Você escolhe o novo professor e a turma com horário.','destination','<h1>Programar transferência</h1><div class="target" id="destination"><strong>Professor(a) de destino</strong>Marina<br><strong>Turma / horário</strong>Adaptação · 09h00</div>'+students],
+['Confira a formação das turmas','A aba temporária aparece após a primeira programação. Confira a composição por professor, turma e horário.','preview','<h1>Transferência</h1>'+preview],
+['Aplique após a virada','O novo mês libera a confirmação. A chamada oficial recebe a nova composição após você aprovar.','approve','<h1>Transferência</h1><div id="approve" class="target"><strong>Data efetiva · 01/12/2026</strong><button class="primary" tabindex="-1">Aprovar e aplicar</button></div>'+preview]
+],
+welcome:[
+['Encontre seus alunos','Use esta tela para consultar os alunos e a turma de cada um.','roster','<h1>Alunos</h1><div id="roster" class="target">'+students+'</div>'],
+['Abra a chamada da turma','Escolha o professor e a turma. Use o horário para identificar o grupo da aula.','filters','<h1>Chamadas</h1><div id="filters" class="target"><strong>Professor(a) → Turma → Horário</strong>Jefferson → Iniciação → 08h00</div>']
+]};
+let guide=null,index=0,trigger;
+function render(){
+ document.querySelector('.focus')?.classList.remove('focus');
+ const [title,description,target,markup]=guides[guide][index];
+ el('transferNav').hidden=guide!=='news'||index<2;
+ el('screen').innerHTML=markup;
+ el('title').textContent=title;
+ el('description').textContent=description;
+ el('progress').textContent=(guide==='news'?'Veja o que mudou':'Conheça o Fiz!')+' · '+(index+1)+' de '+guides[guide].length;
+ el('back').hidden=index===0;
+ el('next').textContent=index===guides[guide].length-1?'Concluir':'Próximo';
+ el(target).classList.add('focus');
+ el(target).scrollIntoView({block:'center'});
+ el('next').focus({preventScroll:true});
+}
+function open(name){trigger=el(name);guide=name;index=0;el('shade').hidden=false;el('coach').hidden=false;el('app').inert=true;render();}
+function close(){guide=null;el('app').inert=false;el('shade').hidden=true;el('coach').hidden=true;el('transferNav').hidden=true;el('screen').innerHTML='<h1>Alunos</h1><p>Abra um guia para rever os passos.</p>';trigger.focus();}
+el('news').onclick=()=>open('news');el('welcome').onclick=()=>open('welcome');el('skip').onclick=close;
+el('back').onclick=()=>{index--;render();};
+el('next').onclick=()=>{if(index+1===guides[guide].length)close();else{index++;render();}};
+document.addEventListener('keydown',event=>{
+ if(!guide)return;
+ if(event.key==='Escape')close();
+ if(event.key==='Tab'){
+  const buttons=[...el('coach').querySelectorAll('button:not([hidden])')];
+  const edge=event.shiftKey?buttons[0]:buttons.at(-1);
+  if(document.activeElement===edge){event.preventDefault();(event.shiftKey?buttons.at(-1):buttons[0]).focus();}
+ }
+});
+</script></html>

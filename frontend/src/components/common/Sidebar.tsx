@@ -116,7 +116,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0, l
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       className={`bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-r dark:border-gray-800 min-h-[calc(100vh-57px)] flex flex-col py-4 transition-all duration-300 ease-in-out overflow-hidden ${
-        collapsed ? 'w-14' : 'w-56'
+        collapsed ? 'w-16' : 'w-56'
       }`}
     >
       <div className={`flex items-center mb-4 px-3 ${collapsed ? 'justify-center' : 'justify-between'}`}>
@@ -139,7 +139,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0, l
             to={link.to}
             data-tour={`nav-${link.to.replace('/', '')}`}
             className={({ isActive }) =>
-              `relative flex items-center gap-3 px-2 ${collapsed ? 'py-1.5' : 'py-2'} rounded-md text-sm transition-colors whitespace-nowrap ${
+              `relative flex items-center gap-3 px-2 ${collapsed ? 'py-1' : 'py-2'} rounded-md text-sm transition-colors whitespace-nowrap ${
                 collapsed ? 'justify-center' : ''
               } ${
                 isActive
@@ -187,7 +187,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0, l
             to={link.to}
             data-tour={`nav-${link.to.replace('/', '')}`}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-2 ${collapsed ? 'py-1.5' : 'py-2'} rounded-md text-sm transition-colors whitespace-nowrap ${
+              `flex items-center gap-3 px-2 ${collapsed ? 'py-1' : 'py-2'} rounded-md text-sm transition-colors whitespace-nowrap ${
                 collapsed ? 'justify-center' : ''
               } ${
                 isActive
@@ -211,7 +211,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0, l
           data-tour="nav-ajuda"
           onClick={() => window.dispatchEvent(new CustomEvent('abrir-ajuda'))}
           title="Ajuda"
-          className={`flex items-center gap-3 px-2 ${collapsed ? 'py-1.5' : 'py-2'} rounded-md text-sm transition-colors whitespace-nowrap w-full text-left ${
+          className={`flex items-center gap-3 px-2 ${collapsed ? 'py-1' : 'py-2'} rounded-md text-sm transition-colors whitespace-nowrap w-full text-left ${
             collapsed ? 'justify-center' : ''
           } text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200`}
         >
@@ -230,12 +230,12 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0, l
         <div className="px-2 mt-2">
           <button
             onClick={handleInstall}
-            className={`flex items-center gap-3 px-2 ${collapsed ? 'py-1.5' : 'py-2'} rounded-md text-sm transition-colors whitespace-nowrap w-full ${
+            className={`flex items-center gap-3 px-2 ${collapsed ? 'py-1' : 'py-2'} rounded-md text-sm transition-colors whitespace-nowrap w-full ${
               collapsed ? 'justify-center' : ''
             } text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200`}
             title="Instalar App"
           >
-            <span className={`${collapsed ? 'text-[2.25rem]' : 'text-lg'} leading-none flex-shrink-0`}>{'\u2B07'}</span>
+            <span className={`${collapsed ? 'text-[3rem]' : 'text-lg'} leading-none flex-shrink-0`}>{'\u2B07'}</span>
             <span
               className={`transition-all duration-300 ${
                 collapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'
