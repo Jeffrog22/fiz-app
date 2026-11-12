@@ -4,6 +4,7 @@ import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
 import SearchInput from '../components/SearchInput';
 import PreviaChamada from '../components/transferencias/PreviaChamada';
+import ListagemPrevia from '../components/transferencias/ListagemPrevia';
 import type {
   Aluno,
   Professor,
@@ -11,6 +12,7 @@ import type {
   StatusTransferenciaLoteItem,
   TransferenciaLote,
   TransferenciaLoteItem,
+  TransferenciaNivelPendencia,
   Turma,
 } from '../types';
 import { formatDateBR } from '../utils/formatters';
@@ -21,7 +23,7 @@ import {
   isLoteAtivo,
   type MovimentoTransferencia,
 } from '../utils/transferenciasUtils';
-import { Pencil, Trash2, UserPlus, Play, ShieldAlert, Clock, X, LayoutGrid, CalendarRange, List } from 'lucide-react';
+import { Pencil, Trash2, UserPlus, Play, ShieldAlert, Clock, X, LayoutGrid, CalendarRange, List, ClipboardList } from 'lucide-react';
 
 const STATUS_LABEL: Record<StatusTransferenciaLote, string> = {
   programado: 'Programado',
@@ -54,7 +56,7 @@ const PAPEL_LABEL: Record<string, string> = {
   ambos: 'Origem e destino',
 };
 
-type Aba = 'visao' | 'previa' | 'lotes';
+type Aba = 'visao' | 'previa' | 'lotes' | 'listagem';
 
 const TransferenciasNivel: React.FC = () => {
   const navigate = useNavigate();
@@ -77,6 +79,7 @@ const TransferenciasNivel: React.FC = () => {
   const [modalAberto, setModalAberto] = useState(false);
   const [processando, setProcessando] = useState<string | null>(null);
   const [contadorPendentes, setContadorPendentes] = useState(0);
+  const [pendenciasNivel, setPendenciasNivel] = useState<TransferenciaNivelPendencia[]>([]);
   const [editandoLote, setEditandoLote] = useState(false);
   const [turmaEditada, setTurmaEditada] = useState('');
   const [dataEditada, setDataEditada] = useState('');
@@ -85,7 +88,7 @@ const TransferenciasNivel: React.FC = () => {
   // "Lotes pendentes" pelo link do guia visual.
   const abaParam = searchParams.get('aba');
   useEffect(() => {
-    if (abaParam === 'visao' || abaParam === 'previa' || abaParam === 'lotes') {
+    if (abaParam === 'visao' || abaParam === 'previa' || abaParam === 'lotes' || abaParam === 'listagem') {
       setAba(abaParam);
     }
   }, [abaParam]);
@@ -110,11 +113,12 @@ const TransferenciasNivel: React.FC = () => {
     setCarregando(true);
     setErro(null);
     try {
-      const [resLotes, resAlunos, resTurmas, resProfs] = await Promise.all([
+      const [resLotes, resAlunos, resTurmas, resProfs, resNiveis] = await Promise.all([
         api.get('/transferencias-nivel/lotes'),
         api.get('/alunos?ativo=true'),
         api.get('/turmas'),
         api.get('/professores'),
+        api.get('/transferencias-nivel/niveis-pendentes').catch(() => ({ data: [] })),
       ]);
 
       const listaLotes: TransferenciaLote[] = resLotes.data || [];
@@ -122,6 +126,7 @@ const TransferenciasNivel: React.FC = () => {
       setAlunos(resAlunos.data || []);
       setTurmas(resTurmas.data || []);
       setProfessores(resProfs.data || []);
+      setPendenciasNivel((resNiveis.data || []) as TransferenciaNivelPendencia[]);
 
       const pendentes = listaLotes.filter((l) => isLoteAtivo(l.status));
       setContadorPendentes(pendentes.length);
@@ -174,12 +179,18 @@ const TransferenciasNivel: React.FC = () => {
         alunosAtivos: alunos,
         turmas,
         professorMap,
+        pendenciasNivel,
       }),
-    [lotesPendentes, itensPorLote, alunos, turmas, professorMap],
+    [lotesPendentes, itensPorLote, alunos, turmas, professorMap, pendenciasNivel],
   );
 
-  const lotesFiltrados = useMemo(() => {
-    const base =
+  /** Proposta de mudança de nível vinculada ao lote selecionado */
+  const propostaDoLote = useMemo(() => {
+    if (!loteSelecionado?.nivel_pendencia_id) return null;
+    return pendenciasNivel.find((p) => p.id === loteSelecionado.nivel_pendencia_id) || null;
+  }, [pendenciasNivel, loteSelecionado]);
+
+  const lotesFiltrados = useMemo(() => {    const base =
       filtroStatus === 'pendentes'
         ? lotesPendentes
         : filtroStatus === 'todos'
@@ -196,7 +207,19 @@ const TransferenciasNivel: React.FC = () => {
 
   const podeAplicar = (lote: TransferenciaLote) => {
     if (!isLoteAtivo(lote.status)) return false;
+    if (lote.mudar_nivel_turma && lote.nivel_conflito) return false;
     return lote.data_efetiva <= hojeSaoPaulo();
+  };
+
+  /** Texto da mudança de nível programada no lote (para a confirmação) */
+  const descricaoMudancaNivel = (lote: TransferenciaLote): string | null => {
+    if (!lote.mudar_nivel_turma) return null;
+    const turma = turmas.find((t) => t.grupo_id === lote.turma_destino);
+    const nivelAtual = lote.nivel_turma_atual ?? turma?.nivel ?? 'sem nível';
+    return (
+      `Mudança de nível da turma: ${nivelAtual} → ${lote.nivel_turma_novo || '—'}\n` +
+      `  (turma ${lote.turma_destino}, a partir de ${formatDateBR(lote.data_efetiva)})`
+    );
   };
 
   const abrirLote = async (lote: TransferenciaLote) => {
@@ -217,12 +240,23 @@ const TransferenciasNivel: React.FC = () => {
 
   const aplicarLote = async (lote: TransferenciaLote) => {
     const qtd = (itensPorLote[lote.id] || []).filter((i) => i.status === 'pendente').length;
+    const turmaDestino = turmas.find((t) => t.grupo_id === lote.turma_destino);
+    const mudancaNivel = descricaoMudancaNivel(lote);
+    const avisoConflito =
+      lote.mudar_nivel_turma && lote.nivel_conflito
+        ? '\n\nATENÇÃO: há uma proposta conflitante de mudança de nível para esta turma e data.\nA aplicação está bloqueada até a revisão das propostas.'
+        : '';
     const ok = confirm(
       `Aprovar e aplicar o lote?\n\n` +
-        `Turma de destino: ${lote.turma_destino}\n` +
+        `Turma de destino: ${lote.turma_destino}${turmaDestino ? ` (${turmaDestino.label} • ${(turmaDestino.horario || '').slice(0, 5)})` : ''}\n` +
         `Data efetiva: ${formatDateBR(lote.data_efetiva)}\n` +
-        `Alunos: ${qtd}\n\n` +
-        `Os alunos serão movidos e a matrícula atual encerrada em ${formatDateBR(lote.data_efetiva)}.`,
+        `Alunos: ${qtd}\n` +
+        (mudancaNivel ? `${mudancaNivel}\n` : '') +
+        `\nOs alunos serão movidos e a matrícula atual encerrada em ${formatDateBR(lote.data_efetiva)}.` +
+        (mudancaNivel
+          ? `\nO nível da turma inteira também será alterado a partir de ${formatDateBR(lote.data_efetiva)}.`
+          : '') +
+        avisoConflito,
     );
     if (!ok) return;
     setProcessando(lote.id);
@@ -364,6 +398,17 @@ const TransferenciasNivel: React.FC = () => {
         >
           <List size={15} /> Lotes pendentes
         </button>
+        <button
+          type="button"
+          onClick={() => trocarAba('listagem')}
+          className={`flex items-center gap-2 px-4 py-2 text-sm border-b-2 transition-colors ${
+            aba === 'listagem'
+              ? 'border-purple-600 text-purple-700 dark:text-purple-300 font-medium'
+              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+          }`}
+        >
+          <ClipboardList size={15} /> Listagem prévia
+        </button>
       </div>
 
       {aba === 'visao' && (
@@ -374,6 +419,7 @@ const TransferenciasNivel: React.FC = () => {
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Professor</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Turma</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Horário</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Nível</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Papel</th>
                 <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Lotação atual</th>
                 <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Lotação projetada</th>
@@ -387,6 +433,7 @@ const TransferenciasNivel: React.FC = () => {
                 const trocaProfessor = linha.professor_nome !== professorAnterior;
                 professorAnterior = linha.professor_nome;
                 const excede = linha.capacidade != null && linha.lotacao_projetada > linha.capacidade;
+                const nivelMudou = linha.nivel_projetado && linha.nivel_projetado !== linha.nivel;
                 return (
                   <tr key={linha.grupo_id} className={trocaProfessor ? 'border-t-2 border-gray-200 dark:border-gray-700' : ''}>
                     <td className="px-3 py-2 text-gray-800 dark:text-gray-200 font-medium">{linha.professor_nome}</td>
@@ -395,6 +442,20 @@ const TransferenciasNivel: React.FC = () => {
                       <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">{linha.grupo_id}</span>
                     </td>
                     <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{linha.horario || '—'}</td>
+                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                      {nivelMudou ? (
+                        <>
+                          {linha.nivel || '—'} → <strong className="text-amber-700 dark:text-amber-300">{linha.nivel_projetado}</strong>
+                          {linha.conflito_nivel && (
+                            <span className="ml-1 text-[10px] px-1 py-0.5 rounded bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300">
+                              conflito
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        linha.nivel || '—'
+                      )}
+                    </td>
                     <td className="px-3 py-2">
                       <span
                         className={`text-xs px-2 py-0.5 rounded-full ${
@@ -426,7 +487,7 @@ const TransferenciasNivel: React.FC = () => {
               })}
               {linhasVisao.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={10} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     Nenhuma turma afetada por transferências pendentes.
                   </td>
                 </tr>
@@ -442,6 +503,18 @@ const TransferenciasNivel: React.FC = () => {
           professores={professores}
           alunosAtivos={alunos}
           movimentos={movimentos}
+          dataEfetivaBase={dataEfetivaBase}
+          pendenciasNivel={pendenciasNivel}
+        />
+      )}
+
+      {aba === 'listagem' && (
+        <ListagemPrevia
+          turmas={turmas}
+          professores={professores}
+          alunosAtivos={alunos}
+          movimentos={movimentos}
+          pendenciasNivel={pendenciasNivel}
           dataEfetivaBase={dataEfetivaBase}
         />
       )}
@@ -506,6 +579,16 @@ const TransferenciasNivel: React.FC = () => {
                     Professor: {professorMap.get(lote.professor_destino) || lote.professor_destino}
                   </p>
                 )}
+                {lote.mudar_nivel_turma && (
+                  <p className="text-xs mb-2 text-amber-700 dark:text-amber-300">
+                    Mudança de nível da turma: {lote.nivel_turma_atual || '—'} → {lote.nivel_turma_novo || '—'}
+                    {lote.nivel_conflito && (
+                      <span className="ml-1 px-1 py-0.5 rounded bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300">
+                        conflito — aplicação bloqueada
+                      </span>
+                    )}
+                  </p>
+                )}
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs text-gray-500 dark:text-gray-400">
                     {lote.itensPendentes ?? 0} pendente · {lote.itensAplicados ?? 0} aplicado · {lote.totalItens ?? 0} total
@@ -526,7 +609,13 @@ const TransferenciasNivel: React.FC = () => {
                       onClick={() => aplicarLote(lote)}
                       data-tour="lote-aprovar"
                       disabled={!pode || processando === lote.id}
-                      title={pode ? 'Aplicar a transferência' : `Aplicação disponível a partir de ${formatDateBR(lote.data_efetiva)}`}
+                      title={
+                        lote.mudar_nivel_turma && lote.nivel_conflito
+                          ? 'Aplicação bloqueada: proposta conflitante de mudança de nível'
+                          : pode
+                          ? 'Aplicar a transferência'
+                          : `Aplicação disponível a partir de ${formatDateBR(lote.data_efetiva)}`
+                      }
                       className="px-3 py-1.5 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Play size={12} className="mr-1 inline" /> Aprovar e aplicar
@@ -642,6 +731,30 @@ const TransferenciasNivel: React.FC = () => {
                 </div>
 
                 <div className="overflow-x-auto">
+                  {loteSelecionado.mudar_nivel_turma && (
+                    <div className="mb-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3 text-xs text-amber-800 dark:text-amber-200">
+                      <p className="font-semibold mb-1">Mudança de nível da turma programada</p>
+                      <p>
+                        {loteSelecionado.nivel_turma_atual || '—'} → <strong>{loteSelecionado.nivel_turma_novo || '—'}</strong>{' '}
+                        · turma {loteSelecionado.turma_destino} · a partir de {formatDateBR(loteSelecionado.data_efetiva)}
+                      </p>
+                      <p className="mt-1">
+                        Vale para toda a turma (alunos atuais e os que chegam por este lote). Até a confirmação, o
+                        nível oficial continua vigente.
+                      </p>
+                      {loteSelecionado.nivel_conflito && (
+                        <p className="mt-1 font-semibold text-red-700 dark:text-red-300">
+                          Proposta conflitante: a aplicação deste lote está bloqueada até a revisão.
+                        </p>
+                      )}
+                      {propostaDoLote && propostaDoLote.lotes && propostaDoLote.lotes.length > 1 && (
+                        <p className="mt-1">
+                          Esta mudança também depende de {propostaDoLote.lotes.length - 1} outro(s) lote(s) — será
+                          aplicada na confirmação do primeiro lote confirmado.
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <table className="w-full text-sm border-collapse">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-gray-700">

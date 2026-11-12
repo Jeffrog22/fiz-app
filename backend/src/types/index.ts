@@ -396,6 +396,16 @@ export interface TransferenciaLote {
   atualizado_em: string;
   confirmado_em?: string | null;
   confirmado_por?: string | null;
+  /** Programou mudanca de nivel da turma de destino (turma inteira) */
+  mudar_nivel_turma?: boolean;
+  /** Nivel atual da turma de destino no momento da programacao (snapshot) */
+  nivel_turma_atual?: string | null;
+  /** Nivel previsto para a turma de destino a partir da data efetiva */
+  nivel_turma_novo?: string | null;
+  /** Proposta de mudanca de nivel compartilhada que este lote confirma */
+  nivel_pendencia_id?: string | null;
+  /** Existe outra proposta com nivel diferente para a mesma turma/data */
+  nivel_conflito?: boolean;
 }
 
 export interface TransferenciaLoteItem {
@@ -426,6 +436,10 @@ export interface TransferenciaLoteCreateInput {
   data_efetiva: string;
   motivo?: string | null;
   itens: TransferenciaLoteItemInput[];
+  /** Programar mudanca de nivel da turma de destino (turma inteira) */
+  mudar_nivel_turma?: boolean;
+  /** Novo nivel da turma de destino (exigido quando mudar_nivel_turma = true) */
+  nivel_turma_novo?: string | null;
 }
 
 export interface TransferenciaLoteUpdateInput {
@@ -434,4 +448,38 @@ export interface TransferenciaLoteUpdateInput {
   professor_destino?: string | null;
   data_efetiva?: string;
   motivo?: string | null;
+  /** Cancela a mudanca de nivel da turma programada neste lote */
+  remover_mudanca_nivel?: boolean;
+}
+
+/** Status de uma proposta de mudanca de nivel da turma */
+export type StatusNivelPendencia = 'pendente' | 'conflito' | 'aplicado' | 'cancelado';
+
+/** Proposta de mudanca de nivel da turma (compartilhada entre lotes) */
+export interface TransferenciaNivelPendencia {
+  id: string;
+  tenant_id: string;
+  turma_grupo_id: string;
+  nivel_atual?: string | null;
+  nivel_novo: string;
+  data_efetiva: string;
+  status: StatusNivelPendencia;
+  lote_origem_id?: string | null;
+  criado_em: string;
+  atualizado_em: string;
+  /** Lotes que dependem desta proposta */
+  lotes?: Array<{ id: string; data_efetiva: string; turma_destino: string }>;
+}
+
+/** Registro de vigencia do nivel de uma turma */
+export interface TurmaNivelVigencia {
+  id: string;
+  tenant_id: string;
+  turma_grupo_id: string;
+  nivel?: string | null;
+  data_inicio: string;
+  data_fim?: string | null;
+  lote_id?: string | null;
+  criado_em: string;
+  atualizado_em: string;
 }

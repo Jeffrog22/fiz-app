@@ -9,6 +9,7 @@ import { useDevLog } from '../hooks/useDevLog';
 import NotificationSettings from '../components/notifications/NotificationSettings';
 import api from '../utils/api';
 import { sortLabels } from '../utils/chamadaUtils';
+import { downloadBlob } from '../utils/download';
 import { buscarUltimaVersao, compararVersoes } from '../utils/version';
 import { buscarChangelog } from '../utils/changelog';
 import ReleaseNotesModal from '../components/common/ReleaseNotesModal';
@@ -242,17 +243,6 @@ const { enabled: devEnabled } = useDevLog();
       setTimeout(() => setExportMsg(null), 4000);
     }
   }, [abaExport, professorId, label, mes, ano, tipoSelect]);
-
-  function downloadBlob(blob: Blob, filename: string) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
 
   const verificarAtualizacoes = useCallback(async () => {
     setUpdateStatus('checking');

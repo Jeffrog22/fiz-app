@@ -3556,6 +3556,49 @@ Regras:
 
 ---
 
+## Sessão: 12/11/2026 — Transferência de nível: prévia navegável, listagem prévia e mudança de nível da turma → v3.5.0
+
+### O que foi feito
+- **Ajuste 1 — Prévia de chamada com botões "‹ Voltar / Próxima ›"** (`frontend/src/components/transferencias/PreviaChamada.tsx`)
+  - **Sequência oficial** (`frontend/src/utils/transferenciasUtils.ts` → `sequenciaTurmasProfessor`): blocos de dias primeiro via `sortLabels`/`LABEL_ORDER` (**Ter/Qui antes de Qua/Sex**) e, dentro de cada bloco, **horários em ordem crescente** (`horariosSequenciaProfessor`)
+  - Navegar sincroniza os filtros **Turma** e **Horário** (novo `<select>`) e grava a preferência `tf_previa:<unidade>:<professor>` (mecanismo existente de `transferenciaPreferencias.ts`); botões desabilitados nos limites; trocar o professor reposiciona na 1ª turma
+  - Composição projetada e `DataGrid` **somente leitura** mantidos
+- **Ajuste 2 — Listagem prévia** (4ª aba de `/transferencias-nivel`, `?aba=listagem`; novo `frontend/src/components/transferencias/ListagemPrevia.tsx`)
+  - **Projeção híbrida de TODAS as turmas** (`projetarComposicoes`): permanecem os atuais, saem os transferidos, entram os que chegam — o aluno com transferência programada aparece **só na turma de destino**
+  - Colunas Aluno | Turma | Horário | Nível (projetado) + Professor; badge "entra"; filtros no padrão do Fis! (`SearchInput` + `<select>` de uniques no header); paginação de 50
+  - **Exportar CSV** (novo `frontend/src/utils/csv.ts`: BOM UTF-8 + separador `;`) e **Imprimir / PDF** (portal + `print-alunos` + `body.print-lista`, padrão de `ImpressaoListaModal`) com **todas** as linhas filtradas; a impressão mostra competência + filtros
+  - `downloadBlob` duplicado foi extraído para `frontend/src/utils/download.ts` (usado por ImpressaoListaModal, Configuracoes e ListagemPrevia)
+- **Ajuste 3 — Mudança de nível da turma**
+  - **Escopo do campo existente**: o "Nível de destino" (read-only) define o nível **só dos alunos do lote** (`alunos.nivel` + `enrollment_period.nivel` gravados pela RPC) → **preservado** e rotulado; o **novo controle** ("Programar mudança de nível da turma" + "Novo nível da turma") é **diferenciado** e explícito
+  - **Backend**: novo `backend/src/services/turmaNivelService.ts` (vigência, propostas, reuso, conflito, liberação); colunas no lote (`mudar_nivel_turma`, `nivel_turma_atual`, `nivel_turma_novo`, `nivel_pendencia_id`, `nivel_conflito`); `criarLote`/`atualizarLote`/`cancelarLote`/`removerItemLote` cuidam da proposta; endpoint `GET /transferencias-nivel/niveis-pendentes`
+  - **RPC (migration 037)**: aplica transferência + mudança de nível na **mesma transação**; revalida nível vigente (mudou desde a programação → erro) e **bloqueia** proposta conflitante; CAS `status IN ('programado','revisao')` preservado (concorrência/repetição); grava a vigência, atualiza `turmas.nivel`, `alunos.nivel` e o `enrollment_period` **aberto** (períodos anteriores preservados)
+  - **Consulta por data**: `GET /turmas?nivel_data=YYYY-MM-DD`; Chamadas usa o **1º dia da competência**; XLSX de Frequência (aba + F4) e `relatoriosService.historicoAluno` passam a consultar a vigência
+  - **Conflito** (mesma turma/data com nível diferente): proposta `status='conflito'`, lote sinalizado, **aplicação bloqueada**; cancelar o lote conflitante libera a proposta
+  - **Reuso**: mesma turma + data + mesmo nível → a proposta é compartilhada entre lotes (dependências N:N); cancelar um lote preserva a proposta se outro ainda depender (a UI mostra em qual confirmação será aplicada)
+
+### Decisões (confirmadas pelo usuário)
+- Ordem dos blocos na Prévia: **LABEL_ORDER** (Ter/Qui antes de Qua/Sex)
+- Listagem prévia: **todas as turmas**, com projeção híbrida
+- Nível na competência: **vigente no 1º dia do mês**
+- Proposta conflitante: **bloqueia a aplicação do lote**
+
+### Arquivos
+- **Backend**: `services/turmaNivelService.ts` (novo) · `services/transferenciaLoteService.ts` · `controllers/transferenciaLoteController.ts` · `routes/transferenciaLoteRoutes.ts` · `services/turmasService.ts` · `services/exportacaoService.ts` · `services/relatoriosService.ts` · `controllers/turmasController.ts` · `types/index.ts` · `migrations/038_turma_nivel_vigencia.sql` (novo) · `migrations/037_apply_transferencia_lote_fn.sql` (RPC atualizada)
+- **Frontend**: `utils/transferenciasUtils.ts` · `utils/csv.ts` (novo) · `utils/download.ts` (novo) · `components/transferencias/PreviaChamada.tsx` · `components/transferencias/ListagemPrevia.tsx` (novo) · `components/modals/TransferenciaLoteReviewModal.tsx` · `pages/TransferenciasNivel.tsx` · `pages/Chamadas.tsx` · `pages/Configuracoes.tsx` · `components/modals/ImpressaoListaModal.tsx` · `types/index.ts`
+- **Testes**: `backend/src/services/__tests__/turmaNivelService.test.ts` (novo, 13) · `transferenciaLoteService.test.ts` (+9) · `frontend/src/utils/__tests__/transferenciasUtils.test.ts` (+6) · `frontend/src/utils/__tests__/csv.test.ts` (novo, 5)
+
+### Typecheck / Testes
+- Backend: 0 erros (`tsc --noEmit`) · **190/190** testes (jest)
+- Frontend: 0 erros (`tsc --noEmit`) · **161/161** testes (vitest) · `npm run build` limpo
+
+### Pendências / riscos conhecidos
+- **Migrations 036, 037 e 038 pendentes de execução no Supabase** (ordem `036 → 037 → 038`). Sem elas a mudança de nível não opera; até lá o sistema degrada para o comportamento atual (`turmas.nivel`) — todos os pontos consultam a vigência com **fail-open**
+- A vigência retroativa antes do backfill é **aproximada** (o banco não guarda o histórico antigo de níveis)
+- Mudança de nível no meio do mês: XLSX/Chamadas mostram o nível do **1º dia** (decisão do usuário) — o mês fica com um único rótulo de nível
+- `transferencia_lote` + itens continuam sem transação única (limitação pré-existente) — a **aplicação** é atômica (RPC)
+
+---
+
 ## Sessão: 12/11/2026 — Transferência de nível: abas internas, filtros persistidos e auto-cancelamento → v3.4.0
 
 ### O que foi feito

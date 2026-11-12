@@ -3,6 +3,7 @@ import { supabase } from './supabaseClient';
 import { AppError } from '../middleware/errorHandler';
 import type { Turma, Aluno, ChamadaLog, Professor } from '../types';
 import { parseDiasFromLabel, gerarDiasLetivos, formatMesAno, sortLabels } from '../utils/chamadaUtils';
+import { nivelVigenteService } from './turmaNivelService';
 
 const TENANT_LOCAL: Record<string, string> = {
   'bela-vista': 'Piscina Bela Vista',
@@ -148,6 +149,13 @@ export async function gerarFrequenciaXLSX(
   const ultimoDia = new Date(ano, mes, 0).getDate();
   const dataFim = `${ano}-${String(mes).padStart(2,'0')}-${String(ultimoDia).padStart(2,'0')}`;
 
+  // Nivel vigente de cada turma no 1o dia da competencia (historico por vigencia)
+  const nivelPorTurma = await nivelVigenteService(tenantId, turmas, dataInicio);
+  const turmasComNivel = turmas.map((t: any) => ({
+    ...t,
+    nivel: nivelPorTurma.get(t.grupo_id) ?? t.nivel ?? null,
+  }));
+
   const { data: logs, error: logsError } = await supabase
     .from('chamadas_log')
     .select('*')
@@ -291,7 +299,7 @@ export async function gerarFrequenciaXLSX(
   console.log('[EXPORT] labelsUnicas=' + JSON.stringify(labelsUnicas) + ' turmas=' + turmas.length);
 
   for (const label of labelsUnicas) {
-    const turmasLabel = turmas.filter((t: any) => t.label === label).sort((a: any, b: any) => a.horario.localeCompare(b.horario));
+    const turmasLabel = turmasComNivel.filter((t: any) => t.label === label).sort((a: any, b: any) => a.horario.localeCompare(b.horario));
     const diasLetivos = gerarDiasLetivos(mes, ano, label);
 
     for (const turma of turmasLabel) {

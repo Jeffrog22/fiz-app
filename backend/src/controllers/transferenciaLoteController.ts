@@ -9,6 +9,7 @@ import {
   aplicarLote,
   contarPendentes,
 } from '../services/transferenciaLoteService';
+import { listarPendenciasNivelService } from '../services/turmaNivelService';
 import type { TenantRequest } from '../types';
 
 export async function criarLoteHandler(
@@ -52,6 +53,25 @@ export async function listarLotesHandler(
     const status = (req.query.status as string) || undefined;
     const lotes = await listarLotes(tenantId, status);
     res.json(lotes);
+  } catch (err: any) {
+    next(err);
+  }
+}
+
+export async function listarNiveisPendentesHandler(
+  req: TenantRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  const tenantId = req.tenantId;
+  if (!tenantId) {
+    res.status(400).json({ error: 'Tenant nao identificado' });
+    return;
+  }
+
+  try {
+    const pendencias = await listarPendenciasNivelService(tenantId);
+    res.json(pendencias);
   } catch (err: any) {
     next(err);
   }

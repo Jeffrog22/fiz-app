@@ -7,10 +7,14 @@ jest.mock('../supabaseClient', () => {
     turmas: [],
     enrollment_period: [],
     professores: [],
+    turma_nivel_vigencia: [],
+    transferencia_nivel_pendencia: [],
+    transferencia_nivel_pendencia_lote: [],
   };
 
   const match = (row: Row, f: any): boolean => {
     if (f.type === 'eq') return row[f.col] === f.val;
+    if (f.type === 'is') return row[f.col] === f.val;
     if (f.type === 'notNull') return row[f.col] !== null && row[f.col] !== undefined;
     if (f.type === 'in') return Array.isArray(f.vals) && f.vals.includes(row[f.col]);
     if (f.type === 'gte') return row[f.col] >= f.val;
@@ -25,10 +29,12 @@ jest.mock('../supabaseClient', () => {
     const b: any = {
       select() { if (state.op === 'delete') state.returning = true; return b; },
       eq(col: string, val: any) { state.filters.push({ type: 'eq', col, val }); return b; },
+      is(col: string, val: any) { state.filters.push({ type: 'is', col, val }); return b; },
       not(col: string) { state.filters.push({ type: 'notNull', col }); return b; },
       in(col: string, vals: any[]) { state.filters.push({ type: 'in', col, vals }); return b; },
       gte(col: string, val: any) { state.filters.push({ type: 'gte', col, val }); return b; },
       lte(col: string, val: any) { state.filters.push({ type: 'lte', col, val }); return b; },
+      or() { return b; },
       order() { return b; },
       limit(n: number) { state.limit = n; return b; },
       range() { return b; },
@@ -64,7 +70,11 @@ jest.mock('../supabaseClient', () => {
       if (state.op === 'upsert') {
         for (const payload of state.payload as Row[]) {
           const idx = (store[table] || []).findIndex(
-            (r) => r.tenant_id === payload.tenant_id && r.key === payload.key,
+            (r) =>
+              r.tenant_id === payload.tenant_id &&
+              (payload.pendencia_id
+                ? r.pendencia_id === payload.pendencia_id && r.lote_id === payload.lote_id
+                : r.key === payload.key),
           );
           if (idx >= 0) Object.assign(store[table][idx], payload);
           else (store[table] = store[table] || []).push({ ...payload });
@@ -223,6 +233,9 @@ beforeEach(() => {
     { id: 'ep4', tenant_id: TENANT, aluno_id: 'a4', turma_id: 'marqq01', nivel: 'Iniciação', motivo: 'matricula_inicial', data_inicio: '2026-09-01', data_fim: null, criado_em: '2026-09-01T00:00:00Z' },
   ];
   store.professores = [];
+  store.turma_nivel_vigencia = [];
+  store.transferencia_nivel_pendencia = [];
+  store.transferencia_nivel_pendencia_lote = [];
 });
 
 afterEach(() => {
@@ -614,5 +627,164 @@ describe('transferenciaLoteService', () => {
     await criarLote(TENANT, PROFESSOR, { turma_destino: 'marqq01', data_efetiva: '2027-01-01', itens: [{ aluno_id: 'a1', turma_destino: 'marqq01' }] });
     await criarLote(TENANT, PROFESSOR, { turma_destino: 'marqq01', data_efetiva: '2027-01-01', itens: [{ aluno_id: 'a2', turma_destino: 'marqq01' }] });
     expect(await contarPendentes(TENANT)).toBe(2);
+  });
+
+  describe('mudanca de nivel da turma', () => {
+    it('cria a proposta de mudanca de nivel e vincula o lote', async () => {
+      const lote = await criarLote(TENANT, PROFESSOR, {
+        turma_destino: 'marqq01',
+        data_efetiva: '2027-01-01',
+        mudar_nivel_turma: true,
+        nivel_turma_novo: '3',
+        itens: [{ aluno_id: 'a1', turma_destino: 'marqq01' }],
+      });
+
+      expect(lote.mudar_nivel_turma).toBe(true);
+      expect(lote.nivel_turma_novo).toBe('3');
+      expect(lote.nivel_turma_atual).toBe('Iniciação');
+      expect(lote.nivel_pendencia_id).toBeTruthy();
+      expect(lote.nivel_conflito).toBe(false);
+
+      expect(store.transferencia_nivel_pendencia).toHaveLength(1);
+      expect(store.transferencia_nivel_pendencia[0].nivel_novo).toBe('3');
+      expect(store.transferencia_nivel_pendencia[0].status).toBe('pendente');
+      expect(store.transferencia_nivel_pendencia_lote).toHaveLength(1);
+      expect(store.transferencia_nivel_pendencia_lote[0].lote_id).toBe(lote.id);
+    });
+
+    it('exige o novo nivel da turma', async () => {
+      await expect(
+        criarLote(TENANT, PROFESSOR, {
+          turma_destino: 'marqq01',
+          data_efetiva: '2027-01-01',
+          mudar_nivel_turma: true,
+          itens: [{ aluno_id: 'a1', turma_destino: 'marqq01' }],
+        }),
+      ).rejects.toThrow(/Informe o novo nivel da turma/);
+    });
+
+    it('nao cria proposta quando a mudanca de nivel nao foi solicitada', async () => {
+      const lote = await criarLote(TENANT, PROFESSOR, {
+        turma_destino: 'marqq01',
+        data_efetiva: '2027-01-01',
+        itens: [{ aluno_id: 'a1', turma_destino: 'marqq01' }],
+      });
+
+      expect(lote.mudar_nivel_turma).toBe(false);
+      expect(store.transferencia_nivel_pendencia).toHaveLength(0);
+    });
+
+    it('reutiliza a proposta quando outro lote usa a mesma turma, data e nivel', async () => {
+      const primeiro = await criarLote(TENANT, PROFESSOR, {
+        turma_destino: 'marqq01',
+        data_efetiva: '2027-01-01',
+        mudar_nivel_turma: true,
+        nivel_turma_novo: '3',
+        itens: [{ aluno_id: 'a1', turma_destino: 'marqq01' }],
+      });
+      const segundo = await criarLote(TENANT, PROFESSOR, {
+        turma_destino: 'marqq01',
+        data_efetiva: '2027-01-01',
+        mudar_nivel_turma: true,
+        nivel_turma_novo: '3',
+        itens: [{ aluno_id: 'a2', turma_destino: 'marqq01' }],
+      });
+
+      expect(segundo.nivel_pendencia_id).toBe(primeiro.nivel_pendencia_id);
+      expect(store.transferencia_nivel_pendencia).toHaveLength(1);
+      expect(store.transferencia_nivel_pendencia_lote).toHaveLength(2);
+    });
+
+    it('sinaliza conflito quando o nivel difere para a mesma turma e data', async () => {
+      await criarLote(TENANT, PROFESSOR, {
+        turma_destino: 'marqq01',
+        data_efetiva: '2027-01-01',
+        mudar_nivel_turma: true,
+        nivel_turma_novo: '3',
+        itens: [{ aluno_id: 'a1', turma_destino: 'marqq01' }],
+      });
+      const conflitante = await criarLote(TENANT, PROFESSOR, {
+        turma_destino: 'marqq01',
+        data_efetiva: '2027-01-01',
+        mudar_nivel_turma: true,
+        nivel_turma_novo: '5',
+        itens: [{ aluno_id: 'a3', turma_destino: 'marqq01' }],
+      });
+
+      expect(conflitante.nivel_conflito).toBe(true);
+      expect(store.transferencia_nivel_pendencia.find((p) => p.nivel_novo === '5')?.status).toBe('conflito');
+    });
+
+    it('canceler o lote cancela a proposta de mudanca de nivel', async () => {
+      const lote = await criarLote(TENANT, PROFESSOR, {
+        turma_destino: 'marqq01',
+        data_efetiva: '2027-01-01',
+        mudar_nivel_turma: true,
+        nivel_turma_novo: '3',
+        itens: [{ aluno_id: 'a1', turma_destino: 'marqq01' }],
+      });
+
+      await cancelarLote(lote.id, TENANT, PROFESSOR);
+
+      expect(store.transferencia_nivel_pendencia[0].status).toBe('cancelado');
+      expect(store.transferencia_nivel_pendencia_lote).toHaveLength(0);
+    });
+
+    it('retirar o ultimo aluno cancela o lote e a proposta de mudanca de nivel', async () => {
+      const lote = await criarLote(TENANT, PROFESSOR, {
+        turma_destino: 'marqq01',
+        data_efetiva: '2027-01-01',
+        mudar_nivel_turma: true,
+        nivel_turma_novo: '3',
+        itens: [{ aluno_id: 'a1', turma_destino: 'marqq01' }],
+      });
+
+      const resultado = await removerItemLote(lote.id, 'a1', TENANT);
+
+      expect(resultado.canceladoAutomaticamente).toBe(true);
+      expect(store.transferencia_nivel_pendencia[0].status).toBe('cancelado');
+    });
+
+    it('preserva a proposta quando outro lote ainda depende dela', async () => {
+      const primeiro = await criarLote(TENANT, PROFESSOR, {
+        turma_destino: 'marqq01',
+        data_efetiva: '2027-01-01',
+        mudar_nivel_turma: true,
+        nivel_turma_novo: '3',
+        itens: [{ aluno_id: 'a1', turma_destino: 'marqq01' }],
+      });
+      await criarLote(TENANT, PROFESSOR, {
+        turma_destino: 'marqq01',
+        data_efetiva: '2027-01-01',
+        mudar_nivel_turma: true,
+        nivel_turma_novo: '3',
+        itens: [{ aluno_id: 'a2', turma_destino: 'marqq01' }],
+      });
+
+      await cancelarLote(primeiro.id, TENANT, PROFESSOR);
+
+      expect(store.transferencia_nivel_pendencia[0].status).toBe('pendente');
+      expect(store.transferencia_nivel_pendencia_lote).toHaveLength(1);
+    });
+
+    it('bloqueia a aplicacao quando ha proposta conflitante', async () => {
+      await criarLote(TENANT, PROFESSOR, {
+        turma_destino: 'marqq01',
+        data_efetiva: '2027-01-01',
+        mudar_nivel_turma: true,
+        nivel_turma_novo: '3',
+        itens: [{ aluno_id: 'a1', turma_destino: 'marqq01' }],
+      });
+      const conflitante = await criarLote(TENANT, PROFESSOR, {
+        turma_destino: 'marqq01',
+        data_efetiva: '2027-01-01',
+        mudar_nivel_turma: true,
+        nivel_turma_novo: '5',
+        itens: [{ aluno_id: 'a3', turma_destino: 'marqq01' }],
+      });
+
+      avancarClock('2027-01-02');
+      await expect(aplicarLote(conflitante.id, TENANT, PROFESSOR)).rejects.toThrow(/conflitante/i);
+    });
   });
 });

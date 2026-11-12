@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Printer, Download } from 'lucide-react';
 import api from '../../utils/api';
 import { calcIdade, calcIdadeDoAno, calcCategoria, formatDateBR } from '../../utils/formatters';
+import { downloadBlob } from '../../utils/download';
 
 interface ColunaOpcao {
   key: string;
@@ -28,17 +29,6 @@ interface ImpressaoListaModalProps {
   alunos: any[];
   professorMap: Map<string, string>;
   unidade: string;
-}
-
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }
 
 const ImpressaoListaModal: React.FC<ImpressaoListaModalProps> = ({

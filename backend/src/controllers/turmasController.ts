@@ -12,11 +12,12 @@ export class TurmasController {
   static async listar(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const tenantId = req.tenantId!;
-      const { nivel, professor_id, horario } = req.query;
+      const { nivel, professor_id, horario, nivel_data } = req.query;
       const data = await listarTurmasService(tenantId, {
         nivel: nivel as string,
         professor_id: professor_id as string,
         horario: horario as string,
+        nivel_data: nivel_data as string,
       });
       const turmas = data || [];
       res.json(req.visitante ? turmas.map(sanitizarTurma) : turmas);

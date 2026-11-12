@@ -145,9 +145,11 @@ const Chamadas: React.FC = () => {
   const carregarDados = useCallback(async () => {
     setCarregando(true);
     try {
+      // Nivel vigente da turma na competencia (1o dia do mes exibido)
+      const primeiroDia = `${ano}-${String(mes).padStart(2, '0')}-01`;
       const [resAlunos, resTurmas, resProfs, resEventos] = await Promise.all([
         api.get('/alunos?ativo=true'),
-        api.get('/turmas'),
+        api.get(`/turmas?nivel_data=${primeiroDia}`),
         api.get('/professores'),
         api.get(`/calendario?mes=${mes}&ano=${ano}`),
       ]);

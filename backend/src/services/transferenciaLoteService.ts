@@ -1,5 +1,9 @@
 import { supabase } from './supabaseClient';
 import { AppError } from '../middleware/errorHandler';
+import {
+  criarOuReusarPropostaNivelService,
+  liberarPropostaDoLoteService,
+} from './turmaNivelService';
 import type {
   TransferenciaLote,
   TransferenciaLoteItem,
@@ -20,6 +24,30 @@ function hojeLocalISO(): string {
   const mes = String(d.getMonth() + 1).padStart(2, '0');
   const dia = String(d.getDate()).padStart(2, '0');
   return `${d.getFullYear()}-${mes}-${dia}`;
+}
+
+/** Mapeia a linha do banco para o tipo TransferenciaLote */
+function mapearLote(l: any): TransferenciaLote {
+  return {
+    id: l.id,
+    tenant_id: l.tenant_id,
+    professor_id: l.professor_id,
+    turma_destino: l.turma_destino,
+    nivel_destino: l.nivel_destino ?? undefined,
+    professor_destino: l.professor_destino ?? undefined,
+    data_efetiva: l.data_efetiva,
+    status: l.status as StatusTransferenciaLote,
+    motivo: l.motivo ?? undefined,
+    criado_em: l.created_at || l.criado_em,
+    atualizado_em: l.updated_at || l.atualizado_em,
+    confirmado_em: l.confirmado_em ?? undefined,
+    confirmado_por: l.confirmado_por ?? undefined,
+    mudar_nivel_turma: !!l.mudar_nivel_turma,
+    nivel_turma_atual: l.nivel_turma_atual ?? undefined,
+    nivel_turma_novo: l.nivel_turma_novo ?? undefined,
+    nivel_pendencia_id: l.nivel_pendencia_id ?? undefined,
+    nivel_conflito: !!l.nivel_conflito,
+  };
 }
 
 export async function criarLote(
@@ -123,6 +151,13 @@ export async function criarLote(
     };
   });
 
+  // Mudanca de nivel da TURMA de destino (turma inteira, nao apenas os alunos do lote)
+  const querMudarNivel = input.mudar_nivel_turma === true;
+  const nivelTurmaNovo = querMudarNivel ? String(input.nivel_turma_novo || '').trim() : '';
+  if (querMudarNivel && !nivelTurmaNovo) {
+    throw new AppError('Informe o novo nivel da turma de destino', 400);
+  }
+
   // Insere o lote
   const { data: lote, error: loteError } = await supabase
     .from(LOTE_TABLE)
@@ -135,6 +170,9 @@ export async function criarLote(
       data_efetiva: input.data_efetiva,
       status: 'programado',
       motivo: input.motivo || null,
+      mudar_nivel_turma: querMudarNivel,
+      nivel_turma_atual: querMudarNivel ? turmaDestino.nivel || null : null,
+      nivel_turma_novo: querMudarNivel ? nivelTurmaNovo : null,
     })
     .select()
     .single();
@@ -158,20 +196,46 @@ export async function criarLote(
     throw new AppError('Erro ao criar itens do lote', 500);
   }
 
+  // Proposta de mudanca de nivel (cria ou reusa; sinaliza conflito)
+  let nivelPendenciaId: string | null = null;
+  let nivelConflito = false;
+  if (querMudarNivel) {
+    try {
+      const proposta = await criarOuReusarPropostaNivelService(
+        tenantId,
+        input.turma_destino,
+        turmaDestino.nivel || null,
+        nivelTurmaNovo,
+        input.data_efetiva,
+        lote.id,
+      );
+      nivelPendenciaId = proposta.pendenciaId;
+      nivelConflito = proposta.conflito;
+
+      if (nivelPendenciaId) {
+        const { error: updateError } = await supabase
+          .from(LOTE_TABLE)
+          .update({ nivel_pendencia_id: nivelPendenciaId, nivel_conflito: nivelConflito })
+          .eq('id', lote.id)
+          .eq('tenant_id', tenantId);
+
+        if (updateError) {
+          await liberarPropostaDoLoteService(tenantId, lote.id);
+          await supabase.from(LOTE_TABLE).delete().eq('id', lote.id);
+          throw new AppError('Erro ao vincular proposta de mudanca de nivel', 500);
+        }
+      }
+    } catch (err) {
+      if (err instanceof AppError) {
+        await liberarPropostaDoLoteService(tenantId, lote.id);
+        await supabase.from(LOTE_TABLE).delete().eq('id', lote.id);
+      }
+      throw err;
+    }
+  }
+
   return {
-    id: lote.id,
-    tenant_id: lote.tenant_id,
-    professor_id: lote.professor_id,
-    turma_destino: lote.turma_destino,
-    nivel_destino: lote.nivel_destino ?? undefined,
-    professor_destino: lote.professor_destino ?? undefined,
-    data_efetiva: lote.data_efetiva,
-    status: lote.status as 'programado',
-    motivo: lote.motivo ?? undefined,
-    criado_em: lote.created_at || lote.criado_em,
-    atualizado_em: lote.updated_at || lote.atualizado_em,
-    confirmado_em: lote.confirmado_em ?? undefined,
-    confirmado_por: lote.confirmado_por ?? undefined,
+    ...mapearLote({ ...lote, nivel_pendencia_id: nivelPendenciaId, nivel_conflito: nivelConflito }),
   };
 }
 
@@ -214,19 +278,7 @@ export async function listarLotes(
   return data.map((l) => {
     const c = contagem[l.id] || { total: 0, aplicados: 0, pendentes: 0 };
     return {
-      id: l.id,
-      tenant_id: l.tenant_id,
-      professor_id: l.professor_id,
-      turma_destino: l.turma_destino,
-      nivel_destino: l.nivel_destino ?? undefined,
-      professor_destino: l.professor_destino ?? undefined,
-      data_efetiva: l.data_efetiva,
-      status: l.status as StatusTransferenciaLote,
-      motivo: l.motivo ?? undefined,
-      criado_em: l.created_at || l.criado_em,
-      atualizado_em: l.updated_at || l.atualizado_em,
-      confirmado_em: l.confirmado_em ?? undefined,
-      confirmado_por: l.confirmado_por ?? undefined,
+      ...mapearLote(l),
       totalItens: c.total,
       itensAplicados: c.aplicados,
       itensPendentes: c.pendentes,
@@ -270,21 +322,7 @@ export async function buscarLote(
   }
 
   return {
-    lote: {
-      id: lote.id,
-      tenant_id: lote.tenant_id,
-      professor_id: lote.professor_id,
-      turma_destino: lote.turma_destino,
-      nivel_destino: lote.nivel_destino ?? undefined,
-      professor_destino: lote.professor_destino ?? undefined,
-      data_efetiva: lote.data_efetiva,
-      status: lote.status as StatusTransferenciaLote,
-      motivo: lote.motivo ?? undefined,
-      criado_em: lote.created_at || lote.criado_em,
-      atualizado_em: lote.updated_at || lote.atualizado_em,
-      confirmado_em: lote.confirmado_em ?? undefined,
-      confirmado_por: lote.confirmado_por ?? undefined,
-    },
+    lote: mapearLote(lote),
     itens: (itens || []).map((i) => ({
       id: i.id,
       lote_id: i.lote_id,
@@ -311,7 +349,7 @@ export async function atualizarLote(
 ): Promise<TransferenciaLote> {
   const { data: lote, error: loteError } = await supabase
     .from(LOTE_TABLE)
-    .select('status, turma_destino')
+    .select('status, turma_destino, data_efetiva, mudar_nivel_turma, nivel_turma_novo, nivel_turma_atual, nivel_pendencia_id')
     .eq('id', loteId)
     .eq('tenant_id', tenantId)
     .maybeSingle();
@@ -321,6 +359,10 @@ export async function atualizarLote(
   if (!STATUS_ATIVOS.includes(lote.status as string)) {
     throw new AppError('Só é possível editar lotes programados ou em revisao', 400);
   }
+
+  let nivelTurmaAtual: string | null = null;
+  let turmaDestinoNova = input.turma_destino ?? lote.turma_destino;
+  let dataEfetivaNova = input.data_efetiva ?? lote.data_efetiva;
 
   // Se mudou o destino, valida a nova turma
   if (input.turma_destino && input.turma_destino !== lote.turma_destino) {
@@ -334,6 +376,8 @@ export async function atualizarLote(
     if (turmaError) throw new AppError('Erro ao validar nova turma destino', 500);
     if (!turma) throw new AppError('Nova turma destino nao encontrada nesta unidade', 404);
 
+    nivelTurmaAtual = turma.nivel || null;
+
     // Atualiza nivel_destino e professor_destino se nao fornecidos explicitamente
     if (input.nivel_destino === undefined) input.nivel_destino = turma.nivel || null;
     if (input.professor_destino === undefined) input.professor_destino = turma.professor_id || null;
@@ -345,6 +389,15 @@ export async function atualizarLote(
   if (input.professor_destino !== undefined) updateData.professor_destino = input.professor_destino;
   if (input.data_efetiva !== undefined) updateData.data_efetiva = input.data_efetiva;
   if (input.motivo !== undefined) updateData.motivo = input.motivo;
+
+  // Cancela a mudanca de nivel da turma, se solicitado
+  if (input.remover_mudanca_nivel === true) {
+    await liberarPropostaDoLoteService(tenantId, loteId);
+    updateData.mudar_nivel_turma = false;
+    updateData.nivel_turma_novo = null;
+    updateData.nivel_pendencia_id = null;
+    updateData.nivel_conflito = false;
+  }
 
   const { data, error } = await supabase
     .from(LOTE_TABLE)
@@ -372,21 +425,55 @@ export async function atualizarLote(
     }
   }
 
-  return {
-    id: data.id,
-    tenant_id: data.tenant_id,
-    professor_id: data.professor_id,
-    turma_destino: data.turma_destino,
-    nivel_destino: data.nivel_destino ?? undefined,
-    professor_destino: data.professor_destino ?? undefined,
-    data_efetiva: data.data_efetiva,
-    status: data.status as StatusTransferenciaLote,
-    motivo: data.motivo ?? undefined,
-    criado_em: data.created_at || data.criado_em,
-    atualizado_em: data.updated_at || data.atualizado_em,
-    confirmado_em: data.confirmado_em ?? undefined,
-    confirmado_por: data.confirmado_por ?? undefined,
-  };
+  // Rebind da proposta de mudanca de nivel (turma ou data efetiva mudaram)
+  const destinoMudou = turmaDestinoNova !== lote.turma_destino;
+  const dataMudou = dataEfetivaNova !== lote.data_efetiva;
+  if (
+    input.remover_mudanca_nivel !== true &&
+    lote.mudar_nivel_turma &&
+    (destinoMudou || dataMudou)
+  ) {
+    await liberarPropostaDoLoteService(tenantId, loteId);
+
+    let nivelBase = nivelTurmaAtual;
+    if (!destinoMudou) {
+      const { data: turmaAtual } = await supabase
+        .from('turmas')
+        .select('nivel')
+        .eq('tenant_id', tenantId)
+        .eq('grupo_id', turmaDestinoNova)
+        .maybeSingle();
+      nivelBase = turmaAtual?.nivel ?? lote.nivel_turma_atual ?? null;
+    }
+
+    const proposta = await criarOuReusarPropostaNivelService(
+      tenantId,
+      turmaDestinoNova,
+      nivelBase,
+      String(lote.nivel_turma_novo || '').trim(),
+      dataEfetivaNova,
+      loteId,
+    );
+
+    await supabase
+      .from(LOTE_TABLE)
+      .update({
+        nivel_pendencia_id: proposta.pendenciaId,
+        nivel_conflito: proposta.conflito,
+        nivel_turma_atual: nivelBase,
+      })
+      .eq('id', loteId)
+      .eq('tenant_id', tenantId);
+  }
+
+  const { data: final } = await supabase
+    .from(LOTE_TABLE)
+    .select('*')
+    .eq('id', loteId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+
+  return mapearLote(final || data);
 }
 
 export interface ResultadoRemocaoItemLote {
@@ -450,6 +537,8 @@ export async function removerItemLote(
     if (cancelError) throw new AppError('Erro ao cancelar lote esvaziado', 500);
 
     if (cancelados && cancelados.length > 0) {
+      // O lote foi cancelado: a mudanca de nivel que dependia dele e liberada
+      await liberarPropostaDoLoteService(tenantId, loteId);
       return { status: 'cancelado', itensRestantes, canceladoAutomaticamente: true };
     }
 
@@ -500,6 +589,9 @@ export async function cancelarLote(
     .eq('tenant_id', tenantId);
 
   if (error) throw new AppError('Erro ao cancelar lote', 500);
+
+  // Libera a mudanca de nivel da turma que dependia deste lote
+  await liberarPropostaDoLoteService(tenantId, loteId);
 }
 
 export async function aplicarLote(
@@ -510,7 +602,7 @@ export async function aplicarLote(
   // Verifica se o lote existe e esta disponivel
   const { data: lote, error: loteError } = await supabase
     .from(LOTE_TABLE)
-    .select('status, data_efetiva')
+    .select('status, data_efetiva, turma_destino, mudar_nivel_turma, nivel_conflito, nivel_turma_atual')
     .eq('id', loteId)
     .eq('tenant_id', tenantId)
     .maybeSingle();
@@ -527,6 +619,15 @@ export async function aplicarLote(
     throw new AppError(`A data efetiva do lote ainda nao chegou (${lote.data_efetiva})`, 400);
   }
 
+  // Conflito de mudanca de nivel: bloqueia ate a revisao
+  if (lote.mudar_nivel_turma && lote.nivel_conflito) {
+    throw new AppError(
+      'Ha uma proposta conflitante de mudanca de nivel para esta turma e data. ' +
+        'Cancele o lote com a proposta conflitante antes de aplicar.',
+      400,
+    );
+  }
+
   // Chama a funcao RPC atomica no banco
   const { data, error } = await supabase.rpc('aplicar_transferencia_lote', {
     p_lote_id: loteId,
@@ -534,6 +635,20 @@ export async function aplicarLote(
   });
 
   if (error) {
+    const mensagem = String(error.message || '');
+    if (mensagem.toLowerCase().includes('conflito') && mensagem.toLowerCase().includes('nivel')) {
+      throw new AppError(
+        'Ha uma proposta conflitante de mudanca de nivel para esta turma e data. ' +
+          'Cancele o lote com a proposta conflitante antes de aplicar.',
+        400,
+      );
+    }
+    if (mensagem.toLowerCase().includes('nivel da turma mudou')) {
+      throw new AppError(
+        'O nivel da turma mudou desde a programacao. Revise a proposta de mudanca de nivel antes de aplicar.',
+        400,
+      );
+    }
     throw new AppError(error.message || 'Erro ao aplicar lote de transferencia', 400);
   }
 

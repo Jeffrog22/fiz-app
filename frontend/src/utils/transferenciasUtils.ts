@@ -3,8 +3,10 @@ import type {
   StatusTransferenciaLote,
   TransferenciaLote,
   TransferenciaLoteItem,
+  TransferenciaNivelPendencia,
   Turma,
 } from '../types';
+import { sortLabels } from './chamadaUtils';
 
 export const STATUS_LOTE_ATIVOS: StatusTransferenciaLote[] = ['programado', 'revisao'];
 
@@ -109,6 +111,129 @@ export function comporTurma(
 
 export type PapelTurma = 'origem' | 'destino' | 'ambos';
 
+/**
+ * Sequencia de turmas de um professor, na ordem do grid oficial de Chamadas:
+ * primeiro os blocos de dias (LABEL_ORDER: Ter/Qui antes de Qua/Sex) e, dentro
+ * de cada bloco, os horarios em ordem crescente.
+ */
+export function sequenciaTurmasProfessor(turmas: Turma[], professorId: string): Turma[] {
+  if (!professorId) return [];
+
+  const porLabel = new Map<string, Turma[]>();
+  for (const t of turmas) {
+    if (t.professor_id !== professorId) continue;
+    const label = t.label || '';
+    if (!porLabel.has(label)) porLabel.set(label, []);
+    porLabel.get(label)!.push(t);
+  }
+
+  const sequencia: Turma[] = [];
+  for (const label of sortLabels([...porLabel.keys()])) {
+    const bloco = [...(porLabel.get(label) || [])].sort((a, b) =>
+      (a.horario || '').localeCompare(b.horario || '', 'pt-BR'),
+    );
+    sequencia.push(...bloco);
+  }
+
+  return sequencia;
+}
+
+/** Horarios (na ordem da sequencia) disponiveis para um professor */
+export function horariosSequenciaProfessor(turmas: Turma[], professorId: string): string[] {
+  const horarios: string[] = [];
+  for (const t of sequenciaTurmasProfessor(turmas, professorId)) {
+    const h = (t.horario || '').slice(0, 5);
+    if (h && !horarios.includes(h)) horarios.push(h);
+  }
+  return horarios;
+}
+
+export interface NivelProjetadoTurma {
+  nivel: string | null;
+  dataEfetiva?: string | null;
+  propostaId?: string | null;
+  conflito: boolean;
+}
+
+/**
+ * Nivel projetado por turma a partir das propostas pendentes de mudanca de nivel.
+ * Propostas em conflito nao alteram o nivel projetado (aplicacao bloqueada).
+ */
+export function nivelProjetadoPorTurma(
+  pendencias: TransferenciaNivelPendencia[] = [],
+): Map<string, NivelProjetadoTurma> {
+  const mapa = new Map<string, NivelProjetadoTurma>();
+  for (const p of pendencias) {
+    if (!p.turma_grupo_id) continue;
+    if (p.status === 'conflito') {
+      const atual = mapa.get(p.turma_grupo_id);
+      mapa.set(p.turma_grupo_id, {
+        nivel: atual?.nivel ?? null,
+        dataEfetiva: atual?.dataEfetiva ?? p.data_efetiva,
+        propostaId: atual?.propostaId ?? null,
+        conflito: true,
+      });
+      continue;
+    }
+    if (p.status !== 'pendente') continue;
+    mapa.set(p.turma_grupo_id, {
+      nivel: p.nivel_novo,
+      dataEfetiva: p.data_efetiva,
+      propostaId: p.id,
+      conflito: false,
+    });
+  }
+  return mapa;
+}
+
+export interface ProjecaoTurma {
+  turma: Turma;
+  nivelAtual: string | null;
+  nivelProjetado: string | null;
+  conflito: boolean;
+  alunos: Aluno[];
+  entradas: Aluno[];
+  saidas: Aluno[];
+  movimentada: boolean;
+}
+
+/**
+ * Projecao hibrida de TODAS as turmas: permanecem os alunos atuais, saem os que
+ * tem transferencia programada e entram os que chegam por transferencia.
+ * O aluno com transferencia programada aparece somente na turma de destino.
+ */
+export function projetarComposicoes(params: {
+  turmas: Turma[];
+  alunosAtivos: Aluno[];
+  movimentos: MovimentoTransferencia[];
+  pendenciasNivel?: TransferenciaNivelPendencia[];
+}): ProjecaoTurma[] {
+  const { turmas, alunosAtivos, movimentos, pendenciasNivel = [] } = params;
+  const niveis = nivelProjetadoPorTurma(pendenciasNivel);
+
+  const gruposMovimentados = new Set<string>();
+  for (const m of movimentos) {
+    if (m.turma_origem) gruposMovimentados.add(m.turma_origem);
+    if (m.turma_destino) gruposMovimentados.add(m.turma_destino);
+  }
+
+  return turmas.map((turma) => {
+    const grupoId = turma.grupo_id || turma.id;
+    const composicao = comporTurma(grupoId, alunosAtivos, movimentos);
+    const nivel = niveis.get(grupoId);
+    return {
+      turma,
+      nivelAtual: turma.nivel ?? null,
+      nivelProjetado: nivel?.nivel ?? turma.nivel ?? null,
+      conflito: nivel?.conflito ?? false,
+      alunos: composicao.alunos,
+      entradas: composicao.entradas,
+      saidas: composicao.saidas,
+      movimentada: gruposMovimentados.has(grupoId),
+    };
+  });
+}
+
 export interface LinhaVisaoGeral {
   grupo_id: string;
   professor_id?: string | null;
@@ -116,6 +241,10 @@ export interface LinhaVisaoGeral {
   label: string;
   horario: string;
   nivel?: string | null;
+  /** Nivel previsto (mudanca de nivel programada para a turma) */
+  nivel_projetado?: string | null;
+  /** Existe proposta conflitante de mudanca de nivel */
+  conflito_nivel?: boolean;
   capacidade?: number | null;
   lotacao_atual: number;
   lotacao_projetada: number;
@@ -135,9 +264,11 @@ export function calcularVisaoGeral(params: {
   alunosAtivos: Aluno[];
   turmas: Turma[];
   professorMap?: Map<string, string>;
+  pendenciasNivel?: TransferenciaNivelPendencia[];
 }): LinhaVisaoGeral[] {
-  const { lotes, itensPorLote, alunosAtivos, turmas, professorMap } = params;
+  const { lotes, itensPorLote, alunosAtivos, turmas, professorMap, pendenciasNivel = [] } = params;
   const movimentos = coletarMovimentos(lotes, itensPorLote);
+  const niveis = nivelProjetadoPorTurma(pendenciasNivel);
 
   const papelPorTurma = new Map<string, PapelTurma>();
   const marcar = (grupoId: string, papel: PapelTurma) => {
@@ -165,6 +296,8 @@ export function calcularVisaoGeral(params: {
       label: turma?.label || '—',
       horario: (turma?.horario || '').slice(0, 5),
       nivel: turma?.nivel || null,
+      nivel_projetado: niveis.get(grupoId)?.nivel ?? turma?.nivel ?? null,
+      conflito_nivel: niveis.get(grupoId)?.conflito ?? false,
       capacidade: turma?.capacidade ?? null,
       lotacao_atual: lotacaoAtual,
       lotacao_projetada: composicao.alunos.length,

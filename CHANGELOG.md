@@ -1,5 +1,32 @@
 # Changelog - Fiz! App
 
+## [v3.5.0] - 2026-11-12
+### Feat
+- **Transferência de nível — três ajustes** (Prévia navegável, Listagem prévia e mudança de nível da turma)
+- **1. Prévia de chamada com botões “‹ Voltar / Próxima ›”**: percorre a sequência de turmas do professor na **ordem do grid oficial de Chamadas**
+  - Sequência: **blocos de dias primeiro** (`sortLabels`/`LABEL_ORDER` → **Ter/Qui antes de Qua/Sex**) e, dentro de cada bloco, **horários em ordem crescente** — todos os horários do bloco são percorridos antes de passar ao seguinte
+  - Ao navegar, sincroniza os filtros **Turma** e **Horário** (novo) e grava a seleção na preferência existente (`tf_previa:<unidade>:<professor>`); botões **desabilitados nos limites**; trocar o professor reposiciona na primeira turma
+  - A composição projetada e as células de frequência seguem **somente leitura**
+- **2. Nova subaba “Listagem prévia”** (ordem: **Visão geral | Prévia de chamada | Lotes pendentes | Listagem prévia**)
+  - Uma linha por aluno da **composição projetada (híbrida) de todas as turmas** da unidade — inclui quem **permanece** e quem **entra**; o aluno com transferência programada aparece **somente na turma de destino**
+  - Colunas: **Aluno, Turma, Horário, Nível** (nível **projetado**) + Professor; badge “entra” nos que chegam
+  - **Filtros no padrão do Fis!** (`SearchInput` + `<select>` de uniques no header, como em Alunos): nome, professor, turma, horário e nível; paginação de 50 linhas
+  - **Exportar CSV** e **Imprimir / salvar em PDF** com **todas** as linhas filtradas (não só a página). CSV com **BOM UTF-8** e separador **`;`** (abre com acentos no Excel pt-BR). A impressão mostra **competência + filtros aplicados** + total
+  - A listagem acompanha a programação, edição, aplicação, cancelamento de lotes e a retirada de aluno pela lixeira
+- **3. Programar mudança de nível da turma** (no “Programar transferência”)
+  - **Confirmação do escopo**: o campo existente “Nível de destino” define o nível **somente dos alunos do lote** (é gravado em `alunos.nivel`/`enrollment_period.nivel` na aplicação) → **preservado** e rotulado como tal; o **novo controle é diferenciado**, logo abaixo
+  - Novo controle explícito **“Programar mudança de nível da turma”** + campo **“Novo nível da turma”**, mostrando **nível atual**, **nível previsto**, **data efetiva** e o aviso de que a mudança abrange **toda a turma** (atuais e os que chegam). A escolha é explícita (checkbox desmarcado = nenhuma mudança)
+  - **Persistência como pendência** da turma de destino e da data efetiva, **vinculada ao lote que a confirma**: `transferencia_nivel_pendencia` (compartilhada) + `transferencia_nivel_pendencia_lote` (dependências N:N)
+    - Mesma turma + data + **mesmo nível** → **reutiliza** a programação existente
+    - Mesma turma + data com **nível diferente** → proposta marcada como **conflito** e **aplicação bloqueada** até a revisão
+    - Cancelar o lote ou retirar o **último aluno** → a mudança que dependia só dele é retirada; se **outro lote ainda depender**, a programação é preservada e a UI mostra **em qual confirmação** ela será aplicada
+  - **Projeções mostram o nível novo antes da confirmação**: Visão geral (coluna Nível `atual → projetado`), Prévia de chamada (banner) e Listagem prévia (coluna Nível). **Até a confirmação o nível oficial segue vigente**
+  - **Aplicação em uma única transação** (RPC `aplicar_transferencia_lote`): transferência + mudança de nível, com confirmação manual que mostra **turma, nível atual, novo nível e data**. Revalida **unidade, permissões, data, nível vigente** (mudou desde a programação → exige revisão) e **pendências relacionadas** (conflito → bloqueia). A proteção contra **aplicação concorrente/repetida** foi preservada
+  - **Identificador da turma preservado** (`grupo_id` não muda) e **vigência do nível registrada** em `turma_nivel_vigencia` — assim Chamadas, exportações e o histórico do aluno recuperam o **nível válido na data consultada**. `alunos.nivel` e o `enrollment_period` **aberto** ficam coerentes a partir da vigência; **períodos anteriores preservados**
+- **Nível por data nas consultas**: `GET /turmas?nivel_data=YYYY-MM-DD` resolve o nível vigente na data; grid de Chamadas usa o **1º dia da competência**; XLSX de Frequência (nome da aba e célula “Nível:”) e histórico do aluno passam a consultar a vigência
+- **Testes**: backend `turmaNivelService.test.ts` (novo, 13 casos), `transferenciaLoteService.test.ts` (+9 casos de mudança de nível); frontend `transferenciasUtils.test.ts` (+6 casos de sequência/projeção) e `csv.test.ts` (novo, 5 casos)
+- **Migrations pendentes de execução no Supabase**: **038** (nova: `turma_nivel_vigencia`, `transferencia_nivel_pendencia`, `transferencia_nivel_pendencia_lote`, colunas do lote e backfill da vigência) e **037** (RPC atualizada com a lógica de nível). Ordem: `036 → 037 → 038`
+
 ## [v3.4.0] - 2026-11-12
 ### Feat
 - **Transferência de nível — "Lotes pendentes" vira aba interna**: a aba temporária passa a ter **3 abas internas** — *Visão geral* | *Prévia de chamada* | *Lotes pendentes* (a lista de lotes deixa de ficar sempre visível abaixo da visão geral)

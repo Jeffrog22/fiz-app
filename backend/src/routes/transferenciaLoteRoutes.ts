@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   criarLoteHandler,
   listarLotesHandler,
+  listarNiveisPendentesHandler,
   buscarLoteHandler,
   atualizarLoteHandler,
   removerItemLoteHandler,
@@ -21,6 +22,7 @@ router.use(authMiddleware);
 router.post('/lotes', criarLoteHandler);
 router.get('/lotes', listarLotesHandler);
 router.get('/lotes/pendentes/count', contarPendentesHandler);
+router.get('/niveis-pendentes', listarNiveisPendentesHandler);
 router.get('/lotes/:id', buscarLoteHandler);
 router.put('/lotes/:id', atualizarLoteHandler);
 router.delete('/lotes/:id/itens/:alunoId', removerItemLoteHandler);

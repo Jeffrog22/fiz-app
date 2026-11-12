@@ -49,6 +49,8 @@ const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> 
   const [dataEfetiva, setDataEfetiva] = useState(primeiroDiaMesSeguinte());
   const [motivo, setMotivo] = useState('');
   const [nivelDestino, setNivelDestino] = useState<string | null>(null);
+  const [mudarNivelTurma, setMudarNivelTurma] = useState(false);
+  const [nivelTurmaNovo, setNivelTurmaNovo] = useState('');
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
@@ -117,6 +119,8 @@ const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> 
     setErro(null);
     setTurmaDestino('');
     setNivelDestino(null);
+    setMudarNivelTurma(false);
+    setNivelTurmaNovo('');
     setDataEfetiva(primeiroDiaMesSeguinte());
     carregarDados();
   }, [aberto, carregarDados]);
@@ -167,6 +171,10 @@ const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> 
     setTurmaDestino(value);
     const t = turmasDisponiveis.find((x) => x.grupo_id === value);
     setNivelDestino(t?.nivel || null);
+    // A mudança de nível da turma é uma escolha explícita: ao trocar de turma
+    // o controle volta ao estado inicial (desmarcado).
+    setMudarNivelTurma(false);
+    setNivelTurmaNovo(t?.nivel || '');
     if (!tenantId || !professorLogado) return;
     salvarPreferencia(PREFERENCIA_TIPO, tenantId, professorLogado, {
       professorId: professorDestino,
@@ -196,6 +204,10 @@ const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> 
       setErro('Alunos sem matrícula vigente não podem ser transferidos');
       return;
     }
+    if (mudarNivelTurma && !nivelTurmaNovo.trim()) {
+      setErro('Informe o novo nível da turma de destino');
+      return;
+    }
 
     const itens: TransferenciaLoteItemInput[] = origens.map((o) => ({
       aluno_id: o.aluno_id,
@@ -209,13 +221,19 @@ const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> 
       data_efetiva: dataEfetiva,
       motivo: motivo || undefined,
       itens,
+      mudar_nivel_turma: mudarNivelTurma || undefined,
+      nivel_turma_novo: mudarNivelTurma ? nivelTurmaNovo.trim() : undefined,
     };
 
     setCarregando(true);
     setErro(null);
     try {
       await api.post('/transferencias-nivel/lotes', input);
-      setSucesso('Lote programado. Os alunos serão transferidos na data efetiva.');
+      setSucesso(
+        mudarNivelTurma
+          ? `Lote programado. Os alunos serão transferidos e a turma de destino passa para o nível "${nivelTurmaNovo.trim()}" em ${dataEfetiva.split('-').reverse().join('/')}.`
+          : 'Lote programado. Os alunos serão transferidos na data efetiva.',
+      );
       onSucesso();
       setTimeout(() => onClose(), 1200);
     } catch (err: any) {
@@ -344,8 +362,66 @@ const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> 
                 placeholder="Definido pela turma de destino"
                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100"
               />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Vale somente para os alunos transferidos neste lote.
+              </p>
             </div>
           </div>
+
+          {turmaSelecionada && (
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={mudarNivelTurma}
+                  onChange={(e) => {
+                    setMudarNivelTurma(e.target.checked);
+                    if (e.target.checked && !nivelTurmaNovo) {
+                      setNivelTurmaNovo(turmaSelecionada.nivel || '');
+                    }
+                  }}
+                  disabled={carregando}
+                  className="mt-1"
+                />
+                <span className="text-sm font-medium text-gray-800 dark:text-gray-100">
+                  Programar mudança de nível da turma
+                </span>
+              </label>
+
+              {mudarNivelTurma && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Novo nível da turma
+                    </label>
+                    <input
+                      type="text"
+                      value={nivelTurmaNovo}
+                      onChange={(e) => setNivelTurmaNovo(e.target.value)}
+                      placeholder="Ex.: 3"
+                      disabled={carregando}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
+                    />
+                  </div>
+
+                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3 text-xs text-amber-800 dark:text-amber-200 space-y-1">
+                    <p>
+                      Nível atual da turma: <strong>{turmaSelecionada.nivel || 'sem nível'}</strong> → novo nível:{' '}
+                      <strong>{nivelTurmaNovo.trim() || '—'}</strong>
+                    </p>
+                    <p>
+                      Vigência: <strong>{dataEfetiva ? dataEfetiva.split('-').reverse().join('/') : '—'}</strong>{' '}
+                      (data efetiva do lote).
+                    </p>
+                    <p>
+                      A mudança abrange <strong>toda a turma</strong>: os alunos que já estão nela e os que
+                      chegam por esta transferência. Até a confirmação, o nível oficial continua vigente.
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4">
             <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-2">

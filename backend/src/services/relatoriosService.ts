@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { AppError } from '../middleware/errorHandler';
 import { calcularCategoria } from './alunosService';
+import { listarVigenciasService, resolverNivelPorData } from './turmaNivelService';
 import type {
   FrequenciaAlunoItem, FrequenciaTurmaItem, RotatividadeItem, ExclusaoStatsItem,
   CancelamentoData, CancelamentoItem, CancelamentoRegistro, PiscinaHistoricoData, PiscinaRegistro,
@@ -568,10 +569,14 @@ export async function historicoAluno(
 
   const enrollmentPeriods: EnrollmentPeriodHistorico[] = [];
 
+  // Vigencia do nivel por turma (resolve o nivel valido na data de cada periodo)
+  const vigencias = await listarVigenciasService(tenantId);
+
   for (const period of rawPeriods) {
     const turma = turmaMap.get(period.turma_id) || turmaAtual;
     const label = turma ? `${turma.label} ${turma.horario ? turma.horario.slice(0, 5) : ''}`.trim() : '';
-    const nivel = turma?.nivel || period.nivel || '';
+    const nivelVigente = resolverNivelPorData(vigencias, period.turma_id, period.data_inicio);
+    const nivel = nivelVigente ?? turma?.nivel ?? period.nivel ?? '';
 
     const dataInicio = period.data_inicio;
     const dataFim = period.data_fim || hoje;

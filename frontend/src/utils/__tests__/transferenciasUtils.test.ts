@@ -4,12 +4,22 @@ import {
   coletarMovimentos,
   comporTurma,
   hojeSaoPaulo,
+  horariosSequenciaProfessor,
   isLoteAtivo,
   mesAnoDeData,
+  nivelProjetadoPorTurma,
   primeiroDiaMesSeguinte,
+  projetarComposicoes,
   projetarLotacaoDestino,
+  sequenciaTurmasProfessor,
 } from '../transferenciasUtils';
-import type { Aluno, TransferenciaLote, TransferenciaLoteItem, Turma } from '../../types';
+import type {
+  Aluno,
+  TransferenciaLote,
+  TransferenciaLoteItem,
+  TransferenciaNivelPendencia,
+  Turma,
+} from '../../types';
 
 const aluno = (overrides: Partial<Aluno> = {}): Aluno => ({
   id: 'a1',
@@ -210,4 +220,119 @@ test('projetarLotacaoDestino desconta aluno que ja esta no destino', () => {
   expect(projecao.saidas).toBe(1);
   expect(projecao.entradas).toBe(0);
   expect(projecao.projetado).toBe(0);
+});
+
+const pendencia = (overrides: Partial<TransferenciaNivelPendencia> = {}): TransferenciaNivelPendencia => ({
+  id: 'p1',
+  tenant_id: 'bela-vista',
+  turma_grupo_id: 'marqq01',
+  nivel_atual: '4',
+  nivel_novo: '3',
+  data_efetiva: '2026-12-01',
+  status: 'pendente',
+  criado_em: '2026-11-01',
+  atualizado_em: '2026-11-01',
+  ...overrides,
+});
+
+test('sequenciaTurmasProfessor percorre blocos (LABEL_ORDER) e horarios crescentes', () => {
+  const turmas = [
+    turma({ grupo_id: 'jeftq03', label: 'Ter/Qui', horario: '13:45' }),
+    turma({ grupo_id: 'jeftq01', label: 'Ter/Qui', horario: '07:00' }),
+    turma({ grupo_id: 'jeftq02', label: 'Ter/Qui', horario: '09:00' }),
+    turma({ grupo_id: 'jeffqs01', label: 'Qua/Sex', horario: '08:00' }),
+    turma({ grupo_id: 'jeffqs02', label: 'Qua/Sex', horario: '07:00' }),
+  ];
+
+  const sequencia = sequenciaTurmasProfessor(turmas, 'jeff');
+
+  // LABEL_ORDER: Ter/Qui (8) antes de Qua/Sex (12); dentro do bloco, horario crescente
+  expect(sequencia.map((t) => t.grupo_id)).toEqual([
+    'jeftq01',
+    'jeftq02',
+    'jeftq03',
+    'jeffqs02',
+    'jeffqs01',
+  ]);
+});
+
+test('sequenciaTurmasProfessor ignora turmas de outros professores', () => {
+  const turmas = [
+    turma({ grupo_id: 'jeftq01', professor_id: 'jeff' }),
+    turma({ id: 'u2', grupo_id: 'marqq01', professor_id: 'duda', label: 'Ter/Qui', horario: '09:00' }),
+  ];
+  expect(sequenciaTurmasProfessor(turmas, 'jeff').map((t) => t.grupo_id)).toEqual(['jeftq01']);
+  expect(sequenciaTurmasProfessor(turmas, '')).toEqual([]);
+});
+
+test('horariosSequenciaProfessor lista os horarios sem repetir', () => {
+  const turmas = [
+    turma({ grupo_id: 'jeftq01', horario: '07:00' }),
+    turma({ id: 'u2', grupo_id: 'jeftq02', horario: '09:00' }),
+    turma({ id: 'u3', grupo_id: 'jeffqs01', label: 'Qua/Sex', horario: '07:00' }),
+  ];
+  expect(horariosSequenciaProfessor(turmas, 'jeff')).toEqual(['07:00', '09:00']);
+});
+
+test('nivelProjetadoPorTurma usa a proposta pendente e sinaliza conflito', () => {
+  const mapa = nivelProjetadoPorTurma([
+    pendencia(),
+    pendencia({ id: 'p2', turma_grupo_id: 'jeftq01', nivel_novo: '5', status: 'conflito' }),
+  ]);
+
+  expect(mapa.get('marqq01')?.nivel).toBe('3');
+  expect(mapa.get('marqq01')?.conflito).toBe(false);
+  expect(mapa.get('jeftq01')?.conflito).toBe(true);
+  expect(mapa.get('inexistente')).toBeUndefined();
+});
+
+test('projetarComposicoes aplica a projecao hibrida em todas as turmas', () => {
+  const alunos = [
+    aluno({ id: 'a1', turma_id: 'jeftq01' }),
+    aluno({ id: 'a2', turma_id: 'jeftq01' }),
+    aluno({ id: 'a3', turma_id: 'marqq01' }),
+  ];
+  const turmas = [
+    turma({ grupo_id: 'jeftq01', nivel: '2B' }),
+    turma({ id: 'u2', grupo_id: 'marqq01', horario: '09:00', professor_id: 'duda', nivel: '4' }),
+  ];
+  const movimentos = coletarMovimentos([lote()], {
+    l1: [item({ aluno_id: 'a1', turma_origem: 'jeftq01', turma_destino: 'marqq01' })],
+  });
+
+  const projecoes = projetarComposicoes({
+    turmas,
+    alunosAtivos: alunos,
+    movimentos,
+    pendenciasNivel: [pendencia()],
+  });
+
+  const origem = projecoes.find((p) => p.turma.grupo_id === 'jeftq01')!;
+  expect(origem.alunos.map((a) => a.id)).toEqual(['a2']);
+  expect(origem.saidas.map((a) => a.id)).toEqual(['a1']);
+  expect(origem.nivelAtual).toBe('2B');
+
+  const destino = projecoes.find((p) => p.turma.grupo_id === 'marqq01')!;
+  expect(destino.alunos.map((a) => a.id).sort()).toEqual(['a1', 'a3']);
+  expect(destino.entradas.map((a) => a.id)).toEqual(['a1']);
+  // Nivel projetado (mudanca da turma) vale para quem permanece e para quem entra
+  expect(destino.nivelProjetado).toBe('3');
+});
+
+test('calcularVisaoGeral exibe o nivel projetado e o conflito', () => {
+  const linhas = calcularVisaoGeral({
+    lotes: [lote()],
+    itensPorLote: { l1: [item({ aluno_id: 'a1' })] },
+    alunosAtivos: [aluno({ id: 'a1', turma_id: 'jeftq01' })],
+    turmas: [
+      turma({ grupo_id: 'jeftq01' }),
+      turma({ id: 'u2', grupo_id: 'marqq01', horario: '09:00', professor_id: 'duda', nivel: '4' }),
+    ],
+    pendenciasNivel: [pendencia()],
+  });
+
+  const destino = linhas.find((l) => l.grupo_id === 'marqq01')!;
+  expect(destino.nivel).toBe('4');
+  expect(destino.nivel_projetado).toBe('3');
+  expect(destino.conflito_nivel).toBe(false);
 });

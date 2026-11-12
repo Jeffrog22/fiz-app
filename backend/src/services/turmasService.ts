@@ -1,10 +1,22 @@
 import { supabase } from './supabaseClient';
 import { AppError } from '../middleware/errorHandler';
 import { generateGrupoId, gerarLabelFromDias } from '../utils/idGenerator';
+import {
+  nivelVigenteService,
+  registrarVigenciaNivelService,
+} from './turmaNivelService';
+
+/** Data de hoje no horario local do servidor (YYYY-MM-DD) */
+function hojeLocalISO(): string {
+  const d = new Date();
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mes}-${dia}`;
+}
 
 export async function listarTurmasService(
   tenantId: string,
-  filters: { nivel?: string; professor_id?: string; horario?: string },
+  filters: { nivel?: string; professor_id?: string; horario?: string; nivel_data?: string },
 ): Promise<any[]> {
   let query = supabase
     .from('turmas')
@@ -19,7 +31,19 @@ export async function listarTurmasService(
   const { data, error } = await query;
 
   if (error) throw new AppError('Erro ao buscar turmas', 500);
-  return data || [];
+  const turmas = data || [];
+
+  // Nivel vigente na data de referencia (historico por competencia)
+  if (filters.nivel_data) {
+    const mapa = await nivelVigenteService(tenantId, turmas, filters.nivel_data);
+    return turmas.map((t: any) => ({
+      ...t,
+      nivel_atual: t.nivel ?? null,
+      nivel: mapa.get(t.grupo_id) ?? t.nivel ?? null,
+    }));
+  }
+
+  return turmas;
 }
 
 export async function criarTurmaService(data: any, tenantId: string): Promise<any> {
@@ -76,11 +100,31 @@ export async function criarTurmaService(data: any, tenantId: string): Promise<an
 
   if (error) throw new AppError(`Erro ao criar turma: ${error.message}`, 500);
   if (!result) throw new AppError('Erro ao criar turma: nenhum retorno do banco', 500);
+
+  // Registra a vigencia inicial do nivel da turma
+  if (result.grupo_id && result.nivel) {
+    await registrarVigenciaNivelService(
+      tenantId,
+      result.grupo_id,
+      result.nivel,
+      hojeLocalISO(),
+      null,
+    );
+  }
+
   return result;
 }
 
 export async function atualizarTurmaService(id: string, data: any, tenantId: string): Promise<any> {
   const { label, horario, professor_id, nivel, capacidade, faixa_etaria, duracao_minutos } = data;
+
+  // Nivel vigente antes da edicao (para encerrar a vigencia quando ele muda)
+  const { data: anterior } = await supabase
+    .from('turmas')
+    .select('grupo_id, nivel')
+    .eq('id', id)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
 
   // Valida chave tríplice (excluindo a si mesmo)
   const { data: existing } = await supabase
@@ -118,6 +162,23 @@ export async function atualizarTurmaService(id: string, data: any, tenantId: str
 
   if (error) throw new AppError(`Erro ao atualizar turma: ${error.message}`, 500);
   if (!result) throw new AppError('Erro ao atualizar turma: nenhum retorno do banco', 500);
+
+  // Mudanca manual de nivel: encerra a vigencia anterior e abre a nova
+  if (
+    nivel !== undefined &&
+    anterior?.grupo_id &&
+    result.nivel &&
+    result.nivel !== anterior.nivel
+  ) {
+    await registrarVigenciaNivelService(
+      tenantId,
+      anterior.grupo_id,
+      result.nivel,
+      hojeLocalISO(),
+      null,
+    );
+  }
+
   return result;
 }
 

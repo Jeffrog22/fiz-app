@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../../utils/api';
 import { useAuth } from '../../hooks/useAuth';
-import type { Aluno, CalendarioEvento, ChamadaLog, Professor, Turma } from '../../types';
+import type {
+  Aluno,
+  CalendarioEvento,
+  ChamadaLog,
+  Professor,
+  TransferenciaNivelPendencia,
+  Turma,
+} from '../../types';
 import DataGrid from '../grid/DataGrid';
 import { gerarDiasLetivos } from '../../utils/chamadaUtils';
 import { getTenantId } from '../../utils/tenant';
@@ -11,10 +18,13 @@ import {
 } from '../../utils/transferenciaPreferencias';
 import {
   comporTurma,
+  horariosSequenciaProfessor,
   mesAnoDeData,
+  nivelProjetadoPorTurma,
+  sequenciaTurmasProfessor,
   type MovimentoTransferencia,
 } from '../../utils/transferenciasUtils';
-import { ArrowDownLeft, ArrowUpRight, Eye } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 
 interface PeriodoPreview {
   id?: string;
@@ -32,6 +42,7 @@ interface PreviaChamadaProps {
   alunosAtivos: Aluno[];
   movimentos: MovimentoTransferencia[];
   dataEfetivaBase?: string | null;
+  pendenciasNivel?: TransferenciaNivelPendencia[];
 }
 
 const MESES = [
@@ -45,11 +56,13 @@ const PreviaChamada: React.FC<PreviaChamadaProps> = ({
   alunosAtivos,
   movimentos,
   dataEfetivaBase,
+  pendenciasNivel = [],
 }) => {
   const { professorId: professorLogado } = useAuth();
   const tenantId = getTenantId();
   const [professorId, setProfessorId] = useState('');
   const [turmaGrupoId, setTurmaGrupoId] = useState('');
+  const [horarioSelecionado, setHorarioSelecionado] = useState('');
   const [competenciaManual, setCompetenciaManual] = useState(false);
   const [competencia, setCompetencia] = useState(() => mesAnoDeData(dataEfetivaBase || '') || { mes: new Date().getMonth() + 1, ano: new Date().getFullYear() });
   const [logs, setLogs] = useState<Record<string, Record<string, Record<number, ChamadaLog>>>>({});
@@ -58,17 +71,25 @@ const PreviaChamada: React.FC<PreviaChamadaProps> = ({
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  const turmasDoProfessor = useMemo(
-    () =>
-      turmas
-        .filter((t) => t.professor_id === professorId)
-        .sort((a, b) => (a.horario || '').localeCompare(b.horario || '')),
+  /** Sequencia oficial: blocos de dias (LABEL_ORDER) e, dentro deles, horarios */
+  const sequencia = useMemo(
+    () => sequenciaTurmasProfessor(turmas, professorId),
     [turmas, professorId],
   );
 
+  const horariosDisponiveis = useMemo(
+    () => horariosSequenciaProfessor(turmas, professorId),
+    [turmas, professorId],
+  );
+
+  const indiceSequencia = useMemo(
+    () => sequencia.findIndex((t) => t.grupo_id === turmaGrupoId),
+    [sequencia, turmaGrupoId],
+  );
+
   const turmaSelecionada = useMemo(
-    () => turmasDoProfessor.find((t) => t.grupo_id === turmaGrupoId) || null,
-    [turmasDoProfessor, turmaGrupoId],
+    () => sequencia.find((t) => t.grupo_id === turmaGrupoId) || null,
+    [sequencia, turmaGrupoId],
   );
 
   const indiceTurma = useMemo(() => {
@@ -78,6 +99,11 @@ const PreviaChamada: React.FC<PreviaChamadaProps> = ({
       .sort((a, b) => (a.horario || '').localeCompare(b.horario || ''));
     return Math.max(irmas.findIndex((t) => t.grupo_id === turmaSelecionada.grupo_id), 0);
   }, [turmas, turmaSelecionada]);
+
+  const nivelProjeto = useMemo(
+    () => nivelProjetadoPorTurma(pendenciasNivel).get(turmaGrupoId),
+    [pendenciasNivel, turmaGrupoId],
+  );
 
   const dias = useMemo(
     () => (turmaSelecionada ? gerarDiasLetivos(competencia.mes, competencia.ano, turmaSelecionada.label) : []),
@@ -213,9 +239,48 @@ const PreviaChamada: React.FC<PreviaChamadaProps> = ({
   const nomeProfessor = (id?: string) =>
     (id && (professores.find((p) => p.id === id)?.nome || '')) || '—';
 
+  /** Seleciona uma turma da sequencia e sincroniza o filtro de horario */
+  const selecionarTurma = useCallback(
+    (grupoId: string, salvar = true) => {
+      const alvo = sequencia.find((t) => t.grupo_id === grupoId);
+      setTurmaGrupoId(grupoId);
+      setHorarioSelecionado(alvo ? (alvo.horario || '').slice(0, 5) : '');
+      if (!salvar || !tenantId || !professorLogado) return;
+      salvarPreferencia('previa', tenantId, professorLogado, {
+        professorId,
+        turmaGrupoId: grupoId,
+        competencia: competenciaManual ? competencia : null,
+      });
+    },
+    [sequencia, professorId, competencia, competenciaManual, tenantId, professorLogado],
+  );
+
+  /** Navega para uma posicao da sequencia (usado pelos botoes Voltar/Proxima) */
+  const irParaIndice = useCallback(
+    (indice: number) => {
+      if (indice < 0 || indice >= sequencia.length) return;
+      const alvo = sequencia[indice];
+      selecionarTurma(alvo.grupo_id || '');
+    },
+    [sequencia, selecionarTurma],
+  );
+
+  const podeVoltar = indiceSequencia > 0;
+  const podeAvancar = indiceSequencia >= 0 && indiceSequencia < sequencia.length - 1;
+
+  // Trocar de professor reposiciona na primeira turma da sequencia
+  useEffect(() => {
+    if (!professorId || sequencia.length === 0) return;
+    const atual = sequencia.findIndex((t) => t.grupo_id === turmaGrupoId);
+    if (atual >= 0) return;
+    const primeira = sequencia[0];
+    setTurmaGrupoId(primeira.grupo_id || '');
+    setHorarioSelecionado((primeira.horario || '').slice(0, 5));
+  }, [professorId, sequencia, turmaGrupoId]);
+
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
         <div>
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Professor</label>
           <select
@@ -224,6 +289,7 @@ const PreviaChamada: React.FC<PreviaChamadaProps> = ({
               const valor = e.target.value;
               setProfessorId(valor);
               setTurmaGrupoId('');
+              setHorarioSelecionado('');
               if (!tenantId || !professorLogado) return;
               salvarPreferencia('previa', tenantId, professorLogado, {
                 professorId: valor,
@@ -242,26 +308,62 @@ const PreviaChamada: React.FC<PreviaChamadaProps> = ({
 
         <div>
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Turma</label>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => irParaIndice(indiceSequencia - 1)}
+              disabled={!podeVoltar}
+              title="Turma anterior"
+              className="px-2 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <select
+              value={turmaGrupoId}
+              onChange={(e) => selecionarTurma(e.target.value)}
+              disabled={!professorId}
+              className="flex-1 min-w-0 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="">Escolha a turma</option>
+              {sequencia.map((t) => (
+                <option key={t.grupo_id} value={t.grupo_id}>
+                  {t.label} • {(t.horario || '').slice(0, 5)} ({t.nivel || 'sem nível'})
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => irParaIndice(indiceSequencia + 1)}
+              disabled={!podeAvancar}
+              title="Próxima turma"
+              className="px-2 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+          {sequencia.length > 0 && (
+            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+              {indiceSequencia >= 0 ? indiceSequencia + 1 : 0} de {sequencia.length} turma(s) na ordem do grid oficial
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Horário</label>
           <select
-            value={turmaGrupoId}
+            value={horarioSelecionado}
             onChange={(e) => {
               const valor = e.target.value;
-              setTurmaGrupoId(valor);
-              if (!tenantId || !professorLogado) return;
-              salvarPreferencia('previa', tenantId, professorLogado, {
-                professorId,
-                turmaGrupoId: valor,
-                competencia: competenciaManual ? competencia : null,
-              });
+              setHorarioSelecionado(valor);
+              const indice = sequencia.findIndex((t) => (t.horario || '').slice(0, 5) === valor);
+              if (indice >= 0) irParaIndice(indice);
             }}
             disabled={!professorId}
             className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <option value="">Escolha a turma</option>
-            {turmasDoProfessor.map((t) => (
-              <option key={t.grupo_id} value={t.grupo_id}>
-                {t.label} • {(t.horario || '').slice(0, 5)} ({t.nivel || 'sem nível'})
-              </option>
+            <option value="">Todos os horários</option>
+            {horariosDisponiveis.map((h) => (
+              <option key={h} value={h}>{h}</option>
             ))}
           </select>
         </div>
@@ -334,7 +436,26 @@ const PreviaChamada: React.FC<PreviaChamadaProps> = ({
             <span>
               Composição projetada: <strong>{composicao.alunos.length}</strong> aluno(s)
             </span>
+            {nivelProjeto && nivelProjeto.nivel && nivelProjeto.nivel !== turmaSelecionada.nivel ? (
+              <span className="text-amber-800 dark:text-amber-300">
+                Nível projetado da turma: <strong>{nivelProjeto.nivel}</strong> (atual: {turmaSelecionada.nivel || 'sem nível'})
+                {nivelProjeto.dataEfetiva && (
+                  <> · a partir de {nivelProjeto.dataEfetiva.split('-').reverse().join('/')}</>
+                )}
+              </span>
+            ) : (
+              <span>
+                Nível da turma: <strong>{turmaSelecionada.nivel || 'sem nível'}</strong>
+              </span>
+            )}
           </div>
+
+          {nivelProjeto?.conflito && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3 text-sm text-red-800 dark:text-red-200">
+              Há uma proposta conflitante de mudança de nível para esta turma e data. A aplicação do lote
+              fica bloqueada até a revisão das propostas.
+            </div>
+          )}
 
           {(composicao.entradas.length > 0 || composicao.saidas.length > 0) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
