@@ -1,5 +1,15 @@
 # Changelog - Fiz! App
 
+## [v3.1.1] - 2026-11-12
+### Fix
+- **Correção do alvo da ampliação dos ícones**: a v3.1.0 havia ampliado em 80% os ícones do **menu lateral (expandido)** e dos **cards da tela inicial** — o pedido real era ampliar **somente os ícones do menu recolhido**, e apenas quando ele recolhe
+  - `IconsColoridos.tsx`: tamanho **dinâmico** — padrão volta a 20px (`w-5 h-5`) e a nova prop `grande` aplica 36px (`w-9 h-9`); 12 componentes com `grande?: boolean` e `CLASSE_ICONE` / `CLASSE_ICONE_GRANDE` (determinístico, sem depender da ordem do CSS)
+  - `Sidebar.tsx`: os arrays `links` / `linkTransferencia` / `configLinks` passam a ser montados **dentro do componente** (precisam do estado `collapsed`) com `useMemo` → `icon: <ChamadaIcon grande={collapsed} />`; menu **expandido** volta a 20px, **recolhido** usa 36px
+  - Ícone "Instalar App": `text-lg` (18px) expandido / `text-[2.25rem]` (36px) recolhido, acompanhando os ícones do trilho
+  - `Home.tsx`: **revertido** ao layout original — cards com `p-8` (sem `gap-2`) e "Mais Opções" com `grid-cols-2 sm:grid-cols-4 gap-3` e `p-4`
+  - **Mantido do v3.1.0** (necessário para o ícone de 36px no trilho de 56px): badge em `absolute -top-1 -right-1` com `relative` no `NavLink`, menu principal com `min-h-0 overflow-y-auto` e scrollbar oculta (a lista rola em vez de ser cortada) e `py-1.5` no modo recolhido
+  - Textos preservados; barra superior inalterada
+
 ## [v3.1.0] - 2026-11-12
 ### Feat
 - **Ícones do menu lateral e dos cards da tela inicial ampliados em 80%** (20px → **36px**, ou seja, ×1,8)

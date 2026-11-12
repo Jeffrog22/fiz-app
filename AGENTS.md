@@ -1,4 +1,4 @@
-<!-- última-sessão: 2026-11-12 — Ícones do menu lateral e cards da Home ampliados em 80% → v3.1.0 -->
+<!-- última-sessão: 2026-11-12 — Correção do alvo da ampliação dos ícones (só menu recolhido) → v3.1.1 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -34,7 +34,7 @@ Regras:
 ## Identidade
 - **Nome:** Fiz! App — Lista de Chamada (gestão de aulas de natação)
 - **Repositório:** `https://github.com/Jeffrog22/fiz-app`
-- **Versão atual:** v3.1.0
+- **Versão atual:** v3.1.1
 - **Stack:** React 18 + Vite + Tailwind (frontend), Node.js + Express + Supabase (backend), PostgreSQL
 - **Deploy:** Render (backend), Cloudflare Pages v2 (frontend)
 - **Build Cloudflare:** `git fetch --tags --unshallow` é necessário no build command para `git describe --tags` funcionar (clone shallow sem tags)
@@ -3497,3 +3497,34 @@ Regras:
 
 ### Pendências / riscos conhecidos
 - Checagem visual em dispositivo (desktop expandida/recolhida, celular, zoom 80%/150%) fica a cargo do usuário — o ambiente não tem browser headless instalado no projeto
+
+---
+
+## Sessão: 12/11/2026 — Correção do alvo da ampliação dos ícones (só menu recolhido) → v3.1.1
+
+### O que foi feito
+- **Correção de escopo**: a v3.1.0 ampliou em 80% os ícones do menu lateral **expandido** e dos cards da Home — o pedido real era ampliar **somente os ícones do menu recolhido**, apenas quando ele recolhe. A Home foi **revertida** ao layout original e o menu expandido voltou a 20px
+- `IconsColoridos.tsx`: tamanho **dinâmico** — `CLASSE_ICONE = 'w-5 h-5'` (padrão, 20px) + `CLASSE_ICONE_GRANDE = 'w-9 h-9'` (36px) e prop `grande?: boolean` nos **12** componentes (`${grande ? CLASSE_ICONE_GRANDE : CLASSE_ICONE}`) — determinístico, sem depender da ordem das classes no CSS
+- `Sidebar.tsx`: `links` / `linkTransferencia` / `configLinks` saíram do escopo do módulo e passaram a ser montados **dentro do componente** (precisam do `collapsed`), com `useMemo` para preservar a identidade usada por `linksVisiveis` → `icon: <ChamadaIcon grande={collapsed} />`
+- Ícone "Instalar App": `text-lg` (18px) expandido / `text-[2.25rem]` (36px) recolhido
+- `Home.tsx`: revertido (cards `p-8` sem `gap-2`; "Mais Opções" `grid-cols-2 sm:grid-cols-4 gap-3` com `p-4`)
+- **Mantido da v3.1.0** (necessário para o ícone de 36px no trilho de 56px): badge `absolute -top-1 -right-1` com `relative` no `NavLink`, nav com `min-h-0 overflow-y-auto` + scrollbar oculta, `py-1.5` no modo recolhido
+
+### Decisões
+- **Um commit corretivo** (`fix:` → v3.1.1) com o efeito líquido da correção; a tag v3.1.0 permanece no histórico (sem force-push) e a correção está registrada no CHANGELOG/AGENTS.md
+- Ícones em **rem** (`w-9` = 2.25rem = 36px) → acompanham o zoom de acessibilidade (`useZoom` altera o `font-size` da raiz)
+- Geometria do trilho recolhido (56px): 8 + 36 + 8 = 52px (folga de 4px); ícone centralizado ocupa 10..46px; badge 18px em 34..52px — sem corte nem sobreposição; linha com `py-1.5` + 36px = 48px
+
+### Arquivos
+- `frontend/src/components/icons/IconsColoridos.tsx` (prop `grande`, 12 ícones)
+- `frontend/src/components/common/Sidebar.tsx` (arrays dentro do componente, `grande={collapsed}`, emoji do instalar condicional)
+- `frontend/src/pages/Home.tsx` (revertido ao layout original)
+- `CHANGELOG.md` (v3.1.1), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Frontend: 0 erros (`tsc --noEmit`) · 136/136 testes (vitest) · `npm run build` limpo
+- CSS verificado: `.w-9{width:2.25rem}`, `.w-5{width:1.25rem}`, `.text-\[2\.25rem\]{font-size:2.25rem}` e ausência do `min-width:420px` (revertido)
+- Backend inalterado; sem migration
+
+### Pendências / riscos conhecidos
+- Checagem visual ao recolher/expandir o menu (desktop e celular) fica a cargo do usuário — o ambiente não tem browser headless instalado no projeto

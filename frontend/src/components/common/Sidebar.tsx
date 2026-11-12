@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import {
@@ -22,28 +22,6 @@ interface SidebarLink {
   icon: React.ReactNode;
 }
 
-const links: SidebarLink[] = [
-  { to: '/home', label: 'Início', icon: <HomeIcon /> },
-  { to: '/chamadas', label: 'Chamadas', icon: <ChamadaIcon /> },
-  { to: '/alunos', label: 'Alunos', icon: <AlunosIcon /> },
-  { to: '/turmas', label: 'Turmas', icon: <TurmasIcon /> },
-  { to: '/vagas', label: 'Vagas', icon: <VagasIcon /> },
-  { to: '/exclusoes', label: 'Exclusões', icon: <ExclusoesIcon /> },
-  { to: '/relatorios', label: 'Relatórios', icon: <RelatoriosIcon /> },
-  { to: '/calendario', label: 'Calendário', icon: <CalendarioIcon /> },
-  { to: '/bloco-de-notas', label: 'Bloco de notas', icon: <BlocoNotasIcon /> },
-];
-
-const linkTransferencia: SidebarLink = {
-  to: '/transferencias-nivel',
-  label: 'Transferência',
-  icon: <TransferenciasIcon />,
-};
-
-const configLinks: SidebarLink[] = [
-  { to: '/configuracoes', label: 'Configurações', icon: <SettingsIcon /> },
-];
-
 interface Props {
   collapsed: boolean;
   onToggle: () => void;
@@ -59,6 +37,38 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0, l
   const touchStartX = React.useRef(0);
   const touchStartY = React.useRef(0);
 
+  // Os ícones só ampliam (36px) quando o menu está recolhido
+  const links = useMemo<SidebarLink[]>(
+    () => [
+      { to: '/home', label: 'Início', icon: <HomeIcon grande={collapsed} /> },
+      { to: '/chamadas', label: 'Chamadas', icon: <ChamadaIcon grande={collapsed} /> },
+      { to: '/alunos', label: 'Alunos', icon: <AlunosIcon grande={collapsed} /> },
+      { to: '/turmas', label: 'Turmas', icon: <TurmasIcon grande={collapsed} /> },
+      { to: '/vagas', label: 'Vagas', icon: <VagasIcon grande={collapsed} /> },
+      { to: '/exclusoes', label: 'Exclusões', icon: <ExclusoesIcon grande={collapsed} /> },
+      { to: '/relatorios', label: 'Relatórios', icon: <RelatoriosIcon grande={collapsed} /> },
+      { to: '/calendario', label: 'Calendário', icon: <CalendarioIcon grande={collapsed} /> },
+      { to: '/bloco-de-notas', label: 'Bloco de notas', icon: <BlocoNotasIcon grande={collapsed} /> },
+    ],
+    [collapsed],
+  );
+
+  const linkTransferencia = useMemo<SidebarLink>(
+    () => ({
+      to: '/transferencias-nivel',
+      label: 'Transferência',
+      icon: <TransferenciasIcon grande={collapsed} />,
+    }),
+    [collapsed],
+  );
+
+  const configLinks = useMemo<SidebarLink[]>(
+    () => [
+      { to: '/configuracoes', label: 'Configurações', icon: <SettingsIcon grande={collapsed} /> },
+    ],
+    [collapsed],
+  );
+
   // O link de Transferência só aparece logo após o Bloco de notas quando há lotes pendentes
   const linksVisiveis = React.useMemo(() => {
     const base = links.filter((link) => !isVisitante || VISITANTE_ROTAS.includes(link.to));
@@ -66,7 +76,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0, l
       return [...base, linkTransferencia];
     }
     return base;
-  }, [isVisitante, lotesPendentes]);
+  }, [isVisitante, lotesPendentes, links, linkTransferencia]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -205,7 +215,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0, l
             collapsed ? 'justify-center' : ''
           } text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200`}
         >
-          <AjudaIcon />
+          <AjudaIcon grande={collapsed} />
           <span
             className={`transition-all duration-300 ${
               collapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'
@@ -225,7 +235,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0, l
             } text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200`}
             title="Instalar App"
           >
-            <span className="text-[2rem] leading-none flex-shrink-0">{'\u2B07'}</span>
+            <span className={`${collapsed ? 'text-[2.25rem]' : 'text-lg'} leading-none flex-shrink-0`}>{'\u2B07'}</span>
             <span
               className={`transition-all duration-300 ${
                 collapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'
