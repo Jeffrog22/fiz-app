@@ -1,5 +1,11 @@
 # Changelog - Fiz! App
 
+## [v2.96.3] - 2026-11-11
+### Fix
+- **Correção duplo /api/api/ nas chamadas da API**: removido o prefixo `/api` das chamadas `api.get/post/delete('/transferencias-nivel/...')` no frontend, pois o `baseURL` do axios já inclui `/api` via `VITE_API_URL`. Isso corrigia 404 em todas as rotas de transferências-nivel e alunos.
+- **Sidebar condicional**: o link "Transferências de nível" agora aparece **apenas quando há lotes pendentes** (`lotesPendentes > 0`) e é posicionado **após o Bloco de Notas**, não entre Alunos e Turmas.
+- **Botão Transferir no grid**: confirmação final de que não ativa mais checkboxes/modo antigo; navega diretamente para `/transferencias-nivel/novo`.
+
 ## [v2.96.1] - 2026-11-11
 ### Fix
 - **Correção aba Transferências de Nível e botão Transferir no grid**

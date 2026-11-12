@@ -61,7 +61,7 @@ const TransferenciasNivel: React.FC = () => {
     setCarregando(true);
     setErro(null);
     try {
-      const url = filtroStatus === 'todos' ? '/api/transferencias-nivel/lotes' : `/api/transferencias-nivel/lotes?status=${filtroStatus}`;
+      const url = filtroStatus === 'todos' ? '/transferencias-nivel/lotes' : `/transferencias-nivel/lotes?status=${filtroStatus}`;
       const res = await api.get(url);
       setLotes(res.data || []);
     } catch (err: any) {
@@ -79,7 +79,7 @@ const TransferenciasNivel: React.FC = () => {
 
   useEffect(() => {
     if (!isVisitante) {
-      api.get('/api/transferencias-nivel/lotes/pendentes/count')
+      api.get('/transferencias-nivel/lotes/pendentes/count')
         .then((res) => setContadorPendentes(res.data.pendentes || 0))
         .catch(() => {});
     }
@@ -87,7 +87,7 @@ const TransferenciasNivel: React.FC = () => {
 
   const carregarLote = useCallback(async (loteId: string) => {
     try {
-      const res = await api.get(`/api/transferencias-nivel/lotes/${loteId}`);
+      const res = await api.get(`/transferencias-nivel/lotes/${loteId}`);
       setLoteSelecionado(res.data.lote);
       setItensLote(res.data.itens || []);
     } catch (err: any) {
@@ -108,7 +108,7 @@ const TransferenciasNivel: React.FC = () => {
     if (!confirm('Confirmar a aplicação deste lote de transferências? Isso moverá os alunos para as turmas de destino a partir da data efetiva programada.')) return;
     setProcessando(loteId);
     try {
-      const res = await api.post(`/api/transferencias-nivel/lotes/${loteId}/aplicar`);
+      const res = await api.post(`/transferencias-nivel/lotes/${loteId}/aplicar`);
       const { aplicados, erros, conflitos } = res.data;
       alert(`Aplicação concluída: ${aplicados} aplicado(s), ${erros} erro(s), ${conflitos} conflito(s).`);
       await carregarLotes();
@@ -123,7 +123,7 @@ const TransferenciasNivel: React.FC = () => {
   const cancelarLote = async (loteId: string) => {
     if (!confirm('Cancelar este lote? Os alunos não serão movidos.')) return;
     try {
-      await api.delete(`/api/transferencias-nivel/lotes/${loteId}`);
+      await api.delete(`/transferencias-nivel/lotes/${loteId}`);
       await carregarLotes();
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Erro ao cancelar lote');

@@ -62,7 +62,7 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
     if (!isAuthenticated || isVisitante) return;
     const carregarLotes = async () => {
       try {
-        const res = await api.get('/api/transferencias-nivel/lotes/pendentes/count');
+        const res = await api.get('/transferencias-nivel/lotes/pendentes/count');
         setLotesPendentes(res.data.pendentes || 0);
       } catch { /* ignore */ }
     };

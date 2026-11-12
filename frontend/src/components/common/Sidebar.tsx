@@ -26,7 +26,6 @@ const links: SidebarLink[] = [
   { to: '/home', label: 'Início', icon: <HomeIcon /> },
   { to: '/chamadas', label: 'Chamadas', icon: <ChamadaIcon /> },
   { to: '/alunos', label: 'Alunos', icon: <AlunosIcon /> },
-  { to: '/transferencias-nivel', label: 'Transferências de nível', icon: <TransferenciasIcon /> },
   { to: '/turmas', label: 'Turmas', icon: <TurmasIcon /> },
   { to: '/vagas', label: 'Vagas', icon: <VagasIcon /> },
   { to: '/exclusoes', label: 'Exclusões', icon: <ExclusoesIcon /> },
@@ -155,6 +154,41 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0, l
           </NavLink>
         ))}
       </nav>
+
+      {!isVisitante && lotesPendentes > 0 && (
+        <nav className="flex flex-col gap-1 px-2">
+          <NavLink
+            to="/transferencias-nivel"
+            data-tour="nav-transferencias-nivel"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors whitespace-nowrap ${
+                collapsed ? 'justify-center' : ''
+              } ${
+                isActive
+                  ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'
+              }`
+            }
+          >
+            <TransferenciasIcon />
+            <span
+              className={`transition-all duration-300 ${
+                collapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'
+              }`}
+            >
+              Transferências de nível
+            </span>
+            <span
+              className={`bg-purple-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center flex-shrink-0 ${
+                collapsed ? 'absolute mt-[-10px] mr-[-10px]' : 'ml-auto'
+              }`}
+              title={`${lotesPendentes} lote(s) de transferência pendente(s) de aplicação`}
+            >
+              {lotesPendentes}
+            </span>
+          </NavLink>
+        </nav>
+      )}
 
       {!isVisitante && <nav className="flex flex-col gap-1 px-2 pt-2 border-t border-gray-200 dark:border-t dark:border-gray-800 mt-2">
         {configLinks.map((link) => (

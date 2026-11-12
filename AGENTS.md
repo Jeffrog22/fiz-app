@@ -2954,6 +2954,33 @@ Regras:
 
 ---
 
+## Sessão: 11/11/2026 — Correção duplo /api/api/ e sidebar condicional → v2.96.3
+
+### O que foi feito
+- **Correção duplo /api/api/**: o `VITE_API_URL` já termina em `/api` (ex: `https://chamadas-backend.onrender.com/api`), então chamadas `api.get('/api/transferencias-nivel/...')` resultavam em `.../api/api/transferencias-nivel/...` (404). Corrigido em 7 ocorrências no frontend:
+  - `frontend/src/App.tsx`: `/transferencias-nivel/lotes/pendentes/count`
+  - `frontend/src/pages/TransferenciasNivel.tsx`: `/transferencias-nivel/lotes`, `/transferencias-nivel/lotes/pendentes/count`, `/transferencias-nivel/lotes/:id`, `/transferencias-nivel/lotes/:id/aplicar`, `/transferencias-nivel/lotes/:id`
+  - `frontend/src/components/modals/TransferenciaLoteReviewModal.tsx`: `/transferencias-nivel/lotes`
+- **Sidebar condicional**: o link "Transferências de nível" agora aparece **apenas quando `lotesPendentes > 0`** e é posicionado **após o Bloco de Notas** (não mais entre Alunos e Turmas).
+- **Botão Transferir no grid**: confirmação de que não ativa mais checkboxes/modo antigo; navega diretamente para `/transferencias-nivel/novo`.
+
+### Arquivos
+- `frontend/src/App.tsx` (fix URL /api duplicado)
+- `frontend/src/pages/TransferenciasNivel.tsx` (fix URLs /api duplicados)
+- `frontend/src/components/modals/TransferenciaLoteReviewModal.tsx` (fix URL /api duplicado)
+- `frontend/src/components/common/Sidebar.tsx` (link condicional após Bloco de Notas)
+- `CHANGELOG.md` (v2.96.3), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Frontend: 0 erros (`tsc --noEmit`) · 126/126 testes passam (vitest) · `npm run build` limpo
+- Backend inalterado nesta correção
+
+### Commit / Tag / Push
+- Pendente (aguardando "done" do usuário)
+
+
+---
+
 ## Sessão: 11/11/2026 — Correção aba Transferências de Nível e botão Transferir no grid → v2.96.1
 
 ### O que foi feito

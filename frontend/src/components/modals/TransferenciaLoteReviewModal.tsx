@@ -139,7 +139,7 @@ const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> 
     setCarregando(true);
     setErro(null);
     try {
-      await api.post('/api/transferencias-nivel/lotes', input);
+      await api.post('/transferencias-nivel/lotes', input);
       setSucesso('Lote programado com sucesso. Os alunos serão transferidos na data efetiva.');
       onSucesso();
       setTimeout(() => onClose(), 1500);
