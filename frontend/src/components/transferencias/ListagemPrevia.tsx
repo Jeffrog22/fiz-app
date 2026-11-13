@@ -233,9 +233,8 @@ const ListagemPrevia: React.FC<ListagemPreviaProps> = ({
   const cabecalho = ['Aluno', 'Turma', 'Horário', 'Nível'];
 
   const exportarCsv = () => {
-    const dados = processed.map((l) => [l.nome, l.turma, l.horario, l.nivel]);
-    // Nivel (indice 3) sempre entre aspas para o Excel nao interpretar como hora/data
-    const blob = csvBlob(cabecalho, dados, [3]);
+    const dados = processed.map((l) => [l.nome, l.turma, l.horario, nivelParaImpressao(l.nivel)]);
+    const blob = csvBlob(cabecalho, dados);
     downloadBlob(blob, `fiz_listagem_previa_${competencia.ano}_${String(competencia.mes).padStart(2, '0')}.csv`);
   };
 

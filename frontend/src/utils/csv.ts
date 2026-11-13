@@ -7,48 +7,29 @@
 const SEPARADOR = ';';
 
 /** Escapa um valor: adiciona aspas quando houver separador, aspas ou quebra de linha */
-function escapar(valor: string, sempreAspas = false): string {
+function escapar(valor: string): string {
   const v = valor ?? '';
-  if (sempreAspas) {
-    // Apóstrofo inicial força o Excel a tratar como texto puro (nao interpreta como hora/data)
-    return `"'${v.replace(/"/g, '""')}"`;
-  }
   if (v.includes('"') || v.includes(SEPARADOR) || v.includes('\n') || v.includes('\r')) {
     return `"${v.replace(/"/g, '""')}"`;
   }
   return v;
 }
 
-/** Colunas (indice) que devem ser tratadas como texto e sempre colocadas entre aspas */
-export type ColunasTexto = number[];
-
 /** Monta o conteudo CSV (com BOM) a partir de cabecalho e linhas */
-export function montarCsv(
-  cabecalho: string[],
-  linhas: string[][],
-  colunasTexto: ColunasTexto = [],
-): string {
+export function montarCsv(cabecalho: string[], linhas: string[][]): string {
   const partes: string[] = [];
   if (cabecalho && cabecalho.length > 0) {
     partes.push(cabecalho.map((c) => escapar(c)).join(SEPARADOR));
   }
   for (const linha of linhas || []) {
-    partes.push(
-      (linha || [])
-        .map((v, i) => escapar(String(v ?? ''), colunasTexto.includes(i)))
-        .join(SEPARADOR),
-    );
+    partes.push((linha || []).map((v) => escapar(String(v ?? ''))).join(SEPARADOR));
   }
   return '\uFEFF' + partes.join('\r\n');
 }
 
 /** Cria um Blob CSV pronto para download */
-export function csvBlob(
-  cabecalho: string[],
-  linhas: string[][],
-  colunasTexto?: ColunasTexto,
-): Blob {
-  return new Blob([montarCsv(cabecalho, linhas, colunasTexto)], {
+export function csvBlob(cabecalho: string[], linhas: string[][]): Blob {
+  return new Blob([montarCsv(cabecalho, linhas)], {
     type: 'text/csv;charset=utf-8',
   });
 }
