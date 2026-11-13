@@ -384,7 +384,7 @@ const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> 
                 <option value="">Escolha o professor</option>
                 {professores.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.nome_documento || p.nome} ({p.id})
+                    {p.nome} ({p.id})
                   </option>
                 ))}
               </select>
@@ -405,7 +405,7 @@ const TransferenciaLoteReviewModal: React.FC<TransferenciaLoteReviewModalProps> 
                   const prof = professores.find((p) => p.id === t.professor_id);
                   return (
                     <option key={t.grupo_id} value={t.grupo_id}>
-                      {t.label} • {(t.horario || '').slice(0, 5)} {prof ? `— ${prof.nome_documento || prof.nome}` : ''}
+                      {t.label} • {(t.horario || '').slice(0, 5)} {prof ? `— ${prof.nome}` : ''}
                     </option>
                   );
                 })}

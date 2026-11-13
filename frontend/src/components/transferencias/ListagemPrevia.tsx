@@ -45,6 +45,12 @@ interface LinhaListagem {
   situacao: 'permanece' | 'entra';
 }
 
+type SortDir = 'asc' | 'desc';
+interface SortRuleLocal {
+  column: string;
+  dir: SortDir;
+}
+
 const ListagemPrevia: React.FC<ListagemPreviaProps> = ({
   turmas,
   professores,
@@ -57,6 +63,7 @@ const ListagemPrevia: React.FC<ListagemPreviaProps> = ({
   const [filtro, setFiltro] = useState('');
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
   const [pagina, setPagina] = useState(1);
+  const [sortRules, setSortRules] = useState<SortRuleLocal[]>([]);
   const [competencia, setCompetencia] = useState(
     () => mesAnoDeData(dataEfetivaBase || '') || { mes: new Date().getMonth() + 1, ano: new Date().getFullYear() },
   );
@@ -116,6 +123,39 @@ const ListagemPrevia: React.FC<ListagemPreviaProps> = ({
     return result;
   }, [linhas]);
 
+  const toggleSort = (column: string) => {
+    setSortRules((prev) => {
+      const idx = prev.findIndex((r) => r.column === column);
+      if (idx === 0) {
+        if (prev[0].dir === 'asc') return [{ column, dir: 'desc' }, ...prev.slice(1)];
+        return prev.slice(1);
+      }
+      return [{ column, dir: 'asc' }, ...prev.filter((r) => r.column !== column)];
+    });
+  };
+
+  const sortIcon = (column: string) => {
+    const idx = sortRules.findIndex((r) => r.column === column);
+    if (idx === -1) return null;
+    const dir = sortRules[idx].dir;
+    return (
+      <span className="ml-1 text-xs text-primary-600 dark:text-primary-400">
+        {dir === 'asc' ? '▲' : '▼'}
+      </span>
+    );
+  };
+
+  const thSort = (column: string, label: string) => (
+    <button
+      type="button"
+      onClick={() => toggleSort(column)}
+      className="font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-left text-sm whitespace-nowrap"
+    >
+      {label}
+      {sortIcon(column)}
+    </button>
+  );
+
   const processed = useMemo(() => {
     let data = [...linhas];
 
@@ -135,13 +175,23 @@ const ListagemPrevia: React.FC<ListagemPreviaProps> = ({
       data = data.filter((l) => getFilterValue(l, col) === val);
     }
 
-    return data.sort(
-      (a, b) =>
-        a.turma.localeCompare(b.turma, 'pt-BR') ||
-        a.horario.localeCompare(b.horario, 'pt-BR') ||
-        a.nome.localeCompare(b.nome, 'pt-BR'),
-    );
-  }, [linhas, filtro, columnFilters]);
+    const alunoRule = sortRules.find((r) => r.column === 'aluno');
+    if (alunoRule) {
+      data.sort((a, b) => {
+        const cmp = a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' });
+        return alunoRule.dir === 'asc' ? cmp : -cmp;
+      });
+    } else {
+      data.sort(
+        (a, b) =>
+          a.turma.localeCompare(b.turma, 'pt-BR') ||
+          a.horario.localeCompare(b.horario, 'pt-BR') ||
+          a.nome.localeCompare(b.nome, 'pt-BR'),
+      );
+    }
+
+    return data;
+  }, [linhas, filtro, columnFilters, sortRules]);
 
   useEffect(() => {
     setPagina(1);
@@ -312,9 +362,7 @@ const ListagemPrevia: React.FC<ListagemPreviaProps> = ({
         <table className="min-w-full">
           <thead className="bg-gray-50 dark:bg-gray-900/40">
             <tr>
-              <th className="text-left px-3 py-2 align-top">
-                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Aluno</span>
-              </th>
+              <th className="text-left px-3 py-2 align-top">{thSort('aluno', 'Aluno')}</th>
               <th className="px-3 py-2 align-top">{thFiltro('turma', 'Turma')}</th>
               <th className="px-3 py-2 align-top">{thFiltro('horario', 'Horário')}</th>
               <th className="px-3 py-2 align-top">{thFiltro('nivel', 'Nível')}</th>

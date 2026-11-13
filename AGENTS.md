@@ -3731,3 +3731,32 @@ Regras:
 - Nenhuma migration necessária (consulta em tabelas existentes `transferencia_lote` / `transferencia_lote_item`)
 - Checagem visual do fluxo de conflito no app fica a cargo do usuário (ambiente sem browser headless)
 
+## Sessão: 12/11/2026 — Ordenar coluna Aluno na Listagem prévia + nome do professor nos seletores → v3.6.1
+
+### O que foi feito
+1. **Ordenar a coluna "Aluno" na Listagem prévia** (`frontend/src/components/transferencias/ListagemPrevia.tsx`):
+   - Cabeçalho "Aluno" agora é um botão clicável/acionável pelo teclado (`thSort`), alternando entre ordem alfabética crescente e decrescente a cada acionamento, com ícone de direção ativa (▲/▼) no cabeçalho, seguindo o padrão dos demais grids (`Alunos.tsx`).
+   - Ordenação pelo nome do aluno em português do Brasil (`localeCompare('pt-BR', { sensitivity: 'base' })`), aplicada ao conjunto filtrado completo **antes** da paginação.
+   - CSV e impressão/PDF herdam a ordem (leem de `processed`, já ordenado).
+
+2. **Exibir "Jefferson" nos seletores de professor** (nome de exibição `nome` nos rótulos, `nome_documento` preservado para documentos):
+   - `ListagemPrevia.tsx`: `professorMap` usa `p.nome` (coluna Professor da listagem).
+   - `PreviaChamada.tsx`: seletor de professor da aba `previa` usa `{p.nome}`.
+   - `TransferenciaLoteReviewModal.tsx`: seletor de professor de destino usa `{p.nome} ({p.id})` e o rótulo do professor na opção turma/horário usa `{prof.nome}`.
+   - O `value` dos `<option>` continua sendo `p.id`; filtros e seleção de destino preservam o ID.
+   - `nome_documento` ("Jefferson de Melo") continua sendo usado apenas em documentos/relatórios (padrão já correto em `Alunos.tsx` `professorMapDoc`).
+
+### Arquivos
+- `frontend/src/components/transferencias/ListagemPrevia.tsx` (+tipo SortRule local, +estado sortRules, +toggleSort/sortIcon/thSort, cabeçalho Aluno clicável, ordenação por nome em processed, CSV/print herdam a ordem)
+- `frontend/src/components/transferencias/PreviaChamada.tsx` (seletor professor → nome)
+- `frontend/src/components/modals/TransferenciaLoteReviewModal.tsx` (seletores professor → nome)
+- `frontend/src/utils/__tests__/transferenciaPreferencias.test.ts` (importação de vitest adicionada — corrigiu typecheck)
+- `CHANGELOG.md` (v3.6.1), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Frontend: 0 erros (`tsc --noEmit`) · 158/158 testes (vitest) · `npm run build` limpo
+- Backend inalterado; sem migration
+
+### Pendências / riscos conhecidos
+- Checagem visual da ordenação (grid/CSV/impressão) e dos seletores de professor fica a cargo do usuário (ambiente sem browser headless)
+

@@ -301,7 +301,7 @@ const PreviaChamada: React.FC<PreviaChamadaProps> = ({
           >
             <option value="">Escolha o professor</option>
             {professores.map((p) => (
-              <option key={p.id} value={p.id}>{p.nome_documento || p.nome}</option>
+              <option key={p.id} value={p.id}>{p.nome}</option>
             ))}
           </select>
         </div>
