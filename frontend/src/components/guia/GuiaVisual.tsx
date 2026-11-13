@@ -37,6 +37,12 @@ const GuiaVisual: React.FC = () => {
   const rotaPronta = !passo?.rota || passo.rota === `${location.pathname}${location.search}`;
   const podeDestacar = rotaPronta && (!passo?.requerPendentes || temPendentes === true);
 
+  const passoRef = useRef<PassoGuia | null>(passo);
+  passoRef.current = passo;
+  const podeDestacarRef = useRef<boolean>(podeDestacar);
+  podeDestacarRef.current = podeDestacar;
+  const tentativasRef = useRef(0);
+
   useEffect(() => {
     if (passo?.rota && !rotaPronta && (!passo.requerPendentes || temPendentes === true)) {
       navigate(passo.rota);
@@ -46,10 +52,18 @@ const GuiaVisual: React.FC = () => {
   useLayoutEffect(() => {
     if (!passo) return;
     let alvoAnterior: Element | null = null;
+    const MAX_TENTATIVAS = 5;
     const medir = () => {
-      const alvo = podeDestacar && passo.target ? document.querySelector(passo.target) : null;
+      const alvo = podeDestacarRef.current && passoRef.current?.target
+        ? document.querySelector(passoRef.current.target)
+        : null;
       if (alvo && alvo !== alvoAnterior && alvo.getClientRects().length) {
         alvo.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+        tentativasRef.current = 0;
+      } else if ((!alvo || alvo.getClientRects().length === 0) && tentativasRef.current < MAX_TENTATIVAS) {
+        // Alvo ainda não está no DOM (ex.: rota ainda navegando). Tenta de novo.
+        tentativasRef.current += 1;
+        requestAnimationFrame(medir);
       }
       alvoAnterior = alvo;
       const rect = alvo?.getBoundingClientRect();
@@ -69,7 +83,7 @@ const GuiaVisual: React.FC = () => {
       window.removeEventListener('scroll', medir, true);
       window.removeEventListener('resize', medir);
     };
-  }, [passo, podeDestacar]);
+  }, [passo, podeDestacar, location]);
 
   useLayoutEffect(() => {
     const cartao = cardRef.current;
@@ -204,7 +218,7 @@ const GuiaVisual: React.FC = () => {
   return createPortal(
     <>
       <div className="fixed inset-0 z-[1000]" aria-hidden="true">
-        <div className="absolute inset-0" style={{ backgroundColor: COR_OVERLAY, backdropFilter: 'blur(4px)', clipPath }} />
+        <div className="absolute inset-0" style={{ backgroundColor: COR_OVERLAY, backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', clipPath }} />
         {recorte && (
           <div className="absolute rounded-[10px] border-[3px]" style={{
             left: recorte.left, top: recorte.top,

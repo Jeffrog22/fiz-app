@@ -450,6 +450,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                   >
                     <button
                       type="button"
+                      data-tour="dia-chamada"
                       onClick={() => !futura && handleDateHeaderClickTimer(dia)}
                       disabled={futura}
                       className={`block w-full text-center ${

@@ -123,15 +123,19 @@ export const GUIA_BOAS_VINDAS: GuiaVisual = {
     },
     {
       id: 'cardaula',
+      target: '[data-tour="dia-chamada"]',
       rota: '/chamadas',
       title: '🌤️ CardAula (clima)',
+      placement: 'bottom',
       content:
         'Dê 2 cliques (ou toque 2x) numa data para registrar a temperatura da água, a externa e o cloro. Se a água estiver fria, o app sugere cancelar ou justificar as aulas automaticamente.',
     },
     {
       id: 'cardbo',
+      target: '[data-tour="botao-card-bo"]',
       rota: '/chamadas',
       title: '📋 Ocorrências (BO)',
+      placement: 'bottom',
       content:
         'Os botões BO registram manutenção, problema climático ou afastamento de professor. O cancelamento se propaga sozinho para os dias da turma.',
     },

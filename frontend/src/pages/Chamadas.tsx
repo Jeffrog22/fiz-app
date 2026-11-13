@@ -1089,12 +1089,12 @@ const Chamadas: React.FC = () => {
               )}
             </div>
           )}
-          <button onClick={() => { if (!dateHeaderClickData) setDateHeaderClickData(dias[0] || ''); setCardAulaAberto(true); }} disabled={!grupoId}
+          <button data-tour="botao-card-aula" onClick={() => { if (!dateHeaderClickData) setDateHeaderClickData(dias[0] || ''); setCardAulaAberto(true); }} disabled={!grupoId}
             className="px-3 py-1.5 text-xs bg-cyan-50 text-cyan-700 rounded hover:bg-cyan-100 border border-cyan-200 transition disabled:opacity-30 disabled:cursor-not-allowed dark:bg-cyan-900/30 dark:text-cyan-400 dark:hover:bg-cyan-900/50 dark:border-cyan-800">
             {isVisitante ? 'Ver Card Aula' : 'Card Aula'}
           </button>
           {!isVisitante && (
-            <button onClick={() => { if (!dateHeaderClickData) setDateHeaderClickData(dias[0] || ''); setCardBOAberto(true); }} disabled={!grupoId}
+            <button data-tour="botao-card-bo" onClick={() => { if (!dateHeaderClickData) setDateHeaderClickData(dias[0] || ''); setCardBOAberto(true); }} disabled={!grupoId}
               className="px-3 py-1.5 text-xs bg-orange-50 text-orange-700 rounded hover:bg-orange-100 border border-orange-200 transition disabled:opacity-30 disabled:cursor-not-allowed dark:bg-orange-900/30 dark:text-orange-400 dark:hover:bg-orange-900/50 dark:border-orange-800">
               Card BO
             </button>
