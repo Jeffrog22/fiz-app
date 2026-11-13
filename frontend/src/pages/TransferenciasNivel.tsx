@@ -145,6 +145,16 @@ const TransferenciasNivel: React.FC = () => {
       for (const [id, itens] of pares) mapa[id] = itens;
       setItensPorLote(mapa);
 
+      // Atalho do modal de programação: abrir diretamente o Detalhes do lote
+      // indicado por ?loteAberto= (mesmo que filtros o ocultem na listagem).
+      const loteAbertoParam = searchParams.get('loteAberto');
+      if (loteAbertoParam && !redirectRef.current) {
+        const lote = listaLotes.find((l) => l.id === loteAbertoParam);
+        if (lote) {
+          abrirLote(lote);
+        }
+      }
+
       // Rota sem pendências: volta para as chamadas
       if (!redirectRef.current && pendentes.length === 0) {
         redirectRef.current = true;

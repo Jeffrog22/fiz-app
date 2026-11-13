@@ -7,11 +7,13 @@ import { TenantRequest } from '../types';
 export class AppError extends Error {
   public statusCode: number;
   public isOperational: boolean;
+  public detalhes?: Record<string, unknown>;
 
-  constructor(message: string, statusCode: number = 500) {
+  constructor(message: string, statusCode: number = 500, detalhes?: Record<string, unknown>) {
     super(message);
     this.statusCode = statusCode;
     this.isOperational = true;
+    this.detalhes = detalhes;
     Error.captureStackTrace(this, this.constructor);
   }
 }
@@ -36,6 +38,7 @@ export function errorHandler(
 
   res.status(statusCode).json({
     error: message,
+    ...(err instanceof AppError && err.detalhes ? { detalhes: err.detalhes } : {}),
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 }

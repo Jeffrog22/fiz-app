@@ -2,13 +2,14 @@ import { Router } from 'express';
 import {
   criarLoteHandler,
   listarLotesHandler,
-  listarNiveisPendentesHandler,
   buscarLoteHandler,
+  listarNiveisPendentesHandler,
   atualizarLoteHandler,
   removerItemLoteHandler,
   cancelarLoteHandler,
   aplicarLoteHandler,
   contarPendentesHandler,
+  conflitosAlunosHandler,
 } from '../controllers/transferenciaLoteController';
 import { tenantMiddleware } from '../middleware/tenant';
 import { authMiddleware } from '../middleware/auth';
@@ -22,6 +23,7 @@ router.use(authMiddleware);
 router.post('/lotes', criarLoteHandler);
 router.get('/lotes', listarLotesHandler);
 router.get('/lotes/pendentes/count', contarPendentesHandler);
+router.get('/conflitos-alunos', conflitosAlunosHandler);
 router.get('/niveis-pendentes', listarNiveisPendentesHandler);
 router.get('/lotes/:id', buscarLoteHandler);
 router.put('/lotes/:id', atualizarLoteHandler);

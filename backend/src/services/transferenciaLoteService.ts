@@ -80,7 +80,7 @@ export async function criarLote(
 
   const { data: alunos, error: alunosError } = await supabase
     .from('alunos')
-    .select('id, turma_id, nivel, tenant_id')
+    .select('id, nome, turma_id, nivel, tenant_id')
     .in('id', alunoIds)
     .eq('tenant_id', tenantId);
 
@@ -100,7 +100,7 @@ export async function criarLote(
   // Verifica duplicidade: aluno ja tem lote ativo (programado/revisao)
   const lotesAtivos = await supabase
     .from(ITEM_TABLE)
-    .select('aluno_id, lote_id, status')
+    .select('aluno_id, lote_id, turma_origem, status')
     .in('aluno_id', alunoIds)
     .eq('tenant_id', tenantId);
 
@@ -110,7 +110,7 @@ export async function criarLote(
   if (lotesIds.length > 0) {
     const lotesDetalhe = await supabase
       .from(LOTE_TABLE)
-      .select('id, data_efetiva, status')
+      .select('id, turma_destino, data_efetiva')
       .in('id', lotesIds)
       .in('status', STATUS_ATIVOS);
 
@@ -126,11 +126,48 @@ export async function criarLote(
       }
     }
 
-    if (mesmaData.size > 0) {
-      throw new AppError('Um ou mais alunos ja possuem transferencia programada para esta data', 409);
+    const montarConflitos = (ids: Set<string>): ConflitoAluno[] => {
+      const lotePorId = new Map(
+        (lotesDetalhe.data || []).map((l) => [l.id, l]),
+      );
+      const nomes = new Map(
+        (alunos || []).map((a) => [a.id, a.nome]),
+      );
+      const conflitos: ConflitoAluno[] = [];
+      for (const alunoId of ids) {
+        const item = (lotesAtivos.data || []).find((i) => i.aluno_id === alunoId);
+        if (!item) continue;
+        const lote = lotePorId.get(item.lote_id);
+        if (!lote) continue;
+        conflitos.push({
+          aluno_id: alunoId,
+          aluno_nome: nomes.get(alunoId) ?? undefined,
+          lote_id: lote.id,
+          turma_destino: lote.turma_destino,
+          data_efetiva: lote.data_efetiva,
+          status: item.status as StatusTransferenciaLote,
+          turma_origem: item.turma_origem ?? null,
+        });
+      }
+      return conflitos;
+    };
+
+    const conflitosMesmaData = montarConflitos(mesmaData);
+    const conflitosOutraData = montarConflitos(outraData);
+
+    if (conflitosMesmaData.length > 0) {
+      throw new AppError(
+        'Um ou mais alunos ja possuem transferencia programada para esta data',
+        409,
+        { conflitos: conflitosMesmaData },
+      );
     }
-    if (outraData.size > 0) {
-      throw new AppError('Um ou mais alunos ja possuem transferencia programada em outro lote', 409);
+    if (conflitosOutraData.length > 0) {
+      throw new AppError(
+        'Um ou mais alunos ja possuem transferencia programada em outro lote',
+        409,
+        { conflitos: conflitosOutraData },
+      );
     }
   }
 
@@ -675,4 +712,78 @@ export async function contarPendentes(tenantId: string): Promise<number> {
 
   if (error) return 0;
   return (data || []).length;
+}
+
+/** Conflito de um aluno que já possui transferência programada/revisão */
+export interface ConflitoAluno {
+  aluno_id: string;
+  aluno_nome?: string | null;
+  lote_id: string;
+  turma_destino: string;
+  data_efetiva: string;
+  status: StatusTransferenciaLote;
+  turma_origem?: string | null;
+}
+
+/** Verifica se algum dos alunos já pertence a um lote pendente (programado/revisao) na tenant. */
+export async function verificarConflitosAlunos(
+  tenantId: string,
+  alunoIds: string[],
+): Promise<ConflitoAluno[]> {
+  const ids = [...new Set(alunoIds.filter(Boolean))];
+  if (ids.length === 0) return [];
+
+  const { data: itens, error: itensError } = await supabase
+    .from(ITEM_TABLE)
+    .select('aluno_id, lote_id, turma_origem, status')
+    .in('aluno_id', ids)
+    .eq('tenant_id', tenantId);
+
+  if (itensError) throw new AppError('Erro ao verificar lotes existentes', 500);
+
+  const loteIds = [...new Set((itens || []).map((i) => i.lote_id).filter(Boolean))];
+  let lotesMap: Record<string, { id: string; turma_destino: string; data_efetiva: string; status: string }> = {};
+  if (loteIds.length > 0) {
+    const { data: lotes, error: lotesError } = await supabase
+      .from(LOTE_TABLE)
+      .select('id, turma_destino, data_efetiva, status')
+      .in('id', loteIds)
+      .eq('tenant_id', tenantId)
+      .in('status', STATUS_ATIVOS);
+
+    if (lotesError) throw new AppError('Erro ao verificar lotes existentes', 500);
+    for (const l of lotes || []) {
+      lotesMap[l.id] = { id: l.id, turma_destino: l.turma_destino, data_efetiva: l.data_efetiva, status: l.status };
+    }
+  }
+
+  // Nomes dos alunos conflitantes
+  const alunoIdsComConflito = [...new Set((itens || []).map((i) => i.aluno_id).filter(Boolean))];
+  let nomesMap: Record<string, string> = {};
+  if (alunoIdsComConflito.length > 0) {
+    const { data: alunos } = await supabase
+      .from('alunos')
+      .select('id, nome')
+      .in('id', alunoIdsComConflito)
+      .eq('tenant_id', tenantId);
+    if (alunos) {
+      nomesMap = Object.fromEntries(alunos.map((a) => [a.id, a.nome]));
+    }
+  }
+
+  const conflitos: ConflitoAluno[] = [];
+  for (const i of itens || []) {
+    const lote = lotesMap[i.lote_id];
+    if (!lote) continue;
+    conflitos.push({
+      aluno_id: i.aluno_id,
+      aluno_nome: nomesMap[i.aluno_id] ?? undefined,
+      lote_id: i.lote_id,
+      turma_destino: lote.turma_destino,
+      data_efetiva: lote.data_efetiva,
+      status: lote.status as StatusTransferenciaLote,
+      turma_origem: i.turma_origem ?? null,
+    });
+  }
+  return conflitos;
 }

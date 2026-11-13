@@ -8,6 +8,7 @@ import {
   cancelarLote,
   aplicarLote,
   contarPendentes,
+  verificarConflitosAlunos,
 } from '../services/transferenciaLoteService';
 import { listarPendenciasNivelService } from '../services/turmaNivelService';
 import type { TenantRequest } from '../types';
@@ -227,6 +228,31 @@ export async function contarPendentesHandler(
   try {
     const count = await contarPendentes(tenantId);
     res.json({ pendentes: count });
+  } catch (err: any) {
+    next(err);
+  }
+}
+
+export async function conflitosAlunosHandler(
+  req: TenantRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  const tenantId = req.tenantId;
+  if (!tenantId) {
+    res.status(400).json({ error: 'Tenant nao identificado' });
+    return;
+  }
+
+  const alunosParam = (req.query.alunos as string | undefined) || '';
+  const alunoIds = alunosParam
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  try {
+    const conflitos = await verificarConflitosAlunos(tenantId, alunoIds);
+    res.json({ conflitos });
   } catch (err: any) {
     next(err);
   }

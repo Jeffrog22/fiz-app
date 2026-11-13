@@ -12,6 +12,7 @@ import { getTenantId, getTenantNome } from '../utils/tenant';
 import useIsTouchDevice from '../hooks/useIsTouchDevice';
 import { useDevLog } from '../hooks/useDevLog';
 import { useAuth } from '../hooks/useAuth';
+import { carregarProgramacaoPendente } from '../utils/transferenciaPreferencias';
 
 interface SortRule {
   column: string;
@@ -82,7 +83,7 @@ const Alunos: React.FC = () => {
 
   const isTouch = useIsTouchDevice();
   const { enabled: devEnabled } = useDevLog();
-  const { isVisitante } = useAuth();
+  const { isVisitante, professorId: professorLogado } = useAuth();
   const [largurasCols, setLargurasCols] = useState<LargurasCols | null>(null);
   const resizeRef = useRef<{ key: ColunaCfg; startX: number; startW: number; base: LargurasCols } | null>(null);
   const resizeListenersRef = useRef<{ move: (e: PointerEvent) => void; up: (e: PointerEvent) => void; cancel: () => void } | null>(null);
@@ -138,6 +139,21 @@ const Alunos: React.FC = () => {
   }, []);
 
   useEffect(() => { carregar(); }, [carregar]);
+
+  // Restaura a programação de transferência pendente ao voltar do Detalhes do lote
+  // (atalho "Ver lote pendente"). Restaura seleção, entra no modo e reabre o modal,
+  // que por sua vez reconsulta os conflitos ao abrir.
+  useEffect(() => {
+    if (isVisitante || !professorLogado) return;
+    const tenantId = getTenantId();
+    if (!tenantId) return;
+    const pendente = carregarProgramacaoPendente(tenantId, professorLogado);
+    if (pendente && pendente.alunoIds.length > 0) {
+      setSelecaoTransferencia(new Set(pendente.alunoIds));
+      setModoTransferencia(true);
+      setModalTransferenciaAberto(true);
+    }
+  }, [isVisitante, professorLogado]);
 
   const carregarJanelaRematricula = useCallback(async () => {
     try {

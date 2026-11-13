@@ -3698,3 +3698,36 @@ Regras:
 - Camada de destaque persistente entre passos, com desfoque e recorte do alvo. O guia permanece disponível enquanto o alvo carrega ou está ausente.
 - Avanço limitado ao último passo e abertura automática sem substituir um guia em execução.
 
+## Sessão: 12/11/2026 — Bloqueio de conflito no modal “Programar transferência” → v3.6.0
+
+### O que foi feito
+- **Bloqueio ao abrir o modal** (`TransferenciaLoteReviewModal`): ao abrir, consulta `GET /transferencias-nivel/conflitos-alunos?alunos=...` com os IDs selecionados. Enquanto verifica, “Programar” fica desabilitado. Se houver conflito, exibe alerta no modal com o nome de cada aluno bloqueado, o destino já programado e a data efetiva, e bloqueia o envio da seleção inteira. A retirada do aluno do lote anterior continua sendo decisão explícita do usuário (via Detalhes do lote).
+- **Atalho para resolver o conflito**: cada aluno em conflito ganha um botão “Ver lote pendente” que salva a programação atual no `sessionStorage`, fecha o modal e abre diretamente “Transferência → Lotes pendentes → Detalhes” no lote correspondente (mesmo que filtros o ocultem na listagem, via `?loteAberto=`). Em Detalhes, a lixeira e a confirmação individual já existentes continuam disponíveis; o usuário decide se retira o aluno. Ao voltar para a programação (restauração em `Alunos.tsx`), a seleção e os campos preenchidos são restaurados e os conflitos são consultados novamente. “Programar” só é liberado quando não houver conflitos. “Cancelar programação” sai da operação sem alterar lotes existentes.
+- **Validação no servidor**: `criarLote` preserva a validação de duplicidade (409) e agora inclui `detalhes.conflitos` (aluno, nome, lote, destino, data efetiva) para o frontend montar o alerta com atalho também no conflito criado entre abertura e envio.
+- **Backend**: novo service `verificarConflitosAlunos` (consulta itens ativos `programado`/`revisao` isolados por tenant, cruza com lotes ativos, traz nomes), novo controller `conflitosAlunosHandler` e rota `GET /transferencias-nivel/conflitos-alunos`; `AppError` aceita `detalhes` espalhado na resposta de erro; `criarLote` inclui `detalhes.conflitos` nos 409 de duplicidade.
+- **Frontend**: tipos `ConflitoAluno` e `ConflitosAlunosResponse`; util `salvarProgramacaoPendente`/`carregarProgramacaoPendente`/`limparProgramacaoPendente` (sessionStorage, isolado por tenant+professor); `Alunos.tsx` restaura a programação pendente ao entrar no modo Transferência; `TransferenciasNivel.tsx` abre o Detalhes do lote via `?loteAberto=`.
+
+### Arquivos
+- `backend/src/services/transferenciaLoteService.ts` (+`verificarConflitosAlunos`, +`ConflitoAluno`, `criarLote` com `detalhes.conflitos` no 409, select de lotes/itens ajustado)
+- `backend/src/middleware/errorHandler.ts` (`AppError` + `detalhes`, espalhado na resposta JSON)
+- `backend/src/controllers/transferenciaLoteController.ts` (+`conflitosAlunosHandler`)
+- `backend/src/routes/transferenciaLoteRoutes.ts` (+`GET /conflitos-alunos`)
+- `frontend/src/types/index.ts` (+`ConflitoAluno`, `ConflitosAlunosResponse`)
+- `frontend/src/utils/transferenciaPreferencias.ts` (+`salvarProgramacaoPendente`, `carregarProgramacaoPendente`, `limparProgramacaoPendente`)
+- `frontend/src/utils/__tests__/transferenciaPreferencias.test.ts` (novo — 4 casos)
+- `frontend/src/components/modals/TransferenciaLoteReviewModal.tsx` (verificação de conflitos ao abrir, alerta, atalho “Ver lote pendente”, “Programar” bloqueado, “Cancelar programação”, tratamento do 409)
+- `frontend/src/pages/Alunos.tsx` (restauração de programação pendente ao entrar no modo Transferência)
+- `frontend/src/pages/TransferenciasNivel.tsx` (atalho `?loteAberto=` abre o Detalhes do lote)
+- `backend/src/services/__tests__/transferenciaLoteService.test.ts` (+5 casos de `verificarConflitosAlunos`)
+- `backend/src/controllers/__tests__/conflitosAlunosController.test.ts` (novo — 4 casos)
+- `CHANGELOG.md` (v3.6.0), `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Backend: 0 erros (`tsc --noEmit`) · 199/199 testes (jest)
+- Frontend: 0 erros (`tsc --noEmit`) · 158/158 testes (vitest) · `npm run build` limpo
+- Sem migration
+
+### Pendências / riscos conhecidos
+- Nenhuma migration necessária (consulta em tabelas existentes `transferencia_lote` / `transferencia_lote_item`)
+- Checagem visual do fluxo de conflito no app fica a cargo do usuário (ambiente sem browser headless)
+

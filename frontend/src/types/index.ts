@@ -477,6 +477,22 @@ export interface TransferenciaLoteCreateInput {
   nivel_turma_novo?: string | null;
 }
 
+/** Aluno que ja possui transferencia programada/revisao (conflito ao programar lote) */
+export interface ConflitoAluno {
+  aluno_id: string;
+  aluno_nome?: string | null;
+  lote_id: string;
+  turma_destino: string;
+  data_efetiva: string;
+  status: StatusTransferenciaLote;
+  turma_origem?: string | null;
+}
+
+/** Resposta de consulta de conflitos de alunos */
+export interface ConflitosAlunosResponse {
+  conflitos: ConflitoAluno[];
+}
+
 export interface TransferenciaLoteUpdateInput {
   turma_destino?: string;
   nivel_destino?: string | null;

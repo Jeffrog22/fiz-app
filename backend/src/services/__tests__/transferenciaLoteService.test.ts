@@ -198,6 +198,7 @@ import {
   cancelarLote,
   aplicarLote,
   contarPendentes,
+  verificarConflitosAlunos,
 } from '../transferenciaLoteService';
 import { supabase } from '../supabaseClient';
 
@@ -785,6 +786,58 @@ describe('transferenciaLoteService', () => {
 
       avancarClock('2027-01-02');
       await expect(aplicarLote(conflitante.id, TENANT, PROFESSOR)).rejects.toThrow(/conflitante/i);
+    });
+  });
+
+  describe('verificarConflitosAlunos', () => {
+    it('retorna vazio quando nenhum aluno tem lote ativo', async () => {
+      const conflitos = await verificarConflitosAlunos(TENANT, ['a2', 'a3']);
+      expect(conflitos).toHaveLength(0);
+    });
+
+    it('retorna conflito com destino e data efetiva para aluno com lote ativo', async () => {
+      await criarLote(TENANT, PROFESSOR, {
+        turma_destino: 'marqq01',
+        data_efetiva: '2027-01-01',
+        itens: [{ aluno_id: 'a1', turma_destino: 'marqq01' }],
+      });
+
+      const conflitos = await verificarConflitosAlunos(TENANT, ['a1']);
+      expect(conflitos).toHaveLength(1);
+      expect(conflitos[0].aluno_id).toBe('a1');
+      expect(conflitos[0].aluno_nome).toBe('Aluno 1');
+      expect(conflitos[0].turma_destino).toBe('marqq01');
+      expect(conflitos[0].data_efetiva).toBe('2027-01-01');
+      expect(conflitos[0].turma_origem).toBe('jeftq01');
+      expect(conflitos[0].status).toBe('programado');
+    });
+
+    it('ignora alunos sem lote ativo mesclados com conflituosos', async () => {
+      await criarLote(TENANT, PROFESSOR, {
+        turma_destino: 'marqq01',
+        data_efetiva: '2027-01-01',
+        itens: [{ aluno_id: 'a1', turma_destino: 'marqq01' }],
+      });
+
+      const conflitos = await verificarConflitosAlunos(TENANT, ['a1', 'a2', 'a3']);
+      expect(conflitos).toHaveLength(1);
+      expect(conflitos[0].aluno_id).toBe('a1');
+    });
+
+    it('isola por tenant: aluno de outra unidade nao gera conflito', async () => {
+      await criarLote(TENANT, PROFESSOR, {
+        turma_destino: 'marqq01',
+        data_efetiva: '2027-01-01',
+        itens: [{ aluno_id: 'a1', turma_destino: 'marqq01' }],
+      });
+
+      const conflitos = await verificarConflitosAlunos('outra-unidade', ['a1']);
+      expect(conflitos).toHaveLength(0);
+    });
+
+    it('retorna vazio para lista de alunos vazia', async () => {
+      const conflitos = await verificarConflitosAlunos(TENANT, []);
+      expect(conflitos).toHaveLength(0);
     });
   });
 });

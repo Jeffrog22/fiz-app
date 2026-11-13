@@ -1,78 +1,62 @@
-import { test, expect, beforeEach, afterEach } from 'vitest';
 import {
-  carregarPreferencia,
-  salvarPreferencia,
+  carregarProgramacaoPendente,
+  limparProgramacaoPendente,
+  salvarProgramacaoPendente,
 } from '../transferenciaPreferencias';
 
-const TIPO = 'destino';
-const TENANT = 'bela-vista';
+const TENANT = 't1';
+const PROFESSOR = 'prof1';
 
 beforeEach(() => {
-  localStorage.clear();
+  sessionStorage.clear();
 });
 
-afterEach(() => {
-  localStorage.clear();
-});
+describe('transferenciaPreferencias (programacao pendente)', () => {
+  it('salva, carrega e limpa a programacao pendente', () => {
+    const valor = {
+      alunoIds: ['a1', 'a2'],
+      professorDestino: 'prof2',
+      turmaDestino: 'turma-x',
+      dataEfetiva: '2027-01-01',
+      motivo: 'transferencia',
+      mudarNivelTurma: false,
+      nivelTurmaNovo: '',
+    };
 
-test('salva e carrega preferencia (round-trip)', () => {
-  const valor = { professorId: 'p1', turmaGrupoId: 'jeftq01' };
-  salvarPreferencia(TIPO, TENANT, 'prof1', valor);
-  expect(carregarPreferencia(TIPO, TENANT, 'prof1', { professorId: '', turmaGrupoId: '' })).toEqual(valor);
-});
+    salvarProgramacaoPendente(TENANT, PROFESSOR, valor);
+    const carregado = carregarProgramacaoPendente(TENANT, PROFESSOR);
+    expect(carregado).toEqual(valor);
 
-test('isola por professor logado', () => {
-  salvarPreferencia(TIPO, TENANT, 'prof1', { professorId: 'p1', turmaGrupoId: 't1' });
-  salvarPreferencia(TIPO, TENANT, 'prof2', { professorId: 'p2', turmaGrupoId: 't2' });
+    limparProgramacaoPendente(TENANT, PROFESSOR);
+    expect(carregarProgramacaoPendente(TENANT, PROFESSOR)).toBeNull();
+  });
 
-  expect(
-    carregarPreferencia(TIPO, TENANT, 'prof1', { professorId: '', turmaGrupoId: '' }),
-  ).toEqual({ professorId: 'p1', turmaGrupoId: 't1' });
-  expect(
-    carregarPreferencia(TIPO, TENANT, 'prof2', { professorId: '', turmaGrupoId: '' }),
-  ).toEqual({ professorId: 'p2', turmaGrupoId: 't2' });
-});
+  it('nao mistura programacao de professores diferentes', () => {
+    const a = { alunoIds: ['a1'], professorDestino: 'p1', turmaDestino: 't1', dataEfetiva: '2027-01-01', motivo: '', mudarNivelTurma: false, nivelTurmaNovo: '' };
+    const b = { alunoIds: ['a2'], professorDestino: 'p2', turmaDestino: 't2', dataEfetiva: '2027-02-01', motivo: '', mudarNivelTurma: false, nivelTurmaNovo: '' };
 
-test('isola por unidade (tenant)', () => {
-  salvarPreferencia(TIPO, TENANT, 'prof1', { professorId: 'p1', turmaGrupoId: 't1' });
-  salvarPreferencia(TIPO, 'sao-matheus', 'prof1', { professorId: 'p3', turmaGrupoId: 't3' });
+    salvarProgramacaoPendente(TENANT, 'prof-a', a);
+    salvarProgramacaoPendente(TENANT, 'prof-b', b);
 
-  expect(
-    carregarPreferencia(TIPO, TENANT, 'prof1', { professorId: '', turmaGrupoId: '' }),
-  ).toEqual({ professorId: 'p1', turmaGrupoId: 't1' });
-  expect(
-    carregarPreferencia(TIPO, 'sao-matheus', 'prof1', { professorId: '', turmaGrupoId: '' }),
-  ).toEqual({ professorId: 'p3', turmaGrupoId: 't3' });
-});
+    expect(carregarProgramacaoPendente(TENANT, 'prof-a')).toEqual(a);
+    expect(carregarProgramacaoPendente(TENANT, 'prof-b')).toEqual(b);
+  });
 
-test('retorna fallback quando nao existe preferencia', () => {
-  const fallback = { professorId: '', turmaGrupoId: '' };
-  expect(carregarPreferencia(TIPO, TENANT, 'prof1', fallback)).toEqual(fallback);
-});
+  it('retorna null quando nao ha programacao salva', () => {
+    expect(carregarProgramacaoPendente(TENANT, PROFESSOR)).toBeNull();
+  });
 
-test('retorna fallback quando o valor armazenado esta corrompido', () => {
-  localStorage.setItem(`tf_${TIPO}:${TENANT}:prof1`, 'não-é-json');
-  expect(
-    carregarPreferencia(TIPO, TENANT, 'prof1', { professorId: 'x', turmaGrupoId: 'y' }),
-  ).toEqual({ professorId: 'x', turmaGrupoId: 'y' });
-});
-
-test('sobrescreve valor anterior ao salvar novamente', () => {
-  salvarPreferencia(TIPO, TENANT, 'prof1', { professorId: 'p1', turmaGrupoId: 't1' });
-  salvarPreferencia(TIPO, TENANT, 'prof1', { professorId: 'p2', turmaGrupoId: 't2' });
-  expect(
-    carregarPreferencia(TIPO, TENANT, 'prof1', { professorId: '', turmaGrupoId: '' }),
-  ).toEqual({ professorId: 'p2', turmaGrupoId: 't2' });
-});
-
-test('suporta tipos diferentes de preferencia na mesma chave de professor', () => {
-  salvarPreferencia('destino', TENANT, 'prof1', { professorId: 'p1', turmaGrupoId: 't1' });
-  salvarPreferencia('previa', TENANT, 'prof1', { professorId: 'p2', turmaGrupoId: 't2', competencia: null });
-
-  expect(
-    carregarPreferencia('destino', TENANT, 'prof1', { professorId: '', turmaGrupoId: '' }),
-  ).toEqual({ professorId: 'p1', turmaGrupoId: 't1' });
-  expect(
-    carregarPreferencia('previa', TENANT, 'prof1', { professorId: '', turmaGrupoId: '', competencia: null }),
-  ).toEqual({ professorId: 'p2', turmaGrupoId: 't2', competencia: null });
+  it('nao quebra quando o storage esta indisponível', () => {
+    const original = sessionStorage.getItem;
+    sessionStorage.getItem = vi.fn(() => {
+      throw new Error('quota');
+    });
+    expect(() =>
+      salvarProgramacaoPendente(TENANT, PROFESSOR, {
+        alunoIds: [], professorDestino: '', turmaDestino: '', dataEfetiva: '', motivo: '', mudarNivelTurma: false, nivelTurmaNovo: '',
+      }),
+    ).not.toThrow();
+    expect(() => carregarProgramacaoPendente(TENANT, PROFESSOR)).not.toThrow();
+    sessionStorage.getItem = original;
+  });
 });
