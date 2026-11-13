@@ -270,12 +270,13 @@ const ListagemPrevia: React.FC<ListagemPreviaProps> = ({
           <th className="text-left px-2 py-1 border border-gray-300">Turma</th>
           <th className="text-left px-2 py-1 border border-gray-300">Horário</th>
           <th className="text-left px-2 py-1 border border-gray-300">Nível</th>
+          <th className="text-left px-2 py-1 border border-gray-300">Professor</th>
         </tr>
       </thead>
       <tbody>
         {dados.length === 0 ? (
           <tr>
-            <td colSpan={4} className="px-2 py-3 border border-gray-300 text-gray-500">
+            <td colSpan={5} className="px-2 py-3 border border-gray-300 text-gray-500">
               Nenhum aluno com os filtros atuais.
             </td>
           </tr>
@@ -291,6 +292,7 @@ const ListagemPrevia: React.FC<ListagemPreviaProps> = ({
               <td className="px-2 py-1 border border-gray-300 whitespace-nowrap">{l.turma}</td>
               <td className="px-2 py-1 border border-gray-300 whitespace-nowrap">{l.horario}</td>
               <td className="px-2 py-1 border border-gray-300 whitespace-nowrap">{l.nivel}</td>
+              <td className="px-2 py-1 border border-gray-300 whitespace-nowrap">{l.professor}</td>
             </tr>
           ))
         )}

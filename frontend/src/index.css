@@ -62,6 +62,11 @@ body {
     background: transparent !important;
     border-color: #000 !important;
   }
+  .print-alunos table {
+    font-size: 10px;
+    table-layout: auto;
+    width: auto;
+  }
   .print-alunos table,
   .print-alunos th,
   .print-alunos td {
