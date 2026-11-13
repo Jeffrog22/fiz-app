@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Joyride } from 'react-joyride';
+import { createPortal } from 'react-dom';
 import { useGuiaVisual } from '../../hooks/useGuiaVisual';
 import type { PassoGuia } from '../../data/guiaVisual';
 
@@ -20,13 +20,8 @@ function ehCelular(): boolean {
   return typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
 }
 
-/**
- * Guia visual único (boas-vindas e novidades).
- * O Joyride cuida apenas do recorte iluminado (spotlight) e da camada escura;
- * o cartão é o do protótipo visual do projeto.
- */
 const GuiaVisual: React.FC = () => {
-  const { guia, indice, chave, temPendentes, avancar, voltar, pular, encerrar } = useGuiaVisual();
+  const { guia, indice, temPendentes, avancar, voltar, pular, encerrar } = useGuiaVisual();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -39,61 +34,59 @@ const GuiaVisual: React.FC = () => {
   const passo: PassoGuia | null = guia ? guia.passos[indice] ?? null : null;
   const totalPassos = guia ? guia.passos.length : 0;
 
-  const alvoDisponivel = useCallback(
-    (p: PassoGuia | null): boolean => {
-      if (!p || !p.target) return false;
-      if (p.requerPendentes && temPendentes !== true) return false;
-      return typeof document !== 'undefined' && !!document.querySelector(p.target);
-    },
-    [temPendentes],
-  );
+  const rotaPronta = !passo?.rota || passo.rota === `${location.pathname}${location.search}`;
+  const podeDestacar = rotaPronta && (!passo?.requerPendentes || temPendentes === true);
 
-  const usandoDemo = !alvoDisponivel(passo);
-
-  // Navega para a rota do passo antes de exibi-lo
   useEffect(() => {
-    if (!guia || !passo) return;
-    if (!passo.rota) return;
-    if (usandoDemo && passo.requerPendentes) return;
-    const atual = `${location.pathname}${location.search}`;
-    if (atual !== passo.rota) navigate(passo.rota);
-  }, [guia, passo, usandoDemo, navigate, location.pathname, location.search]);
-
-  // Mede o alvo destacado e o cartão
-  const medir = useCallback(() => {
-    if (!passo || !passo.target) {
-      setRectAlvo(null);
-      return;
+    if (passo?.rota && !rotaPronta && (!passo.requerPendentes || temPendentes === true)) {
+      navigate(passo.rota);
     }
-    const el = document.querySelector(passo.target);
-    setRectAlvo(el ? el.getBoundingClientRect() : null);
-  }, [passo]);
+  }, [passo, rotaPronta, temPendentes, navigate]);
 
   useLayoutEffect(() => {
-    medir();
-    const cartao = cardRef.current;
-    if (cartao) {
-      setTamanhoCartao({ largura: cartao.offsetWidth, altura: cartao.offsetHeight });
-    }
-  }, [medir, indice, guia, usandoDemo]);
-
-  useEffect(() => {
-    if (!guia) return;
-    const aoMover = () => medir();
-    window.addEventListener('scroll', aoMover, true);
-    window.addEventListener('resize', aoMover);
-    return () => {
-      window.removeEventListener('scroll', aoMover, true);
-      window.removeEventListener('resize', aoMover);
+    if (!passo) return;
+    let alvoAnterior: Element | null = null;
+    const medir = () => {
+      const alvo = podeDestacar && passo.target ? document.querySelector(passo.target) : null;
+      if (alvo && alvo !== alvoAnterior && alvo.getClientRects().length) {
+        alvo.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+      }
+      alvoAnterior = alvo;
+      const rect = alvo?.getBoundingClientRect();
+      const visivel = rect && rect.width && rect.height && rect.bottom > 0 &&
+        rect.right > 0 && rect.top < window.innerHeight && rect.left < window.innerWidth;
+      const proximo = visivel ? rect : null;
+      setRectAlvo((anterior) => anterior?.x === proximo?.x && anterior?.y === proximo?.y &&
+        anterior?.width === proximo?.width && anterior?.height === proximo?.height ? anterior : proximo);
     };
-  }, [guia, medir]);
+    medir();
+    const observer = new MutationObserver(medir);
+    observer.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('scroll', medir, true);
+    window.addEventListener('resize', medir);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', medir, true);
+      window.removeEventListener('resize', medir);
+    };
+  }, [passo, podeDestacar]);
+
+  useLayoutEffect(() => {
+    const cartao = cardRef.current;
+    if (!cartao) return;
+    const observer = new ResizeObserver(() => {
+      setTamanhoCartao({ largura: cartao.offsetWidth, altura: cartao.offsetHeight });
+    });
+    observer.observe(cartao);
+    return () => observer.disconnect();
+  }, [guia]);
 
   // Foco no botão primário a cada passo
   useEffect(() => {
     if (!guia) return;
     const t = setTimeout(() => botaoPrimarioRef.current?.focus({ preventScroll: true }), 60);
     return () => clearTimeout(t);
-  }, [guia, indice, usandoDemo]);
+  }, [guia, indice]);
 
   // Fecha com Escape (sem marcar a visualização) e prende o Tab no cartão
   useEffect(() => {
@@ -106,7 +99,7 @@ const GuiaVisual: React.FC = () => {
       }
       if (e.key === 'ArrowRight') {
         e.preventDefault();
-        avancar();
+        if (indice < totalPassos - 1) avancar();
         return;
       }
       if (e.key === 'ArrowLeft') {
@@ -140,7 +133,7 @@ const GuiaVisual: React.FC = () => {
     };
     window.addEventListener('keydown', aoTeclar);
     return () => window.removeEventListener('keydown', aoTeclar);
-  }, [guia, encerrar, avancar, voltar]);
+  }, [guia, encerrar, avancar, voltar, indice, totalPassos]);
 
   // Guarda o elemento que abriu o guia para restaurar o foco ao fechar
   useEffect(() => {
@@ -192,49 +185,34 @@ const GuiaVisual: React.FC = () => {
     return { bottom: 18, right: 24 };
   }, [rectAlvo, tamanhoCartao]);
 
-  const steps = useMemo(() => {
-    if (!passo) return [];
-    return [
-      {
-        target: usandoDemo ? 'body' : passo.target!,
-        placement: passo.placement ?? ('bottom' as const),
-        title: passo.title,
-        content: passo.content,
-        disableCloseOnEsc: true,
-      },
-    ];
-  }, [passo, usandoDemo]);
-
   if (!guia || !passo) return null;
 
   const ehUltimo = indice >= totalPassos - 1;
   const rotuloProgresso = passo.rotuloProgresso || guia.rotulo;
+  const recorte = rectAlvo && {
+    left: Math.max(0, rectAlvo.left - 6),
+    top: Math.max(0, rectAlvo.top - 6),
+    right: Math.min(window.innerWidth, rectAlvo.right + 6),
+    bottom: Math.min(window.innerHeight, rectAlvo.bottom + 6),
+  };
+  const clipPath = recorte ? `polygon(evenodd,
+    0 0, 100% 0, 100% 100%, 0 100%, 0 0,
+    ${recorte.left}px ${recorte.top}px, ${recorte.left}px ${recorte.bottom}px,
+    ${recorte.right}px ${recorte.bottom}px, ${recorte.right}px ${recorte.top}px,
+    ${recorte.left}px ${recorte.top}px)` : undefined;
 
-  return (
+  return createPortal(
     <>
-      <Joyride
-        key={`${chave}-${indice}-${usandoDemo ? 'demo' : 'real'}`}
-        steps={steps}
-        run
-        continuous={false}
-        tooltipComponent={() => <span className="hidden" aria-hidden />}
-        options={{
-          showProgress: false,
-          disableFocusTrap: true,
-          dismissKeyAction: false,
-          closeButtonAction: 'close',
-          overlayClickAction: false,
-          spotlightPadding: 6,
-          spotlightRadius: 10,
-          targetWaitTimeout: 2500,
-          scrollOffset: 80,
-          zIndex: 1000,
-        }}
-        styles={{
-          overlay: { backgroundColor: COR_OVERLAY },
-          spotlight: { stroke: COR_CONTORNO, strokeWidth: 3 },
-        }}
-      />
+      <div className="fixed inset-0 z-[1000]" aria-hidden="true">
+        <div className="absolute inset-0" style={{ backgroundColor: COR_OVERLAY, backdropFilter: 'blur(4px)', clipPath }} />
+        {recorte && (
+          <div className="absolute rounded-[10px] border-[3px]" style={{
+            left: recorte.left, top: recorte.top,
+            width: recorte.right - recorte.left, height: recorte.bottom - recorte.top,
+            borderColor: COR_CONTORNO,
+          }} />
+        )}
+      </div>
 
       <div
         ref={cardRef}
@@ -272,7 +250,7 @@ const GuiaVisual: React.FC = () => {
           {passo.content}
         </p>
 
-        {passo.demo && <div className="mt-3">{passo.demo}</div>}
+        {!rectAlvo && passo.demo && <div className="mt-3">{passo.demo}</div>}
 
         <div className="flex items-center gap-2 mt-4 flex-wrap">
           <button
@@ -301,7 +279,8 @@ const GuiaVisual: React.FC = () => {
           </button>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   );
 };
 

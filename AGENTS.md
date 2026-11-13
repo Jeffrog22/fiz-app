@@ -91,6 +91,11 @@ Regras:
 - Migration 031 (`professores.nome_documento` — nome formal dos documentos) **pendente de execução no Supabase**; até rodar, os exports continuam com o nome de login (fallback no `buscarProfessoresDocumento`) mas o **PATCH /professores/:id dá erro** (coluna inexistente)
 - Migration 032 (`card_aula.professor_id`) **pendente de execução no Supabase**
 - Migration 033 (`fix_reativacao_turma_id`) **pendente de execução no Supabase** — repara períodos de reativação com `turma_id` NULL (alunos restaurados bloqueados no grid)
+- **Migrations 036, 037 e 038 EXECUTADAS em produção** (confirmado pelo usuário em 12/11/2026, ordem `036 → 037 → 038`):
+  - `036_create_transferencia_lote.sql` — tabelas `transferencia_lote` e `transferencia_lote_item`
+  - `037_apply_transferencia_lote_fn.sql` — RPC `aplicar_transferencia_lote` **atualizada na v3.5.0** (nunca executada na versão antiga): aplica transferência + mudança de nível na mesma transação, revalida o nível vigente, bloqueia proposta conflitante e preserva o CAS `status IN ('programado','revisao')` (concorrência/repetição). A lógica de nível é **opcional**: sem as tabelas da 038 a função se comporta como antes
+  - `038_turma_nivel_vigencia.sql` — tabelas `turma_nivel_vigencia` (timeline do nível por turma, `data_fim` inclusivo, 1 intervalo aberto por turma), `transferencia_nivel_pendencia` (proposta compartilhada) e `transferencia_nivel_pendencia_lote` (dependências N:N) + colunas em `transferencia_lote` (`mudar_nivel_turma`, `nivel_turma_atual`, `nivel_turma_novo`, `nivel_pendencia_id`, `nivel_conflito`) + **backfill** da vigência inicial de todas as turmas
+  - Endpoint `GET /api/transferencias-nivel/niveis-pendentes` ativo; o nível por data é resolvido por `GET /api/turmas?nivel_data=YYYY-MM-DD` (Chamadas usa o 1º dia da competência, XLSX de Frequência e histórico do aluno também consultam a vigência)
 - Unidade **3ª Idade (`3aidade`) removida do app na v2.92.5**: whitelist `backend/src/config/tenants.ts` (4 unidades), bloqueio de header/host/origin/referer/token, tela `UnidadeDesativada` no domínio antigo e limpeza de dados na **migration 034** (`034_remove_3aidade_tenant.sql`) — **pendente de executar no Supabase**
 - Passos externos pendentes da v2.92.5: excluir o projeto/domínio `chamada3aidade.pages.dev` no Cloudflare Pages, remover `PIN_3AIDADE` e a origem antiga de CORS/`FRONTEND_URL` no Render e redeployar
 
@@ -3038,7 +3043,7 @@ Regras:
 - Protege contra confirmação concorrente e repetida
 - Revalida lotação dentro da operação de aplicação
 - Modo Visitante não pode programar, editar, cancelar ou aplicar lotes
-- Migrations 036 e 037 **pendentes de executar no Supabase** (aguardando autorização explícita)
+- Migrations 036 e 037 **executadas no Supabase** (confirmado em 12/11/2026)
 
 ### Arquivos
 - `backend/src/migrations/036_create_transferencia_lote.sql` (novo)
@@ -3060,7 +3065,7 @@ Regras:
 - Frontend: 0 erros (`tsc --noEmit`) · 126/126 testes passam (vitest) · `npm run build` limpo
 
 ### Pendências / riscos conhecidos
-- Executar as migrations 036 e 037 no Supabase apenas após autorização explícita
+- ~~Executar as migrations 036 e 037 no Supabase~~ — **executadas em 12/11/2026**
 - Ensaio local com dados fictícios e virada de mês simulada ainda pendente
 
 
@@ -3436,7 +3441,7 @@ Regras:
 - Frontend: 0 erros (`tsc --noEmit`) · 136/136 testes (vitest) · `npm run build` limpo
 
 ### Pendências / riscos conhecidos
-- **Migrations 036 e 037 pendentes de execução no Supabase** (exigem autorização explícita) — sem elas a funcionalidade não opera em produção
+- **Migrations 036 e 037 executadas no Supabase** (confirmado em 12/11/2026) — a funcionalidade opera em produção
 - Ensaio com dados fictícios e virada de mês simulada ainda pendente
 - `exportacaoService.gerarFrequenciaXLSX` mantém a associação da chamada via `enrollment_period` (não alterado nesta sessão) — a comparação antes/depois da aplicação precisa ser validada com as migrations aplicadas
 
@@ -3592,7 +3597,7 @@ Regras:
 - Frontend: 0 erros (`tsc --noEmit`) · **161/161** testes (vitest) · `npm run build` limpo
 
 ### Pendências / riscos conhecidos
-- **Migrations 036, 037 e 038 pendentes de execução no Supabase** (ordem `036 → 037 → 038`). Sem elas a mudança de nível não opera; até lá o sistema degrada para o comportamento atual (`turmas.nivel`) — todos os pontos consultam a vigência com **fail-open**
+- **Migrations 036, 037 e 038 EXECUTADAS no Supabase** (confirmado pelo usuário em 12/11/2026, ordem `036 → 037 → 038`) — a mudança de nível **opera em produção**; o backfill da vigência inicial de todas as turmas foi aplicado pela 038
 - A vigência retroativa antes do backfill é **aproximada** (o banco não guarda o histórico antigo de níveis)
 - Mudança de nível no meio do mês: XLSX/Chamadas mostram o nível do **1º dia** (decisão do usuário) — o mês fica com um único rótulo de nível
 - `transferencia_lote` + itens continuam sem transação única (limitação pré-existente) — a **aplicação** é atômica (RPC)
@@ -3621,7 +3626,7 @@ Regras:
 - Persistência por **professor logado + unidade** (não global): dois professores da mesma unidade não sobrescrevem a seleção um do outro
 - Auto-cancelamento **no servidor** (fonte única de verdade): o front não pode inferir "lote vazio" com segurança (itens em outros estados)
 - `DELETE` devolvendo corpo JSON é **retrocompatível** (axios trata 204 e 200 igual) — nenhum outro consumidor quebrou
-- Sem migration: a feature continua dependente das migrations **036/037** (pendentes de execução no Supabase)
+- Sem migration: a feature continua dependente das migrations **036/037** (executadas no Supabase em 12/11/2026)
 
 ### Arquivos
 - `backend/src/services/transferenciaLoteService.ts` (`removerItemLote` → `ResultadoRemocaoItemLote`, lock + revalidação + cancelamento automático)
@@ -3641,7 +3646,7 @@ Regras:
 - Sem migration
 
 ### Pendências / riscos conhecidos
-- Migrations **036** e **037** (Transferência de nível) continuam **pendentes de execução no Supabase** — a funcionalidade não opera em produção sem elas
+- Migrations **036** e **037** (Transferência de nível) **executadas no Supabase** (confirmado em 12/11/2026) — a funcionalidade opera em produção
 - Checagem visual (abas, preferências restauradas, badge, auto-cancelamento) fica a cargo do usuário — o ambiente não tem browser headless
 
 ---
@@ -3685,5 +3690,11 @@ Regras:
 
 ### Pendências / riscos conhecidos
 - Checagem visual do guia no app (recorte, cartão, demos, mobile) fica a cargo do usuário — o ambiente não tem browser headless instalado no projeto
-- Migrations **036** e **037** (Transferência de nível) continuam pendentes de execução no Supabase — o guia de novidades as apresenta como funcionalidade já disponível
+- Migrations **036** e **037** (Transferência de nível) foram **executadas no Supabase** (confirmado em 12/11/2026) — o guia de novidades as apresenta como funcionalidade já disponível
+
+
+## Sessão: 12/11/2026 — Estabilidade do guia visual
+
+- Camada de destaque persistente entre passos, com desfoque e recorte do alvo. O guia permanece disponível enquanto o alvo carrega ou está ausente.
+- Avanço limitado ao último passo e abertura automática sem substituir um guia em execução.
 

@@ -33,7 +33,7 @@ export interface GuiaVisualState {
   iniciar: (id: string) => void;
   /** Encerra o guia; `marcar` = concluir ou pular (registra a visualização). */
   encerrar: (marcar: boolean) => void;
-  /** Avança um passo (encerra no último). */
+  /** Avança até o último passo. */
   avancar: () => void;
   /** Volta um passo. */
   voltar: () => void;
@@ -116,17 +116,8 @@ export const GuiaVisualProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const avancar = useCallback(() => {
     const atual = guiaRef.current;
-    if (!atual) return;
-    if (indice >= atual.passos.length - 1) {
-      // último passo: concluir (marca a visualização)
-      registrarVisualizacao(atual);
-      setGuia(null);
-      setIndice(0);
-      setTemPendentes(null);
-      return;
-    }
-    setIndice((i) => i + 1);
-  }, [indice, registrarVisualizacao]);
+    if (atual) setIndice((i) => Math.min(i + 1, atual.passos.length - 1));
+  }, []);
 
   const voltar = useCallback(() => {
     setIndice((i) => Math.max(0, i - 1));
@@ -142,10 +133,10 @@ export const GuiaVisualProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Boas-vindas automáticas apenas para quem ainda não fez o tutorial
   useEffect(() => {
     if (!professorId || iniciadoRef.current) return;
-    iniciadoRef.current = true;
     const timer = setTimeout(() => {
       const pid = professorRef.current;
-      if (!pid) return;
+      if (!pid || guiaRef.current) return;
+      iniciadoRef.current = true;
       if (tourJaVisto(pid)) return;
       const atual = versaoAtualApp();
       if (atual) setUltimaVersaoVista(pid, atual);

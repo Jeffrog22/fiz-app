@@ -25,7 +25,7 @@
   - **Identificador da turma preservado** (`grupo_id` não muda) e **vigência do nível registrada** em `turma_nivel_vigencia` — assim Chamadas, exportações e o histórico do aluno recuperam o **nível válido na data consultada**. `alunos.nivel` e o `enrollment_period` **aberto** ficam coerentes a partir da vigência; **períodos anteriores preservados**
 - **Nível por data nas consultas**: `GET /turmas?nivel_data=YYYY-MM-DD` resolve o nível vigente na data; grid de Chamadas usa o **1º dia da competência**; XLSX de Frequência (nome da aba e célula “Nível:”) e histórico do aluno passam a consultar a vigência
 - **Testes**: backend `turmaNivelService.test.ts` (novo, 13 casos), `transferenciaLoteService.test.ts` (+9 casos de mudança de nível); frontend `transferenciasUtils.test.ts` (+6 casos de sequência/projeção) e `csv.test.ts` (novo, 5 casos)
-- **Migrations pendentes de execução no Supabase**: **038** (nova: `turma_nivel_vigencia`, `transferencia_nivel_pendencia`, `transferencia_nivel_pendencia_lote`, colunas do lote e backfill da vigência) e **037** (RPC atualizada com a lógica de nível). Ordem: `036 → 037 → 038`
+- **Migrations aplicadas em produção** (Supabase, ordem `036 → 037 → 038`, confirmado em 12/11/2026): **038** (nova: `turma_nivel_vigencia`, `transferencia_nivel_pendencia`, `transferencia_nivel_pendencia_lote`, colunas do lote e backfill da vigência) e **037** (RPC atualizada com a lógica de nível) — a mudança de nível opera em produção
 
 ## [v3.4.0] - 2026-11-12
 ### Feat
