@@ -69,7 +69,7 @@ const ListagemPrevia: React.FC<ListagemPreviaProps> = ({
   );
 
   const professorMap = useMemo(
-    () => new Map(professores.map((p) => [p.id, p.nome_documento || p.nome])),
+    () => new Map(professores.map((p) => [p.id, p.nome])),
     [professores],
   );
 

@@ -3760,3 +3760,18 @@ Regras:
 ### Pendências / riscos conhecidos
 - Checagem visual da ordenação (grid/CSV/impressão) e dos seletores de professor fica a cargo do usuário (ambiente sem browser headless)
 
+## Sessão: 12/11/2026 — Coluna Professor na Listagem prévia usa nome de exibição → v3.6.2
+
+### O que foi feito
+- `frontend/src/components/transferencias/ListagemPrevia.tsx` (linha 72): `professorMap` passou de `p.nome_documento || p.nome` para `p.nome`, de modo que a coluna "Professor" do grid da Listagem prévia exibe o nome de exibição ("Jefferson") e não o nome formal do documento ("Jefferson de Melo").
+- Isso alinha a Listagem prévia ao padrão já usado em `Alunos.tsx` (`professorMap` = `nome` para a UI, `nome_documento` reservado a documentos/relatórios).
+- Os seletores de professor da aba prévia (`PreviaChamada.tsx`) e do modal de programação (`TransferenciaLoteReviewModal.tsx`) já estavam corrigidos na sessão anterior (usando `p.nome`).
+
+### Arquivos
+- `frontend/src/components/transferencias/ListagemPrevia.tsx` (professorMap → nome)
+- `AGENTS.md` (esta sessão)
+
+### Typecheck / Testes
+- Frontend: 0 erros (`tsc --noEmit`) · 158/158 testes (vitest) · `npm run build` limpo
+- Sem migration
+
