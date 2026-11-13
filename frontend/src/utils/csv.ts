@@ -9,7 +9,11 @@ const SEPARADOR = ';';
 /** Escapa um valor: adiciona aspas quando houver separador, aspas ou quebra de linha */
 function escapar(valor: string, sempreAspas = false): string {
   const v = valor ?? '';
-  if (sempreAspas || v.includes('"') || v.includes(SEPARADOR) || v.includes('\n') || v.includes('\r')) {
+  if (sempreAspas) {
+    // Apóstrofo inicial força o Excel a tratar como texto puro (nao interpreta como hora/data)
+    return `"'${v.replace(/"/g, '""')}"`;
+  }
+  if (v.includes('"') || v.includes(SEPARADOR) || v.includes('\n') || v.includes('\r')) {
     return `"${v.replace(/"/g, '""')}"`;
   }
   return v;
