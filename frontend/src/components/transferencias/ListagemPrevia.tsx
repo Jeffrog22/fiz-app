@@ -223,6 +223,13 @@ const ListagemPrevia: React.FC<ListagemPreviaProps> = ({
     return partes.join(' · ');
   }, [filtro, columnFilters]);
 
+  /** Prefixo "Nível " apenas para valores numerais (3, 4 A, 10 B) na impressão.
+   * Textos como Iniciação, Adulto, Pré-Mirim ficam inalterados. */
+  const nivelParaImpressao = (nivel: string): string => {
+    if (!nivel || !/^\d/.test(nivel)) return nivel;
+    return `Nível ${nivel}`;
+  };
+
   const cabecalho = ['Aluno', 'Turma', 'Horário', 'Nível'];
 
   const exportarCsv = () => {
@@ -434,7 +441,12 @@ const ListagemPrevia: React.FC<ListagemPreviaProps> = ({
             <p key={i} className="text-xs mb-0.5">{l}</p>
           ))}
           <div className="mt-3">
-            <Tabela dados={processed} />
+            <Tabela
+              dados={processed.map((l) => ({
+                ...l,
+                nivel: nivelParaImpressao(l.nivel),
+              }))}
+            />
           </div>
         </div>,
         document.body,
