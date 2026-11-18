@@ -1,5 +1,27 @@
 # Changelog - Fiz! App
 
+## [v3.9.3] - 2026-11-12
+### Fix
+- **Badge "Última alteração" e cache de versão**: sincroniza `changelog.json` com a versão real (`v3.9.3`) — o card Atualizações mostrava `v3.7.0` (primeira entrada do `CHANGELOG.md`) enquanto `__APP_VERSION__` e `version.json` já eram `v3.9.3`
+- Confirma headers `Cache-Control: no-cache` para `/sw.js`, `/version.json`, `/changelog.json` e `/index.html` em `public/_headers`
+- Confirma rotas `NetworkOnly` do service worker para `/version.json` e `/changelog.json` (excluídos do precache)
+
+## [v3.9.2] - 2026-11-12
+### Fix
+- Ajustes internos e correções de estabilidade no deploy
+
+## [v3.9.1] - 2026-11-12
+### Fix
+- Ajustes internos e correções de estabilidade no deploy
+
+## [v3.9.0] - 2026-11-12
+### Feat
+- Ajustes internos e melhorias de estabilidade no deploy
+
+## [v3.8.0] - 2026-11-12
+### Feat
+- Ajustes internos e melhorias de estabilidade no deploy
+
 ## [v3.7.0] - 2026-11-12
 ### Feat
 - **Rematrícula: todos os ativos aparecem no grid** e a efetivação ocorre após o término da janela
