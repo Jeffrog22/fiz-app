@@ -4,6 +4,7 @@ import api from '../utils/api';
 import AlunoModal from '../components/modals/AlunoModal';
 import ImpressaoListaModal from '../components/modals/ImpressaoListaModal';
 import TransferenciaLoteReviewModal from '../components/modals/TransferenciaLoteReviewModal';
+import HorarioFiltroModal from '../components/modals/HorarioFiltroModal';
 import SearchInput from '../components/SearchInput';
 import type { Aluno, Professor, SavePayload, NotificacaoAceite } from '../types';
 import { calcIdade, calcIdadeDoAno, calcCategoria, normalizeSearch, sortTurmas, formatarNomeMobile, formatDateBR } from '../utils/formatters';
@@ -50,10 +51,8 @@ const Alunos: React.FC = () => {
   const [filtro, setFiltro] = useState(searchParams.get('search') || '');
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
   const [horariosSelecionados, setHorariosSelecionados] = useState<Set<string>>(new Set());
-  const [filtroHorarioAberto, setFiltroHorarioAberto] = useState(false);
-  const filtroHorarioRef = useRef<HTMLDivElement>(null);
-  const filtroHorarioWrapperRef = useRef<HTMLTableHeaderCellElement | null>(null);
-  const [filtroHorarioAbaixo, setFiltroHorarioAbaixo] = useState(true);
+  const [modalHorarioAberto, setModalHorarioAberto] = useState(false);
+  const [selecaoHorarioRascunho, setSelecaoHorarioRascunho] = useState<Set<string>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<Aluno | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -146,20 +145,8 @@ const Alunos: React.FC = () => {
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  // Fecha o painel de horários ao clicar fora
-  useEffect(() => {
-    if (!filtroHorarioAberto) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (filtroHorarioRef.current && !filtroHorarioRef.current.contains(e.target as Node)) {
-        setFiltroHorarioAberto(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [filtroHorarioAberto]);
-
-  const toggleHorario = (valor: string) => {
-    setHorariosSelecionados((prev) => {
+  const toggleRascunhoHorario = (valor: string) => {
+    setSelecaoHorarioRascunho((prev) => {
       const next = new Set(prev);
       if (next.has(valor)) next.delete(valor);
       else next.add(valor);
@@ -167,16 +154,10 @@ const Alunos: React.FC = () => {
     });
   };
 
-  const limparHorarios = () => {
-    setHorariosSelecionados(new Set());
-    setFiltroHorarioAberto(false);
-  };
-
   const limparFiltros = () => {
     setFiltro('');
     setColumnFilters({});
     setHorariosSelecionados(new Set());
-    setFiltroHorarioAberto(false);
     setSortRules([]);
   };
 
@@ -742,23 +723,27 @@ const Alunos: React.FC = () => {
     const ativo = horariosSelecionados.size > 0;
     const qtdSelecionados = horarios.filter((h) => horariosSelecionados.has(h)).length;
 
+    const abrirModalHorario = () => {
+      setSelecaoHorarioRascunho(new Set(horariosSelecionados));
+      setModalHorarioAberto(true);
+    };
+
+    const confirmarHorario = (selecionados: string[]) => {
+      setHorariosSelecionados(new Set(selecionados));
+      setModalHorarioAberto(false);
+    };
+
+    const cancelarHorario = () => {
+      setModalHorarioAberto(false);
+    };
+
     return (
-      <th className={`relative px-3 py-2 align-top ${thFixo}`} ref={filtroHorarioWrapperRef}>
+      <th className={`relative px-3 py-2 align-top ${thFixo}`}>
         <div className="flex flex-col gap-1">
           {thSort('horario', 'Horário')}
           <button
             type="button"
-            onClick={() => {
-              const wrapper = filtroHorarioWrapperRef.current;
-              const panelHeight = 220; // estimativa do painel aberto (max-h + padding)
-              if (wrapper) {
-                const rect = wrapper.getBoundingClientRect();
-                const espacoAbaixo = window.innerHeight - rect.bottom;
-                const espacoAcima = rect.top;
-                setFiltroHorarioAbaixo(espacoAbaixo >= panelHeight || espacoAbaixo >= espacoAcima);
-              }
-              setFiltroHorarioAberto((a) => !a);
-            }}
+            onClick={abrirModalHorario}
             className={`flex items-center gap-1 text-xs border rounded px-1 py-0.5 max-w-[110px] text-left ${
               ativo
                 ? 'bg-primary-50 dark:bg-primary-900/30 border-primary-300 text-primary-700 dark:text-primary-300'
@@ -770,50 +755,14 @@ const Alunos: React.FC = () => {
                 ({qtdSelecionados})
               </span>
             )}
-            {filtroHorarioAberto ? (
-              <svg className="w-3 h-3 ml-auto" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            ) : (
-              <svg className="w-3 h-3 ml-auto" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-            )}
           </button>
-          {filtroHorarioAberto && (
-            <div
-              ref={filtroHorarioRef}
-              className={`absolute z-50 w-48 max-h-[calc(100vh-10rem)] overflow-y-auto border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md shadow-lg p-1 ${
-                filtroHorarioAbaixo ? 'mt-1' : 'bottom-full mb-1'
-              }`}
-            >
-              {horarios.map((h) => (
-                <button
-                  key={h}
-                  type="button"
-                  onClick={() => toggleHorario(h)}
-                  className="flex items-center gap-2 px-2 py-1.5 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-                >
-                  <input
-                    type="checkbox"
-                    checked={horariosSelecionados.has(h)}
-                    onChange={() => toggleHorario(h)}
-                    className="rounded border-gray-300 dark:border-gray-600 text-primary-600 dark:text-primary-400"
-                  />
-                  <span className="text-xs">{h}</span>
-                </button>
-              ))}
-              {horarios.length > 0 && (
-                <button
-                  type="button"
-                  onClick={limparHorarios}
-                  className="mt-1 px-2 py-1.5 text-xs text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded border border-red-100 dark:border-red-900/30 transition-colors"
-                >
-                  Limpar seleção
-                </button>
-              )}
-            </div>
-          )}
+          <HorarioFiltroModal
+            open={modalHorarioAberto}
+            horarios={horarios}
+            selecionados={horariosSelecionados}
+            onConfirm={confirmarHorario}
+            onClose={cancelarHorario}
+          />
         </div>
         {colResizeHandle('horario')}
       </th>
