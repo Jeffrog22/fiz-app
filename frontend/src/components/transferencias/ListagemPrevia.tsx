@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Printer, Download } from 'lucide-react';
+import { Printer, Download, X } from 'lucide-react';
 import type {
   Aluno,
   Professor,
@@ -209,6 +209,11 @@ const ListagemPrevia: React.FC<ListagemPreviaProps> = ({
 
   const temFiltro = !!filtro || Object.keys(columnFilters).length > 0;
 
+  const limparFiltros = () => {
+    setFiltro('');
+    setColumnFilters({});
+  };
+
   const descricaoFiltros = useMemo(() => {
     const partes: string[] = [];
     if (filtro) partes.push(`Nome: ${filtro}`);
@@ -361,6 +366,17 @@ const ListagemPrevia: React.FC<ListagemPreviaProps> = ({
           placeholder="Buscar por nome, professor, turma, horário ou nível..."
           className="flex-1 max-w-md"
         />
+        {temFiltro && (
+          <button
+            type="button"
+            onClick={limparFiltros}
+            className="text-xs text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 whitespace-nowrap border border-gray-200 dark:border-gray-700 rounded px-2 py-1"
+            title="Limpar busca e filtros ativos (mantém a ordenação)"
+            aria-label="Limpar filtros"
+          >
+            <X size={12} className="mr-1" /> Limpar filtros
+          </button>
+        )}
         <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
           {processed.length}
           {temFiltro ? ` de ${linhas.length} ` : ' '}aluno(s)

@@ -7,7 +7,7 @@ import TransferenciaLoteReviewModal from '../components/modals/TransferenciaLote
 import SearchInput from '../components/SearchInput';
 import type { Aluno, Professor, SavePayload, NotificacaoAceite } from '../types';
 import { calcIdade, calcIdadeDoAno, calcCategoria, normalizeSearch, sortTurmas, formatarNomeMobile, formatDateBR } from '../utils/formatters';
-import { Pencil, Unlink, Trash2, Printer, Check } from 'lucide-react';
+import { Pencil, Unlink, Trash2, Printer, Check, X } from 'lucide-react';
 import { getTenantId, getTenantNome } from '../utils/tenant';
 import useIsTouchDevice from '../hooks/useIsTouchDevice';
 import { useDevLog } from '../hooks/useDevLog';
@@ -170,6 +170,13 @@ const Alunos: React.FC = () => {
     setFiltroHorarioAberto(false);
   };
 
+  const limparFiltros = () => {
+    setFiltro('');
+    setColumnFilters({});
+    setHorariosSelecionados(new Set());
+    setFiltroHorarioAberto(false);
+  };
+
   // Restaura a programação de transferência pendente ao voltar do Detalhes do lote
   // (atalho "Ver lote pendente"). Restaura seleção, entra no modo e reabre o modal,
   // que por sua vez reconsulta os conflitos ao abrir.
@@ -202,6 +209,42 @@ const Alunos: React.FC = () => {
     if (isVisitante) return;
     carregarJanelaRematricula();
   }, [carregarJanelaRematricula, isVisitante]);
+
+  // Chave de persistência da seleção de rematrícula por unidade + período
+  const periodoRematriculaKey = useMemo(() => {
+    if (!rematriculaJanela) return null;
+    const tenantId = getTenantId();
+    return `rematricula_selecao:${tenantId}:${rematriculaJanela.inicio}_${rematriculaJanela.fim}`;
+  }, [rematriculaJanela]);
+
+  // Carrega a seleção salva ao entrar no modo rematrícula ou ao mudar de período
+  useEffect(() => {
+    if (!modoRematricula || !periodoRematriculaKey) {
+      setSelectedIds(new Set());
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(periodoRematriculaKey);
+      if (raw) {
+        const ids = JSON.parse(raw) as string[];
+        setSelectedIds(new Set(ids));
+      } else {
+        setSelectedIds(new Set());
+      }
+    } catch {
+      setSelectedIds(new Set());
+    }
+  }, [modoRematricula, periodoRematriculaKey]);
+
+  // Salva a seleção sempre que mudar (marca ou desmarca)
+  useEffect(() => {
+    if (!modoRematricula || !periodoRematriculaKey) return;
+    try {
+      localStorage.setItem(periodoRematriculaKey, JSON.stringify([...selectedIds]));
+    } catch {
+      // storage indisponível — ignora
+    }
+  }, [selectedIds, modoRematricula, periodoRematriculaKey]);
 
   const janelaAberta = rematriculaJanela
     ? hojeLocal() >= rematriculaJanela.inicio && hojeLocal() <= rematriculaJanela.fim
@@ -884,6 +927,17 @@ const Alunos: React.FC = () => {
             ↺ Larguras padrão
           </button>
         )}
+        {temFiltro && (
+          <button
+            type="button"
+            onClick={limparFiltros}
+            className="text-xs text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 whitespace-nowrap border border-gray-200 dark:border-gray-700 rounded px-2 py-1"
+            title="Limpar busca e filtros ativos (mantém a ordenação)"
+            aria-label="Limpar filtros"
+          >
+            <X size={12} className="mr-1" /> Limpar filtros
+          </button>
+        )}
         <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
           {processed.length}
           {temFiltro ? ` de ${alunos.length} ` : ' '}
@@ -1085,11 +1139,13 @@ const Alunos: React.FC = () => {
                 const categoria = calcCategoria(calcIdadeDoAno(a.data_nascimento));
                 const profNome = a.turma?.professor_id ? professorMap.get(a.turma.professor_id) : null;
                 return (
-                  <tr key={a.id} className={`hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                    aceiteNotif?.aluno_id === a.id
-                      ? 'bg-amber-50 dark:bg-amber-900/20'
-                      : ''
-                  }`}>
+                    <tr key={a.id} className={`hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                      aceiteNotif?.aluno_id === a.id
+                        ? 'bg-amber-50 dark:bg-amber-900/20'
+                        : selectedIds.has(a.id)
+                        ? 'bg-gray-100 dark:bg-gray-700/40'
+                        : ''
+                    }`}>
                     {(modoAlocacao || modoTransferencia || modoRematricula) && (
                       <td className="px-2 py-2">
                         <input

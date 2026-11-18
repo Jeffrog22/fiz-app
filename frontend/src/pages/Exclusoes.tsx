@@ -4,7 +4,7 @@ import SearchInput from '../components/SearchInput';
 import RestoreModal from '../components/modals/RestoreModal';
 import type { Exclusao, Turma, Professor } from '../types';
 import { normalizeSearch, formatDateBR, formatarNomeMobile } from '../utils/formatters';
-import { RotateCcw, EyeOff } from 'lucide-react';
+import { RotateCcw, EyeOff, X } from 'lucide-react';
 
 interface SortRule {
   column: string;
@@ -32,6 +32,10 @@ const Exclusoes: React.FC = () => {
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [editandoCampo, setEditandoCampo] = useState<'motivo' | 'data' | null>(null);
   const [editandoValor, setEditandoValor] = useState('');
+
+  const limparFiltros = () => {
+    setFiltro('');
+  };
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -226,6 +230,17 @@ const Exclusoes: React.FC = () => {
         placeholder="Buscar por nome do aluno..."
         className="max-w-sm"
       />
+      {filtro && (
+        <button
+          type="button"
+          onClick={limparFiltros}
+          className="text-xs text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 whitespace-nowrap border border-gray-200 dark:border-gray-700 rounded px-2 py-1"
+          title="Limpar busca (mantém a ordenação)"
+          aria-label="Limpar filtros"
+        >
+          <X size={12} className="mr-1" /> Limpar filtros
+        </button>
+      )}
 
       {erro && !carregando && (
         <p className="text-sm text-red-500 dark:text-red-400">{erro}</p>
