@@ -35,6 +35,7 @@ const Exclusoes: React.FC = () => {
 
   const limparFiltros = () => {
     setFiltro('');
+    setSortRules([]);
   };
 
   const carregar = useCallback(async () => {
@@ -235,10 +236,10 @@ const Exclusoes: React.FC = () => {
           type="button"
           onClick={limparFiltros}
           className="text-xs text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 whitespace-nowrap border border-gray-200 dark:border-gray-700 rounded px-2 py-1"
-          title="Limpar busca (mantém a ordenação)"
+          title="Limpar busca e ordenação"
           aria-label="Limpar filtros"
         >
-          <X size={12} className="mr-1" /> Limpar filtros
+          <X size={12} />
         </button>
       )}
 
