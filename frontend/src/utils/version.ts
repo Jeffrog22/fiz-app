@@ -8,7 +8,15 @@ function numeros(v: string): number[] {
     .filter((n) => !Number.isNaN(n));
 }
 
+function versaoValida(v: string): boolean {
+  return numeros(v).length > 0;
+}
+
+export { versaoValida };
+
 export function compararVersoes(a: string, b: string): number {
+  // Versões inválidas ('dev', '', strings não-semver) não disparam atualização
+  if (!versaoValida(a) || !versaoValida(b)) return 0;
   const na = numeros(a);
   const nb = numeros(b);
   const len = Math.max(na.length, nb.length);

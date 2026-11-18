@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { buscarUltimaVersao, compararVersoes } from '../utils/version';
+import { buscarUltimaVersao, compararVersoes, versaoValida } from '../utils/version';
 
 const CHECK_INTERVAL_MS = 30 * 60 * 1000;
 
@@ -18,7 +18,9 @@ export function useUpdateChecker(): {
     try {
       const atual = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '';
       const ultima = await buscarUltimaVersao();
-      if (ultima && atual && compararVersoes(ultima, atual) > 0) {
+      // Não considera atualização se a versão atual for inválida ('dev', '', não-semver)
+      // ou se não houver versão no servidor — evita falso positivo de banner permanente
+      if (ultima && atual && versaoValida(atual) && compararVersoes(ultima, atual) > 0) {
         setUpdateAvailable(true);
       }
     } catch {

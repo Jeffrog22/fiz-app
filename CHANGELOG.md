@@ -1,5 +1,21 @@
 # Changelog - Fiz! App
 
+## [v3.7.0] - 2026-11-12
+### Feat
+- **Rematrícula: todos os ativos aparecem no grid** e a efetivação ocorre após o término da janela
+  - No modo Rematrículas (grid de Alunos), todos os alunos ativos são listados, independentemente do `par_q`; o checkbox funciona como confirmação de rematrícula
+  - Novo botão **“Efetivar rematrícula”** grava `par_q: true` + `par_q_data` + `acao: 'rematricula'` nos alunos selecionados
+  - O botão só fica ativo **após o fim da janela de rematrícula** (`hoje > fim`); dentro da janela ou sem janela configurada fica desabilitado, com tooltip explicativo
+  - Feedback visual: ícone de check na linha dos alunos já efetivados; seleção é limpa após a efetivação
+
+## [v3.6.0] - 2026-11-12
+### Feat
+- **Transferência de nível em bloco**
+  - Programação de trocas de turma de vários alunos (inclusive entre professores) com data efetiva futura, aplicadas mediante confirmação manual
+  - Migrations **036** (`transferencia_lote` / `transferencia_lote_item`) e **037** (RPC `aplicar_transferencia_lote`) executadas em produção em 12/11/2026
+  - Fluxo: seleção no grid de Alunos → modal de destino (professor → turma/horário, nível, data efetiva, projeção de lotação) → lote pendente → revisão e aplicação a partir da data efetiva
+  - Proteção contra aplicação concorrente/repetida, revalidação de nível vigente e bloqueio de proposta conflitante
+
 ## [v3.5.0] - 2026-11-12
 ### Feat
 - **Transferência de nível — três ajustes** (Prévia navegável, Listagem prévia e mudança de nível da turma)
