@@ -7,7 +7,7 @@ import TransferenciaLoteReviewModal from '../components/modals/TransferenciaLote
 import SearchInput from '../components/SearchInput';
 import type { Aluno, Professor, SavePayload, NotificacaoAceite } from '../types';
 import { calcIdade, calcIdadeDoAno, calcCategoria, normalizeSearch, sortTurmas, formatarNomeMobile, formatDateBR } from '../utils/formatters';
-import { Pencil, Unlink, Trash2, Printer } from 'lucide-react';
+import { Pencil, Unlink, Trash2, Printer, Check } from 'lucide-react';
 import { getTenantId, getTenantNome } from '../utils/tenant';
 import useIsTouchDevice from '../hooks/useIsTouchDevice';
 import { useDevLog } from '../hooks/useDevLog';
@@ -66,6 +66,7 @@ const Alunos: React.FC = () => {
   const [modalTransferenciaAberto, setModalTransferenciaAberto] = useState(false);
   const [rematriculando, setRematriculando] = useState(false);
   const [rematriculaJanela, setRematriculaJanela] = useState<{ inicio: string; fim: string } | null>(null);
+  const [rematriculaEfetuada, setRematriculaEfetuada] = useState<Set<string>>(new Set());
   const [lastSession, setLastSession] = useState({ genero: '', turmaId: '', professorId: '', nivel: '' });
   const [resetCounter, setResetCounter] = useState(0);
   const [imprimindo, setImprimindo] = useState(false);
@@ -206,6 +207,10 @@ const Alunos: React.FC = () => {
     ? hojeLocal() >= rematriculaJanela.inicio && hojeLocal() <= rematriculaJanela.fim
     : false;
 
+  const periodoRematriculaEncerrado = rematriculaJanela
+    ? hojeLocal() > rematriculaJanela.fim
+    : false;
+
   useEffect(() => {
     if (isVisitante) return;
     const aceiteId = searchParams.get('aceite');
@@ -250,7 +255,6 @@ const Alunos: React.FC = () => {
 
     if (modoAlocacao) data = data.filter((a: any) => !a.turma_id);
     if (modoTransferencia) data = data.filter((a: any) => !!a.turma_id);
-    if (modoRematricula) data = data.filter((a: any) => a.par_q !== true);
 
     if (filtro) {
       const q = normalizeSearch(filtro);
@@ -576,8 +580,8 @@ const Alunos: React.FC = () => {
     }
   };
 
-  const handleRematricular = async () => {
-    if (selectedIds.size === 0) return;
+  const handleEfetivarRematricula = async () => {
+    if (selectedIds.size === 0 || !periodoRematriculaEncerrado) return;
     setRematriculando(true);
     try {
       const hoje = hojeLocal();
@@ -587,12 +591,13 @@ const Alunos: React.FC = () => {
           par_q_data: hoje,
           acao: 'rematricula',
         });
+        setRematriculaEfetuada((prev) => new Set([...prev, alunoId]));
       }
       setSelectedIds(new Set());
       await carregar();
       await carregarJanelaRematricula();
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Erro ao rematricular alunos');
+      alert(err?.response?.data?.error || 'Erro ao efetivar rematrícula');
     } finally {
       setRematriculando(false);
     }
@@ -943,7 +948,7 @@ const Alunos: React.FC = () => {
       {modoRematricula && (
         <div className="flex items-center gap-3 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 rounded-md flex-wrap">
           <span className="text-sm text-gray-600 dark:text-gray-400">
-            Alunos sem ParQ (aptidão): <strong className="text-emerald-700 dark:text-emerald-300">{processed.length}</strong>
+            Alunos para rematrícula: <strong className="text-emerald-700 dark:text-emerald-300">{processed.length}</strong>
           </span>
           {selectedIds.size > 0 && (
             <>
@@ -952,11 +957,24 @@ const Alunos: React.FC = () => {
               </span>
               <button
                 type="button"
-                onClick={handleRematricular}
-                disabled={rematriculando}
+                onClick={handleEfetivarRematricula}
+                disabled={
+                  rematriculando ||
+                  !periodoRematriculaEncerrado ||
+                  selectedIds.size === 0
+                }
                 className="px-4 py-1.5 text-sm bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title={
+                  periodoRematriculaEncerrado
+                    ? undefined
+                    : rematriculaJanela
+                    ? `A efetivação só é liberada após o término da janela de rematrícula (até ${formatDateBR(
+                        rematriculaJanela.fim
+                      )}).`
+                    : 'Configure a janela de rematrícula no Calendário'
+                }
               >
-                {rematriculando ? 'Rematriculando...' : 'Rematricular selecionados'}
+                {rematriculando ? 'Efetuando...' : 'Efetivar rematrícula'}
               </button>
               <button
                 type="button"
@@ -1114,6 +1132,11 @@ const Alunos: React.FC = () => {
                       )}
                       <span className="sm:hidden">{formatarNomeMobile(a.nome, alunosNomes)}</span>
                       <span className="hidden sm:inline">{a.nome}</span>
+                      {rematriculaEfetuada.has(a.id) && (
+                        <span className="ml-1 text-emerald-600 dark:text-emerald-400" title="Rematrícula efetivada">
+                          <Check size={12} />
+                        </span>
+                      )}
                     </td>
                     <td className={`px-3 py-2 text-gray-600 dark:text-gray-400 ${tdTrunc}`}>{a.turma?.nivel || a.nivel || '-'}</td>
                     <td className={`px-3 py-2 text-gray-600 dark:text-gray-400 ${tdTrunc}`}>{a.turma?.label || '-'}</td>
