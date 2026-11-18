@@ -52,6 +52,8 @@ const Alunos: React.FC = () => {
   const [horariosSelecionados, setHorariosSelecionados] = useState<Set<string>>(new Set());
   const [filtroHorarioAberto, setFiltroHorarioAberto] = useState(false);
   const filtroHorarioRef = useRef<HTMLDivElement>(null);
+  const filtroHorarioWrapperRef = useRef<HTMLTableHeaderCellElement | null>(null);
+  const [filtroHorarioAbaixo, setFiltroHorarioAbaixo] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<Aluno | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -351,9 +353,7 @@ const Alunos: React.FC = () => {
     !!filtro ||
     Object.keys(columnFilters).length > 0 ||
     horariosSelecionados.size > 0 ||
-    modoAlocacao ||
-    modoTransferencia ||
-    modoRematricula;
+    sortRules.length > 0;
 
   const editandoCols = isTouch && devEnabled;
   const fixarLayout = isTouch && largurasCols !== null;
@@ -743,12 +743,22 @@ const Alunos: React.FC = () => {
     const qtdSelecionados = horarios.filter((h) => horariosSelecionados.has(h)).length;
 
     return (
-      <th className={`relative px-3 py-2 align-top ${thFixo}`}>
+      <th className={`relative px-3 py-2 align-top ${thFixo}`} ref={filtroHorarioWrapperRef}>
         <div className="flex flex-col gap-1">
           {thSort('horario', 'Horário')}
           <button
             type="button"
-            onClick={() => setFiltroHorarioAberto((a) => !a)}
+            onClick={() => {
+              const wrapper = filtroHorarioWrapperRef.current;
+              const panelHeight = 220; // estimativa do painel aberto (max-h + padding)
+              if (wrapper) {
+                const rect = wrapper.getBoundingClientRect();
+                const espacoAbaixo = window.innerHeight - rect.bottom;
+                const espacoAcima = rect.top;
+                setFiltroHorarioAbaixo(espacoAbaixo >= panelHeight || espacoAbaixo >= espacoAcima);
+              }
+              setFiltroHorarioAberto((a) => !a);
+            }}
             className={`flex items-center gap-1 text-xs border rounded px-1 py-0.5 max-w-[110px] text-left ${
               ativo
                 ? 'bg-primary-50 dark:bg-primary-900/30 border-primary-300 text-primary-700 dark:text-primary-300'
@@ -773,7 +783,9 @@ const Alunos: React.FC = () => {
           {filtroHorarioAberto && (
             <div
               ref={filtroHorarioRef}
-              className="absolute z-50 mt-1 w-48 max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md shadow-lg p-1"
+              className={`absolute z-50 w-48 max-h-[calc(100vh-10rem)] overflow-y-auto border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md shadow-lg p-1 ${
+                filtroHorarioAbaixo ? 'mt-1' : 'bottom-full mb-1'
+              }`}
             >
               {horarios.map((h) => (
                 <button
@@ -788,7 +800,7 @@ const Alunos: React.FC = () => {
                     onChange={() => toggleHorario(h)}
                     className="rounded border-gray-300 dark:border-gray-600 text-primary-600 dark:text-primary-400"
                   />
-                  {h}
+                  <span className="text-xs">{h}</span>
                 </button>
               ))}
               {horarios.length > 0 && (
@@ -933,8 +945,8 @@ const Alunos: React.FC = () => {
             type="button"
             onClick={limparFiltros}
             className="text-xs text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 whitespace-nowrap border border-gray-200 dark:border-gray-700 rounded px-2 py-1"
-            title="Limpar busca e filtros ativos (inclui ordenação)"
-            aria-label="Limpar filtros"
+            title="Limpar filtros e ordenação"
+            aria-label="Limpar filtros e ordenação"
           >
             <X size={12} />
           </button>

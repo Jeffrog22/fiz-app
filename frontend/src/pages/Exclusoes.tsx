@@ -78,6 +78,8 @@ const Exclusoes: React.FC = () => {
 
   const [sortRules, setSortRules] = useState<SortRule[]>([]);
 
+  const temFiltro = !!filtro || sortRules.length > 0;
+
   const toggleSort = (column: string) => {
     setSortRules((prev) => {
       const idx = prev.findIndex((r) => r.column === column);
@@ -231,13 +233,13 @@ const Exclusoes: React.FC = () => {
         placeholder="Buscar por nome do aluno..."
         className="max-w-sm"
       />
-      {filtro && (
+      {temFiltro && (
         <button
           type="button"
           onClick={limparFiltros}
           className="text-xs text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 whitespace-nowrap border border-gray-200 dark:border-gray-700 rounded px-2 py-1"
-          title="Limpar busca e ordenação"
-          aria-label="Limpar filtros"
+          title="Limpar filtros e ordenação"
+          aria-label="Limpar filtros e ordenação"
         >
           <X size={12} />
         </button>

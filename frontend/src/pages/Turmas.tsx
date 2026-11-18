@@ -23,11 +23,6 @@ const Turmas: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<Turma | null>(null);
 
-  const limparFiltros = () => {
-    setFiltro('');
-    setSortRules([]);
-  };
-
   const carregar = useCallback(async () => {
     setCarregando(true);
     try {
@@ -91,6 +86,13 @@ const Turmas: React.FC = () => {
     professores.find((p) => p.id === professorId)?.nome || '-';
 
   const [sortRules, setSortRules] = useState<SortRule[]>([]);
+
+  const temFiltro = !!filtro || sortRules.length > 0;
+
+  const limparFiltros = () => {
+    setFiltro('');
+    setSortRules([]);
+  };
 
   const toggleSort = (column: string) => {
     setSortRules((prev) => {
@@ -188,13 +190,13 @@ const Turmas: React.FC = () => {
         placeholder="Buscar por turma, grupo ID, horário, nível ou professor..."
         className="w-full max-w-md"
       />
-      {filtro && (
+      {temFiltro && (
         <button
           type="button"
           onClick={limparFiltros}
           className="text-xs text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 whitespace-nowrap border border-gray-200 dark:border-gray-700 rounded px-2 py-1"
-          title="Limpar busca e ordenação"
-          aria-label="Limpar filtros"
+          title="Limpar filtros e ordenação"
+          aria-label="Limpar filtros e ordenação"
         >
           <X size={12} />
         </button>
