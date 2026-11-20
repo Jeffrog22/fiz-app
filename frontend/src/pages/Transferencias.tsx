@@ -112,6 +112,7 @@ const Transferencias: React.FC = () => {
       });
       setSelecionados(new Set());
       setTenantDestino('');
+      window.dispatchEvent(new Event('transferencias:recebidas-mudou'));
       carregar();
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Erro ao adicionar a fila');
@@ -124,6 +125,7 @@ const Transferencias: React.FC = () => {
     if (!confirm('Cancelar esta transferencia?')) return;
     try {
       await api.delete(`/transferencias/${id}`);
+      window.dispatchEvent(new Event('transferencias:recebidas-mudou'));
       carregar();
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Erro ao cancelar');
@@ -138,6 +140,7 @@ const Transferencias: React.FC = () => {
         nivel,
       });
       setAceitarTarget(null);
+      window.dispatchEvent(new Event('transferencias:recebidas-mudou'));
       carregar();
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Erro ao aceitar transferencia');

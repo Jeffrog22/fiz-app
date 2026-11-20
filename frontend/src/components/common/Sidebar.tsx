@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
+import { useTransferenciasRecebidas } from '../../hooks/useTransferenciasRecebidas';
 import { useAuth } from '../../hooks/useAuth';
 import {
   HomeIcon,
@@ -33,6 +34,7 @@ const VISITANTE_ROTAS = ['/home', '/chamadas', '/alunos', '/turmas'];
 
 const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0, lotesPendentes = 0 }) => {
   const { isVisitante } = useAuth();
+  const recebidasPendentes = useTransferenciasRecebidas();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const touchStartX = React.useRef(0);
   const touchStartY = React.useRef(0);
@@ -156,6 +158,12 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, aceitesNaoVistos = 0, l
             >
               {link.label}
             </span>
+          {link.to === '/vagas' && !isVisitante && recebidasPendentes > 0 && (
+            <span className={`bg-purple-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center flex-shrink-0 ${collapsed ? 'absolute top-0 right-0' : 'ml-auto'}`}
+              title={`${recebidasPendentes} transferências recebidas pendentes`}>
+              {recebidasPendentes}
+            </span>
+          )}
           {link.to === '/alunos' && !isVisitante && aceitesNaoVistos > 0 && (
             <span
               className={`bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center flex-shrink-0 ${

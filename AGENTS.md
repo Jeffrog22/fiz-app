@@ -3775,3 +3775,9 @@ Regras:
 - Frontend: 0 erros (`tsc --noEmit`) · 158/158 testes (vitest) · `npm run build` limpo
 - Sem migration
 
+
+## Sessão: 19/11/2026 — Contadores de transferências recebidas
+
+- Removidos os avisos flutuantes de Vagas e sua consulta local duplicada.
+- Badges no menu Vagas e na subaba Transferências, atualizados por unidade, ações e consulta periódica.
+- Verificação: git diff --check. Typecheck/build indisponíveis sem dependências locais do frontend.

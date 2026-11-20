@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import api from '../utils/api';
 import type { VagasResponse, VagaHorario } from '../types';
 import Transferencias from './Transferencias';
+import { useTransferenciasRecebidas } from '../hooks/useTransferenciasRecebidas';
 
 function nivelGroup(nivel: string): string {
   return nivel.replace(/ [AB]$/, '');
@@ -39,7 +40,7 @@ const Vagas: React.FC = () => {
   const [periodo, setPeriodo] = useState<'todos' | 'manha' | 'tarde'>('todos');
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   const [vagasFilter, setVagasFilter] = useState(false);
-  const [transferenciasRecebidas, setTransferenciasRecebidas] = useState(0);
+  const transferenciasRecebidas = useTransferenciasRecebidas();
 
   const carregar = useCallback(async () => {
     try {
@@ -50,23 +51,13 @@ const Vagas: React.FC = () => {
     }
   }, []);
 
-  const carregarRecebidas = useCallback(async () => {
-    try {
-      const res = await api.get('/transferencias/recebidas');
-      const recebidas = res.data || [];
-      setTransferenciasRecebidas(recebidas.length);
-    } catch {
-      setTransferenciasRecebidas(0);
-    }
-  }, []);
-
-  useEffect(() => { carregar(); carregarRecebidas(); }, [carregar, carregarRecebidas]);
+  useEffect(() => { carregar(); }, [carregar]);
 
   useEffect(() => {
-    const handler = () => { if (!document.hidden) { carregar(); carregarRecebidas(); } };
+    const handler = () => { if (!document.hidden) carregar(); };
     document.addEventListener('visibilitychange', handler);
     return () => document.removeEventListener('visibilitychange', handler);
-  }, [carregar, carregarRecebidas]);
+  }, [carregar]);
 
   const niveis = useMemo(() => {
     if (!data) return [];
@@ -186,6 +177,12 @@ const Vagas: React.FC = () => {
             }`}
           >
             Transferências
+            {transferenciasRecebidas > 0 && (
+              <span className="ml-2 inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-purple-500 px-1 text-[10px] font-bold text-white"
+                aria-label={`${transferenciasRecebidas} transferências recebidas pendentes`}>
+                {transferenciasRecebidas}
+              </span>
+            )}
           </button>
         </div>
         {aba === 'transferencias' ? (
@@ -221,35 +218,23 @@ const Vagas: React.FC = () => {
           }`}
         >
           Transferências
+            {transferenciasRecebidas > 0 && (
+              <span className="ml-2 inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-purple-500 px-1 text-[10px] font-bold text-white"
+                aria-label={`${transferenciasRecebidas} transferências recebidas pendentes`}>
+                {transferenciasRecebidas}
+              </span>
+            )}
         </button>
       </div>
 
       {aba === 'transferencias' ? (
         <>
-          {transferenciasRecebidas > 0 && (
-            <div
-              className="fixed bottom-4 right-4 z-50 bg-blue-600 dark:bg-blue-700 text-white px-4 py-2 rounded shadow-lg dark:shadow-black/20 text-sm"
-            >
-              Você tem {transferenciasRecebidas} transferência(s) recebida(s) pendente(s)
-            </div>
-          )}
+
           <Transferencias />
         </>
       ) : (
         <>
-          {transferenciasRecebidas > 0 && (
-            <div
-              className="fixed bottom-4 right-4 z-50 bg-blue-600 dark:bg-blue-700 text-white px-4 py-2 rounded shadow-lg dark:shadow-black/20 text-sm"
-            >
-              Você tem {transferenciasRecebidas} transferência(s) recebida(s) pendente(s)
-              <button
-                onClick={() => setAba('transferencias')}
-                className="ml-2 font-bold underline hover:text-blue-100 dark:hover:text-blue-200"
-              >
-                Ver transferências
-              </button>
-            </div>
-          )}
+
           <div className="flex gap-2 flex-wrap items-center">
         <select
           value={nivel}

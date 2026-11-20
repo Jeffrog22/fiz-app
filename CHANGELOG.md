@@ -1587,3 +1587,6 @@
 - Testes de middleware: tenant (3) e auth (4)
 - Jest + ts-jest configurado no backend
 - `npm test` passa 5 suites, 25 testes, 0 falhas
+
+### Correção — Contadores de transferências recebidas
+- Avisos flutuantes substituídos por contadores em Vagas no menu e na subaba Transferências.
