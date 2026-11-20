@@ -1,5 +1,29 @@
 # Changelog - Fiz! App
 
+## [v3.9.9] - 2026-11-19
+### Fix
+- Tutorial mantém o progresso entre páginas, com destaques que acompanham o carregamento, blur e barra de progresso.
+
+## [v3.9.8] - 2026-11-19
+### Fix
+- Contadores de transferências recebidas em Vagas no menu e na subaba Transferências substituem o aviso flutuante.
+
+## [v3.9.7] - 2026-11-19
+### Fix
+- Remove o push de nova intenção e restringe o aviso de recebidas à página Vagas.
+
+## [v3.9.6] - 2026-11-19
+### Fix
+- Adiciona avisos de intenção de transferência entre unidades.
+
+## [v3.9.5] - 2026-11-19
+### Fix
+- Preserva o fechamento do banner de atualização entre recarregamentos.
+
+## [v3.9.4] - 2026-11-18
+### Fix
+- Atualiza as notas publicadas da versão v3.9.3.
+
 ## [v3.9.3] - 2026-11-12
 ### Fix
 - **Badge "Última alteração" e cache de versão**: sincroniza `changelog.json` com a versão real (`v3.9.3`) — o card Atualizações mostrava `v3.7.0` (primeira entrada do `CHANGELOG.md`) enquanto `__APP_VERSION__` e `version.json` já eram `v3.9.3`

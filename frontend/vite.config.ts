@@ -55,12 +55,24 @@ function changelogJsonPlugin(): Plugin {
     closeBundle() {
       const outDir = resolve(__dirname, 'dist');
       mkdirSync(outDir, { recursive: true });
-      let versions: unknown[] = [];
+      let versions: ReturnType<typeof parseChangelog> = [];
       try {
         const md = readFileSync(resolve(__dirname, '..', 'CHANGELOG.md'), 'utf-8');
         versions = parseChangelog(md, 30);
       } catch {
         // CHANGELOG indisponível — gera lista vazia (modal mostra aviso)
+      }
+      if (appVersion !== 'dev' && !versions.some((entry) => entry.version === appVersion)) {
+        // A tag é criada após o commit e pode ainda não ter uma seção no Markdown.
+        const cwd = resolve(__dirname, '..');
+        const date = execSync('git log -1 --format=%as', { cwd }).toString().trim();
+        const subject = execSync('git log -1 --format=%s', { cwd }).toString().trim();
+        versions.unshift({
+          version: appVersion,
+          date,
+          secoes: [{ titulo: 'Alterações', itens: [{ titulo: subject, detalhes: [] }] }],
+        });
+        versions = versions.slice(0, 30);
       }
       writeFileSync(
         resolve(outDir, 'changelog.json'),

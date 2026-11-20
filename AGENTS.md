@@ -3789,3 +3789,9 @@ Regras:
 - Blur preservado; cartão com transição suave, barra de progresso, limite de altura e proteção contra repetição de teclas.
 - Typecheck passou. Build bloqueado por acesso negado do esbuild ao carregar vite.config.ts.
 - Testes direcionados: 10/10 passaram, incluindo alvo carregado posteriormente e repetição de tecla. Validação visual em navegador pendente.
+
+## Sessão: 20/11/2026 — Notas de atualização defasadas
+
+- Causa: versão vem da tag e detalhes vêm do primeiro registro do changelog, parado em v3.9.3.
+- Completadas notas v3.9.4 a v3.9.9. Build inclui assunto/data do commit quando a versão não tem seção no Markdown.
+- Verificação: 8 testes do changelog passaram. Checagem isolada tsconfig.node encontra erros de configuração/tipagem já existentes (include, navigateFallback e test).
