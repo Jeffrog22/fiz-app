@@ -37,12 +37,6 @@ const GuiaVisual: React.FC = () => {
   const rotaPronta = !passo?.rota || passo.rota === `${location.pathname}${location.search}`;
   const podeDestacar = rotaPronta && (!passo?.requerPendentes || temPendentes === true);
 
-  const passoRef = useRef<PassoGuia | null>(passo);
-  passoRef.current = passo;
-  const podeDestacarRef = useRef<boolean>(podeDestacar);
-  podeDestacarRef.current = podeDestacar;
-  const tentativasRef = useRef(0);
-
   useEffect(() => {
     if (passo?.rota && !rotaPronta && (!passo.requerPendentes || temPendentes === true)) {
       navigate(passo.rota);
@@ -50,22 +44,24 @@ const GuiaVisual: React.FC = () => {
   }, [passo, rotaPronta, temPendentes, navigate]);
 
   useLayoutEffect(() => {
+    setRectAlvo(null);
     if (!passo) return;
+    let frame = 0;
+    let ativo = true;
     let alvoAnterior: Element | null = null;
-    const MAX_TENTATIVAS = 5;
+    const resizeObserver = new ResizeObserver(() => agendar());
     const medir = () => {
-      const alvo = podeDestacarRef.current && passoRef.current?.target
-        ? document.querySelector(passoRef.current.target)
-        : null;
-      if (alvo && alvo !== alvoAnterior && alvo.getClientRects().length) {
-        alvo.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
-        tentativasRef.current = 0;
-      } else if ((!alvo || alvo.getClientRects().length === 0) && tentativasRef.current < MAX_TENTATIVAS) {
-        // Alvo ainda não está no DOM (ex.: rota ainda navegando). Tenta de novo.
-        tentativasRef.current += 1;
-        requestAnimationFrame(medir);
+      frame = 0;
+      if (!ativo) return;
+      const alvo = podeDestacar && passo.target ? document.querySelector(passo.target) : null;
+      if (alvo !== alvoAnterior) {
+        resizeObserver.disconnect();
+        if (alvo) {
+          resizeObserver.observe(alvo);
+          alvo.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+        }
+        alvoAnterior = alvo;
       }
-      alvoAnterior = alvo;
       const rect = alvo?.getBoundingClientRect();
       const visivel = rect && rect.width && rect.height && rect.bottom > 0 &&
         rect.right > 0 && rect.top < window.innerHeight && rect.left < window.innerWidth;
@@ -73,15 +69,25 @@ const GuiaVisual: React.FC = () => {
       setRectAlvo((anterior) => anterior?.x === proximo?.x && anterior?.y === proximo?.y &&
         anterior?.width === proximo?.width && anterior?.height === proximo?.height ? anterior : proximo);
     };
+    function agendar() {
+      if (ativo && !frame) frame = requestAnimationFrame(medir);
+    }
     medir();
-    const observer = new MutationObserver(medir);
-    observer.observe(document.body, { childList: true, subtree: true });
-    window.addEventListener('scroll', medir, true);
-    window.addEventListener('resize', medir);
+    const observer = new MutationObserver((mutations) => {
+      if (mutations.some((mutation) => !cardRef.current?.contains(mutation.target))) agendar();
+    });
+    observer.observe(document.getElementById('root') ?? document.body, {
+      childList: true, subtree: true, attributes: true,
+    });
+    window.addEventListener('scroll', agendar, true);
+    window.addEventListener('resize', agendar);
     return () => {
+      ativo = false;
+      cancelAnimationFrame(frame);
       observer.disconnect();
-      window.removeEventListener('scroll', medir, true);
-      window.removeEventListener('resize', medir);
+      resizeObserver.disconnect();
+      window.removeEventListener('scroll', agendar, true);
+      window.removeEventListener('resize', agendar);
     };
   }, [passo, podeDestacar, location]);
 
@@ -106,6 +112,7 @@ const GuiaVisual: React.FC = () => {
   useEffect(() => {
     if (!guia) return;
     const aoTeclar = (e: KeyboardEvent) => {
+      if (e.repeat) return;
       if (e.key === 'Escape') {
         e.preventDefault();
         encerrar(false);
@@ -233,7 +240,7 @@ const GuiaVisual: React.FC = () => {
         role="dialog"
         aria-modal="true"
         aria-labelledby="guia-visual-titulo"
-        className="fixed z-[1001] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 w-[min(465px,calc(100vw-32px))]"
+        className="fixed max-h-[calc(100dvh-32px)] overflow-y-auto motion-safe:transition-[top,left,bottom,right] motion-safe:duration-200 z-[1001] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 w-[min(465px,calc(100vw-32px))]"
         style={posicao}
       >
         <div className="flex items-start gap-2">
@@ -252,6 +259,11 @@ const GuiaVisual: React.FC = () => {
           >
             ✕
           </button>
+        </div>
+
+        <div className="mt-2 h-1 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden" aria-hidden="true">
+          <div className="h-full bg-primary-500 motion-safe:transition-[width] motion-safe:duration-300"
+            style={{ width: `${((indice + 1) / totalPassos) * 100}%` }} />
         </div>
 
         <h2

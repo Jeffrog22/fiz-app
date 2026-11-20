@@ -3781,3 +3781,11 @@ Regras:
 - Removidos os avisos flutuantes de Vagas e sua consulta local duplicada.
 - Badges no menu Vagas e na subaba Transferências, atualizados por unidade, ações e consulta periódica.
 - Verificação: git diff --check. Typecheck/build indisponíveis sem dependências locais do frontend.
+
+## Sessão: 19/11/2026 — Continuidade do tutorial entre rotas
+
+- Causa identificada: ProtectedLayout e GuiaVisualProvider eram montados separadamente por rota; transições entre árvores diferentes perdiam o estado do guia. Rotas autenticadas agora usam um layout pai persistente com Outlet, preservando as restrições de Visitante.
+- Medição do destaque acompanha carregamento, mutações e tamanho do alvo, com animation frames canceláveis e limpeza dos observadores.
+- Blur preservado; cartão com transição suave, barra de progresso, limite de altura e proteção contra repetição de teclas.
+- Typecheck passou. Build bloqueado por acesso negado do esbuild ao carregar vite.config.ts.
+- Testes direcionados: 10/10 passaram, incluindo alvo carregado posteriormente e repetição de tecla. Validação visual em navegador pendente.

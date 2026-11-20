@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { TenantProvider } from './context/TenantContext';
 import { AuthProvider } from './context/AuthContext';
 import { DevProvider } from './context/DevContext';
@@ -30,7 +30,7 @@ import { useAuth } from './hooks/useAuth';
 import { GuiaVisualProvider } from './context/GuiaVisualContext';
 import { isBlockedHost } from './utils/tenant';
 
-const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const ProtectedLayout: React.FC = () => {
   const { isAuthenticated, loading, isVisitante } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(() => window.innerWidth < 768);
   const [aceitesNaoVistos, setAceitesNaoVistos] = React.useState(0);
@@ -116,7 +116,7 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
         <div className="flex flex-1">
           <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((v) => !v)} aceitesNaoVistos={aceitesNaoVistos} lotesPendentes={lotesPendentes} />
           <main className="flex-1 p-6 overflow-auto">
-            {children}
+            <Outlet />
           </main>
         </div>
         {devEnabled && !isVisitante && <DevPanel />}
@@ -151,17 +151,19 @@ const AppContent: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={<Login />} />
-      <Route path="/home" element={<ProtectedLayout><Home /></ProtectedLayout>} />
-      <Route path="/alunos" element={<ProtectedLayout><Alunos /></ProtectedLayout>} />
-      <Route path="/turmas" element={<ProtectedLayout><Turmas /></ProtectedLayout>} />
-      <Route path="/chamadas" element={<ProtectedLayout><Chamadas /></ProtectedLayout>} />
-      <Route path="/vagas" element={<RotaVisitante><ProtectedLayout><Vagas /></ProtectedLayout></RotaVisitante>} />
-        <Route path="/exclusoes" element={<RotaVisitante><ProtectedLayout><Exclusoes /></ProtectedLayout></RotaVisitante>} />
-        <Route path="/relatorios" element={<RotaVisitante><ProtectedLayout><Relatorios /></ProtectedLayout></RotaVisitante>} />
-      <Route path="/bloco-de-notas" element={<RotaVisitante><ProtectedLayout><BlocoDeNotas /></ProtectedLayout></RotaVisitante>} />
-      <Route path="/transferencias-nivel" element={<RotaVisitante><ProtectedLayout><TransferenciasNivel /></ProtectedLayout></RotaVisitante>} />
-      <Route path="/calendario" element={<RotaVisitante><ProtectedLayout><Calendario /></ProtectedLayout></RotaVisitante>} />
-      <Route path="/configuracoes" element={<RotaVisitante><ProtectedLayout><Configuracoes /></ProtectedLayout></RotaVisitante>} />
+      <Route element={<ProtectedLayout />}>
+        <Route path="/home" element={<Home />} />
+        <Route path="/alunos" element={<Alunos />} />
+        <Route path="/turmas" element={<Turmas />} />
+        <Route path="/chamadas" element={<Chamadas />} />
+        <Route path="/vagas" element={<RotaVisitante><Vagas /></RotaVisitante>} />
+        <Route path="/exclusoes" element={<RotaVisitante><Exclusoes /></RotaVisitante>} />
+        <Route path="/relatorios" element={<RotaVisitante><Relatorios /></RotaVisitante>} />
+        <Route path="/bloco-de-notas" element={<RotaVisitante><BlocoDeNotas /></RotaVisitante>} />
+        <Route path="/transferencias-nivel" element={<RotaVisitante><TransferenciasNivel /></RotaVisitante>} />
+        <Route path="/calendario" element={<RotaVisitante><Calendario /></RotaVisitante>} />
+        <Route path="/configuracoes" element={<RotaVisitante><Configuracoes /></RotaVisitante>} />
+      </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

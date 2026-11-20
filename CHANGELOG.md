@@ -1590,3 +1590,7 @@
 
 ### Correção — Contadores de transferências recebidas
 - Avisos flutuantes substituídos por contadores em Vagas no menu e na subaba Transferências.
+
+### Correção — Continuidade do guia visual
+- Tutorial preserva o progresso ao navegar entre páginas.
+- Destaques acompanham elementos carregados e redimensionados, com blur, barra de progresso e transições suaves.

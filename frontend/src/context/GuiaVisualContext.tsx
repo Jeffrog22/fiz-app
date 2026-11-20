@@ -1,5 +1,4 @@
 import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuth } from '../hooks/useAuth';
 import { GUIAS, type GuiaVisual } from '../data/guiaVisual';
@@ -45,7 +44,6 @@ export const GuiaVisualContext = createContext<GuiaVisualState | null>(null);
 
 export const GuiaVisualProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { professorId } = useAuth();
-  const navigate = useNavigate();
   const [guia, setGuia] = useState<GuiaVisual | null>(null);
   const [indice, setIndice] = useState(0);
   const [chave, setChave] = useState(0);
