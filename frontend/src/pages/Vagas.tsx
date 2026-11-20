@@ -39,6 +39,7 @@ const Vagas: React.FC = () => {
   const [periodo, setPeriodo] = useState<'todos' | 'manha' | 'tarde'>('todos');
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   const [vagasFilter, setVagasFilter] = useState(false);
+  const [transferenciasRecebidas, setTransferenciasRecebidas] = useState(0);
 
   const carregar = useCallback(async () => {
     try {
@@ -49,13 +50,23 @@ const Vagas: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => { carregar(); }, [carregar]);
+  const carregarRecebidas = useCallback(async () => {
+    try {
+      const res = await api.get('/transferencias/recebidas');
+      const recebidas = res.data || [];
+      setTransferenciasRecebidas(recebidas.length);
+    } catch {
+      setTransferenciasRecebidas(0);
+    }
+  }, []);
+
+  useEffect(() => { carregar(); carregarRecebidas(); }, [carregar, carregarRecebidas]);
 
   useEffect(() => {
-    const handler = () => { if (!document.hidden) carregar(); };
+    const handler = () => { if (!document.hidden) { carregar(); carregarRecebidas(); } };
     document.addEventListener('visibilitychange', handler);
     return () => document.removeEventListener('visibilitychange', handler);
-  }, [carregar]);
+  }, [carregar, carregarRecebidas]);
 
   const niveis = useMemo(() => {
     if (!data) return [];
@@ -217,6 +228,19 @@ const Vagas: React.FC = () => {
         <Transferencias />
       ) : (
         <>
+          {transferenciasRecebidas > 0 && (
+            <div
+              className="fixed bottom-4 right-4 z-50 bg-blue-600 dark:bg-blue-700 text-white px-4 py-2 rounded shadow-lg dark:shadow-black/20 text-sm"
+            >
+              Você tem {transferenciasRecebidas} transferência(s) recebida(s) pendente(s)
+              <button
+                onClick={() => setAba('transferencias')}
+                className="ml-2 font-bold underline hover:text-blue-100 dark:hover:text-blue-200"
+              >
+                Ver transferências
+              </button>
+            </div>
+          )}
           <div className="flex gap-2 flex-wrap items-center">
         <select
           value={nivel}

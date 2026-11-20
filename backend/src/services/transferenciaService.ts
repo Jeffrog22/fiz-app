@@ -86,6 +86,15 @@ export async function criar(
     throw new AppError('Erro ao criar intencao de transferencia', 500);
   }
 
+  const TENANT_NOMES: Record<string, string> = {
+    'bela-vista': 'Bela Vista',
+    'sao-matheus': 'São Matheus',
+    'vila': 'Vila',
+    'parque': 'Parque',
+  };
+
+  enviarNotificacaoPushNovaIntencao(destino, aluno.nome, TENANT_NOMES[destino] || destino, data.id);
+
   return data;
 }
 
@@ -106,6 +115,22 @@ export async function criarLote(
     } catch (err: any) {
       erros.push(`${alunoId}: ${err.message}`);
     }
+  }
+
+  if (criadas > 0) {
+    const TENANT_NOMES: Record<string, string> = {
+      'bela-vista': 'Bela Vista',
+      'sao-matheus': 'São Matheus',
+      'vila': 'Vila',
+      'parque': 'Parque',
+    };
+    enviarNotificacaoPushNovaIntencao(
+      tenantDestino,
+      `${criadas} aluno(s)`,
+      TENANT_NOMES[tenantDestino] || tenantDestino,
+      undefined,
+      criadas,
+    );
   }
 
   return { criadas, erros };
@@ -336,5 +361,43 @@ async function enviarNotificacaoPushAceite(
     });
   } catch (err: any) {
     console.error('[transferencia/enviarPush] Erro ao enviar push:', err.message);
+  }
+}
+
+async function enviarNotificacaoPushNovaIntencao(
+  tenantDestino: string,
+  alunoNome: string,
+  unidadeDestino: string,
+  transferenciaId: string | undefined,
+  quantidade?: number,
+) {
+  try {
+    const { data: professors } = await supabase
+      .from('professores')
+      .select('id')
+      .eq('tenant_id', tenantDestino);
+
+    if (!professors || professors.length === 0) return;
+
+    const professorIds = professors.map((p) => p.id);
+
+    const { data: subscriptions } = await supabase
+      .from('notificacoes_subscriptions')
+      .select('endpoint, p256dh, auth, professor_id')
+      .in('professor_id', professorIds);
+
+    if (!subscriptions || subscriptions.length === 0) return;
+
+    const corpo = quantidade
+      ? `${quantidade} aluno(s) solicitaram transferência para ${unidadeDestino}`
+      : `${alunoNome} solicitou transferência para ${unidadeDestino}`;
+
+    await enviarNotificacaoCustom(subscriptions, {
+      title: 'Nova transferência',
+      body: corpo,
+      url: '/vagas',
+    });
+  } catch (err: any) {
+    console.error('[transferencia/enviarPushNovaIntencao] Erro ao enviar push:', err.message);
   }
 }
