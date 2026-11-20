@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { buscarUltimaVersao, compararVersoes, versaoValida } from '../utils/version';
 
 const CHECK_INTERVAL_MS = 30 * 60 * 1000;
+const DISMISSED_KEY = 'fiz_update_dismissed';
 
 export function useUpdateChecker(): {
   updateAvailable: boolean;
@@ -12,6 +13,14 @@ export function useUpdateChecker(): {
   const dismissedRef = useRef(false);
   const checkingRef = useRef(false);
 
+  const versaoDismissada = (): string | null => {
+    try {
+      return localStorage.getItem(DISMISSED_KEY);
+    } catch {
+      return null;
+    }
+  };
+
   const checkForUpdate = useCallback(async () => {
     if (checkingRef.current) return;
     checkingRef.current = true;
@@ -20,7 +29,14 @@ export function useUpdateChecker(): {
       const ultima = await buscarUltimaVersao();
       // Não considera atualização se a versão atual for inválida ('dev', '', não-semver)
       // ou se não houver versão no servidor — evita falso positivo de banner permanente
-      if (ultima && atual && versaoValida(atual) && compararVersoes(ultima, atual) > 0) {
+      // Se o usuário já dispensou esta versão (dismiss persistido), não reapresenta o banner
+      if (
+        ultima &&
+        atual &&
+        versaoValida(atual) &&
+        versaoDismissada() !== atual &&
+        compararVersoes(ultima, atual) > 0
+      ) {
         setUpdateAvailable(true);
       }
     } catch {
@@ -49,6 +65,12 @@ export function useUpdateChecker(): {
   const dismiss = useCallback(() => {
     dismissedRef.current = true;
     setUpdateAvailable(false);
+    try {
+      const atual = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '';
+      if (atual) localStorage.setItem(DISMISSED_KEY, atual);
+    } catch {
+      // localStorage indisponível — dismiss só vale para a sessão atual
+    }
   }, []);
 
   const atualizarAgora = useCallback(async () => {
